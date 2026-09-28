@@ -17,7 +17,7 @@ sealed interface StepResult {
      * a self-loop, or a compound state whose transition targets itself or one of its descendants.
      *
      * @property transitions The transitions taken, in selection order; never empty. Without
-     * parallel states it is exactly one transition.
+     * parallel states it is exactly one transition; with them, at most one per active region.
      * @property exited Nodes left, innermost first
      * @property entered Nodes entered, outermost first. Only real states: a transition into a
      * [HistoryState] lists the states it restored, never the history state itself.
@@ -70,8 +70,9 @@ sealed interface StepResult {
  *
  * [step] is a pure function of the current configuration, the state and the action: it does not
  * keep state, launch work or call Koma. Holding the configuration is the caller's job, for example
- * a Koma Store. For a chart whose Koma state determines its configuration (one active leaf), the
- * shorter `step(state, action)` derives it from `stateIdOf(state)`.
+ * a Koma Store. For a chart whose Koma state determines its configuration (one active leaf, so no
+ * [ParallelState] and no [HistoryState]), the shorter `step(state, action)` derives it from
+ * `stateIdOf(state)`.
  *
  * The chart node of a state is `stateIdOf(state)`, the active leaf. There is no default mapping:
  * class names are not stable under code shrinking, so the caller states it explicitly, for example
@@ -84,14 +85,24 @@ sealed interface StepResult {
  * first-match rule for handlers. [validate] reports cases where the order decides between
  * unguarded transitions of one state.
  *
+ * Parallel states: every active leaf (one per active region) chooses a transition that way, leaves
+ * in declaration order, and all the choices are taken together in one step unless they conflict,
+ * that is unless their exit sets meet. On a conflict the transition whose source is a proper
+ * descendant of the other's wins; otherwise the one chosen first wins. So transitions in different
+ * regions fire together, and a transition of the parallel state or of an ancestor, chosen by
+ * several leaves, fires once and exits every region.
+ *
  * Exit and entry: a transition exits every active descendant of its domain, the innermost compound
  * state that is a proper ancestor of both source and target (the implicit root when there is
- * none), innermost first. Then it enters the target's ancestors below the domain, the target and,
- * while the entered node is compound, its initial child, outermost first. A self-loop therefore
- * exits and re-enters its source.
+ * none), innermost first, ties in reverse declaration order. Then it enters the target's
+ * ancestors below the domain, the target and, while the entered node is compound, its initial
+ * child, outermost first, ties in declaration order. Entering a parallel state, as a target or as
+ * an ancestor of one, enters each of its other regions through its initial states too. A
+ * self-loop therefore exits and re-enters its source, and a transition from one region of a
+ * parallel state into another exits and re-enters the whole parallel state.
  *
- * History: right before a compound state with [HistoryState] children is exited, each of them
- * records its active child (shallow) or active atomic descendants (deep) in
+ * History: right before a compound or parallel state with [HistoryState] children is exited, each
+ * of them records its active children (shallow) or active atomic descendants (deep) in
  * [StateConfiguration.history]. A transition into a history state enters what it recorded, or its
  * default, or its parent's initial child, and never enters the history state itself. The history
  * lives in the configuration, so charts with history states need the `step` overload that takes
@@ -146,7 +157,9 @@ class StateChartRuntime<S : State>(
      * [StateChartDefinition.configurationOf]) for [action], or [StepResult.Ignored].
      *
      * That configuration remembers no history, so a transition into a [HistoryState] enters its
-     * default; keep the configuration and use the other overload to restore history.
+     * default; keep the configuration and use the other overload to restore history. One leaf
+     * cannot describe the regions of a [ParallelState] either, so charts with parallel states need
+     * the other overload too.
      */
     fun step(state: S, action: Action): StepResult = step(definition.configurationOf(stateIdOf(state)), state, action)
 }

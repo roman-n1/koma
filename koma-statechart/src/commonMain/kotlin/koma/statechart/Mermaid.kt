@@ -26,6 +26,14 @@ private fun isPlainMermaidId(value: String): Boolean =
  * source and its target, after the nested blocks. A transition is labelled with its action name
  * and, when present, its guard in brackets, for example `Idle --> Loading : Submit [isValid]`.
  *
+ * A parallel state becomes a block too, `state Parallel { ... }`, whose regions are separated by
+ * `--` lines, one region per section in declaration order; each region is drawn in its section
+ * like any child (a compound or parallel region as its own nested block). A parallel state's
+ * history states are drawn in its first section. A parallel block holds no transitions: one whose
+ * innermost common block is a parallel state (for example between two of its regions) is written
+ * in the nearest enclosing block that is not parallel. A parallel state without children is drawn
+ * like an atomic state.
+ *
  * A history state has no Mermaid syntax of its own, so it is drawn as a state labelled `[H]`
  * (shallow) or `[H*]` (deep) in its parent's block, always declared with a label, for example
  * `state "[H]" as ChatHistory`. Its default, when set, is drawn as an unlabelled edge from it
@@ -58,6 +66,8 @@ fun StateChartDefinition.toMermaid(): String = buildString {
     }
     val containers = mermaidContainers()
     fun containerOf(id: StateId): StateId? = containers[id]
+    val drawnChildren = hierarchy.nodes.values.filter { it.id in containers }.groupBy { containers.getValue(it.id) }
+    fun isBlock(node: StateNode?): Boolean = node is CompoundState || (node is ParallelState && node.id in drawnChildren)
     fun containerChain(id: StateId): List<StateId?> = generateSequence(containerOf(id)) { containerOf(it) }.toList() + null
     fun declaration(id: StateId): String {
         val ref = refs.getValue(id)
@@ -70,14 +80,16 @@ fun StateChartDefinition.toMermaid(): String = buildString {
     }
     fun blockOf(source: StateId, target: StateId): StateId? {
         val targetChain = containerChain(target)
-        return containerChain(source).first { it in targetChain }
+        var block = containerChain(source).first { it in targetChain }
+        while (block != null && hierarchy.nodes[block] is ParallelState) block = containerOf(block)
+        return block
     }
     val transitionsByBlock = transitions.groupBy { blockOf(it.source, it.target) }
-    val defaultsByBlock = histories.filter { it.default != null }.groupBy { blockOf(it.id, it.default!!) }
+    val defaultsByBlock = histories.flatMap { h -> listOfNotNull(h.default).map { h.id to it } }.groupBy { (h, default) -> blockOf(h, default) }
 
     fun appendTransitions(block: StateId?, indent: String) {
-        for (history in defaultsByBlock[block].orEmpty()) {
-            appendLine("$indent${refs.getValue(history.id)} --> ${refs.getValue(history.default!!)}")
+        for ((history, default) in defaultsByBlock[block].orEmpty()) {
+            appendLine("$indent${refs.getValue(history)} --> ${refs.getValue(default)}")
         }
         for (transition in transitionsByBlock[block].orEmpty()) {
             append("$indent${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : ${transition.on.name}")
@@ -86,36 +98,47 @@ fun StateChartDefinition.toMermaid(): String = buildString {
         }
     }
 
-    fun appendCompound(node: CompoundState, indent: String) {
+    fun appendBlock(node: StateNode, indent: String) {
         val ref = refs.getValue(node.id)
         appendLine("$indent${if (ref == node.id.value) "state $ref" else declaration(node.id)} {")
         val inner = "$indent    "
-        appendLine("$inner[*] --> ${refs.getValue(node.initial)}")
-        for (child in hierarchy.nodes.values) {
-            if (containerOf(child.id) != node.id) continue
-            if (child is CompoundState) appendCompound(child, inner) else appendLine("$inner${declaration(child.id)}")
+        fun appendChild(child: StateNode) {
+            if (isBlock(child)) appendBlock(child, inner) else appendLine("$inner${declaration(child.id)}")
         }
-        appendTransitions(node.id, inner)
+        val children = drawnChildren[node.id].orEmpty()
+        if (node is CompoundState) {
+            appendLine("$inner[*] --> ${refs.getValue(node.initial)}")
+            children.forEach(::appendChild)
+            appendTransitions(node.id, inner)
+        } else {
+            val (histories, regions) = children.partition { it is HistoryState }
+            regions.forEachIndexed { i, region ->
+                if (i > 0) appendLine("$inner--")
+                appendChild(region)
+                if (i == 0) histories.forEach(::appendChild)
+            }
+            if (regions.isEmpty()) histories.forEach(::appendChild)
+        }
         appendLine("$indent}")
     }
 
     appendLine("stateDiagram-v2")
     for (id in ids) {
         val node = hierarchy.nodes[id]
-        if (containerOf(id) == null && node !is CompoundState && (refs.getValue(id) != id.value || node is HistoryState)) {
+        if (containerOf(id) == null && !isBlock(node) && (refs.getValue(id) != id.value || node is HistoryState)) {
             appendLine("    ${declaration(id)}")
         }
     }
     appendLine("    [*] --> ${refs.getValue(initial)}")
     for (node in hierarchy.nodes.values) {
-        if (node is CompoundState && containerOf(node.id) == null) appendCompound(node, "    ")
+        if (isBlock(node) && containerOf(node.id) == null) appendBlock(node, "    ")
     }
     appendTransitions(null, "    ")
 }.trimEnd()
 
 /**
- * The block each declared state is drawn in: its parent when that is a declared compound state
- * drawn itself, otherwise the top level (`null`, absent from the map). States left over by a
+ * The block each declared state is drawn in: its parent when that is a declared compound or
+ * parallel state drawn itself, otherwise the top level (`null`, absent from the map). States left over by a
  * parent cycle are drawn from the top, starting with the first declared one.
  */
 @OptIn(ExperimentalKomaApi::class)
@@ -125,13 +148,13 @@ private fun StateChartDefinition.mermaidContainers(): Map<StateId, StateId> {
     fun place(node: StateNode, container: StateId?) {
         placed += node.id
         if (container != null) containers[node.id] = container
-        if (node is CompoundState) {
+        if (node is CompoundState || node is ParallelState) {
             for (child in childrenOf(node.id)) if (child.id !in placed) place(child, node.id)
         }
     }
     for (node in hierarchy.nodes.values) {
         val parent = node.parent
-        if (node.id !in placed && (parent == null || node(parent) !is CompoundState)) place(node, null)
+        if (node.id !in placed && (parent == null || node(parent).let { it !is CompoundState && it !is ParallelState })) place(node, null)
     }
     for (node in hierarchy.nodes.values) {
         if (node.id !in placed) place(node, null)

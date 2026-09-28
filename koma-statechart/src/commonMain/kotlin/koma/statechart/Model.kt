@@ -23,9 +23,8 @@ value class StateId(val value: String) {
 /**
  * A node in a statechart.
  *
- * The hierarchy is given by [parent] links, so a definition stays a flat list of nodes. Parallel
- * nodes will be added as a new implementation, so code that matches on this type should expect
- * more cases.
+ * The hierarchy is given by [parent] links, so a definition stays a flat list of nodes. More
+ * kinds of nodes may be added, so code that matches on this type should expect more cases.
  */
 @ExperimentalKomaApi
 sealed interface StateNode {
@@ -35,7 +34,7 @@ sealed interface StateNode {
     val id: StateId
 
     /**
-     * The compound node that contains this node, or `null` for a top-level node.
+     * The compound or parallel node that contains this node, or `null` for a top-level node.
      */
     val parent: StateId?
 }
@@ -43,7 +42,8 @@ sealed interface StateNode {
 /**
  * A state without child states.
  *
- * @property parent The compound state that contains this state, or `null` for a top-level state
+ * @property parent The compound or parallel state that contains this state, or `null` for a
+ * top-level state
  */
 @ExperimentalKomaApi
 data class AtomicState(
@@ -58,7 +58,8 @@ data class AtomicState(
  * too, unless a transition targets a deeper descendant directly.
  *
  * @property initial The child entered by default; must be a child of this state
- * @property parent The compound state that contains this state, or `null` for a top-level state
+ * @property parent The compound or parallel state that contains this state, or `null` for a
+ * top-level state
  */
 @ExperimentalKomaApi
 data class CompoundState(
@@ -68,17 +69,44 @@ data class CompoundState(
 ) : StateNode
 
 /**
- * A history pseudo-state of the compound state [parent]. It is never active itself: a transition
+ * A state whose children, its *regions*, are all active while this state is active.
+ *
+ * Children are the nodes whose [StateNode.parent] is [id]; every child that is not a
+ * [HistoryState] is a region. A region may be an [AtomicState] (always active with this state), a
+ * [CompoundState] (one active child at a time) or another [ParallelState]. Entering this state
+ * enters every region, in declaration order, each through its own initial states unless a
+ * transition targets a descendant of it directly. Exiting it exits every region.
+ *
+ * In one step each active leaf may select a transition, so transitions in different regions fire
+ * together for one action (see [StateChartRuntime]). A transition from a descendant of one region
+ * into another region leaves this state: its domain is the nearest compound ancestor, so the whole
+ * parallel state is exited and entered again. A parallel state should have at least two regions;
+ * see [validate].
+ *
+ * @property parent The compound or parallel state that contains this state, or `null` for a
+ * top-level state
+ */
+@ExperimentalKomaApi
+data class ParallelState(
+    override val id: StateId,
+    override val parent: StateId? = null,
+) : StateNode
+
+/**
+ * A history pseudo-state of the compound or parallel state [parent]. It is never active itself: a transition
  * that targets it enters [parent] (and the ancestors of [parent] it has to) and restores what was
  * active in [parent] when [parent] was last exited.
  *
- * - A shallow history (`deep = false`) remembers the child of [parent] that was active, and
- *   restores it; a compound child is entered through its own initial states.
+ * - A shallow history (`deep = false`) remembers the child of [parent] that was active (for a
+ *   parallel [parent], all its regions), and restores it; a compound child is entered through its
+ *   own initial states.
  * - A deep history (`deep = true`) remembers the active atomic descendants of [parent], and
  *   restores them with every ancestor between them and [parent], outermost first.
  *
  * Until [parent] has been exited once, nothing is remembered, and the transition enters [default],
- * or the initial child of [parent] when [default] is `null`. What is remembered lives in
+ * or the initial child of [parent] when [default] is `null` (every region, when [parent] is a
+ * [ParallelState]). Regions of a parallel [parent] that the restored nodes do not cover are
+ * entered through their initial states. What is remembered lives in
  * [StateConfiguration.history], keyed by this state's [id]; it is recorded right before [parent] is
  * exited, so a transition that exits [parent] and targets this history restores what it just
  * recorded.
@@ -87,7 +115,7 @@ data class CompoundState(
  * of the chart or of [parent]. A compound state may have several history states, for example one
  * shallow and one deep; each remembers independently. See [validate].
  *
- * @property parent The compound state whose configuration is remembered
+ * @property parent The compound or parallel state whose configuration is remembered
  * @property deep Whether the active atomic descendants are remembered rather than the active child
  * @property default Entered while nothing is remembered: a child of [parent] for a shallow history,
  * any proper descendant of [parent] for a deep one; `null` means the initial child of [parent]
@@ -218,10 +246,21 @@ data class StateChartDefinition(
      * Returns the configuration in which [leaf] is the active leaf: [leaf] and its ancestors,
      * outermost first. It maps a Koma state, through its leaf id, back to a chart configuration.
      *
-     * Nothing is entered below [leaf], so pass a leaf, not a compound state.
+     * Nothing is entered below [leaf], so pass a leaf, not a compound state. Inside a
+     * [ParallelState] one leaf does not describe the other regions; use the overload that takes
+     * all active leaves.
      */
     fun configurationOf(leaf: StateId): StateConfiguration =
         StateConfiguration(active = (hierarchy.ancestors(leaf).asReversed() + leaf).toSet())
+
+    /**
+     * Returns the configuration whose active leaves are [leaves]: each leaf after its ancestors,
+     * outermost first, leaves in the order given. It maps a Koma state of a chart with
+     * [ParallelState]s, through its active leaves (one per active region), back to a chart
+     * configuration. Nothing is entered below the leaves, and no missing region is filled in.
+     */
+    fun configurationOf(leaves: Collection<StateId>): StateConfiguration =
+        StateConfiguration(active = leaves.flatMapTo(linkedSetOf()) { hierarchy.ancestors(it).asReversed() + it })
 }
 
 /**
@@ -232,6 +271,11 @@ internal class HierarchyIndex(definition: StateChartDefinition) {
     val nodes: Map<StateId, StateNode> = buildMap { definition.states.forEach { if (it.id !in this) put(it.id, it) } }
     val children: Map<StateId?, List<StateNode>> = nodes.values.groupBy { it.parent }
     val transitionsBySource: Map<StateId, List<Transition>> = definition.transitions.groupBy { it.source }
+
+    /** Regions of each parallel state: its children that are not history states, in declaration order. */
+    val regions: Map<StateId, List<StateId>> = nodes.values.filterIsInstance<ParallelState>().associate { p ->
+        p.id to children[p.id].orEmpty().filter { it !is HistoryState }.map { it.id }
+    }
 
     /** History states by the id of their parent, in declaration order. */
     val histories: Map<StateId, List<HistoryState>> = nodes.values.filterIsInstance<HistoryState>().groupBy { it.parent }

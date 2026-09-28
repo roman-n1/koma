@@ -9,10 +9,12 @@ import koma.core.ExperimentalKomaApi
  *
  * @property active Active nodes, each together with all its ancestors. For a chart built only from
  * atomic and compound states this is one chain from a top-level node down to one active leaf,
- * listed outermost first.
+ * listed outermost first. An active [ParallelState] has all its regions active, so there is one
+ * active leaf per active region.
  * @property history What each [HistoryState] remembers, keyed by the history state's id: the
- * child of its parent that was active (shallow) or the atomic descendants of its parent that were
- * active (deep) when the parent was last exited. A history state that has not recorded anything yet
+ * children of its parent that were active (shallow; one for a compound parent, every region for a
+ * parallel one) or the active descendants of its parent without active children (deep) when the
+ * parent was last exited. A history state that has not recorded anything yet
  * has no entry. Never contains nodes of [active] that are history states: those are never active.
  */
 @ExperimentalKomaApi
@@ -24,7 +26,7 @@ data class StateConfiguration(
 /**
  * Returns the active nodes of [configuration] that have no active child, in declaration order
  * (undeclared ids last). For a configuration produced by this chart's runtime it is exactly one
- * node, the active leaf.
+ * node, the active leaf, unless a [ParallelState] is active: then there is one per active region.
  */
 @ExperimentalKomaApi
 fun StateChartDefinition.activeLeaves(configuration: StateConfiguration): List<StateId> =
@@ -41,9 +43,9 @@ internal class Microstep(
     val entered: List<StateId>,
     val configuration: StateConfiguration,
 ) {
-    /** The first active leaf after the step, or the last entered node when there is none. */
-    fun leaf(definition: StateChartDefinition): StateId =
-        definition.activeLeaves(configuration).firstOrNull() ?: entered.last()
+    /** The active leaves after the step in declaration order, or the last entered node when there is none. */
+    fun leaves(definition: StateChartDefinition): List<StateId> =
+        definition.activeLeaves(configuration).ifEmpty { listOf(entered.last()) }
 }
 
 @OptIn(ExperimentalKomaApi::class)
@@ -57,7 +59,7 @@ private fun StateChartDefinition.depth(id: StateId): Int = ancestorsOf(id).size
  */
 @OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.initialConfiguration(): StateConfiguration =
-    StateConfiguration(active = entryPath(domain = null, target = initial, history = emptyMap()).toSet())
+    StateConfiguration(active = entrySet(listOf(null to initial), history = emptyMap()).sortedWith(entryOrder()).toSet())
 
 /**
  * Transitions that may fire from [leaf], in priority order: the leaf's own, then each ancestor's,
@@ -68,101 +70,144 @@ internal fun StateChartDefinition.candidatesFor(leaf: StateId): Sequence<Transit
     (sequenceOf(leaf) + ancestorsOf(leaf).asSequence()).flatMap { transitionsFrom(it).asSequence() }
 
 /**
- * Picks the transitions to fire in [configuration]: for each active leaf in declaration order, the
- * first [enabled] candidate (see [candidatesFor]). A transition whose exit set meets the exit set
- * of an earlier pick is dropped, so a transition shared by several leaves fires once.
+ * Picks the transitions to fire in [configuration], as SCXML does: for each active leaf in
+ * declaration order, the first [enabled] candidate (see [candidatesFor]). Two picks conflict when
+ * their exit sets meet. On a conflict the new pick replaces the earlier ones it conflicts with when
+ * its source is a proper descendant of all of their sources (an inner transition beats an outer
+ * one, whichever leaf found it first); otherwise the earlier pick wins and the new one is dropped.
+ * So a transition shared by several leaves fires once, and transitions in different regions of a
+ * parallel state fire together.
  */
 @OptIn(ExperimentalKomaApi::class)
-internal inline fun StateChartDefinition.selectTransitions(
+internal fun StateChartDefinition.selectTransitions(
     configuration: StateConfiguration,
     enabled: (Transition) -> Boolean,
 ): List<Transition> {
-    val selected = mutableListOf<Transition>()
-    val exiting = mutableSetOf<StateId>()
+    val selected = mutableListOf<Pair<Transition, Set<StateId>>>()
     for (leaf in activeLeaves(configuration)) {
         val transition = candidatesFor(leaf).firstOrNull(enabled) ?: continue
-        val exitSet = exitSet(configuration, transition)
-        if (exitSet.none { it in exiting }) {
-            selected += transition
-            exiting += exitSet
+        val exitSet = exitSet(configuration, transition).toSet()
+        val conflicting = selected.filter { (other, otherExit) -> otherExit.any { it in exitSet } }
+        if (conflicting.all { (other, _) -> isDescendant(transition.source, other.source) }) {
+            selected -= conflicting.toSet()
+            selected += transition to exitSet
         }
     }
-    return selected
+    return selected.map { it.first }
+}
+
+/**
+ * The step the configuration graph takes for [trigger], whose source is active in
+ * [configuration]: the runtime's selection (see [selectTransitions]) for an action that matches
+ * exactly the transitions whose matcher equals `trigger.on`, with every guard true, except that
+ * [trigger] is taken for the leaves below its source and transitions that would conflict with it
+ * are left out. Without parallel states this is [trigger] alone.
+ */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.graphStep(configuration: StateConfiguration, trigger: Transition): Microstep {
+    val triggerExit = exitSet(configuration, trigger).toSet()
+    val taken = selectTransitions(configuration) { transition ->
+        transition == trigger || (transition.on == trigger.on && exitSet(configuration, transition).none { it in triggerExit })
+    }
+    // Only in a malformed hierarchy can the source have no active leaf below it; take the trigger alone then.
+    return microstep(configuration, if (trigger in taken) taken else listOf(trigger))
 }
 
 /**
  * The transition's domain: the innermost compound state that is a proper ancestor of both its
- * source and its target, or `null` for the implicit root. Because the domain is a *proper*
- * ancestor of the source, every transition is external: a self-loop, a transition from a state to
- * its own descendant and one from a state to its own ancestor all exit and re-enter the state.
+ * source and its target, or `null` for the implicit root. Parallel states are never domains, as in
+ * SCXML: a transition between two regions of a parallel state exits and re-enters the parallel
+ * state. Because the domain is a *proper* ancestor of the source, every transition is external: a
+ * self-loop, a transition from a state to its own descendant and one from a state to its own
+ * ancestor all exit and re-enter the state.
  */
 @OptIn(ExperimentalKomaApi::class)
-internal fun StateChartDefinition.domainOf(transition: Transition): StateId? {
-    val targetAncestors = ancestorsOf(transition.target)
-    return ancestorsOf(transition.source).firstOrNull { node(it) is CompoundState && it in targetAncestors }
+internal fun StateChartDefinition.domainOf(transition: Transition): StateId? = domainOf(transition.source, transition.target)
+
+/** The domain of a transition from [source] to [target]; see the other overload. */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.domainOf(source: StateId, target: StateId): StateId? {
+    val targetAncestors = ancestorsOf(target)
+    return ancestorsOf(source).firstOrNull { node(it) is CompoundState && it in targetAncestors }
 }
 
 @OptIn(ExperimentalKomaApi::class)
-private fun StateChartDefinition.exitSet(configuration: StateConfiguration, transition: Transition): List<StateId> {
+internal fun StateChartDefinition.exitSet(configuration: StateConfiguration, transition: Transition): List<StateId> {
     val domain = domainOf(transition)
     return configuration.active.filter { domain == null || isDescendant(it, domain) }
 }
 
 /**
- * Nodes entered when entering [target] from [domain]: the ancestors of [target] below [domain],
- * then [target] and, while the entered node is compound, its initial child. Outermost first.
+ * Nodes entered for [targets], each a pair of a domain and a target, as SCXML computes the entry set: first
+ * each target with its descendants, then each target's ancestors below the domain.
  *
- * When [target] is a [HistoryState] it is not entered itself: the nodes it restores (see
- * [restoredBy]) are entered instead, each with its ancestors below the history's parent and its
- * initial descendants. A history that cannot be resolved (only in a malformed chart, see
- * [validate]) is entered like an atomic state, so tools keep working on such charts.
+ * - A compound node enters its initial child too, unless a descendant is already entered.
+ * - A parallel node enters every region that has no entered descendant yet, whether the parallel
+ *   node is a target or an ancestor of one.
+ * - A [HistoryState] target is not entered itself: the nodes it restores (see [restoredBy]) are
+ *   entered with their descendants, then with their ancestors below the history's parent. A
+ *   history that cannot be resolved (only in a malformed chart, see [validate]) is entered like an
+ *   atomic state, so tools keep working on such charts.
+ *
+ * Every node is entered at most once, so this ends even for a malformed hierarchy. The result is
+ * in no particular order.
  */
 @OptIn(ExperimentalKomaApi::class)
-private fun StateChartDefinition.entryPath(domain: StateId?, target: StateId, history: Map<StateId, Set<StateId>>): List<StateId> {
-    val entered = ancestorsOf(target).takeWhile { it != domain }.reversed().toMutableList()
-    val pseudo = node(target) as? HistoryState
-    val restored = pseudo?.let { restoredBy(it, history) }
-    if (pseudo == null || restored == null) {
-        enterWithInitials(target, entered)
-    } else {
-        for (id in restored) {
-            ancestorsOf(id).takeWhile { it != pseudo.parent }.asReversed().forEach { if (it !in entered) entered += it }
-            if (id !in entered) enterWithInitials(id, entered)
+private fun StateChartDefinition.entrySet(targets: List<Pair<StateId?, StateId>>, history: Map<StateId, Set<StateId>>): Set<StateId> {
+    val entered = linkedSetOf<StateId>()
+    fun hasEnteredDescendant(id: StateId) = entered.any { isDescendant(it, id) }
+    fun enterRegions(parallel: StateId, enterDescendants: (StateId) -> Unit) {
+        for (region in hierarchy.regions.getValue(parallel)) if (!hasEnteredDescendant(region)) enterDescendants(region)
+    }
+    fun enterAncestors(id: StateId, below: StateId?, enterDescendants: (StateId) -> Unit) {
+        for (ancestor in ancestorsOf(id).takeWhile { it != below }.asReversed()) {
+            entered += ancestor
+            if (node(ancestor) is ParallelState) enterRegions(ancestor, enterDescendants)
         }
     }
+    fun enterDescendants(id: StateId) {
+        if (id in entered) return
+        val node = node(id)
+        val restored = (node as? HistoryState)?.let { restoredBy(it, history) }
+        if (node is HistoryState && restored != null) {
+            restored.forEach(::enterDescendants)
+            restored.forEach { enterAncestors(it, node.parent, ::enterDescendants) }
+            return
+        }
+        entered += id
+        when (node) {
+            is CompoundState -> {
+                val initial = node(node.initial)
+                if (initial != null && initial !is HistoryState && initial.parent == id && !hasEnteredDescendant(id)) enterDescendants(initial.id)
+            }
+            is ParallelState -> enterRegions(id, ::enterDescendants)
+            else -> Unit
+        }
+    }
+    targets.forEach { (_, target) -> enterDescendants(target) }
+    targets.forEach { (domain, target) -> enterAncestors(target, domain, ::enterDescendants) }
     return entered
 }
-
-/**
- * Adds [id] to [entered] and then, while the entered node is compound, its initial child. Stops at
- * an initial state that is not a child, is a history state or was already entered.
- */
-@OptIn(ExperimentalKomaApi::class)
-private fun StateChartDefinition.enterWithInitials(id: StateId, entered: MutableList<StateId>) {
-    entered += id
-    var current = node(id)
-    while (current is CompoundState) {
-        val next = node(current.initial)
-        if (next == null || next is HistoryState || next.parent != current.id || next.id in entered) break
-        entered += next.id
-        current = next
-    }
-}
-
 /**
  * The nodes [history] restores: what it remembers in [remembered], else its default, else the
- * initial child of its parent. Only proper descendants of the parent that are not history states
- * count; `null` when there is nothing to restore (the parent is not a compound state, or the
- * fallback is not such a descendant).
+ * initial child of its compound parent or every region of its parallel parent. Only proper
+ * descendants of the parent that are not history states count; `null` when there is nothing to
+ * restore (the parent is neither compound nor parallel, or the fallback is not such a descendant).
  */
 @OptIn(ExperimentalKomaApi::class)
 private fun StateChartDefinition.restoredBy(history: HistoryState, remembered: Map<StateId, Set<StateId>>): List<StateId>? {
-    val parent = node(history.parent) as? CompoundState ?: return null
+    val parent = node(history.parent)
+    if (parent !is CompoundState && parent !is ParallelState) return null
     fun restorable(id: StateId): Boolean = node(id).let { it != null && it !is HistoryState } && isDescendant(id, parent.id)
     val recorded = remembered[history.id].orEmpty().filter(::restorable)
     if (recorded.isNotEmpty()) return recorded.sortedBy { declarationOrder(it) }
-    val fallback = history.default ?: parent.initial
-    return if (restorable(fallback)) listOf(fallback) else null
+    val default = history.default
+    val fallback = when {
+        default != null -> listOf(default)
+        parent is CompoundState -> listOf(parent.initial)
+        else -> hierarchy.regions.getValue(parent.id)
+    }
+    return if (fallback.all(::restorable)) fallback else null
 }
 
 /**
@@ -186,10 +231,20 @@ internal fun StateChartDefinition.recordHistory(configuration: StateConfiguratio
     return history
 }
 
+/** Exit order: innermost first, ties in reverse declaration order. */
+@OptIn(ExperimentalKomaApi::class)
+private fun StateChartDefinition.exitOrder(): Comparator<StateId> =
+    compareByDescending<StateId> { depth(it) }.thenByDescending { declarationOrder(it) }
+
+/** Entry order: outermost first, ties in declaration order. */
+@OptIn(ExperimentalKomaApi::class)
+private fun StateChartDefinition.entryOrder(): Comparator<StateId> =
+    compareBy<StateId> { depth(it) }.thenBy { declarationOrder(it) }
+
 /**
  * Fires [transitions] (already selected, non-conflicting) in [configuration]: exits the union of
  * their exit sets innermost first (ties in reverse declaration order), records history for the
- * exited nodes (see [recordHistory]), then enters the union of their entry paths outermost first
+ * exited nodes (see [recordHistory]), then enters their entry set (see [entrySet]) outermost first
  * (ties in declaration order). A transition into a history state enters what the history
  * remembers after this step's recording.
  */
@@ -198,9 +253,8 @@ internal fun StateChartDefinition.microstep(configuration: StateConfiguration, t
     val exitSet = linkedSetOf<StateId>()
     for (transition in transitions) exitSet += exitSet(configuration, transition)
     val history = recordHistory(configuration, exitSet)
-    val entrySet = linkedSetOf<StateId>()
-    for (transition in transitions) entrySet += entryPath(domainOf(transition), transition.target, history)
-    val exited = exitSet.sortedWith(compareByDescending<StateId> { depth(it) }.thenByDescending { declarationOrder(it) })
-    val entered = entrySet.sortedWith(compareBy<StateId> { depth(it) }.thenBy { declarationOrder(it) })
+    val entrySet = entrySet(transitions.map { domainOf(it) to it.target }, history)
+    val exited = exitSet.sortedWith(exitOrder())
+    val entered = entrySet.sortedWith(entryOrder())
     return Microstep(exited, entered, StateConfiguration(active = (configuration.active - exitSet) + entered, history = history))
 }

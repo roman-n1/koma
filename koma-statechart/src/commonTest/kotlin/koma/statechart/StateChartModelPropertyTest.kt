@@ -120,6 +120,7 @@ class StateChartModelPropertyTest {
             is ValidationIssue.HistoryAsInitial -> ValidationIssue.HistoryAsInitial(issue.id?.let(f), f(issue.initial))
             is ValidationIssue.InvalidHistoryDefault -> ValidationIssue.InvalidHistoryDefault(f(issue.id), f(issue.default))
             is ValidationIssue.TransitionFromHistory -> ValidationIssue.TransitionFromHistory(issue.transition.r())
+            is ValidationIssue.TooFewRegions -> ValidationIssue.TooFewRegions(f(issue.id), issue.regions.map(f))
         }
     }
 
@@ -233,6 +234,7 @@ class StateChartModelPropertyTest {
                 is ValidationIssue.InitialNotChild,
                 is ValidationIssue.EmptyCompoundState,
                 is ValidationIssue.HistoryParent,
+                is ValidationIssue.TooFewRegions,
                 is ValidationIssue.HistoryAsInitial,
                 is ValidationIssue.InvalidHistoryDefault,
                 is ValidationIssue.TransitionFromHistory,
