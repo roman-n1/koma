@@ -3,6 +3,7 @@ package koma.core
 import kotlinx.coroutines.Dispatchers
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -104,5 +105,22 @@ class StoreHandlerRegistryTest {
         assertTrue(registry.action.isEmpty())
         assertTrue(registry.exit.isEmpty())
         assertTrue(registry.recover.isEmpty())
+    }
+
+    @Test
+    fun handlersFromLegacyConstructorsHaveNoMatcher() {
+        // Inline code compiled against Koma 4.0.0 still calls the constructors without metadata.
+        val stateHandler = StoreBuilder.StateHandler<(AppState) -> Boolean, EnterScope<AppState, AppEvent, AppState>>(
+            predicate = { true },
+            handler = { },
+        )
+        val threadedHandler = StoreBuilder.StateHandlerConfig.ThreadedHandler<(AppAction) -> Boolean, ActionScope<AppState, AppAction, AppEvent, AppState>>(
+            dispatcher = null,
+            predicate = { true },
+            handler = { },
+        )
+
+        assertNull(stateHandler.matcher)
+        assertNull(threadedHandler.inputType)
     }
 }
