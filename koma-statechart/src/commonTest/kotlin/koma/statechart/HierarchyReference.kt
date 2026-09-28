@@ -84,7 +84,7 @@ internal class HierarchyReference(val chart: StateChartDefinition) {
         var changed = true
         while (changed) {
             changed = false
-            for ((configuration, d) in distance.entries.toList()) {
+            for ((configuration, d) in distance.toList()) {
                 for (t in chart.transitions) {
                     if (t.source !in configuration) continue
                     val next = fire(configuration, t).after
