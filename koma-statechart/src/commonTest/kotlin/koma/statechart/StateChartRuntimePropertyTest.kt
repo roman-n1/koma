@@ -12,7 +12,8 @@ import kotlin.test.assertTrue
 
 /**
  * Property-based tests for [StateChartRuntime.step] and [ActionMatcher.matches] over
- * [RandomCharts], with a random truth table per seed for every guard label.
+ * [RandomCharts], with a random truth table per seed for every guard label, action and retry
+ * count. States are [RandomState]s, so guards can read state data (`attempts`).
  *
  * The reference is deliberately naive: scan *all* transitions in declaration order and take the
  * first one that leaves the current state, matches the action (by a hard-coded type/name table,
@@ -20,7 +21,7 @@ import kotlin.test.assertTrue
  *
  * ```
  * [*] --> A
- * A --Go [even]--> B        guard table decides, per action
+ * A --Go [even]--> B        guard table decides, per action and attempts
  * A --Go--> C               fallback when [even] is false
  * A --Anything--> A         supertype matcher: matches every RandomAction
  * B --Ping--> B             self-loop
@@ -49,21 +50,34 @@ class StateChartRuntimePropertyTest {
     }
 
     private class GuardTable(random: Random) {
-        private val table = RandomCharts.guards.associateWith { RandomCharts.actions.associateWith { random.nextBoolean() } }
-        val calls = mutableListOf<Pair<String, Action>>()
+        private val table = RandomCharts.guards.associateWith {
+            RandomCharts.actions.associateWith { List(maxAttempts + 1) { random.nextBoolean() } }
+        }
+        val calls = mutableListOf<Triple<String, RandomState, Action>>()
 
-        fun holds(label: String, action: Action): Boolean = table.getValue(label).getValue(action as RandomAction)
+        fun holds(label: String, state: RandomState, action: Action): Boolean =
+            table.getValue(label).getValue(action as RandomAction)[state.attempts]
 
-        fun implementations(): Map<String, (Action) -> Boolean> = RandomCharts.guards.associateWith { label ->
-            { action: Action -> calls += label to action; holds(label, action) }
+        fun implementations(): Map<String, (RandomState, Action) -> Boolean> = RandomCharts.guards.associateWith { label ->
+            { state: RandomState, action: Action -> calls += Triple(label, state, action); holds(label, state, action) }
+        }
+
+        companion object {
+            const val maxAttempts = 3
         }
     }
 
-    private fun referenceStep(chart: StateChartDefinition, table: GuardTable, current: StateId, action: RandomAction): StepResult {
+    private val stateIdOf: (RandomState) -> StateId = { it.id }
+
+    private fun runtimeOf(chart: StateChartDefinition, table: GuardTable) = StateChartRuntime(chart, stateIdOf, table.implementations())
+
+    private fun randomState(random: Random, id: StateId) = RandomState(id, random.nextInt(GuardTable.maxAttempts + 1))
+
+    private fun referenceStep(chart: StateChartDefinition, table: GuardTable, current: RandomState, action: RandomAction): StepResult {
         for (t in chart.transitions) {
-            if (t.source != current) continue
+            if (t.source != current.id) continue
             if (!referenceMatches(t.on, action)) continue
-            if (t.guard != null && !table.holds(t.guard, action)) continue
+            if (t.guard != null && !table.holds(t.guard, current, action)) continue
             return StepResult.Transitioned(t)
         }
         return StepResult.Ignored
@@ -72,10 +86,13 @@ class StateChartRuntimePropertyTest {
     @Test
     fun stepEqualsFirstDeclaredMatchingTransitionWithTrueGuard() = RandomCharts.forEachChart(valid = false) { seed, random, chart ->
         val table = GuardTable(random)
-        val runtime = StateChartRuntime(chart, table.implementations())
-        for (current in RandomCharts.allIds) {
-            for (action in RandomCharts.actions) {
-                assertEquals(referenceStep(chart, table, current, action), runtime.step(current, action), "seed $seed: $current on $action")
+        val runtime = runtimeOf(chart, table)
+        for (id in RandomCharts.allIds) {
+            for (attempts in 0..GuardTable.maxAttempts) {
+                val current = RandomState(id, attempts)
+                for (action in RandomCharts.actions) {
+                    assertEquals(referenceStep(chart, table, current, action), runtime.step(current, action), "seed $seed: $current on $action")
+                }
             }
         }
     }
@@ -83,19 +100,20 @@ class StateChartRuntimePropertyTest {
     @Test
     fun guardsAreEvaluatedLazilyInDeclarationOrderUntilOneHolds() = RandomCharts.forEachChart { seed, random, chart ->
         val table = GuardTable(random)
-        val runtime = StateChartRuntime(chart, table.implementations())
+        val runtime = runtimeOf(chart, table)
         repeat(20) {
-            val current = chart.states.random(random).id
+            val current = randomState(random, chart.states.random(random).id)
             val action = RandomCharts.actions.random(random)
             table.calls.clear()
             val result = runtime.step(current, action)
 
-            val expectedCalls = mutableListOf<Pair<String, Action>>()
-            for (t in chart.transitionsFrom(current)) {
+            // Every guard receives exactly the state and action passed to step.
+            val expectedCalls = mutableListOf<Triple<String, RandomState, Action>>()
+            for (t in chart.transitionsFrom(current.id)) {
                 if (!referenceMatches(t.on, action)) continue
                 val guard = t.guard ?: break
-                expectedCalls += guard to action
-                if (table.holds(guard, action)) break
+                expectedCalls += Triple(guard, current, action)
+                if (table.holds(guard, current, action)) break
             }
             assertEquals(expectedCalls, table.calls, "seed $seed: $current on $action gave $result")
         }
@@ -104,37 +122,41 @@ class StateChartRuntimePropertyTest {
     @Test
     fun randomWalksStayInsideReachableStatesAndAgreeWithTheReference() = RandomCharts.forEachChart { seed, random, chart ->
         val table = GuardTable(random)
-        val runtime = StateChartRuntime(chart, table.implementations())
+        val runtime = runtimeOf(chart, table)
         val reachable = chart.reachableStates()
         val actions = List(random.nextInt(0, 60)) { RandomCharts.actions.random(random) }
 
-        val actual = actions.runningFold(chart.initial) { state, action ->
+        // An ignored action counts as a failed attempt (up to maxAttempts); a transition resets it.
+        fun next(state: RandomState, target: StateId?): RandomState =
+            if (target == null) state.copy(attempts = minOf(state.attempts + 1, GuardTable.maxAttempts)) else RandomState(target)
+
+        val actual = actions.runningFold(RandomState(chart.initial)) { state, action ->
             when (val result = runtime.step(state, action)) {
                 is StepResult.Transitioned -> {
-                    assertEquals(state, result.transition.source, "seed $seed")
+                    assertEquals(state.id, result.transition.source, "seed $seed")
                     assertEquals(result.transition.target, result.target, "seed $seed")
-                    result.target
+                    next(state, result.target)
                 }
-                StepResult.Ignored -> state
+                StepResult.Ignored -> next(state, null)
             }
         }
-        val expected = actions.runningFold(chart.initial) { state, action ->
-            (referenceStep(chart, table, state, action) as? StepResult.Transitioned)?.transition?.target ?: state
+        val expected = actions.runningFold(RandomState(chart.initial)) { state, action ->
+            next(state, (referenceStep(chart, table, state, action) as? StepResult.Transitioned)?.transition?.target)
         }
         assertEquals(expected, actual, "seed $seed")
-        assertTrue(reachable.containsAll(actual), "seed $seed: the runtime left the reachable set")
+        assertTrue(reachable.containsAll(actual.map { it.id }), "seed $seed: the runtime left the reachable set")
     }
 
     @Test
     fun stepIsPureAndDoesNotDependOnHistory() = RandomCharts.forEachChart { seed, random, chart ->
         val table = GuardTable(random)
-        val runtime = StateChartRuntime(chart, table.implementations())
-        val probes = List(10) { chart.states.random(random).id to RandomCharts.actions.random(random) }
+        val runtime = runtimeOf(chart, table)
+        val probes = List(10) { randomState(random, chart.states.random(random).id) to RandomCharts.actions.random(random) }
         val first = probes.map { (s, a) -> runtime.step(s, a) }
         // Interleave unrelated steps, then ask again, also on a fresh runtime.
-        repeat(30) { runtime.step(RandomCharts.allIds.random(random), RandomCharts.actions.random(random)) }
+        repeat(30) { runtime.step(randomState(random, RandomCharts.allIds.random(random)), RandomCharts.actions.random(random)) }
         assertEquals(first, probes.map { (s, a) -> runtime.step(s, a) }, "seed $seed")
-        assertEquals(first, probes.map { (s, a) -> StateChartRuntime(chart, table.implementations()).step(s, a) }, "seed $seed")
+        assertEquals(first, probes.map { (s, a) -> runtimeOf(chart, table).step(s, a) }, "seed $seed")
     }
 
     @Test
@@ -142,12 +164,12 @@ class StateChartRuntimePropertyTest {
         val provided = RandomCharts.guards.filter { random.nextBoolean() }
         val used = chart.transitions.mapNotNull { it.guard }.distinct()
         val missing = used.filter { it !in provided }
-        val guards = (provided + "unused-${random.nextInt(5)}").associateWith { { _: Action -> true } }
+        val guards = (provided + "unused-${random.nextInt(5)}").associateWith { { _: RandomState, _: Action -> true } }
 
         if (missing.isEmpty()) {
-            StateChartRuntime(chart, guards)
+            StateChartRuntime(chart, stateIdOf, guards)
         } else {
-            val error = assertFailsWith<IllegalArgumentException>("seed $seed") { StateChartRuntime(chart, guards) }
+            val error = assertFailsWith<IllegalArgumentException>("seed $seed") { StateChartRuntime(chart, stateIdOf, guards) }
             assertEquals("[Koma] Missing guard implementations: ${missing.joinToString()}", error.message, "seed $seed")
         }
     }
@@ -182,18 +204,35 @@ class StateChartRuntimePropertyTest {
                 Transition(a, a, ActionMatcher.of<RandomAction.Pong>("Pong"), guard = "boom"),
             ),
         )
-        val runtime = StateChartRuntime(chart, mapOf("boom" to { _: Action -> throw IllegalStateException("boom") }))
+        val runtime = StateChartRuntime(chart, stateIdOf, mapOf("boom" to { _: RandomState, _: Action -> throw IllegalStateException("boom") }))
 
         // The unguarded Ping transition wins before the throwing guard is looked at.
-        assertEquals(StepResult.Transitioned(chart.transitions[0]), runtime.step(a, RandomAction.Ping))
+        assertEquals(StepResult.Transitioned(chart.transitions[0]), runtime.step(RandomState(a), RandomAction.Ping))
         // No transition leaves B, so no guard runs.
-        assertEquals(StepResult.Ignored, runtime.step(b, RandomAction.Pong))
-        assertFailsWith<IllegalStateException> { runtime.step(a, RandomAction.Pong) }
+        assertEquals(StepResult.Ignored, runtime.step(RandomState(b), RandomAction.Pong))
+        assertFailsWith<IllegalStateException> { runtime.step(RandomState(a), RandomAction.Pong) }
     }
 
     @Test
     fun runtimeExposesItsDefinition() {
         val chart = RandomCharts.chart(Random(42))
-        assertSame(chart, StateChartRuntime(chart, RandomCharts.guards.associateWith { { _: Action -> true } }).definition)
+        assertSame(chart, StateChartRuntime(chart, stateIdOf, RandomCharts.guards.associateWith { { _: RandomState, _: Action -> true } }).definition)
+    }
+
+    @Test
+    fun retryGuardReadsStateDataAndStopsAfterThreeAttempts() = RandomCharts.forEachChart { seed, random, chart ->
+        // Every guard becomes "attempts < 3"; every guarded transition then fires exactly while the
+        // counter in the state is below 3, whatever the action carries.
+        val runtime = StateChartRuntime(chart, stateIdOf, RandomCharts.guards.associateWith { { s: RandomState, _: Action -> s.attempts < 3 } })
+        repeat(10) {
+            val id = chart.states.random(random).id
+            val action = RandomCharts.actions.random(random)
+            val matching = chart.transitionsFrom(id).filter { referenceMatches(it.on, action) }
+            for (attempts in 0..5) {
+                val expected = matching.firstOrNull { it.guard == null || attempts < 3 }
+                val result = runtime.step(RandomState(id, attempts), action)
+                assertEquals(expected?.let { StepResult.Transitioned(it) } ?: StepResult.Ignored, result, "seed $seed: $id/$attempts on $action")
+            }
+        }
     }
 }
