@@ -11,4 +11,10 @@ interface StoreInternalApi<S : State, A : Action, E : Event> {
     suspend fun startAndAwait()
     suspend fun dispatchAndAwait(action: A)
     fun patch(patch: StorePatch<S, A, E>): Store<S, A, E>
+
+    /**
+     * Returns every registered action handler in first-match order, marking which ones match
+     * [state] and [action]. No handler runs.
+     */
+    fun matchActionHandlers(state: S, action: A): List<ActionHandlerMatch>
 }

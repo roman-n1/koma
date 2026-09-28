@@ -353,11 +353,12 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
             override val onError: suspend RecoverScope<S, E, S, Exception>.() -> Unit = this@StoreBuilder.onError
-            override val handlerRegistry: HandlerRegistry = HandlerRegistry(
+            override val handlerRegistry: HandlerRegistry<S, A> = HandlerRegistry(
                 enter = registeredEnterHandlers.map { it.matcher },
                 action = registeredActionHandlers.map { it.matcher },
                 exit = registeredExitHandlers.map { it.matcher },
                 recover = registeredErrorHandlers.map { it.matcher },
+                actionPredicates = registeredActionHandlers.map { it.predicate },
             )
         }
     }
