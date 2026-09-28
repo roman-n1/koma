@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.koma.publish)
 }
 
-group = "io.github.koma-kt"
+group = "io.github.roman-n1"
 version = libs.versions.koma.get()
 
 kotlin {

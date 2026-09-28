@@ -39,7 +39,12 @@ class StateChartModelPropertyTest {
         }
     }
 
-    private fun referenceIssues(chart: StateChartDefinition): List<ValidationIssue> {
+    private fun naiveMatches(matcher: ActionMatcher, action: Action): Boolean = when (val type = matcher.type) {
+        null -> action::class.simpleName == matcher.name
+        else -> type.isInstance(action)
+    }
+
+    private fun referenceIssues(chart: StateChartDefinition, samples: List<Action> = emptyList()): List<ValidationIssue> {
         val issues = mutableListOf<ValidationIssue>()
         val ids = chart.states.map { it.id }
         val distinctIds = mutableListOf<StateId>()
@@ -63,6 +68,16 @@ class StateChartModelPropertyTest {
         for ((source, on) in keys) {
             val group = chart.transitions.filter { it.guard == null && it.source == source && it.on == on }
             if (group.size > 1) issues += ValidationIssue.AmbiguousTransitions(source, on, group)
+        }
+        val sources = mutableListOf<StateId>()
+        for (t in chart.transitions) if (t.guard == null && t.source !in sources) sources += t.source
+        val distinctSamples = mutableListOf<Action>()
+        for (sample in samples) if (sample !in distinctSamples) distinctSamples += sample
+        for (source in sources) {
+            for (sample in distinctSamples) {
+                val group = chart.transitions.filter { it.guard == null && it.source == source && naiveMatches(it.on, sample) }
+                if (group.any { it.on != group.first().on }) issues += ValidationIssue.ShadowedTransitions(source, sample, group)
+            }
         }
         return issues
     }
@@ -94,6 +109,8 @@ class StateChartModelPropertyTest {
             is ValidationIssue.UnreachableState -> ValidationIssue.UnreachableState(f(issue.id))
             is ValidationIssue.AmbiguousTransitions ->
                 ValidationIssue.AmbiguousTransitions(f(issue.source), issue.on, issue.transitions.map { it.r() })
+            is ValidationIssue.ShadowedTransitions ->
+                ValidationIssue.ShadowedTransitions(f(issue.source), issue.sample, issue.transitions.map { it.r() })
         }
     }
 
@@ -148,6 +165,25 @@ class StateChartModelPropertyTest {
     }
 
     @Test
+    fun validateWithSampleActionsEqualsNaiveReference() = RandomCharts.forEachChart(valid = false) { seed, random, chart ->
+        val samples = RandomCharts.actions.shuffled(random).take(random.nextInt(RandomCharts.actions.size + 1))
+        // Duplicated samples must not duplicate issues.
+        val withDuplicates = samples + samples.take(2)
+        assertEquals(referenceIssues(chart, samples), chart.validate(withDuplicates), "seed $seed\n$chart\n$samples")
+    }
+
+    @Test
+    fun samplesOnlyAddShadowingIssues() = RandomCharts.forEachChart(valid = false) { seed, _, chart ->
+        val without = chart.validate()
+        val with = chart.validate(RandomCharts.actions)
+        assertTrue(without.none { it is ValidationIssue.ShadowedTransitions }, "seed $seed")
+        assertEquals(without, with.filterNot { it is ValidationIssue.ShadowedTransitions }, "seed $seed")
+        // Guarding every transition removes every shadowing issue.
+        val guarded = chart.copy(transitions = chart.transitions.map { it.copy(guard = it.guard ?: "g") })
+        assertTrue(guarded.validate(RandomCharts.actions).none { it is ValidationIssue.ShadowedTransitions }, "seed $seed")
+    }
+
+    @Test
     fun validateOnDeclaredChartsReportsOnlyReachabilityAndAmbiguity() = RandomCharts.forEachChart { seed, _, chart ->
         val issues = chart.validate()
         assertEquals(referenceIssues(chart), issues, "seed $seed")
@@ -176,6 +212,7 @@ class StateChartModelPropertyTest {
                         "seed $seed",
                     )
                 }
+                is ValidationIssue.ShadowedTransitions -> error("seed $seed: shadowing reported without samples")
                 is ValidationIssue.UnreachableState -> assertTrue(issue.id !in reachable, "seed $seed")
                 is ValidationIssue.DuplicateStateId -> assertTrue(chart.states.count { it.id == issue.id } > 1, "seed $seed")
                 is ValidationIssue.UnknownInitialState -> assertTrue(chart.states.none { it.id == issue.id }, "seed $seed")
@@ -201,12 +238,32 @@ class StateChartModelPropertyTest {
     }
 
     @Test
+    fun everyShadowingIsJustified() = RandomCharts.forEachChart(valid = false) { seed, _, chart ->
+        for (issue in chart.validate(RandomCharts.actions).filterIsInstance<ValidationIssue.ShadowedTransitions>()) {
+            val group = issue.transitions
+            assertTrue(group.size >= 2 && group.map { it.on }.distinct().size >= 2, "seed $seed: $issue")
+            assertTrue(group.all { it.source == issue.source && it.guard == null && naiveMatches(it.on, issue.sample) }, "seed $seed")
+            // Complete and in declaration order: the first one is what the runtime takes.
+            assertEquals(
+                chart.transitions.filter { it.source == issue.source && it.guard == null && naiveMatches(it.on, issue.sample) },
+                group,
+                "seed $seed",
+            )
+        }
+    }
+
+    @Test
     fun validateIsEquivariantUnderRenamingStates() = RandomCharts.forEachChart(valid = false) { seed, random, chart ->
         val ids = RandomCharts.allIds
         val permuted = ids.zip(ids.shuffled(random)).toMap()
         val f: (StateId) -> StateId = { permuted.getValue(it) }
         val renamed = rename(chart, f)
         assertEquals(chart.validate().map { renameIssue(it, f) }, renamed.validate(), "seed $seed")
+        assertEquals(
+            chart.validate(RandomCharts.actions).map { renameIssue(it, f) },
+            renamed.validate(RandomCharts.actions),
+            "seed $seed",
+        )
         assertEquals(chart.reachableStates().map(f), renamed.reachableStates().toList(), "seed $seed")
     }
 
@@ -376,24 +433,31 @@ class StateChartModelPropertyTest {
     }
 
     @Test
-    fun actionMatcherOfUsesSimpleNameAndType() {
-        assertEquals(ActionMatcher("Go", RandomAction.Go::class), ActionMatcher.of<RandomAction.Go>())
-        assertEquals(ActionMatcher("RandomAction", RandomAction::class), ActionMatcher.of<RandomAction>())
-        assertTrue(ActionMatcher("Go") != ActionMatcher.of<RandomAction.Go>())
+    fun actionMatcherOfUsesTheGivenNameAndType() {
+        assertEquals(ActionMatcher("Go", RandomAction.Go::class), ActionMatcher.of<RandomAction.Go>("Go"))
+        assertEquals(ActionMatcher("Any", RandomAction::class), ActionMatcher.of<RandomAction>("Any"))
+        assertTrue(ActionMatcher("Go") != ActionMatcher.of<RandomAction.Go>("Go"))
+        for (blank in listOf("", " ", "\t")) {
+            assertFailsWith<IllegalArgumentException> { ActionMatcher.of<RandomAction.Go>(blank) }
+        }
     }
 
-    private inline fun <reified A : Action> matcherFor(@Suppress("UNUSED_PARAMETER") action: A) = ActionMatcher.of<A>()
+    private inline fun <reified A : Action> matcherFor(@Suppress("UNUSED_PARAMETER") action: A, name: String) = ActionMatcher.of<A>(name)
 
     @Test
-    fun actionMatcherOfAnAnonymousTypeFailsWhereThePlatformHasNoSimpleName() {
+    fun actionMatcherOfWorksForTypesWithoutASimpleName() {
         val anonymous = object : Action {}
-        val name = anonymous::class.simpleName
-        val result = runCatching { matcherFor(anonymous) }
-        if (name == null) {
-            val error = assertFailsWith<IllegalArgumentException> { result.getOrThrow() }
-            assertEquals("[Koma] Action type must have a simple name", error.message)
-        } else {
-            assertEquals(name, result.getOrThrow().name)
+        val matcher = matcherFor(anonymous, "Anonymous")
+        assertEquals("Anonymous", matcher.name)
+        assertTrue(matcher.matches(anonymous))
+        assertTrue(!matcher.matches(RandomAction.Ping))
+    }
+
+    @Test
+    fun matchesEqualsNaiveDefinition() {
+        val samples: List<Action> = RandomCharts.actions + object : Action {}
+        for (matcher in RandomCharts.matchers) {
+            for (action in samples) assertEquals(naiveMatches(matcher, action), matcher.matches(action), "$matcher $action")
         }
     }
 
@@ -415,7 +479,9 @@ class StateChartModelPropertyTest {
         var aliased = 0
         var ambiguous = 0
         var deep = 0
+        var shadowed = 0
         RandomCharts.forEachChart { _, _, chart ->
+            if (chart.validate(RandomCharts.actions).any { it is ValidationIssue.ShadowedTransitions }) shadowed++
             if (chart.reachableStates().size >= 4) deep++
             if (chart.transitions.any { it.source == it.target }) selfLoops++
             if (chart.transitions.distinct().size < chart.transitions.size) duplicates++
@@ -423,7 +489,7 @@ class StateChartModelPropertyTest {
             if (idsInFirstUseOrder(chart).any(::needsAlias)) aliased++
             if (chart.validate().any { it is ValidationIssue.AmbiguousTransitions }) ambiguous++
         }
-        for ((name, count) in listOf("selfLoops" to selfLoops, "duplicates" to duplicates, "islands" to islands, "aliased" to aliased, "ambiguous" to ambiguous)) {
+        for ((name, count) in listOf("selfLoops" to selfLoops, "duplicates" to duplicates, "islands" to islands, "aliased" to aliased, "ambiguous" to ambiguous, "shadowed" to shadowed)) {
             assertTrue(count >= 20, "only $count charts with $name")
         }
         assertTrue(deep >= 100, "only $deep charts with 4+ reachable states")

@@ -34,10 +34,10 @@ class StateChartRuntimeTest {
         initial = idle,
         states = listOf(AtomicState(idle), AtomicState(loading), AtomicState(ready), AtomicState(error)),
         transitions = listOf(
-            Transition(idle, loading, ActionMatcher.of<FormAction.Submit>(), guard = "isValid"),
-            Transition(idle, error, ActionMatcher.of<FormAction.Submit>()),
-            Transition(loading, ready, ActionMatcher.of<FormAction.Loaded>()),
-            Transition(error, loading, ActionMatcher.of<FormAction.Retry>()),
+            Transition(idle, loading, ActionMatcher.of<FormAction.Submit>("Submit"), guard = "isValid"),
+            Transition(idle, error, ActionMatcher.of<FormAction.Submit>("Submit")),
+            Transition(loading, ready, ActionMatcher.of<FormAction.Loaded>("Loaded")),
+            Transition(error, loading, ActionMatcher.of<FormAction.Retry>("Retry")),
         ),
     )
 

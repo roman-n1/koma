@@ -177,9 +177,9 @@ class StateChartRuntimePropertyTest {
             initial = a,
             states = listOf(AtomicState(a), AtomicState(b)),
             transitions = listOf(
-                Transition(a, b, ActionMatcher.of<RandomAction.Ping>()),
-                Transition(a, b, ActionMatcher.of<RandomAction.Ping>(), guard = "boom"),
-                Transition(a, a, ActionMatcher.of<RandomAction.Pong>(), guard = "boom"),
+                Transition(a, b, ActionMatcher.of<RandomAction.Ping>("Ping")),
+                Transition(a, b, ActionMatcher.of<RandomAction.Ping>("Ping"), guard = "boom"),
+                Transition(a, a, ActionMatcher.of<RandomAction.Pong>("Pong"), guard = "boom"),
             ),
         )
         val runtime = StateChartRuntime(chart, mapOf("boom" to { _: Action -> throw IllegalStateException("boom") }))

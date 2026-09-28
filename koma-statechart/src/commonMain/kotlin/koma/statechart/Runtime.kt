@@ -61,13 +61,3 @@ class StateChartRuntime(
         return if (taken == null) StepResult.Ignored else StepResult.Transitioned(taken)
     }
 }
-
-/**
- * Whether [action] matches this matcher: by type when [ActionMatcher.type] is set, otherwise by
- * the action's simple class name.
- */
-@ExperimentalKomaApi
-fun ActionMatcher.matches(action: Action): Boolean {
-    val type = type
-    return if (type != null) type.isInstance(action) else action::class.simpleName == name
-}

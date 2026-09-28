@@ -43,7 +43,8 @@ data class AtomicState(override val id: StateId) : StateNode
 /**
  * Describes which action triggers a [Transition].
  *
- * @property name Stable display name used by tools such as the Mermaid exporter
+ * @property name Stable display name used by tools such as the Mermaid exporter. It is also how
+ * the matcher recognizes actions when [type] is null (see [matches]).
  * @property type The action type, when the matcher was created from one
  */
 @ExperimentalKomaApi
@@ -55,14 +56,29 @@ data class ActionMatcher(
         require(name.isNotBlank()) { "[Koma] ActionMatcher name must not be blank" }
     }
 
+    /**
+     * Whether [action] triggers transitions with this matcher: `type.isInstance(action)` when
+     * [type] is set, so a supertype matcher also matches its subtypes; otherwise the action's
+     * simple class name must equal [name].
+     *
+     * The runtime and [validate] both use this definition.
+     */
+    fun matches(action: Action): Boolean {
+        val type = type
+        return if (type != null) type.isInstance(action) else action::class.simpleName == name
+    }
+
     companion object {
         /**
-         * Creates a matcher for the action type [A], named after its simple class name.
+         * Creates a matcher for the action type [A] with the display name [name].
+         *
+         * The name is explicit rather than taken from the class name, because class names change
+         * under code shrinking and obfuscation (R8, ProGuard) and nested classes in different
+         * hierarchies can share a simple name. Matching uses the type, not the name.
+         *
+         * @param name Stable display name; must not be blank
          */
-        inline fun <reified A : Action> of(): ActionMatcher {
-            val name = requireNotNull(A::class.simpleName) { "[Koma] Action type must have a simple name" }
-            return ActionMatcher(name = name, type = A::class)
-        }
+        inline fun <reified A : Action> of(name: String): ActionMatcher = ActionMatcher(name = name, type = A::class)
     }
 }
 
