@@ -89,6 +89,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val onError: suspend RecoverScope<S, E, S, Exception>.() -> Unit
 
+    internal abstract val handlerRegistry: HandlerRegistry
+
     private val coroutineScope by lazy {
         isCoroutineScopeCreated = true
         CoroutineScope(
