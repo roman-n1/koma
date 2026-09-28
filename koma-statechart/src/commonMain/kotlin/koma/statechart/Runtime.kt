@@ -5,7 +5,7 @@ import koma.core.ExperimentalKomaApi
 import koma.core.State
 
 /**
- * Outcome of [StateChartRuntime.step].
+ * Outcome of [StateChartRuntime.step] and [StateChartRuntime.fire].
  */
 @ExperimentalKomaApi
 sealed interface StepResult {
@@ -22,12 +22,22 @@ sealed interface StepResult {
      * @property entered Nodes entered, outermost first. Only real states: a transition into a
      * [HistoryState] lists the states it restored, never the history state itself.
      * @property configuration The configuration after the step
+     * @property timersToStart The timers ([Trigger.After] transitions) of the [entered] states, in
+     * the order of [entered], each state's in declaration order: the caller starts each of them now
+     * and calls [StateChartRuntime.fire] when its delay has passed
+     * @property timersToCancel The timers of the [exited] states, in the order of [exited], each
+     * state's in declaration order: the caller cancels each of them, before starting
+     * [timersToStart]. A timer in both lists belongs to a state that was left and entered again,
+     * so it restarts. When the step was a timer firing, that timer is here too, since its source
+     * is always exited.
      */
     data class Transitioned(
         val transitions: List<Transition>,
         val exited: List<StateId>,
         val entered: List<StateId>,
         val configuration: StateConfiguration,
+        val timersToStart: List<Transition> = emptyList(),
+        val timersToCancel: List<Transition> = emptyList(),
     ) : StepResult {
         init {
             require(transitions.isNotEmpty()) { "[Koma] Transitioned needs at least one transition" }
@@ -36,7 +46,8 @@ sealed interface StepResult {
         /**
          * The result of taking [transition] in a flat chart (one without compound states):
          * [Transition.source] is exited, [Transition.target] is entered and becomes the only
-         * active node. It equals what [StateChartRuntime.step] returns for such a chart.
+         * active node. It equals what [StateChartRuntime.step] returns for such a chart when the
+         * chart has no timers; no timers are started or cancelled.
          */
         constructor(transition: Transition) : this(
             transitions = listOf(transition),
@@ -60,10 +71,28 @@ sealed interface StepResult {
 
     /**
      * No transition was taken, because none leaves the active nodes for this action or every
-     * matching transition's guard was false. The chart stays in the same configuration.
+     * matching transition's guard was false, or, for [StateChartRuntime.fire], because the timer's
+     * source is no longer active or its guard was false. The chart stays in the same
+     * configuration, and no timer is started or cancelled.
      */
     data object Ignored : StepResult
 }
+
+/**
+ * The action that guards of a timer receive when [timer] fires (see [StateChartRuntime.fire]).
+ *
+ * A guard has the signature `(state, action)`. A timer has no action, so the runtime passes this
+ * one: a guard used by timers can read the state as usual, and one shared with action transitions
+ * can tell the cases apart with `action is TimerFired`.
+ *
+ * It is not dispatched anywhere. Passed to [StateChartRuntime.step], it is an ordinary action that
+ * fires only transitions whose matcher matches it; timers fire only through
+ * [StateChartRuntime.fire].
+ *
+ * @property timer The timer that fired
+ */
+@ExperimentalKomaApi
+data class TimerFired(val timer: Transition) : Action
 
 /**
  * Runs a [StateChartDefinition] one action at a time over Koma states of type [S].
@@ -108,11 +137,20 @@ sealed interface StepResult {
  * lives in the configuration, so charts with history states need the `step` overload that takes
  * the configuration; `step(state, action)` starts from a configuration with nothing recorded.
  *
+ * Timers: a [Trigger.After] transition never fires for an action. It is a timer that starts when
+ * its source is entered and is cancelled when its source is exited; the runtime keeps no clock and
+ * only reports which timers to start and cancel: [initialTimers] for the initial configuration,
+ * then [StepResult.Transitioned.timersToStart] and [StepResult.Transitioned.timersToCancel] for
+ * each step. When a timer's delay has passed, the caller calls [fire], which takes the timer alone,
+ * with the same exit and entry rules as an action step, if its source is still active and its guard
+ * holds for [TimerFired]. Every transition is external, so a timer's source is exited when it
+ * fires, and a self-loop timer is cancelled and started again: it fires periodically.
+ *
  * @param definition The chart to run
  * @param stateIdOf Maps a state to its active leaf in [definition]
  * @param guards Guard implementations by label. A guard receives the current state and the action,
- * so it can read state data such as a retry counter. Every guard label used in [definition] must
- * be present.
+ * so it can read state data such as a retry counter; a guard of a timer receives [TimerFired]
+ * as the action (see [fire]). Every guard label used in [definition] must be present.
  * @throws IllegalArgumentException if a guard label used by a transition has no implementation, or
  * if the hierarchy is malformed: an unknown, atomic or history parent, a parent cycle, a compound
  * state without children or whose initial state is not its child, a history state as an initial
@@ -138,6 +176,20 @@ class StateChartRuntime<S : State>(
     fun initialConfiguration(): StateConfiguration = definition.initialConfiguration()
 
     /**
+     * Returns the timers to start with [initialConfiguration]: the [Trigger.After] transitions of
+     * its states, outermost first, each state's in declaration order.
+     */
+    fun initialTimers(): List<Transition> = activeTimers(initialConfiguration())
+
+    /**
+     * Returns the timers that run while the chart is in [configuration]: the [Trigger.After]
+     * transitions whose source is active, outermost first (ties in declaration order), each
+     * state's in declaration order. Use it to start timers for a configuration restored from
+     * storage; the delays then start over.
+     */
+    fun activeTimers(configuration: StateConfiguration): List<Transition> = definition.timersOf(definition.inEntryOrder(configuration.active))
+
+    /**
      * Returns the step taken from [configuration] for [action], or [StepResult.Ignored].
      *
      * [state] is only passed to guards. [configuration] must come from [initialConfiguration], an
@@ -145,11 +197,42 @@ class StateChartRuntime<S : State>(
      */
     fun step(configuration: StateConfiguration, state: S, action: Action): StepResult {
         val taken = definition.selectTransitions(configuration) { transition ->
-            transition.on.matches(action) && transition.guard.let { it == null || guards.getValue(it)(state, action) }
+            transition.on?.matches(action) == true && transition.guard.let { it == null || guards.getValue(it)(state, action) }
         }
         if (taken.isEmpty()) return StepResult.Ignored
+        return transitioned(configuration, taken)
+    }
+
+    /**
+     * Returns the step taken from [configuration] when [timer] fires, or [StepResult.Ignored].
+     *
+     * Call it when [timer] has run for its delay since it was started (see [initialTimers] and
+     * [StepResult.Transitioned.timersToStart]) and has not been cancelled. When the timer's source
+     * is not active in [configuration] (a stale timer the caller failed to cancel) or its guard is
+     * false for `(state, TimerFired(timer))`, nothing happens. Otherwise [timer] is taken alone,
+     * with the same exit, history and entry rules as [step]; no other transition fires with it,
+     * in any region.
+     *
+     * @throws IllegalArgumentException if [timer] is not a [Trigger.After] transition of [definition]
+     */
+    fun fire(configuration: StateConfiguration, state: S, timer: Transition): StepResult {
+        require(timer.isTimer) { "[Koma] Not a timer: $timer" }
+        require(timer in definition.transitions) { "[Koma] Timer is not declared in the chart: $timer" }
+        if (timer.source !in configuration.active) return StepResult.Ignored
+        if (timer.guard?.let { guards.getValue(it)(state, TimerFired(timer)) } == false) return StepResult.Ignored
+        return transitioned(configuration, listOf(timer))
+    }
+
+    private fun transitioned(configuration: StateConfiguration, taken: List<Transition>): StepResult.Transitioned {
         val microstep = definition.microstep(configuration, taken)
-        return StepResult.Transitioned(taken, microstep.exited, microstep.entered, microstep.configuration)
+        return StepResult.Transitioned(
+            transitions = taken,
+            exited = microstep.exited,
+            entered = microstep.entered,
+            configuration = microstep.configuration,
+            timersToStart = definition.timersOf(microstep.entered),
+            timersToCancel = definition.timersOf(microstep.exited),
+        )
     }
 
     /**

@@ -4,6 +4,7 @@ import koma.core.Action
 import koma.core.ExperimentalKomaApi
 import kotlin.jvm.JvmInline
 import kotlin.reflect.KClass
+import kotlin.time.Duration
 
 /**
  * Stable identifier of a state node in a [StateChartDefinition].
@@ -171,20 +172,82 @@ data class ActionMatcher(
 }
 
 /**
- * A transition from [source] to [target] when an action matching [on] arrives.
+ * What makes a [Transition] fire.
+ *
+ * More kinds of triggers may be added, so code that matches on this type should expect more cases.
+ */
+@ExperimentalKomaApi
+sealed interface Trigger {
+    /**
+     * The transition fires when an action matching [matcher] arrives (see [StateChartRuntime.step]).
+     */
+    data class OnAction(val matcher: ActionMatcher) : Trigger
+
+    /**
+     * The transition is a timer: it fires [delay] after its source is entered, unless the source
+     * is exited first (see [StateChartRuntime.fire]).
+     *
+     * The timer starts every time its source is entered and is cancelled every time the source is
+     * exited, so re-entering the source (for example through a self-loop) restarts it. The runtime
+     * only says which timers to start and cancel ([StepResult.Transitioned.timersToStart] and
+     * [StepResult.Transitioned.timersToCancel]); scheduling them is the caller's job.
+     *
+     * @property delay How long the source must stay active; should be positive (see [validate])
+     */
+    data class After(val delay: Duration) : Trigger
+}
+
+/**
+ * A transition from [source] to [target], fired by [trigger]: an action ([Trigger.OnAction]) or a
+ * timer ([Trigger.After]).
+ *
+ * `Transition(source, target, on = matcher, guard)` builds an action transition, as before timers
+ * existed; `Transition(source, target, Trigger.After(5.seconds))` builds a timer. Two transitions
+ * are equal when all their fields are, so two declarations with the same endpoints, trigger,
+ * guard and effect are indistinguishable (see [validate]).
  *
  * @property source The state the transition leaves
  * @property target The state the transition enters
- * @property on The action that triggers the transition
- * @property guard Optional label of the condition that must hold; the model only records the label
+ * @property trigger What fires the transition
+ * @property guard Optional label of the condition that must hold; the model only records the label.
+ * For a timer, the guard is asked when the timer fires, with [TimerFired] as the action.
+ * @property effect Optional label of what the transition does, such as updating data; the model
+ * only records the label, and the runtime ignores it
  */
 @ExperimentalKomaApi
 data class Transition(
     val source: StateId,
     val target: StateId,
-    val on: ActionMatcher,
+    val trigger: Trigger,
     val guard: String? = null,
-)
+    val effect: String? = null,
+) {
+    /**
+     * A transition fired by an action matching [on].
+     */
+    constructor(
+        source: StateId,
+        target: StateId,
+        on: ActionMatcher,
+        guard: String? = null,
+        effect: String? = null,
+    ) : this(source, target, Trigger.OnAction(on), guard, effect)
+
+    /**
+     * The matcher of an action transition, or `null` for a timer.
+     */
+    val on: ActionMatcher? get() = (trigger as? Trigger.OnAction)?.matcher
+
+    /**
+     * The delay of a timer, or `null` for an action transition.
+     */
+    val after: Duration? get() = (trigger as? Trigger.After)?.delay
+
+    /**
+     * Whether this transition is a timer ([Trigger.After]).
+     */
+    val isTimer: Boolean get() = trigger is Trigger.After
+}
 
 /**
  * Immutable description of a statechart: its states, its initial state and its transitions.
@@ -271,6 +334,9 @@ internal class HierarchyIndex(definition: StateChartDefinition) {
     val nodes: Map<StateId, StateNode> = buildMap { definition.states.forEach { if (it.id !in this) put(it.id, it) } }
     val children: Map<StateId?, List<StateNode>> = nodes.values.groupBy { it.parent }
     val transitionsBySource: Map<StateId, List<Transition>> = definition.transitions.groupBy { it.source }
+
+    /** Timers ([Trigger.After] transitions) by source, in declaration order. */
+    val timersBySource: Map<StateId, List<Transition>> = definition.transitions.filter { it.isTimer }.groupBy { it.source }
 
     /** Regions of each parallel state: its children that are not history states, in declaration order. */
     val regions: Map<StateId, List<StateId>> = nodes.values.filterIsInstance<ParallelState>().associate { p ->

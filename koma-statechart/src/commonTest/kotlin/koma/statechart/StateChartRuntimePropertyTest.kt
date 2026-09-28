@@ -37,7 +37,8 @@ class StateChartRuntimePropertyTest {
         RandomAction.Reset to "Reset",
     )
 
-    private fun referenceMatches(matcher: ActionMatcher, action: RandomAction): Boolean {
+    private fun referenceMatches(matcher: ActionMatcher?, action: RandomAction): Boolean {
+        if (matcher == null) return false
         val name = simpleNames[action] ?: "Go"
         return when (matcher.type) {
             null -> matcher.name == name

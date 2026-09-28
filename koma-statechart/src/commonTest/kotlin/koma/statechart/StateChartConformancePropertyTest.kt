@@ -89,7 +89,7 @@ class StateChartConformancePropertyTest {
     private val matcherNames = mapOf(RandomAction.Ping to "Ping", RandomAction.Pong to "Pong", RandomAction.Reset to "Reset")
 
     /** Hard-coded matcher semantics, independent of the library's `matches`. */
-    private fun referenceMatches(matcher: ActionMatcher, action: RandomAction): Boolean = when (matcher.type) {
+    private fun referenceMatches(matcher: ActionMatcher?, action: RandomAction): Boolean = if (matcher == null) false else when (matcher.type) {
         null -> matcher.name == (matcherNames[action] ?: "Go")
         RandomAction::class -> true
         RandomAction.Go::class -> action is RandomAction.Go

@@ -113,8 +113,8 @@ internal class HierarchyReference(val chart: StateChartDefinition) {
     companion object {
         private val simpleNames = mapOf(RandomAction.Ping to "Ping", RandomAction.Pong to "Pong", RandomAction.Reset to "Reset")
 
-        /** Hard-coded matcher semantics for [RandomCharts.matchers], independent of the library's `matches`. */
-        fun matches(matcher: ActionMatcher, action: RandomAction): Boolean = when (matcher.type) {
+        /** Hard-coded matcher semantics for [RandomCharts.matchers], independent of the library's `matches`; a timer (`null`) matches nothing. */
+        fun matches(matcher: ActionMatcher?, action: RandomAction): Boolean = if (matcher == null) false else when (matcher.type) {
             null -> matcher.name == (simpleNames[action] ?: "Go")
             RandomAction::class -> true
             RandomAction.Go::class -> action is RandomAction.Go
