@@ -67,11 +67,11 @@ class StateChartConformancePropertyTest {
 
     private fun nodeOf(id: StateId): Node = nodes[nodeIds.indexOf(id)]
 
-    private val guards: Map<String, (Action) -> Boolean> = mapOf(
-        "even" to { a -> a is RandomAction.Go && a.n % 2 == 0 },
-        "positive" to { a -> a is RandomAction.Go && a.n > 0 },
-        "never" to { _ -> false },
-        "always" to { _ -> true },
+    private val guards: Map<String, (Node, Action) -> Boolean> = mapOf(
+        "even" to { _, a -> a is RandomAction.Go && a.n % 2 == 0 },
+        "positive" to { _, a -> a is RandomAction.Go && a.n > 0 },
+        "never" to { _, _ -> false },
+        "always" to { _, _ -> true },
     )
 
     private val matcherNames = mapOf(RandomAction.Ping to "Ping", RandomAction.Pong to "Pong", RandomAction.Reset to "Reset")
@@ -123,7 +123,7 @@ class StateChartConformancePropertyTest {
         dispatcher: CoroutineDispatcher,
         mutation: Mutation? = null,
     ): Store<Node, RandomAction, NoEvent> {
-        val runtime = StateChartRuntime(chart, guards)
+        val runtime = StateChartRuntime(chart, ::defaultStateId, guards)
         var dispatchIndex = 0
         return Store(initialState = nodeOf(chart.initial)) {
             coroutineContext(dispatcher)
@@ -132,7 +132,7 @@ class StateChartConformancePropertyTest {
                 action<RandomAction> {
                     val from = defaultStateId(state)
                     val index = dispatchIndex++
-                    val stepped = (runtime.step(from, action) as? StepResult.Transitioned)?.target ?: from
+                    val stepped = (runtime.step(state, action) as? StepResult.Transitioned)?.target ?: from
                     val to = if (mutation?.index == index) mutation.target else stepped
                     val current = state
                     val dispatched = action
@@ -146,12 +146,12 @@ class StateChartConformancePropertyTest {
     }
 
     private fun walk(random: Random, chart: StateChartDefinition): List<RandomAction> {
-        val runtime = StateChartRuntime(chart, guards)
+        val runtime = StateChartRuntime(chart, ::defaultStateId, guards)
         var current = chart.initial
         return List(random.nextInt(0, 41)) {
-            val moving = RandomCharts.actions.filter { (runtime.step(current, it) as? StepResult.Transitioned)?.target.let { t -> t != null && t != current } }
+            val moving = RandomCharts.actions.filter { (runtime.step(nodeOf(current), it) as? StepResult.Transitioned)?.target.let { t -> t != null && t != current } }
             val action = if (moving.isNotEmpty() && random.nextInt(4) != 0) moving.random(random) else RandomCharts.actions.random(random)
-            current = (runtime.step(current, action) as? StepResult.Transitioned)?.target ?: current
+            current = (runtime.step(nodeOf(current), action) as? StepResult.Transitioned)?.target ?: current
             action
         }
     }
@@ -163,7 +163,7 @@ class StateChartConformancePropertyTest {
         val taken = mutableListOf<Transition>()
         actions.forEachIndexed { index, action ->
             val transition = chart.transitions.firstOrNull { t ->
-                t.source == current && referenceMatches(t.on, action) && (t.guard == null || guards.getValue(t.guard)(action))
+                t.source == current && referenceMatches(t.on, action) && (t.guard == null || guards.getValue(t.guard)(nodeOf(current), action))
             }
             val to = if (mutation?.index == index) mutation.target else transition?.target ?: current
             if (mutation?.index != index && transition != null && to != current) taken += transition
@@ -324,9 +324,9 @@ class StateChartConformancePropertyTest {
     private val n2 = StateId("N2")
     private val n3 = StateId("N3")
     private val n7 = StateId("N7")
-    private val ping = ActionMatcher.of<RandomAction.Ping>()
-    private val pong = ActionMatcher.of<RandomAction.Pong>()
-    private val go = ActionMatcher.of<RandomAction.Go>()
+    private val ping = ActionMatcher.of<RandomAction.Ping>("Ping")
+    private val pong = ActionMatcher.of<RandomAction.Pong>("Pong")
+    private val go = ActionMatcher.of<RandomAction.Go>("Go")
     private val reset = ActionMatcher("Reset")
     private val auto = ActionMatcher("Auto")
 

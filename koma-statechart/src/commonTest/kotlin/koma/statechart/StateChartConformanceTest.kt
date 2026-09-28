@@ -56,10 +56,10 @@ class StateChartConformanceTest {
         initial = idle,
         states = listOf(AtomicState(idle), AtomicState(loading), AtomicState(ready), AtomicState(error)),
         transitions = listOf(
-            Transition(idle, loading, ActionMatcher.of<FormAction.Submit>()),
-            Transition(loading, ready, ActionMatcher.of<FormAction.Loaded>()),
-            Transition(loading, error, ActionMatcher.of<FormAction.Failed>()),
-            Transition(error, loading, ActionMatcher.of<FormAction.Retry>()),
+            Transition(idle, loading, ActionMatcher.of<FormAction.Submit>("Submit")),
+            Transition(loading, ready, ActionMatcher.of<FormAction.Loaded>("Loaded")),
+            Transition(loading, error, ActionMatcher.of<FormAction.Failed>("Failed")),
+            Transition(error, loading, ActionMatcher.of<FormAction.Retry>("Retry")),
         ),
     )
 
