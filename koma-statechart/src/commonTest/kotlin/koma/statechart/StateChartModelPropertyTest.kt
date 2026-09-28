@@ -111,6 +111,11 @@ class StateChartModelPropertyTest {
                 ValidationIssue.AmbiguousTransitions(f(issue.source), issue.on, issue.transitions.map { it.r() })
             is ValidationIssue.ShadowedTransitions ->
                 ValidationIssue.ShadowedTransitions(f(issue.source), issue.sample, issue.transitions.map { it.r() })
+            is ValidationIssue.UnknownParent -> ValidationIssue.UnknownParent(f(issue.id), f(issue.parent))
+            is ValidationIssue.AtomicParent -> ValidationIssue.AtomicParent(f(issue.id), f(issue.parent))
+            is ValidationIssue.ParentCycle -> ValidationIssue.ParentCycle(issue.states.map(f))
+            is ValidationIssue.InitialNotChild -> ValidationIssue.InitialNotChild(f(issue.id), f(issue.initial))
+            is ValidationIssue.EmptyCompoundState -> ValidationIssue.EmptyCompoundState(f(issue.id))
         }
     }
 
@@ -218,6 +223,12 @@ class StateChartModelPropertyTest {
                 is ValidationIssue.UnknownInitialState -> assertTrue(chart.states.none { it.id == issue.id }, "seed $seed")
                 is ValidationIssue.UnknownTransitionSource -> assertTrue(chart.states.none { it.id == issue.transition.source }, "seed $seed")
                 is ValidationIssue.UnknownTransitionTarget -> assertTrue(chart.states.none { it.id == issue.transition.target }, "seed $seed")
+                is ValidationIssue.UnknownParent,
+                is ValidationIssue.AtomicParent,
+                is ValidationIssue.ParentCycle,
+                is ValidationIssue.InitialNotChild,
+                is ValidationIssue.EmptyCompoundState,
+                -> error("seed $seed: hierarchy issue in a flat chart: $issue")
             }
         }
         // Endpoint issues are per declared transition, so a duplicated transition is reported once

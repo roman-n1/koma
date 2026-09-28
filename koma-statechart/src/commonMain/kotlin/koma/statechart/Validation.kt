@@ -29,7 +29,40 @@ sealed interface ValidationIssue {
     data class UnknownTransitionTarget(val transition: Transition) : ValidationIssue
 
     /**
-     * State [id] cannot be reached from the initial state.
+     * State [id] declares [parent] as its parent, but no state [parent] is declared.
+     */
+    data class UnknownParent(val id: StateId, val parent: StateId) : ValidationIssue
+
+    /**
+     * State [id] declares [parent] as its parent, but [parent] is an [AtomicState], which cannot
+     * have children.
+     */
+    data class AtomicParent(val id: StateId, val parent: StateId) : ValidationIssue
+
+    /**
+     * Following parents from [states] leads back to where it started, so these states are not
+     * inside any top-level state.
+     *
+     * Each cycle is reported once; cycles come in the declaration order of their first state.
+     *
+     * @property states The states of the cycle, starting with the first declared one, each
+     * followed by its parent
+     */
+    data class ParentCycle(val states: List<StateId>) : ValidationIssue
+
+    /**
+     * The initial state [initial] of compound state [id] is not one of its children (it may also
+     * be undeclared).
+     */
+    data class InitialNotChild(val id: StateId, val initial: StateId) : ValidationIssue
+
+    /**
+     * Compound state [id] has no children.
+     */
+    data class EmptyCompoundState(val id: StateId) : ValidationIssue
+
+    /**
+     * State [id] never becomes active, starting from the initial configuration.
      */
     data class UnreachableState(val id: StateId) : ValidationIssue
 
@@ -64,8 +97,14 @@ sealed interface ValidationIssue {
 /**
  * Checks the structure of this definition and returns every issue found, or an empty list.
  *
- * Issues are reported in a stable order: duplicates, initial state, transition endpoints,
- * reachability, ambiguity, shadowing.
+ * Issues are reported in a stable order: duplicates, initial state, hierarchy (unknown or atomic
+ * parents by state, parent cycles, compound initial states, empty compound states), transition
+ * endpoints, reachability, ambiguity, shadowing.
+ *
+ * Hierarchy issues use the first declaration of a duplicated id. A state is reachable when it can
+ * become active: the initial configuration and every configuration reached by taking any
+ * transition whose source is active, guards and transition priority ignored (see
+ * [reachableStates]).
  *
  * Transitions with equal matchers are always checked ([ValidationIssue.AmbiguousTransitions]).
  * Overlap between different matchers, such as a matcher for a sealed parent type and one for its
@@ -92,6 +131,8 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
     if (initial !in declared) {
         issues += ValidationIssue.UnknownInitialState(initial)
     }
+
+    issues += hierarchyIssues()
 
     for (transition in transitions) {
         if (transition.source !in declared) issues += ValidationIssue.UnknownTransitionSource(transition)
@@ -130,18 +171,52 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
 }
 
 /**
- * Returns the states reachable from [StateChartDefinition.initial] by following transitions,
- * including the initial state itself. Guards are ignored.
+ * Problems that leave the tree of states undefined, in the order [validate] reports them.
  */
-@ExperimentalKomaApi
-fun StateChartDefinition.reachableStates(): Set<StateId> {
-    val reachable = linkedSetOf(initial)
-    val queue = ArrayDeque(listOf(initial))
-    while (queue.isNotEmpty()) {
-        val current = queue.removeFirst()
-        for (transition in transitionsFrom(current)) {
-            if (reachable.add(transition.target)) queue.addLast(transition.target)
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
+    val issues = mutableListOf<ValidationIssue>()
+    for (node in hierarchy.nodes.values) {
+        val parent = node.parent ?: continue
+        when (node(parent)) {
+            null -> issues += ValidationIssue.UnknownParent(node.id, parent)
+            is AtomicState -> issues += ValidationIssue.AtomicParent(node.id, parent)
+            is CompoundState -> Unit
         }
     }
-    return reachable
+    val cycles = mutableListOf<List<StateId>>()
+    for (start in hierarchy.nodes.keys) {
+        val walk = mutableListOf<StateId>()
+        var current: StateId? = start
+        while (current != null && current !in walk && node(current) != null) {
+            walk += current
+            current = hierarchy.nodes.getValue(current).parent
+        }
+        if (current == null || current !in walk) continue
+        val cycle = walk.drop(walk.indexOf(current))
+        val first = cycle.minBy { declarationOrder(it) }
+        val rotated = cycle.drop(cycle.indexOf(first)) + cycle.take(cycle.indexOf(first))
+        if (rotated !in cycles) cycles += rotated
+    }
+    cycles.sortedBy { declarationOrder(it.first()) }.forEach { issues += ValidationIssue.ParentCycle(it) }
+    for (node in hierarchy.nodes.values) {
+        if (node !is CompoundState) continue
+        if (node(node.initial)?.parent != node.id) issues += ValidationIssue.InitialNotChild(node.id, node.initial)
+    }
+    for (node in hierarchy.nodes.values) {
+        if (node is CompoundState && childrenOf(node.id).isEmpty()) issues += ValidationIssue.EmptyCompoundState(node.id)
+    }
+    return issues
 }
+
+/**
+ * Returns the states that can become active, starting from the initial configuration (see
+ * [StateChartRuntime.initialConfiguration]) and taking, in every configuration reached, any
+ * transition whose source is active. Guards and transition priority are ignored, and entering a
+ * state makes its ancestors active too. For a flat chart these are the states reachable from
+ * [StateChartDefinition.initial] by following transitions, including the initial state itself.
+ *
+ * States come in breadth-first order of the configurations that first make them active.
+ */
+@ExperimentalKomaApi
+fun StateChartDefinition.reachableStates(): Set<StateId> = configurationGraph().firstReaching.keys

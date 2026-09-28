@@ -19,18 +19,26 @@ private fun isPlainMermaidId(value: String): Boolean =
 /**
  * Renders this definition as a Mermaid `stateDiagram-v2`.
  *
- * States are listed in declaration order, then transitions in declaration order. A transition is
- * labelled with its action name and, when present, its guard in brackets, for example
- * `Idle --> Loading : Submit [isValid]`. State ids that are not plain identifiers, or that are
- * Mermaid keywords, are declared with an alias, so any [StateId] renders safely. Aliases never
- * collide with a plain id used by the chart, and ids that only appear as the initial state or a
- * transition endpoint are declared too.
+ * A flat chart lists aliased states, then `[*] --> initial`, then transitions, all in declaration
+ * order. A compound state becomes a nested block, `state Parent { ... }`, that starts with
+ * `[*] --> initialChild` and declares every child in declaration order (an atomic child with a
+ * plain id as a bare line), so each state is drawn inside its parent. Each transition is written in the innermost block that contains both its
+ * source and its target, after the nested blocks. A transition is labelled with its action name
+ * and, when present, its guard in brackets, for example `Idle --> Loading : Submit [isValid]`.
+ *
+ * State ids that are not plain identifiers, or that are Mermaid keywords, are declared with an
+ * alias (`state "Signed in" as koma_state_0`, or `state "Signed in" as koma_state_0 { ... }` for a
+ * compound state), so any [StateId] renders safely. Aliases never collide with a plain id used by
+ * the chart, and ids that only appear as an initial state or a transition endpoint are declared
+ * too, at the top level. A state whose parent is not a declared compound state, or that sits on a
+ * parent cycle, is drawn at the top level (see [validate]).
  *
  * The output is built from the model only; nothing runs and no reflection is used.
  */
 @ExperimentalKomaApi
 fun StateChartDefinition.toMermaid(): String = buildString {
-    val ids = (states.map { it.id } + initial + transitions.flatMap { listOf(it.source, it.target) }).distinct()
+    val compoundInitials = hierarchy.nodes.values.filterIsInstance<CompoundState>().map { it.initial }
+    val ids = (states.map { it.id } + initial + compoundInitials + transitions.flatMap { listOf(it.source, it.target) }).distinct()
     val taken = ids.map { it.value }.filterTo(mutableSetOf(), ::isPlainMermaidId)
     var nextAlias = 0
     val refs = ids.associateWith { id ->
@@ -40,18 +48,74 @@ fun StateChartDefinition.toMermaid(): String = buildString {
             generateSequence { "koma_state_${nextAlias++}" }.first { it !in taken }.also { taken += it }
         }
     }
+    val containers = mermaidContainers()
+    fun containerOf(id: StateId): StateId? = containers[id]
+    fun containerChain(id: StateId): List<StateId?> = generateSequence(containerOf(id)) { containerOf(it) }.toList() + null
+    fun declaration(id: StateId): String {
+        val ref = refs.getValue(id)
+        return if (ref == id.value) ref else "state \"${id.value.replace("\"", "'")}\" as $ref"
+    }
+    val transitionsByBlock = transitions.groupBy { transition ->
+        val targetChain = containerChain(transition.target)
+        containerChain(transition.source).first { it in targetChain }
+    }
+
+    fun appendTransitions(block: StateId?, indent: String) {
+        for (transition in transitionsByBlock[block].orEmpty()) {
+            append("$indent${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : ${transition.on.name}")
+            transition.guard?.let { append(" [$it]") }
+            appendLine()
+        }
+    }
+
+    fun appendCompound(node: CompoundState, indent: String) {
+        val ref = refs.getValue(node.id)
+        appendLine("$indent${if (ref == node.id.value) "state $ref" else declaration(node.id)} {")
+        val inner = "$indent    "
+        appendLine("$inner[*] --> ${refs.getValue(node.initial)}")
+        for (child in hierarchy.nodes.values) {
+            if (containerOf(child.id) != node.id) continue
+            if (child is CompoundState) appendCompound(child, inner) else appendLine("$inner${declaration(child.id)}")
+        }
+        appendTransitions(node.id, inner)
+        appendLine("$indent}")
+    }
 
     appendLine("stateDiagram-v2")
     for (id in ids) {
-        val ref = refs.getValue(id)
-        if (ref != id.value) {
-            appendLine("    state \"${id.value.replace("\"", "'")}\" as $ref")
+        if (containerOf(id) == null && hierarchy.nodes[id] !is CompoundState && refs.getValue(id) != id.value) {
+            appendLine("    ${declaration(id)}")
         }
     }
     appendLine("    [*] --> ${refs.getValue(initial)}")
-    for (transition in transitions) {
-        append("    ${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : ${transition.on.name}")
-        transition.guard?.let { append(" [$it]") }
-        appendLine()
+    for (node in hierarchy.nodes.values) {
+        if (node is CompoundState && containerOf(node.id) == null) appendCompound(node, "    ")
     }
+    appendTransitions(null, "    ")
 }.trimEnd()
+
+/**
+ * The block each declared state is drawn in: its parent when that is a declared compound state
+ * drawn itself, otherwise the top level (`null`, absent from the map). States left over by a
+ * parent cycle are drawn from the top, starting with the first declared one.
+ */
+@OptIn(ExperimentalKomaApi::class)
+private fun StateChartDefinition.mermaidContainers(): Map<StateId, StateId> {
+    val placed = mutableSetOf<StateId>()
+    val containers = mutableMapOf<StateId, StateId>()
+    fun place(node: StateNode, container: StateId?) {
+        placed += node.id
+        if (container != null) containers[node.id] = container
+        if (node is CompoundState) {
+            for (child in childrenOf(node.id)) if (child.id !in placed) place(child, node.id)
+        }
+    }
+    for (node in hierarchy.nodes.values) {
+        val parent = node.parent
+        if (node.id !in placed && (parent == null || node(parent) !is CompoundState)) place(node, null)
+    }
+    for (node in hierarchy.nodes.values) {
+        if (node.id !in placed) place(node, null)
+    }
+    return containers
+}
