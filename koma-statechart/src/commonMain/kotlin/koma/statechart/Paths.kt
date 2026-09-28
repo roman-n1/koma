@@ -73,7 +73,7 @@ private fun requireConnected(start: StateId, transitions: List<Transition>): Lis
  */
 @ExperimentalKomaApi
 fun StateChartDefinition.shortestPathTo(target: StateId): StateChartPath? {
-    val graph = configurationGraph()
+    val graph = configurationGraph
     return graph.firstReaching[target]?.let { StateChartPath(graph.start, it.transitions, it.leaves) }
 }
 
@@ -90,7 +90,7 @@ fun StateChartDefinition.shortestPathTo(target: StateId): StateChartPath? {
  */
 @ExperimentalKomaApi
 fun StateChartDefinition.transitionCoveragePaths(): List<StateChartPath> {
-    val graph = configurationGraph()
+    val graph = configurationGraph
     val candidates = transitions.mapNotNull { transition ->
         graph.firstReaching[transition.source]?.let { prefix ->
             val step = microstep(prefix.configuration, listOf(transition))
@@ -130,7 +130,7 @@ internal class ConfigurationGraph(
  * transition whose source is active is followed, in declaration order.
  */
 @OptIn(ExperimentalKomaApi::class)
-internal fun StateChartDefinition.configurationGraph(): ConfigurationGraph {
+internal fun StateChartDefinition.buildConfigurationGraph(): ConfigurationGraph {
     val initialConfiguration = initialConfiguration()
     val start = activeLeaves(initialConfiguration).firstOrNull() ?: initial
     val first = ReachedConfiguration(initialConfiguration, emptyList(), emptyList())

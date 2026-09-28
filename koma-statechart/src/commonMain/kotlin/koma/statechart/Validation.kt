@@ -219,4 +219,4 @@ internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
  * States come in breadth-first order of the configurations that first make them active.
  */
 @ExperimentalKomaApi
-fun StateChartDefinition.reachableStates(): Set<StateId> = configurationGraph().firstReaching.keys
+fun StateChartDefinition.reachableStates(): Set<StateId> = configurationGraph.firstReaching.keys

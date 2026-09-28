@@ -149,6 +149,9 @@ data class StateChartDefinition(
 ) {
     internal val hierarchy: HierarchyIndex by lazy { HierarchyIndex(this) }
 
+    /** The configuration search behind paths and reachability; computed once per definition. */
+    internal val configurationGraph: ConfigurationGraph by lazy { buildConfigurationGraph() }
+
     /**
      * Returns the transitions that leave [source], in declaration order.
      */
