@@ -47,10 +47,18 @@ sealed interface ConformanceViolation {
  * and does not change how the Store behaves. Register it in tests, or in debug builds, with
  * `plugin(conformance)` or `koma-test`'s `patch { plugin(conformance) }`.
  *
- * Each committed state is mapped to a [StateId] with [stateIdOf]. The mapping is explicit because
- * class names are not stable under code shrinking; a `when` over a sealed state hierarchy is the
- * usual choice. A change that keeps the same [StateId] (for example a data update inside one
+ * Each committed state is mapped to its active leaf with [stateIdOf]. The mapping is explicit
+ * because class names are not stable under code shrinking; a `when` over a sealed state hierarchy
+ * is the usual choice. A change that keeps the same [StateId] (for example a data update inside one
  * variant) is not a transition.
+ *
+ * Transitions from a leaf: in a hierarchical chart a transition may leave the leaf or any of its
+ * ancestors, and they are considered in the runtime's priority order: the leaf's own in
+ * declaration order, then its parent's, outwards (see [StateChartRuntime]). A transition leads
+ * from leaf `from` to leaf `to` when, taken from the configuration of `from` (see
+ * [StateChartDefinition.configurationOf]), it enters `to`; so a transition into a compound state
+ * matches a change to any leaf it enters. In a flat chart this is simply a transition from `from`
+ * to `to`.
  *
  * Start: the Store may start in any declared state, not only [StateChartDefinition.initial],
  * because a [koma.core.StateSaver] or `patch { initialState(...) }` may provide the first state.
@@ -59,17 +67,19 @@ sealed interface ConformanceViolation {
  * Attribution: plugin hooks do not say which action caused a state change. A change is attributed
  * to the most recent action that has not been used for an earlier change (its *trigger*):
  * - no transition from the old to the new state: [ConformanceViolation.UndeclaredTransition];
- * - a declared transition between them matches the trigger: the first such one is covered;
+ * - a declared transition between them matches the trigger: the first such one, in priority
+ *   order, is covered;
  * - transitions between them exist but none matches the trigger:
  *   [ConformanceViolation.UnexpectedTrigger], and nothing is covered;
  * - there is no trigger, because no action has arrived yet (`enter {}` at startup) or the last
  *   action already caused a change (a chained `enter {}` after it): the change is automatic and
- *   the first declared transition between the states is covered, whatever its matcher.
+ *   the first transition between the states, in priority order, is covered, whatever its matcher.
  *
  * Self-transitions: Koma does not notify plugins when a handler keeps the state, so a self-loop
- * is credited by action. When an action arrives, if the first transition (in declaration order,
+ * is credited by action. When an action arrives, if the first transition (in priority order,
  * guards ignored) that leaves the current state and matches it is a self-loop, that self-loop is
- * held as pending. If a change of [StateId] is committed before the next action, the pending
+ * held as pending. In a hierarchical chart, a self-loop is a transition that ends in the same
+ * leaf, for example one from a compound ancestor to itself whose initial leaf is the current one. If a change of [StateId] is committed before the next action, the pending
  * self-loop is dropped and the change is attributed as above. Otherwise it is covered: it is
  * committed when the next action arrives, and [coveredTransitions] and [uncoveredTransitions]
  * already count it.
@@ -114,7 +124,7 @@ class StateChartConformance<S : State, A : Action, E : Event>(
         lastAction = action
         trigger = action
         val current = stateIdOf(state)
-        pendingSelfLoop = definition.transitionsFrom(current).firstOrNull { it.on.matches(action) }?.takeIf { it.target == current }
+        pendingSelfLoop = definition.candidatesFor(current).firstOrNull { it.on.matches(action) }?.takeIf { leafAfter(current, it) == current }
     }
 
     override suspend fun onState(scope: PluginScope<S, A>, prevState: S, state: S) {
@@ -124,7 +134,7 @@ class StateChartConformance<S : State, A : Action, E : Event>(
         pendingSelfLoop = null
         checkDeclared(to)
 
-        val candidates = definition.transitionsFrom(from).filter { it.target == to }
+        val candidates = definition.candidatesFor(from).filter { to in enteredBy(from, it) }.toList()
         val action = trigger
         trigger = null
         val taken = if (action == null) candidates.firstOrNull() else candidates.firstOrNull { it.on.matches(action) }
@@ -134,6 +144,12 @@ class StateChartConformance<S : State, A : Action, E : Event>(
             action != null -> recordedViolations += ConformanceViolation.UnexpectedTrigger(from = from, to = to, action = action)
         }
     }
+
+    private fun enteredBy(leaf: StateId, transition: Transition): List<StateId> =
+        definition.microstep(definition.configurationOf(leaf), listOf(transition)).entered
+
+    private fun leafAfter(leaf: StateId, transition: Transition): StateId =
+        definition.microstep(definition.configurationOf(leaf), listOf(transition)).leaf(definition)
 
     private fun checkDeclared(id: StateId) {
         if (id !in declaredStates) recordedViolations += ConformanceViolation.UndeclaredState(id)
