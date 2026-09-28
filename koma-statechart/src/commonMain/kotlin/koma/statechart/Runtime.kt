@@ -19,7 +19,8 @@ sealed interface StepResult {
      * @property transitions The transitions taken, in selection order; never empty. Without
      * parallel states it is exactly one transition.
      * @property exited Nodes left, innermost first
-     * @property entered Nodes entered, outermost first
+     * @property entered Nodes entered, outermost first. Only real states: a transition into a
+     * [HistoryState] lists the states it restored, never the history state itself.
      * @property configuration The configuration after the step
      */
     data class Transitioned(
@@ -51,7 +52,8 @@ sealed interface StepResult {
 
         /**
          * The target of [transition]. In a flat chart this is the state the chart is in after the
-         * step. When it is a compound state, the new active leaf is the last node of [entered].
+         * step. When it is a compound or history state, the new active leaf is the last node of
+         * [entered].
          */
         val target: StateId get() = transition.target
     }
@@ -88,14 +90,22 @@ sealed interface StepResult {
  * while the entered node is compound, its initial child, outermost first. A self-loop therefore
  * exits and re-enters its source.
  *
+ * History: right before a compound state with [HistoryState] children is exited, each of them
+ * records its active child (shallow) or active atomic descendants (deep) in
+ * [StateConfiguration.history]. A transition into a history state enters what it recorded, or its
+ * default, or its parent's initial child, and never enters the history state itself. The history
+ * lives in the configuration, so charts with history states need the `step` overload that takes
+ * the configuration; `step(state, action)` starts from a configuration with nothing recorded.
+ *
  * @param definition The chart to run
  * @param stateIdOf Maps a state to its active leaf in [definition]
  * @param guards Guard implementations by label. A guard receives the current state and the action,
  * so it can read state data such as a retry counter. Every guard label used in [definition] must
  * be present.
  * @throws IllegalArgumentException if a guard label used by a transition has no implementation, or
- * if the hierarchy is malformed: an unknown or atomic parent, a parent cycle, or a compound state
- * without children or whose initial state is not its child (see [validate])
+ * if the hierarchy is malformed: an unknown, atomic or history parent, a parent cycle, a compound
+ * state without children or whose initial state is not its child, a history state as an initial
+ * state, or an invalid history default (see [validate])
  */
 @ExperimentalKomaApi
 class StateChartRuntime<S : State>(
@@ -106,7 +116,7 @@ class StateChartRuntime<S : State>(
     init {
         val missing = definition.transitions.mapNotNull { it.guard }.distinct().filter { it !in guards }
         require(missing.isEmpty()) { "[Koma] Missing guard implementations: ${missing.joinToString()}" }
-        val malformed = definition.hierarchyIssues()
+        val malformed = definition.hierarchyIssues() + definition.historyIssues()
         require(malformed.isEmpty()) { "[Koma] Malformed state hierarchy: ${malformed.joinToString()}" }
     }
 
@@ -134,6 +144,9 @@ class StateChartRuntime<S : State>(
     /**
      * Returns the step taken from the configuration whose active leaf is `stateIdOf(state)` (see
      * [StateChartDefinition.configurationOf]) for [action], or [StepResult.Ignored].
+     *
+     * That configuration remembers no history, so a transition into a [HistoryState] enters its
+     * default; keep the configuration and use the other overload to restore history.
      */
     fun step(state: S, action: Action): StepResult = step(definition.configurationOf(stateIdOf(state)), state, action)
 }

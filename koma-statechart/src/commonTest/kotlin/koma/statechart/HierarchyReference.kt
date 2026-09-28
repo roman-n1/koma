@@ -124,3 +124,89 @@ internal class HierarchyReference(val chart: StateChartDefinition) {
         }
     }
 }
+
+/** A configuration of [HistoryReference]: active nodes and what each history state remembers. */
+@OptIn(ExperimentalKomaApi::class)
+internal data class HistoryConfiguration(val active: Set<StateId>, val history: Map<StateId, Set<StateId>> = emptyMap())
+
+/** One transition fired by [HistoryReference]. */
+@OptIn(ExperimentalKomaApi::class)
+internal class HistoryFired(val transition: Transition, val exited: List<StateId>, val entered: List<StateId>, val after: HistoryConfiguration)
+
+/**
+ * [HierarchyReference] extended with history states, again restated naively from the design note:
+ * before a node is exited, every history state whose parent it is remembers the node's active
+ * children (shallow) or its active descendants without active children (deep); a transition into a
+ * history state enters, below the LCCA, the history's ancestors and then, for each remembered node
+ * (or else its default, or else its parent's initial child), the chain from the parent down to it
+ * and its initial descendants. Only meant for well-formed charts.
+ */
+@OptIn(ExperimentalKomaApi::class)
+internal class HistoryReference(val chart: StateChartDefinition) {
+    val tree = HierarchyReference(chart)
+    private val nodes = chart.states.associateBy { it.id }
+    private val histories = chart.states.filterIsInstance<HistoryState>()
+
+    fun initialConfiguration() = HistoryConfiguration(tree.initialConfiguration())
+
+    fun leaf(configuration: HistoryConfiguration): StateId = tree.leaf(configuration.active)
+
+    /** What [history] would remember if its parent were exited in [active]. */
+    fun record(history: HistoryState, active: Set<StateId>): Set<StateId> = if (history.deep) {
+        active.filter { tree.isProperAncestor(history.parent, it) && active.none { c -> tree.parent(c) == it } }.toSet()
+    } else {
+        active.filter { tree.parent(it) == history.parent }.toSet()
+    }
+
+    fun fire(configuration: HistoryConfiguration, t: Transition): HistoryFired {
+        val lcca = tree.chain(t.source).drop(1).firstOrNull { nodes[it] is CompoundState && tree.isProperAncestor(it, t.target) }
+        val exited = configuration.active.filter { lcca == null || tree.isProperAncestor(lcca, it) }.sortedByDescending { tree.depth(it) }
+        val history = configuration.history.toMutableMap()
+        for (x in exited) for (h in histories) if (h.parent == x) history[h.id] = record(h, configuration.active)
+        val target = nodes[t.target]
+        val entered = if (target is HistoryState) {
+            val above = tree.chain(t.target).drop(1).takeWhile { it != lcca }.reversed()
+            val restore = history[target.id] ?: setOf(target.default ?: (nodes.getValue(target.parent) as CompoundState).initial)
+            above + restore.flatMap { r -> tree.chain(r).takeWhile { it != target.parent }.reversed() + tree.defaultEntry(r) }
+        } else {
+            tree.chain(t.target).takeWhile { it != lcca }.reversed() + tree.defaultEntry(t.target)
+        }
+        return HistoryFired(t, exited, entered, HistoryConfiguration(configuration.active - exited.toSet() + entered, history))
+    }
+
+    fun step(configuration: HistoryConfiguration, action: RandomAction, guard: (String, RandomAction) -> Boolean): HistoryFired? {
+        for (node in tree.chain(leaf(configuration))) {
+            for (t in chart.transitions) {
+                if (t.source != node || !HierarchyReference.matches(t.on, action)) continue
+                if (t.guard != null && !guard(t.guard, action)) continue
+                return fire(configuration, t)
+            }
+        }
+        return null
+    }
+
+    /** Shortest distances to every configuration, by a plain breadth-first search. */
+    fun distances(): Map<HistoryConfiguration, Int> {
+        val distance = linkedMapOf(initialConfiguration() to 0)
+        val queue = ArrayDeque(listOf(initialConfiguration()))
+        while (queue.isNotEmpty()) {
+            val current = queue.removeFirst()
+            val d = distance.getValue(current)
+            for (t in chart.transitions) {
+                if (t.source !in current.active) continue
+                val next = fire(current, t).after
+                if (next !in distance) {
+                    distance[next] = d + 1
+                    queue.addLast(next)
+                }
+            }
+        }
+        return distance
+    }
+
+    fun nodeDistances(): Map<StateId, Int> {
+        val result = mutableMapOf<StateId, Int>()
+        for ((configuration, d) in distances().toList()) for (id in configuration.active) if (d < (result[id] ?: Int.MAX_VALUE)) result[id] = d
+        return result
+    }
+}

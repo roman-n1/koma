@@ -116,6 +116,10 @@ class StateChartModelPropertyTest {
             is ValidationIssue.ParentCycle -> ValidationIssue.ParentCycle(issue.states.map(f))
             is ValidationIssue.InitialNotChild -> ValidationIssue.InitialNotChild(f(issue.id), f(issue.initial))
             is ValidationIssue.EmptyCompoundState -> ValidationIssue.EmptyCompoundState(f(issue.id))
+            is ValidationIssue.HistoryParent -> ValidationIssue.HistoryParent(f(issue.id), f(issue.parent))
+            is ValidationIssue.HistoryAsInitial -> ValidationIssue.HistoryAsInitial(issue.id?.let(f), f(issue.initial))
+            is ValidationIssue.InvalidHistoryDefault -> ValidationIssue.InvalidHistoryDefault(f(issue.id), f(issue.default))
+            is ValidationIssue.TransitionFromHistory -> ValidationIssue.TransitionFromHistory(issue.transition.r())
         }
     }
 
@@ -228,6 +232,10 @@ class StateChartModelPropertyTest {
                 is ValidationIssue.ParentCycle,
                 is ValidationIssue.InitialNotChild,
                 is ValidationIssue.EmptyCompoundState,
+                is ValidationIssue.HistoryParent,
+                is ValidationIssue.HistoryAsInitial,
+                is ValidationIssue.InvalidHistoryDefault,
+                is ValidationIssue.TransitionFromHistory,
                 -> error("seed $seed: hierarchy issue in a flat chart: $issue")
             }
         }
