@@ -398,7 +398,9 @@ class StateChartModelPropertyTest {
         var islands = 0
         var aliased = 0
         var ambiguous = 0
+        var deep = 0
         RandomCharts.forEachChart { _, _, chart ->
+            if (chart.reachableStates().size >= 4) deep++
             if (chart.transitions.any { it.source == it.target }) selfLoops++
             if (chart.transitions.distinct().size < chart.transitions.size) duplicates++
             if (chart.validate().any { it is ValidationIssue.UnreachableState }) islands++
@@ -408,6 +410,7 @@ class StateChartModelPropertyTest {
         for ((name, count) in listOf("selfLoops" to selfLoops, "duplicates" to duplicates, "islands" to islands, "aliased" to aliased, "ambiguous" to ambiguous)) {
             assertTrue(count >= 20, "only $count charts with $name")
         }
+        assertTrue(deep >= 100, "only $deep charts with 4+ reachable states")
     }
 
     // endregion
