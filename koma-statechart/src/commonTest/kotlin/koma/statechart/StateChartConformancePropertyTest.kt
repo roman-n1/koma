@@ -26,6 +26,7 @@ import kotlinx.coroutines.withContext
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
@@ -593,6 +594,19 @@ class StateChartConformancePropertyTest {
     fun defaultStateIdIsTheClassNameForEveryVariant() {
         assertEquals(nodeIds, nodes.map(::defaultStateId))
         assertEquals(n7, defaultStateId(Node.N7(n = -42)))
+    }
+
+    @Test
+    fun defaultStateIdOfAnAnonymousStateFailsWhereThePlatformHasNoSimpleName() {
+        val anonymous = object : State {}
+        val name = anonymous::class.simpleName
+        val result = runCatching { defaultStateId(anonymous) }
+        if (name == null) {
+            val error = assertFailsWith<IllegalArgumentException> { result.getOrThrow() }
+            assertTrue(error.message!!.startsWith("[Koma] State type must have a simple name"))
+        } else {
+            assertEquals(StateId(name), result.getOrThrow())
+        }
     }
 
     // endregion

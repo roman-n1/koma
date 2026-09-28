@@ -1,5 +1,6 @@
 package koma.statechart
 
+import koma.core.Action
 import koma.core.ExperimentalKomaApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -379,6 +380,21 @@ class StateChartModelPropertyTest {
         assertEquals(ActionMatcher("Go", RandomAction.Go::class), ActionMatcher.of<RandomAction.Go>())
         assertEquals(ActionMatcher("RandomAction", RandomAction::class), ActionMatcher.of<RandomAction>())
         assertTrue(ActionMatcher("Go") != ActionMatcher.of<RandomAction.Go>())
+    }
+
+    private inline fun <reified A : Action> matcherFor(@Suppress("UNUSED_PARAMETER") action: A) = ActionMatcher.of<A>()
+
+    @Test
+    fun actionMatcherOfAnAnonymousTypeFailsWhereThePlatformHasNoSimpleName() {
+        val anonymous = object : Action {}
+        val name = anonymous::class.simpleName
+        val result = runCatching { matcherFor(anonymous) }
+        if (name == null) {
+            val error = assertFailsWith<IllegalArgumentException> { result.getOrThrow() }
+            assertEquals("[Koma] Action type must have a simple name", error.message)
+        } else {
+            assertEquals(name, result.getOrThrow().name)
+        }
     }
 
     @Test
