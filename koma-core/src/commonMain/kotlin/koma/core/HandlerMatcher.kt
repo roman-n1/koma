@@ -53,3 +53,31 @@ class ActionHandlerMatch(
     val actionType: KClass<*>?,
     val matches: Boolean,
 )
+
+/**
+ * Declared types of one registered handler.
+ *
+ * Used by `:koma-test` through [StoreInternalApi.handlerMetadata].
+ *
+ * @property index Position of the handler in first-match order within its kind
+ * @property stateType The state type given to `state<S2> {}`, or `null` if unknown
+ * @property inputType The action type for `action {}`, the exception type for `recover {}`,
+ * `null` for `enter {}` and `exit {}` or if unknown
+ */
+@InternalKomaApi
+class HandlerMetadata(
+    val index: Int,
+    val stateType: KClass<*>?,
+    val inputType: KClass<*>?,
+)
+
+/**
+ * Declared types of all registered handlers, per handler kind, in first-match order.
+ */
+@InternalKomaApi
+class StoreHandlerMetadata(
+    val enter: List<HandlerMetadata>,
+    val action: List<HandlerMetadata>,
+    val exit: List<HandlerMetadata>,
+    val recover: List<HandlerMetadata>,
+)

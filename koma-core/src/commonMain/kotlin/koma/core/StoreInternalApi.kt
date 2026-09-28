@@ -17,4 +17,9 @@ interface StoreInternalApi<S : State, A : Action, E : Event> {
      * [state] and [action]. No handler runs.
      */
     fun matchActionHandlers(state: S, action: A): List<ActionHandlerMatch>
+
+    /**
+     * Returns the declared types of all registered handlers. No handler runs.
+     */
+    fun handlerMetadata(): StoreHandlerMetadata
 }
