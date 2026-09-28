@@ -7,18 +7,22 @@ import koma.core.StateSaver
 import koma.core.Store
 import koma.test.dispatchAndAwait
 import koma.test.startAndAwait
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -42,6 +46,9 @@ import kotlin.time.Duration.Companion.seconds
  */
 @OptIn(ExperimentalKomaApi::class, ExperimentalCoroutinesApi::class)
 class StateChartStorePropertyTest {
+
+    // Well above what the walks need on JVM; browsers on CI are many times slower.
+    private val testTimeout = 5.minutes
 
     data object NoEvent : Event
 
@@ -170,6 +177,13 @@ class StateChartStorePropertyTest {
 
     private val advances = listOf(300.milliseconds, 500.milliseconds, 1.seconds, 2.seconds, 3.seconds, 5.seconds, 10.seconds)
 
+    /**
+     * Lets the platform event loop run between charts. Virtual time never leaves the thread, so
+     * on JS a whole property test would otherwise block the browser long enough for Karma to
+     * lose it (ping timeout). Real dispatch, so it does not touch the TestScope's virtual clock.
+     */
+    private suspend fun yieldToEventLoop() = withContext(Dispatchers.Default) { yield() }
+
     private fun assertAgrees(seed: Int, step: Int, reference: Reference, harness: Harness) {
         val state = harness.store.currentState
         val at = "seed $seed, step $step"
@@ -198,42 +212,43 @@ class StateChartStorePropertyTest {
         }
     }
 
-    private fun storeAgreesWithTheRuntime(cancelTimers: Boolean): Int {
+    // ПОЧЕМУ: a TestScope extension, not a function that calls runTest itself. On JS runTest returns
+    // a Promise that the @Test function must return, or the assertions after it run before the walk.
+    private suspend fun TestScope.storeAgreesWithTheRuntime(cancelTimers: Boolean): Int {
         var stale = 0
         var timerSteps = 0
-        runTest {
-            RandomCharts.forEachTimerChart(count = 80) { seed, random, base ->
-                val chart = withEffects(random, base)
-                val guards = GuardTable(random)
-                val reference = Reference(chart, guards)
-                val harness = Harness(chart, guards, effectLabels, cancelTimers, this)
-                harness.store.startAndAwait()
-                runCurrent()
-                assertAgrees(seed, -1, reference, harness)
-                walk(seed, random, reference, harness, steps = 30)
-                stale += harness.host.staleFirings
-                timerSteps += reference.log.count { it.startsWith("effect") }
-                harness.store.close()
-            }
+        RandomCharts.forEachTimerChart(count = 80) { seed, random, base ->
+            val chart = withEffects(random, base)
+            val guards = GuardTable(random)
+            val reference = Reference(chart, guards)
+            val harness = Harness(chart, guards, effectLabels, cancelTimers, this)
+            harness.store.startAndAwait()
+            runCurrent()
+            assertAgrees(seed, -1, reference, harness)
+            walk(seed, random, reference, harness, steps = 30)
+            stale += harness.host.staleFirings
+            timerSteps += reference.log.count { it.startsWith("effect") }
+            harness.store.close()
+            yieldToEventLoop()
         }
         assertTrue(timerSteps > 100, "only $timerSteps effects")
         return stale
     }
 
     @Test
-    fun storeFollowsTheRuntimeStepForStepWithTimersCancelledOnExit() {
+    fun storeFollowsTheRuntimeStepForStepWithTimersCancelledOnExit() = runTest(timeout = testTimeout) {
         storeAgreesWithTheRuntime(cancelTimers = true)
     }
 
     @Test
-    fun staleTimersNeverFireEvenWhenCancellationComesTooLate() {
+    fun staleTimersNeverFireEvenWhenCancellationComesTooLate() = runTest(timeout = testTimeout) {
         // Timer coroutines are never cancelled: only the tokens in the state stop stale firings.
         val stale = storeAgreesWithTheRuntime(cancelTimers = false)
         assertTrue(stale > 100, "only $stale stale firings exercised")
     }
 
     @Test
-    fun restoredStoreContinuesLikeTheRuntimeWithRestartedTimers() = runTest {
+    fun restoredStoreContinuesLikeTheRuntimeWithRestartedTimers() = runTest(timeout = testTimeout) {
         var restores = 0
         RandomCharts.forEachTimerChart(count = 60) { seed, random, base ->
             val chart = withEffects(random, base)
@@ -258,6 +273,7 @@ class StateChartStorePropertyTest {
             assertAgrees(seed, 100, reference, second)
             walk(seed, random, reference, second, steps = 12)
             second.store.close()
+            yieldToEventLoop()
         }
         assertTrue(restores > 30, "only $restores restores")
     }
