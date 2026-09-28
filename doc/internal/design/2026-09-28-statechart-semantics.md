@@ -129,6 +129,8 @@ val store = StateChartStore<C, A, E>(
   вызывает `cancelLaunch(lane)`.
 - Таймеры запускаются как `launch { delay(d); transaction { … fire … } }` с
   lane перехода и отменяются так же.
+- (Реализовано иначе: `LaunchLane` недоступен из транзакции таймера, поэтому адаптер держит
+  свои `Job`-активации узлов и токены таймеров в состоянии; см. «Решения волны 5».)
 - Порядок в одном шаге: exit-обработчики (изнутри наружу), затем effects
   переходов (в порядке выбора), затем enter-обработчики (снаружи внутрь). Всё
   выполняется одной транзакцией Koma, поэтому UI видит одно новое состояние.
@@ -405,6 +407,96 @@ val store = StateChartStore<C, A, E>(
   раньше, берётся первый подходящий переход, таймер или нет. Смена, которую объясняют и
   совпавший action, и таймер, приписывается action. Self-loop таймера не меняет листья, Koma о
   нём не сообщает, и он никогда не покрывается.
+
+## Решения волны 5 (адаптер к Store)
+
+Уточнения; код в ветке `feature/statechart-store` (`StateChartStore.kt`).
+
+- **API.** `StateChartStore<C, A, E>(definition, context, coroutineContext = null) { ... }`
+  возвращает обычный `Store<ChartState<C>, A, E>`, созданный Koma DSL `Store(...)`, поэтому
+  `koma-test` (`dispatchAndAwait`, `patch`, `StoreRecorder`), `Plugin`, `StateSaver` и Compose
+  работают без изменений. Билдер `StateChartStoreBuilder` (`@KomaStoreDsl`):
+  `guard(label) { state, action -> }`, `effect(label) { context, action -> }`,
+  `onEnter(id) { }`, `onExit(id) { }`, `activity(id) { }` и `store { }` — доступ к
+  `StoreBuilder` (coroutineContext, stateSaver, plugin, exceptionHandler, политики, `recover {}`).
+  Вместо `mapOf(...)` из раздела выше — DSL, как требует CLAUDE.md.
+- **Состояние.** `data class ChartState<C>(configuration, context, timers: ChartTimers = ChartTimers())`
+  с `isActive(id)` и `activeLeaves(definition)`. `ChartTimers(running: Map<Int, Long>, issued: Long)` —
+  токены запущенных таймеров по индексу в `definition.transitions` (равные объявления — равные
+  значения, поэтому индекс) и последний выданный токен. Всё — данные, их сохраняет `StateSaver`.
+  Следствие: перезапуск таймера (например, периодического self-loop) меняет состояние, даже если
+  конфигурация и контекст те же, и Koma коммитит его.
+- **Fail fast при сборке** (`IllegalArgumentException`): нет guard'а (проверка `StateChartRuntime`),
+  нет effect'а, сломанная иерархия (конструктор runtime), hook/activity для необъявленного узла или
+  для `HistoryState`, повторная регистрация guard'а или effect'а с той же меткой. Лишние метки
+  разрешены. `NonPositiveDelay` не ошибка: таймер с задержкой `<= 0` срабатывает сразу.
+- **Один catch-all обработчик.** `state<ChartState<C>> { enter { старт }; action<Action> { шаг } }`.
+  Тип action стёрт, поэтому обработчик регистрируется через unchecked cast билдера к
+  `StoreBuilder<ChartState<C>, Action, E>`; в Store приходят только `A`. Класс состояния не
+  меняется, поэтому Koma никогда не делает свой exit/enter, `enter {}` выполняется ровно один раз
+  на старте, а `PendingActionPolicy.ClearOnStateExit` на шаги чарта не влияет. Блоки `store {}`
+  применяются после регистрации, так что их `enter {}`/`action {}` для `ChartState` не
+  срабатывают, а `recover {}` работают; `initialState` из `store {}` игнорируется.
+- **Шаг.** `runtime.step`; `Ignored` — состояние не меняется, хуки не вызываются, коммита нет
+  (отдельного хука для необработанных action нет: Koma-плагин видит action в `onAction`). При
+  `Transitioned` в одном обработчике: exit-хуки (порядок `exited`, изнутри наружу), effects
+  (порядок выбора переходов), enter-хуки (порядок `entered`, снаружи внутрь); затем отменяется
+  работа вышедших узлов, запускаются activities вошедших, таймеры: снимаются `exited`, выдаются
+  новые токены для `entered` (как `timersToCancel`/`timersToStart`, но по индексам). Один
+  `nextState` — UI видит одно новое состояние. Хуки получают `context` (var; изменения
+  накапливаются по порядку), `action` (`A`, `TimerFired` для таймера, `null` на старте), `node`,
+  `event(e)` (эмитится сразу, до коммита — как в Koma). Guard'ы получают состояние до шага.
+- **Ошибка в хуке или effect'е.** Исключение уходит в Koma (`recover {}` / exceptionHandler),
+  шаг не коммитится; активации, созданные в этом шаге, отменяются, так что работа, запущенная
+  хуком, не стартует. События, уже эмитированные хуками упавшего шага, не отзываются. Таймер, чей шаг
+  упал, в состоянии числится запущенным, но больше не сработает до повторного входа (или
+  рестарта Store).
+- **Работа узла без `LaunchLane`.** `cancelLaunch` есть только в `ActionScope`, а таймер
+  срабатывает в транзакции, где нет ни `launch`, ни `cancelLaunch`. Поэтому `enter {}` один раз
+  запускает Koma-`launch`, живущий всё время Store: он читает канал задач (`Channel.UNLIMITED`,
+  `trySend` потокобезопасен) и запускает их дочерними корутинами в `supervisorScope` (в контексте
+  Store, значит под `runTest` — виртуальное время). У каждого входа в узел — своя «активация»
+  `Job()`; задача связана с ней через `invokeOnCompletion` и отменяется при выходе из узла, а
+  если активация уже отменена до старта — не запускается. Закрытие Store отменяет всё через
+  Koma. Изменяемые таблицы адаптера живут в объекте конкретного Store (не глобально) и
+  трогаются только внутри Koma-обработчиков и транзакций, которые Koma выполняет по одной под
+  mutex.
+- **`ChartEnterScope.launch` и `activity`.** `launch` в `onEnter` — работа на время активации.
+  `activity(id)` — декларативная работа узла (как activity у Harel / invoke в SCXML): стартует
+  после хуков шага, на старте и после restore. `ChartLaunchScope`: `node`, `isActive`,
+  `event(e)`, `updateContext { }` (транзакция; применяется, только если активация ещё жива,
+  возвращает `Boolean`), `dispatch(action)`. Исключение в работе (кроме отмены) перебрасывается
+  внутри транзакции и попадает в `recover {}` / exceptionHandler, Store продолжает работать.
+- **Таймеры.** Задача таймера: `delay(after)`, затем транзакция: если токен в состоянии не
+  совпадает — firing устарел и игнорируется (без коммита); иначе `runtime.fire`. `Ignored`
+  (guard ложен) снимает таймер из `running` (коммит), `Transitioned` — обычный шаг с
+  `TimerFired`. Корректность не зависит от момента отмены корутины: best-effort отмена связывает
+  задачу таймера с активацией source, но решает токен. Таймеры с равной задержкой из одного
+  узла срабатывают в порядке запуска (объявления); если первый выходит из source, второй приходит
+  с устаревшим токеном (мессенджер: `retry` и `giveUp` по 5 с).
+- **Старт и restore.** Начальное состояние строится при сборке: `initialConfiguration()` и
+  токены `1..n` для `initialTimers()`. Свежий старт (Koma отдал ровно этот объект — сравнение по
+  ссылке) выполняет enter-хуки начальной конфигурации снаружи внутрь с `action = null`, затем
+  activities и таймеры; коммит — только если хуки изменили контекст. Восстановленное
+  `StateSaver`'ом состояние (или подменённое через `patch { initialState }`) — enter-хуки **не**
+  выполняются повторно (как entry actions в SCXML/XState: контекст уже содержит их результат),
+  activities стартуют, запущенные таймеры стартуют заново с полной задержкой (как
+  `activeTimers`). Если набор `running` не совпадает с таймерами активных узлов, токены выдаются
+  заново (с `issued + 1`) и это коммитится; иначе старые токены переиспользуются — корутин
+  прошлого процесса нет. Что восстановленная конфигурация соответствует определению — забота
+  вызывающего. Исключение в хуке на старте уходит в `recover {}`; активации и таймеры старта
+  тогда не запускаются.
+- **Conformance.** `StateChartConformance.withActiveLeaves<ChartState<C>, A, E>(definition) { it.activeLeaves(definition).toSet() }`
+  на адаптере не даёт нарушений; self-loop таймеры остаются непокрытыми (решение волны 4).
+- **Тесты.** `StateChartStoreTest` — мессенджер (parallel: connection с retry/giveUp по 5 с,
+  чат с deep history, typing-таймер 3 с, sync-job в `onEnter`, ping-activity), restore,
+  плагины/koma-test/conformance, ошибки. `StateChartStorePropertyTest` — случайные чарты
+  `forEachTimerChart` (+ случайные effect'ы) и случайные расписания action/сдвигов виртуального
+  времени; эталон — чистый `StateChartRuntime` с наивным планировщиком (дедлайн, затем порядок
+  запуска). После каждой операции совпадают конфигурация, набор запущенных таймеров, порядок
+  хуков, контекст и живые activities; то же без отмены корутин таймеров (только токены) и после
+  restore посреди прогулки. `RandomCharts.forEachTimerChart` стал `inline`, чтобы блок мог
+  приостанавливаться.
 
 ## Порядок волн
 
