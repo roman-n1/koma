@@ -24,10 +24,32 @@ internal data class HandlerMatcher(
  * Each list lines up with the order the Store uses for first-match selection.
  * An entry is `null` when the handler was registered by inline code compiled against an earlier
  * Koma version that did not record matchers.
+ *
+ * [actionPredicates] lines up with [action] and holds the predicates the Store uses to select an
+ * action handler, so routing can be checked without running any handler.
  */
-internal class HandlerRegistry(
+internal class HandlerRegistry<S : State, A : Action>(
     val enter: List<HandlerMatcher?>,
     val action: List<HandlerMatcher?>,
     val exit: List<HandlerMatcher?>,
     val recover: List<HandlerMatcher?>,
+    val actionPredicates: List<(S, A) -> Boolean>,
+)
+
+/**
+ * One registered action handler and whether it matches a given state and action.
+ *
+ * Used by `:koma-test` routing diagnostics through [StoreInternalApi.matchActionHandlers].
+ *
+ * @property index Position of the handler in first-match order
+ * @property stateType The state type given to `state<S2> {}`, or `null` if unknown
+ * @property actionType The action type given to `action<A2> {}`, or `null` if unknown
+ * @property matches Whether the handler matches the given state and action
+ */
+@InternalKomaApi
+class ActionHandlerMatch(
+    val index: Int,
+    val stateType: KClass<*>?,
+    val actionType: KClass<*>?,
+    val matches: Boolean,
 )

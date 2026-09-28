@@ -89,7 +89,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val onError: suspend RecoverScope<S, E, S, Exception>.() -> Unit
 
-    internal abstract val handlerRegistry: HandlerRegistry
+    internal abstract val handlerRegistry: HandlerRegistry<S, A>
 
     private val coroutineScope by lazy {
         isCoroutineScopeCreated = true
@@ -161,6 +161,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     final override suspend fun dispatchAndAwait(action: A) {
         launchDispatch(action).join()
+    }
+
+    final override fun matchActionHandlers(state: S, action: A): List<ActionHandlerMatch> {
+        val registry = handlerRegistry
+        return registry.actionPredicates.mapIndexed { index, predicate ->
+            val matcher = registry.action[index]
+            ActionHandlerMatch(
+                index = index,
+                stateType = matcher?.stateType,
+                actionType = matcher?.inputType,
+                matches = predicate(state, action),
+            )
+        }
     }
 
     final override fun patch(patch: StorePatch<S, A, E>): Store<S, A, E> {

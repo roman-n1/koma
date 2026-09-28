@@ -25,10 +25,10 @@ import kotlin.test.assertTrue
  */
 class StoreHandlerRegistryPropertyTest {
 
-    private fun Store<RtState, RtAction, RtEvent>.registry(): HandlerRegistry =
+    private fun Store<RtState, RtAction, RtEvent>.registry(): HandlerRegistry<RtState, RtAction> =
         (this as StoreImpl<RtState, RtAction, RtEvent>).handlerRegistry
 
-    private fun HandlerRegistry.of(kind: HandlerKind): List<HandlerMatcher?> = when (kind) {
+    private fun HandlerRegistry<RtState, RtAction>.of(kind: HandlerKind): List<HandlerMatcher?> = when (kind) {
         HandlerKind.ENTER -> enter
         HandlerKind.ACTION -> action
         HandlerKind.EXIT -> exit

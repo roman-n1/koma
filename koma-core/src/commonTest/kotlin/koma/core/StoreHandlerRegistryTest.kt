@@ -60,7 +60,7 @@ class StoreHandlerRegistryTest {
         }
     }
 
-    private fun Store<AppState, AppAction, AppEvent>.registry(): HandlerRegistry {
+    private fun Store<AppState, AppAction, AppEvent>.registry(): HandlerRegistry<AppState, AppAction> {
         return (this as StoreImpl<AppState, AppAction, AppEvent>).handlerRegistry
     }
 
