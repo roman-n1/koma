@@ -147,7 +147,7 @@ class StateChartParallelPropertyTest {
                 if (result !is StepResult.Transitioned) return@repeat
                 steps++
                 if (result.transitions.size > 1) together++
-                val picks = leaves.mapNotNull { leaf -> chart.candidatesFor(leaf).firstOrNull { t -> t.on.matches(action) && t.guard.let { it == null || table.holds(it, action) } } }.distinct()
+                val picks = leaves.mapNotNull { leaf -> chart.candidatesFor(leaf).firstOrNull { t -> t.on?.matches(action) == true && t.guard.let { it == null || table.holds(it, action) } } }.distinct()
                 if (picks.size > result.transitions.size) conflicts++
                 if (result.transitions.any { t -> (chart.node(t.target) as? HistoryState)?.let { chart.node(it.parent) is ParallelState } == true }) restores++
                 // Taken transitions never conflict: their exit sets are disjoint.
@@ -295,7 +295,7 @@ class StateChartParallelPropertyTest {
         assertEquals(path.startLeaves.first(), path.start, "seed $seed")
         var trigger: Transition? = null
         val fire = ActionMatcher("Fire", Fire::class)
-        val relabelled = chart.copy(transitions = chart.transitions.mapIndexed { i, t -> t.copy(on = fire, guard = "t$i") })
+        val relabelled = chart.copy(transitions = chart.transitions.mapIndexed { i, t -> Transition(t.source, t.target, fire, "t$i") })
         val guards = chart.transitions.withIndex().associate { (i, original) ->
             "t$i" to { _: RandomState, _: Action ->
                 val t = trigger!!
@@ -497,7 +497,7 @@ class StateChartParallelPropertyTest {
                     // Leaf changes are credited to transitions the runtime took; self-loops are credited
                     // by action with guards ignored (see StateChartConformance), so only by matcher.
                     for (t in conformance.coveredTransitions) {
-                        assertTrue(t in taken || actions.any { t.on.matches(it) }, "seed $seed: covered $t")
+                        assertTrue(t in taken || actions.any { t.on?.matches(it) == true }, "seed $seed: covered $t")
                     }
                     covered += conformance.coveredTransitions.count { it in taken }
                     assertEquals(configuration.active, chart.configurationOf(store.currentState.leaves).active, "seed $seed")

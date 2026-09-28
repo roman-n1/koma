@@ -451,7 +451,7 @@ class StateChartHierarchyPropertyTest {
         // Transitions: each once, in declaration order within its block.
         val all = blocks.flatMap { b -> b.transitions.map { b.ref to it } }
         assertEquals(chart.transitions.size, all.size, "seed $seed")
-        fun line(t: Transition) = "${refOf.getValue(t.source)} --> ${refOf.getValue(t.target)} : ${t.on.name}" + (t.guard?.let { " [$it]" } ?: "")
+        fun line(t: Transition) = "${refOf.getValue(t.source)} --> ${refOf.getValue(t.target)} : ${t.on!!.name}" + (t.guard?.let { " [$it]" } ?: "")
         assertEquals(chart.transitions.map(::line).sorted(), all.map { it.second }.sorted(), "seed $seed")
         if (!wellFormed) return
 

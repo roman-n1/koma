@@ -139,8 +139,19 @@ internal class ParallelReference(val chart: StateChartDefinition) {
         return if (taken.isEmpty()) null else fire(configuration, taken)
     }
 
-    /** The configuration graph's step for [trigger]: equal matchers fire elsewhere, nothing may conflict with [trigger]. */
+    /** The timers of [states], state by state in the order given, each state's in declaration order. */
+    fun timersOf(states: List<StateId>): List<Transition> = states.flatMap { id -> chart.transitions.filter { it.source == id && it.trigger is Trigger.After } }
+
+    /** A timer firing: nothing when its source is inactive or [guard] rejects its label; otherwise the timer alone. */
+    fun fireTimer(configuration: HistoryConfiguration, timer: Transition, guard: (String) -> Boolean): ParallelFired? {
+        if (timer.source !in configuration.active) return null
+        if (timer.guard != null && !guard(timer.guard)) return null
+        return fire(configuration, listOf(timer))
+    }
+
+    /** The configuration graph's step for [trigger]: equal matchers fire elsewhere, nothing may conflict with [trigger]; a timer fires alone. */
     fun graphStep(configuration: HistoryConfiguration, trigger: Transition): ParallelFired {
+        if (trigger.trigger is Trigger.After) return fire(configuration, listOf(trigger))
         val triggerExit = exitSet(configuration.active, trigger)
         val taken = select(configuration.active) { t -> t == trigger || (t.on == trigger.on && exitSet(configuration.active, t).none { it in triggerExit }) }
         return fire(configuration, taken)

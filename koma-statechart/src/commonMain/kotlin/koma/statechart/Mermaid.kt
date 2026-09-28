@@ -23,8 +23,10 @@ private fun isPlainMermaidId(value: String): Boolean =
  * order. A compound state becomes a nested block, `state Parent { ... }`, that starts with
  * `[*] --> initialChild` and declares every child in declaration order (an atomic child with a
  * plain id as a bare line), so each state is drawn inside its parent. Each transition is written in the innermost block that contains both its
- * source and its target, after the nested blocks. A transition is labelled with its action name
- * and, when present, its guard in brackets, for example `Idle --> Loading : Submit [isValid]`.
+ * source and its target, after the nested blocks. A transition is labelled with its action name,
+ * or `after` and the delay for a timer ([kotlin.time.Duration.toString], so `after 5s`, `after 1m 30s`), then,
+ * when present, its guard in brackets and its effect after a slash, for example
+ * `Idle --> Loading : Submit [isValid] / countAttempt` or `Typing --> Idle : after 3s`.
  *
  * A parallel state becomes a block too, `state Parallel { ... }`, whose regions are separated by
  * `--` lines, one region per section in declaration order; each region is drawn in its section
@@ -92,8 +94,13 @@ fun StateChartDefinition.toMermaid(): String = buildString {
             appendLine("$indent${refs.getValue(history)} --> ${refs.getValue(default)}")
         }
         for (transition in transitionsByBlock[block].orEmpty()) {
-            append("$indent${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : ${transition.on.name}")
+            val label = when (val trigger = transition.trigger) {
+                is Trigger.OnAction -> trigger.matcher.name
+                is Trigger.After -> "after ${trigger.delay}"
+            }
+            append("$indent${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : $label")
             transition.guard?.let { append(" [$it]") }
+            transition.effect?.let { append(" / $it") }
             appendLine()
         }
     }

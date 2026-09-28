@@ -98,11 +98,19 @@ sealed interface ConformanceViolation {
  * - no transition leads from it to the new leaves: [ConformanceViolation.UndeclaredTransition];
  * - a declared transition that does matches the trigger: the first such one, in priority order,
  *   is covered;
- * - transitions lead there but none matches the trigger:
+ * - transitions lead there but none matches the trigger and none is a timer:
  *   [ConformanceViolation.UnexpectedTrigger], and nothing is covered;
+ * - no transition that leads there matches the trigger, but a timer ([Trigger.After]) does: the
+ *   first such timer, in priority order, is covered, and the trigger stays unused when timers
+ *   explain the whole change;
  * - there is no trigger, because no action has arrived yet (`enter {}` at startup) or the last
  *   action already caused a change (a chained `enter {}` after it): the change is automatic and
- *   the first transition that leads there, in priority order, is covered, whatever its matcher.
+ *   the first transition that leads there, in priority order, is covered, whatever its trigger.
+ *
+ * Timers: plugin hooks do not show timers either, so a change is credited to a timer only as
+ * above, when no action explains it. A change that both an action transition matching the trigger
+ * and a timer explain is credited to the action. A timer self-loop keeps the same leaves, so Koma
+ * does not report it and it is never covered.
  *
  * Self-transitions: Koma does not notify plugins when a handler keeps the state, so a self-loop
  * is credited by action. When an action arrives, the transitions the runtime would take for it
@@ -163,7 +171,7 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         trigger = action
         val leaves = mapping.leavesOf(state)
         val configuration = definition.configurationOf(leaves).copy(history = history)
-        val taken = definition.selectTransitions(configuration) { it.on.matches(action) }
+        val taken = definition.selectTransitions(configuration) { it.on?.matches(action) == true }
         val same = taken.isNotEmpty() && definition.microstep(configuration, taken).leaves(definition).toSet() == leaves
         pendingSelfLoops = if (same) taken else emptyList()
     }
@@ -199,7 +207,11 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
                     val exitSet = definition.exitSet(tracked, t)
                     leaf in exitSet && exitSet.none { it in exited } && leadsTo(tracked, t, to)
                 }.toList()
-            val taken = if (action == null) candidates.firstOrNull() else candidates.firstOrNull { it.on.matches(action) }
+            val taken = if (action == null) {
+                candidates.firstOrNull()
+            } else {
+                candidates.firstOrNull { it.on?.matches(action) == true } ?: candidates.firstOrNull { it.isTimer }
+            }
             if (taken != null) {
                 chosen += taken
                 domains += definition.domainOf(taken)
@@ -223,6 +235,8 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
             report(definition.domainOf(source, leaf), ConformanceViolation.UndeclaredTransition(from = source, to = leaf, lastAction = lastAction))
         }
         recordedCovered += chosen
+        // A change only timers explain used no action: the trigger stays for the next change.
+        if (action != null && domains.size == chosen.size && chosen.all { it.isTimer }) trigger = action
         val step = definition.microstep(tracked, chosen)
         val kept = definition.configurationOf(to).active
         val chosenExits = step.exited.toSet()

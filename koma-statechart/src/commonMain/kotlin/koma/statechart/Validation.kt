@@ -2,6 +2,7 @@ package koma.statechart
 
 import koma.core.Action
 import koma.core.ExperimentalKomaApi
+import kotlin.time.Duration
 
 /**
  * A structural problem found by [validate].
@@ -101,6 +102,12 @@ sealed interface ValidationIssue {
     data class TransitionFromHistory(val transition: Transition) : ValidationIssue
 
     /**
+     * Timer [transition] has a delay that is zero or negative. A timer should wait for a positive
+     * time; what a caller does with such a delay (fire at once, or never) is up to the caller.
+     */
+    data class NonPositiveDelay(val transition: Transition) : ValidationIssue
+
+    /**
      * State [id] never becomes active, starting from the initial configuration. History states are
      * never active and are never reported.
      */
@@ -108,11 +115,24 @@ sealed interface ValidationIssue {
 
     /**
      * More than one transition without a guard leaves [source] on the same action, so the choice
-     * between them depends on declaration order.
+     * between them depends on declaration order. Timers are reported as [AmbiguousTimers].
      */
     data class AmbiguousTransitions(
         val source: StateId,
         val on: ActionMatcher,
+        val transitions: List<Transition>,
+    ) : ValidationIssue
+
+    /**
+     * More than one timer without a guard leaves [source] with the same [delay], so they would fire
+     * at the same time and which one wins depends on the order they were started in, that is
+     * declaration order.
+     *
+     * @property transitions The timers, in declaration order
+     */
+    data class AmbiguousTimers(
+        val source: StateId,
+        val delay: Duration,
         val transitions: List<Transition>,
     ) : ValidationIssue
 
@@ -142,12 +162,14 @@ sealed interface ValidationIssue {
  * history (a history state as the chart's initial state, then as a compound's initial state, then
  * invalid history defaults), parallel states with fewer than two regions (in declaration order),
  * transition endpoints (per transition: unknown source, unknown target, source is a history
- * state), reachability, ambiguity, shadowing.
+ * state, non-positive timer delay), reachability, ambiguity (action transitions, then timers),
+ * shadowing.
  *
  * Hierarchy issues use the first declaration of a duplicated id. A state is reachable when it can
  * become active: the initial configuration and every configuration reached by taking any
  * transition whose source is active, guards and transition priority ignored (see
- * [reachableStates]). History states are never active and never reported as unreachable.
+ * [reachableStates]). History states are never active and never reported as unreachable. Timers
+ * count as transitions that may be taken whenever their source is active.
  *
  * Transitions with equal matchers are always checked ([ValidationIssue.AmbiguousTransitions]).
  * Overlap between different matchers, such as a matcher for a sealed parent type and one for its
@@ -185,6 +207,8 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
         if (transition.source !in declared) issues += ValidationIssue.UnknownTransitionSource(transition)
         if (transition.target !in declared) issues += ValidationIssue.UnknownTransitionTarget(transition)
         if (node(transition.source) is HistoryState) issues += ValidationIssue.TransitionFromHistory(transition)
+        val delay = transition.after
+        if (delay != null && !delay.isPositive()) issues += ValidationIssue.NonPositiveDelay(transition)
     }
 
     if (initial in declared) {
@@ -194,11 +218,17 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
             .forEach { issues += ValidationIssue.UnreachableState(it) }
     }
 
-    transitions
-        .filter { it.guard == null }
-        .groupBy { it.source to it.on }
+    val withoutGuard = transitions.filter { it.guard == null }
+    withoutGuard
+        .mapNotNull { t -> t.on?.let { on -> (t.source to on) to t } }
+        .groupBy({ it.first }, { it.second })
         .filterValues { it.size > 1 }
         .forEach { (key, group) -> issues += ValidationIssue.AmbiguousTransitions(key.first, key.second, group) }
+    withoutGuard
+        .mapNotNull { t -> t.after?.let { delay -> (t.source to delay) to t } }
+        .groupBy({ it.first }, { it.second })
+        .filterValues { it.size > 1 }
+        .forEach { (key, group) -> issues += ValidationIssue.AmbiguousTimers(key.first, key.second, group) }
 
     val samples = sampleActions.distinct()
     if (samples.isNotEmpty()) {
@@ -207,7 +237,7 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
             .groupBy { it.source }
             .forEach { (source, unguarded) ->
                 for (sample in samples) {
-                    val matching = unguarded.filter { it.on.matches(sample) }
+                    val matching = unguarded.filter { it.on?.matches(sample) == true }
                     if (matching.map { it.on }.distinct().size > 1) {
                         issues += ValidationIssue.ShadowedTransitions(source, sample, matching)
                     }

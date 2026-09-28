@@ -4,6 +4,10 @@ import koma.core.Action
 import koma.core.ExperimentalKomaApi
 import koma.core.State
 import kotlin.random.Random
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Actions used by randomly generated charts. [Go] carries a payload so guards have something to
@@ -25,8 +29,8 @@ data class RandomState(val id: StateId, val attempts: Int = 0) : State
 /**
  * Seeded generator of [StateChartDefinition]s for property-based tests: flat charts ([chart]),
  * hierarchical ones ([hierarchicalChart], [malformed]), ones with history states
- * ([withHistory], [malformedHistory]) and ones with parallel states ([parallelChart],
- * [malformedParallel]).
+ * ([withHistory], [malformedHistory]), ones with parallel states ([parallelChart],
+ * [malformedParallel]) and ones with timers ([withTimers], [malformedTimers]).
  *
  * Charts mix plain identifiers with ids that Mermaid cannot use directly (spaces, dashes, quotes,
  * unicode, keywords, and ids that look like the exporter's own aliases), and may contain
@@ -369,6 +373,66 @@ internal object RandomCharts {
             }
         }
         return chart.copy(states = states)
+    }
+
+    /** Positive delays for generated timers; some equal, so equal-delay timers occur. */
+    val delays: List<Duration> = listOf(500.milliseconds, 1.seconds, 3.seconds, 5.seconds, 90.seconds, 2.minutes)
+
+    /**
+     * Adds random timers ([Trigger.After]) to [chart]: one to eight, from random declared states
+     * (history states excluded) to random declared states (history states included), with random
+     * positive delays, some self-loops, some guarded, some with an effect label, and some added
+     * twice to one source with one delay; inserted at random positions among the transitions.
+     */
+    fun withTimers(random: Random, chart: StateChartDefinition): StateChartDefinition {
+        val sources = chart.states.filter { it !is HistoryState }.map { it.id }
+        if (sources.isEmpty()) return chart
+        val targets = chart.states.map { it.id }
+        val transitions = chart.transitions.toMutableList()
+        repeat(random.nextInt(1, 9)) {
+            val source = sources.random(random)
+            val target = if (random.nextInt(5) == 0) source else targets.random(random)
+            val guard = if (random.nextInt(3) == 0) guards.random(random) else null
+            val effect = if (random.nextInt(4) == 0) "effect ${random.nextInt(3)}" else null
+            val timer = Transition(source, target, Trigger.After(delays.random(random)), guard, effect)
+            transitions.add(random.nextInt(transitions.size + 1), timer)
+            if (random.nextInt(8) == 0) {
+                val twin = Transition(source, targets.random(random), timer.trigger)
+                transitions.add(random.nextInt(transitions.size + 1), twin)
+            }
+        }
+        return chart.copy(transitions = transitions)
+    }
+
+    /**
+     * Breaks the timers of [chart] (adding one when it has none) in one to three random ways: a
+     * zero or negative delay, a timer from a history state or an undeclared state, a timer into an
+     * undeclared state.
+     */
+    fun malformedTimers(random: Random, chart: StateChartDefinition): StateChartDefinition {
+        var transitions = chart.transitions
+        val ids = chart.states.map { it.id }
+        if (transitions.none { it.isTimer }) transitions = transitions + Transition(ids.random(random), ids.random(random), Trigger.After(1.seconds))
+        repeat(random.nextInt(1, 4)) { round ->
+            val timer = transitions.filter { it.isTimer }.random(random)
+            val broken = when (random.nextInt(4)) {
+                0 -> timer.copy(trigger = Trigger.After(listOf(Duration.ZERO, (-1).seconds, (-5).minutes).random(random)))
+                1 -> chart.states.filterIsInstance<HistoryState>().randomOrNull(random)?.let { timer.copy(source = it.id) } ?: timer.copy(source = StateId("ghost $round"))
+                2 -> timer.copy(source = StateId("ghost $round"))
+                else -> timer.copy(target = StateId("ghost $round"))
+            }
+            transitions = transitions.toMutableList().also { it.add(random.nextInt(it.size + 1), broken) }
+        }
+        return chart.copy(transitions = transitions)
+    }
+
+    /** [parallelChart] with [withHistory] and [withTimers], for the first [count] seeds. */
+    fun forEachTimerChart(count: Int = seeds.size, block: (seed: Int, random: Random, chart: StateChartDefinition) -> Unit) {
+        for (seed in seeds.take(count)) {
+            val random = Random(seed)
+            val base = if (seed % 3 == 0) hierarchicalChart(random) else parallelChart(random)
+            block(seed, random, withTimers(random, withHistory(random, base)))
+        }
     }
 
     /** [parallelChart] with [withHistory], for the first [count] seeds. */

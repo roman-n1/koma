@@ -59,7 +59,16 @@ private fun StateChartDefinition.depth(id: StateId): Int = ancestorsOf(id).size
  */
 @OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.initialConfiguration(): StateConfiguration =
-    StateConfiguration(active = entrySet(listOf(null to initial), history = emptyMap()).sortedWith(entryOrder()).toSet())
+    StateConfiguration(active = inEntryOrder(entrySet(listOf(null to initial), history = emptyMap())).toSet())
+
+/** [ids] outermost first, ties in declaration order. */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.inEntryOrder(ids: Collection<StateId>): List<StateId> = ids.sortedWith(entryOrder())
+
+/** The timers ([Trigger.After] transitions) of [states], in the order of [states], each state's in declaration order. */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.timersOf(states: List<StateId>): List<Transition> =
+    states.flatMap { hierarchy.timersBySource[it].orEmpty() }
 
 /**
  * Transitions that may fire from [leaf], in priority order: the leaf's own, then each ancestor's,
@@ -98,13 +107,15 @@ internal fun StateChartDefinition.selectTransitions(
 
 /**
  * The step the configuration graph takes for [trigger], whose source is active in
- * [configuration]: the runtime's selection (see [selectTransitions]) for an action that matches
- * exactly the transitions whose matcher equals `trigger.on`, with every guard true, except that
- * [trigger] is taken for the leaves below its source and transitions that would conflict with it
- * are left out. Without parallel states this is [trigger] alone.
+ * [configuration]. For an action transition: the runtime's selection (see [selectTransitions]) for
+ * an action that matches exactly the action transitions whose matcher equals `trigger.on`, with
+ * every guard true, except that [trigger] is taken for the leaves below its source and transitions
+ * that would conflict with it are left out; without parallel states this is [trigger] alone. A
+ * timer fires alone, as in [StateChartRuntime.fire].
  */
 @OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.graphStep(configuration: StateConfiguration, trigger: Transition): Microstep {
+    if (trigger.isTimer) return microstep(configuration, listOf(trigger))
     val triggerExit = exitSet(configuration, trigger).toSet()
     val taken = selectTransitions(configuration) { transition ->
         transition == trigger || (transition.on == trigger.on && exitSet(configuration, transition).none { it in triggerExit })

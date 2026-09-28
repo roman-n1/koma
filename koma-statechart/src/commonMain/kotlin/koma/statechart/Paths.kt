@@ -15,13 +15,18 @@ import koma.core.ExperimentalKomaApi
  * previous leaf and may enter a compound state, so the new leaf can differ from its target; use
  * the paths built by [shortestPathTo] and [transitionCoveragePaths], which carry the leaves.
  *
+ * A step may be a timer ([Trigger.After]): the test then lets the timer's delay pass (advancing
+ * virtual time) instead of dispatching an action, or calls [StateChartRuntime.fire]. [triggers]
+ * lists what each step needs, and [actions] only the actions.
+ *
  * With parallel states several leaves are active at once. [start] and [leaves] then name the first
  * active leaf in declaration order, and [startLeaves] and [activeLeaves] name all of them. The
  * action for a transition may also fire transitions in other regions, as the runtime does; the
  * leaves after it already include what those did (see [shortestPathTo]).
  *
  * @property start The active leaf the path starts in (the first one, with parallel states)
- * @property transitions The transitions to take, in order; each stands for the action that takes it
+ * @property transitions The transitions to take, in order; each stands for the action that takes
+ * it, or for its timer firing
  * @property leaves The active leaf after each transition (the first one, with parallel states); as
  * many as [transitions]
  * @property startLeaves All active leaves the path starts in, in declaration order
@@ -59,9 +64,15 @@ data class StateChartPath(
     val end: StateId get() = leaves.lastOrNull() ?: start
 
     /**
-     * The actions to dispatch, in order.
+     * The actions to dispatch, in order: one per action step; timer steps are left out, so for a
+     * path with timers this is shorter than [transitions] (see [triggers]).
      */
-    val actions: List<ActionMatcher> get() = transitions.map { it.on }
+    val actions: List<ActionMatcher> get() = transitions.mapNotNull { it.on }
+
+    /**
+     * What fires each step, in order: an action or a timer; as many as [transitions].
+     */
+    val triggers: List<Trigger> get() = transitions.map { it.trigger }
 }
 
 @OptIn(ExperimentalKomaApi::class)
@@ -87,7 +98,8 @@ private fun requireConnected(start: StateId, transitions: List<Transition>): Lis
  * would choose for an action that matches exactly the transitions whose matcher equals `t.on`
  * (an equal [ActionMatcher], not merely an overlapping one), with guards true, and leaves out any
  * transition that conflicts with `t` (see [StateChartRuntime]). Without parallel states a step is
- * `t` alone.
+ * `t` alone. A timer is a step like any transition whose source is active, and it fires alone, as
+ * [StateChartRuntime.fire] does; its delay does not count, only the number of steps.
  *
  * Among paths of equal length, the one found first by following transitions in declaration order
  * is returned, so the result is stable for a given definition.

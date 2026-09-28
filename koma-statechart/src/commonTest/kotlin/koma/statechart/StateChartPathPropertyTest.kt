@@ -176,7 +176,7 @@ class StateChartPathPropertyTest {
         val island = StateId("island ${random.nextInt(10)}")
         val withIsland = chart.copy(
             states = chart.states + AtomicState(island),
-            transitions = chart.transitions.flatMap { listOf(Transition(island, it.source, it.on), it) },
+            transitions = chart.transitions.flatMap { listOf(Transition(island, it.source, it.trigger), it) },
         )
         assertEquals(paths, withIsland.transitionCoveragePaths(), "seed $seed")
         for (id in candidateIds(chart)) assertEquals(chart.shortestPathTo(id), withIsland.shortestPathTo(id), "seed $seed")

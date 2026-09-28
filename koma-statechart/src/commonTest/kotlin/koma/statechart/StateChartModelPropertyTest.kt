@@ -39,7 +39,7 @@ class StateChartModelPropertyTest {
         }
     }
 
-    private fun naiveMatches(matcher: ActionMatcher, action: Action): Boolean = when (val type = matcher.type) {
+    private fun naiveMatches(matcher: ActionMatcher?, action: Action): Boolean = if (matcher == null) false else when (val type = matcher.type) {
         null -> action::class.simpleName == matcher.name
         else -> type.isInstance(action)
     }
@@ -64,7 +64,10 @@ class StateChartModelPropertyTest {
             for (id in distinctIds) if (id !in reachable) issues += ValidationIssue.UnreachableState(id)
         }
         val keys = mutableListOf<Pair<StateId, ActionMatcher>>()
-        for (t in chart.transitions) if (t.guard == null && (t.source to t.on) !in keys) keys += t.source to t.on
+        for (t in chart.transitions) {
+            val on = t.on ?: continue
+            if (t.guard == null && (t.source to on) !in keys) keys += t.source to on
+        }
         for ((source, on) in keys) {
             val group = chart.transitions.filter { it.guard == null && it.source == source && it.on == on }
             if (group.size > 1) issues += ValidationIssue.AmbiguousTransitions(source, on, group)
@@ -121,6 +124,8 @@ class StateChartModelPropertyTest {
             is ValidationIssue.InvalidHistoryDefault -> ValidationIssue.InvalidHistoryDefault(f(issue.id), f(issue.default))
             is ValidationIssue.TransitionFromHistory -> ValidationIssue.TransitionFromHistory(issue.transition.r())
             is ValidationIssue.TooFewRegions -> ValidationIssue.TooFewRegions(f(issue.id), issue.regions.map(f))
+            is ValidationIssue.NonPositiveDelay -> ValidationIssue.NonPositiveDelay(issue.transition.r())
+            is ValidationIssue.AmbiguousTimers -> ValidationIssue.AmbiguousTimers(f(issue.source), issue.delay, issue.transitions.map { it.r() })
         }
     }
 
@@ -239,6 +244,9 @@ class StateChartModelPropertyTest {
                 is ValidationIssue.InvalidHistoryDefault,
                 is ValidationIssue.TransitionFromHistory,
                 -> error("seed $seed: hierarchy issue in a flat chart: $issue")
+                is ValidationIssue.NonPositiveDelay,
+                is ValidationIssue.AmbiguousTimers,
+                -> error("seed $seed: timer issue in a chart without timers: $issue")
             }
         }
         // Endpoint issues are per declared transition, so a duplicated transition is reported once
@@ -352,7 +360,7 @@ class StateChartModelPropertyTest {
             assertEquals(refOf.getValue(chart.initial), parsed.initialRef, "seed $seed")
             assertEquals(
                 chart.transitions.map { t ->
-                    "    ${refOf.getValue(t.source)} --> ${refOf.getValue(t.target)} : ${t.on.name}" + (t.guard?.let { " [$it]" } ?: "")
+                    "    ${refOf.getValue(t.source)} --> ${refOf.getValue(t.target)} : ${t.on!!.name}" + (t.guard?.let { " [$it]" } ?: "")
                 },
                 parsed.transitionLines,
                 "seed $seed",
