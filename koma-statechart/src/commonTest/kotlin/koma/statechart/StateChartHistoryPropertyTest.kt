@@ -340,7 +340,7 @@ class StateChartHistoryPropertyTest {
 
     // region mermaid
 
-    private val historyLine = Regex("^( *)state \"\\[H(\\*?)]\" as ([A-Za-z_][A-Za-z0-9_]*)$")
+    private val historyLine = Regex("^( *)state \"\\[H(\\*?)\\]\" as ([A-Za-z_][A-Za-z0-9_]*)$")
     private val blockLine = Regex("^( *)state (?:\"[^\"]*\" as )?([A-Za-z_][A-Za-z0-9_]*) \\{$")
     private val labelled = Regex("^ *state \"([^\"]*)\" as ([A-Za-z_][A-Za-z0-9_]*)(?: \\{)?$")
 
