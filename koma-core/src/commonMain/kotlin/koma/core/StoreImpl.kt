@@ -176,6 +176,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
+    final override fun handlerMetadata(): StoreHandlerMetadata {
+        fun List<HandlerMatcher?>.toMetadata() = mapIndexed { index, matcher ->
+            HandlerMetadata(index = index, stateType = matcher?.stateType, inputType = matcher?.inputType)
+        }
+        val registry = handlerRegistry
+        return StoreHandlerMetadata(
+            enter = registry.enter.toMetadata(),
+            action = registry.action.toMetadata(),
+            exit = registry.exit.toMetadata(),
+            recover = registry.recover.toMetadata(),
+        )
+    }
+
     final override fun patch(patch: StorePatch<S, A, E>): Store<S, A, E> {
         check(mutex.tryLock()) { "[Koma] Failed to configure the Store because it is starting or already started" }
         try {
