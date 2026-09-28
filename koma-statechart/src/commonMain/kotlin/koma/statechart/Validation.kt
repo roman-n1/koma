@@ -40,6 +40,12 @@ sealed interface ValidationIssue {
     data class AtomicParent(val id: StateId, val parent: StateId) : ValidationIssue
 
     /**
+     * State [id] declares [parent] as its parent, but [parent] is a [HistoryState], which cannot
+     * have children.
+     */
+    data class HistoryParent(val id: StateId, val parent: StateId) : ValidationIssue
+
+    /**
      * Following parents from [states] leads back to where it started, so these states are not
      * inside any top-level state.
      *
@@ -62,7 +68,30 @@ sealed interface ValidationIssue {
     data class EmptyCompoundState(val id: StateId) : ValidationIssue
 
     /**
-     * State [id] never becomes active, starting from the initial configuration.
+     * The initial state [initial] of compound state [id], or of the chart when [id] is `null`, is a
+     * [HistoryState]. A history state only says what to restore, so it cannot be where a state or
+     * the chart starts. A history state that is not a child of [id] is reported as
+     * [InitialNotChild] instead.
+     */
+    data class HistoryAsInitial(val id: StateId?, val initial: StateId) : ValidationIssue
+
+    /**
+     * The [HistoryState.default] of history state [id] cannot be entered from it: for a shallow
+     * history it must be a child of the history's parent, for a deep one a proper descendant of it,
+     * and in both cases a declared state that is not a history state. Only checked when the
+     * history's parent is a declared compound state.
+     */
+    data class InvalidHistoryDefault(val id: StateId, val default: StateId) : ValidationIssue
+
+    /**
+     * [transition] leaves a [HistoryState]. A history state is never active, so the transition
+     * never fires.
+     */
+    data class TransitionFromHistory(val transition: Transition) : ValidationIssue
+
+    /**
+     * State [id] never becomes active, starting from the initial configuration. History states are
+     * never active and are never reported.
      */
     data class UnreachableState(val id: StateId) : ValidationIssue
 
@@ -97,14 +126,16 @@ sealed interface ValidationIssue {
 /**
  * Checks the structure of this definition and returns every issue found, or an empty list.
  *
- * Issues are reported in a stable order: duplicates, initial state, hierarchy (unknown or atomic
- * parents by state, parent cycles, compound initial states, empty compound states), transition
- * endpoints, reachability, ambiguity, shadowing.
+ * Issues are reported in a stable order: duplicates, initial state, hierarchy (unknown, atomic or
+ * history parents by state, parent cycles, compound initial states, empty compound states),
+ * history (a history state as the chart's initial state, then as a compound's initial state, then
+ * invalid history defaults), transition endpoints (per transition: unknown source, unknown target,
+ * source is a history state), reachability, ambiguity, shadowing.
  *
  * Hierarchy issues use the first declaration of a duplicated id. A state is reachable when it can
  * become active: the initial configuration and every configuration reached by taking any
  * transition whose source is active, guards and transition priority ignored (see
- * [reachableStates]).
+ * [reachableStates]). History states are never active and never reported as unreachable.
  *
  * Transitions with equal matchers are always checked ([ValidationIssue.AmbiguousTransitions]).
  * Overlap between different matchers, such as a matcher for a sealed parent type and one for its
@@ -133,16 +164,18 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
     }
 
     issues += hierarchyIssues()
+    issues += historyIssues()
 
     for (transition in transitions) {
         if (transition.source !in declared) issues += ValidationIssue.UnknownTransitionSource(transition)
         if (transition.target !in declared) issues += ValidationIssue.UnknownTransitionTarget(transition)
+        if (node(transition.source) is HistoryState) issues += ValidationIssue.TransitionFromHistory(transition)
     }
 
     if (initial in declared) {
         val reachable = reachableStates()
         ids.distinct()
-            .filter { it !in reachable }
+            .filter { it !in reachable && node(it) !is HistoryState }
             .forEach { issues += ValidationIssue.UnreachableState(it) }
     }
 
@@ -181,6 +214,7 @@ internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
         when (node(parent)) {
             null -> issues += ValidationIssue.UnknownParent(node.id, parent)
             is AtomicState -> issues += ValidationIssue.AtomicParent(node.id, parent)
+            is HistoryState -> issues += ValidationIssue.HistoryParent(node.id, parent)
             is CompoundState -> Unit
         }
     }
@@ -210,11 +244,40 @@ internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
 }
 
 /**
+ * Problems with history states that leave their entry undefined, in the order [validate] reports
+ * them.
+ */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.historyIssues(): List<ValidationIssue> {
+    val issues = mutableListOf<ValidationIssue>()
+    if (node(initial) is HistoryState) issues += ValidationIssue.HistoryAsInitial(null, initial)
+    for (node in hierarchy.nodes.values) {
+        if (node is CompoundState && node(node.initial).let { it is HistoryState && it.parent == node.id }) {
+            issues += ValidationIssue.HistoryAsInitial(node.id, node.initial)
+        }
+    }
+    for (node in hierarchy.nodes.values) {
+        if (node !is HistoryState || node(node.parent) !is CompoundState) continue
+        val default = node.default ?: continue
+        val target = node(default)
+        val valid = target != null && target !is HistoryState &&
+            if (node.deep) isDescendant(default, node.parent) else target.parent == node.parent
+        if (!valid) issues += ValidationIssue.InvalidHistoryDefault(node.id, default)
+    }
+    return issues
+}
+
+/**
  * Returns the states that can become active, starting from the initial configuration (see
  * [StateChartRuntime.initialConfiguration]) and taking, in every configuration reached, any
  * transition whose source is active. Guards and transition priority are ignored, and entering a
  * state makes its ancestors active too. For a flat chart these are the states reachable from
  * [StateChartDefinition.initial] by following transitions, including the initial state itself.
+ *
+ * Configurations include what history states remember (see [StateConfiguration.history]), so a
+ * transition into a history state is followed exactly as the runtime would take it: it restores
+ * what was remembered on the path that led there, or its default. History states themselves are
+ * never active and never returned.
  *
  * States come in breadth-first order of the configurations that first make them active.
  */

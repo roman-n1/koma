@@ -24,8 +24,8 @@ value class StateId(val value: String) {
  * A node in a statechart.
  *
  * The hierarchy is given by [parent] links, so a definition stays a flat list of nodes. Parallel
- * and history nodes will be added as new implementations, so code that matches on this type
- * should expect more cases.
+ * nodes will be added as a new implementation, so code that matches on this type should expect
+ * more cases.
  */
 @ExperimentalKomaApi
 sealed interface StateNode {
@@ -65,6 +65,39 @@ data class CompoundState(
     override val id: StateId,
     val initial: StateId,
     override val parent: StateId? = null,
+) : StateNode
+
+/**
+ * A history pseudo-state of the compound state [parent]. It is never active itself: a transition
+ * that targets it enters [parent] (and the ancestors of [parent] it has to) and restores what was
+ * active in [parent] when [parent] was last exited.
+ *
+ * - A shallow history (`deep = false`) remembers the child of [parent] that was active, and
+ *   restores it; a compound child is entered through its own initial states.
+ * - A deep history (`deep = true`) remembers the active atomic descendants of [parent], and
+ *   restores them with every ancestor between them and [parent], outermost first.
+ *
+ * Until [parent] has been exited once, nothing is remembered, and the transition enters [default],
+ * or the initial child of [parent] when [default] is `null`. What is remembered lives in
+ * [StateConfiguration.history], keyed by this state's [id]; it is recorded right before [parent] is
+ * exited, so a transition that exits [parent] and targets this history restores what it just
+ * recorded.
+ *
+ * A history state has no children and no outgoing transitions, and it cannot be the initial state
+ * of the chart or of [parent]. A compound state may have several history states, for example one
+ * shallow and one deep; each remembers independently. See [validate].
+ *
+ * @property parent The compound state whose configuration is remembered
+ * @property deep Whether the active atomic descendants are remembered rather than the active child
+ * @property default Entered while nothing is remembered: a child of [parent] for a shallow history,
+ * any proper descendant of [parent] for a deep one; `null` means the initial child of [parent]
+ */
+@ExperimentalKomaApi
+data class HistoryState(
+    override val id: StateId,
+    override val parent: StateId,
+    val deep: Boolean = false,
+    val default: StateId? = null,
 ) : StateNode
 
 /**
@@ -137,7 +170,7 @@ data class Transition(
  *
  * @property initial The state the chart starts in. Usually a top-level node; a nested one is
  * entered together with its ancestors. A compound one is entered together with its initial
- * descendants.
+ * descendants. It must not be a [HistoryState].
  * @property states All state nodes, in declaration order
  * @property transitions All transitions, in declaration order
  */
@@ -163,8 +196,8 @@ data class StateChartDefinition(
     fun node(id: StateId): StateNode? = hierarchy.nodes[id]
 
     /**
-     * Returns the nodes whose parent is [parent], in declaration order; `null` returns the
-     * top-level nodes.
+     * Returns the nodes whose parent is [parent], in declaration order, history states included;
+     * `null` returns the top-level nodes.
      */
     fun childrenOf(parent: StateId?): List<StateNode> = hierarchy.children[parent].orEmpty()
 
@@ -199,6 +232,9 @@ internal class HierarchyIndex(definition: StateChartDefinition) {
     val nodes: Map<StateId, StateNode> = buildMap { definition.states.forEach { if (it.id !in this) put(it.id, it) } }
     val children: Map<StateId?, List<StateNode>> = nodes.values.groupBy { it.parent }
     val transitionsBySource: Map<StateId, List<Transition>> = definition.transitions.groupBy { it.source }
+
+    /** History states by the id of their parent, in declaration order. */
+    val histories: Map<StateId, List<HistoryState>> = nodes.values.filterIsInstance<HistoryState>().groupBy { it.parent }
 
     /** Declaration position of each first-declared id; undeclared ids sort after all of them. */
     val order: Map<StateId, Int> = nodes.keys.withIndex().associate { (i, id) -> id to i }

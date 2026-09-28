@@ -10,8 +10,10 @@ import koma.core.ExperimentalKomaApi
  * @property active Active nodes, each together with all its ancestors. For a chart built only from
  * atomic and compound states this is one chain from a top-level node down to one active leaf,
  * listed outermost first.
- * @property history Remembered children or leaves of nodes with a history pseudo-state. Reserved
- * for history states; always empty for now.
+ * @property history What each [HistoryState] remembers, keyed by the history state's id: the
+ * child of its parent that was active (shallow) or the atomic descendants of its parent that were
+ * active (deep) when the parent was last exited. A history state that has not recorded anything yet
+ * has no entry. Never contains nodes of [active] that are history states: those are never active.
  */
 @ExperimentalKomaApi
 data class StateConfiguration(
@@ -55,7 +57,7 @@ private fun StateChartDefinition.depth(id: StateId): Int = ancestorsOf(id).size
  */
 @OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.initialConfiguration(): StateConfiguration =
-    StateConfiguration(active = entryPath(domain = null, target = initial).toSet())
+    StateConfiguration(active = entryPath(domain = null, target = initial, history = emptyMap()).toSet())
 
 /**
  * Transitions that may fire from [leaf], in priority order: the leaf's own, then each ancestor's,
@@ -108,36 +110,97 @@ private fun StateChartDefinition.exitSet(configuration: StateConfiguration, tran
 
 /**
  * Nodes entered when entering [target] from [domain]: the ancestors of [target] below [domain],
- * [target], and then, while the entered node is compound, its initial child. Outermost first.
+ * then [target] and, while the entered node is compound, its initial child. Outermost first.
+ *
+ * When [target] is a [HistoryState] it is not entered itself: the nodes it restores (see
+ * [restoredBy]) are entered instead, each with its ancestors below the history's parent and its
+ * initial descendants. A history that cannot be resolved (only in a malformed chart, see
+ * [validate]) is entered like an atomic state, so tools keep working on such charts.
  */
 @OptIn(ExperimentalKomaApi::class)
-private fun StateChartDefinition.entryPath(domain: StateId?, target: StateId): List<StateId> {
+private fun StateChartDefinition.entryPath(domain: StateId?, target: StateId, history: Map<StateId, Set<StateId>>): List<StateId> {
     val entered = ancestorsOf(target).takeWhile { it != domain }.reversed().toMutableList()
-    entered += target
-    var current = node(target)
-    while (current is CompoundState) {
-        val next = node(current.initial)
-        if (next == null || next.parent != current.id || next.id in entered) break
-        entered += next.id
-        current = next
+    val pseudo = node(target) as? HistoryState
+    val restored = pseudo?.let { restoredBy(it, history) }
+    if (pseudo == null || restored == null) {
+        enterWithInitials(target, entered)
+    } else {
+        for (id in restored) {
+            ancestorsOf(id).takeWhile { it != pseudo.parent }.asReversed().forEach { if (it !in entered) entered += it }
+            if (id !in entered) enterWithInitials(id, entered)
+        }
     }
     return entered
 }
 
 /**
+ * Adds [id] to [entered] and then, while the entered node is compound, its initial child. Stops at
+ * an initial state that is not a child, is a history state or was already entered.
+ */
+@OptIn(ExperimentalKomaApi::class)
+private fun StateChartDefinition.enterWithInitials(id: StateId, entered: MutableList<StateId>) {
+    entered += id
+    var current = node(id)
+    while (current is CompoundState) {
+        val next = node(current.initial)
+        if (next == null || next is HistoryState || next.parent != current.id || next.id in entered) break
+        entered += next.id
+        current = next
+    }
+}
+
+/**
+ * The nodes [history] restores: what it remembers in [remembered], else its default, else the
+ * initial child of its parent. Only proper descendants of the parent that are not history states
+ * count; `null` when there is nothing to restore (the parent is not a compound state, or the
+ * fallback is not such a descendant).
+ */
+@OptIn(ExperimentalKomaApi::class)
+private fun StateChartDefinition.restoredBy(history: HistoryState, remembered: Map<StateId, Set<StateId>>): List<StateId>? {
+    val parent = node(history.parent) as? CompoundState ?: return null
+    fun restorable(id: StateId): Boolean = node(id).let { it != null && it !is HistoryState } && isDescendant(id, parent.id)
+    val recorded = remembered[history.id].orEmpty().filter(::restorable)
+    if (recorded.isNotEmpty()) return recorded.sortedBy { declarationOrder(it) }
+    val fallback = history.default ?: parent.initial
+    return if (restorable(fallback)) listOf(fallback) else null
+}
+
+/**
+ * [configuration]'s history after exiting [exited]: for every exited node, each of its history
+ * states remembers the node's active children (shallow) or its active atomic descendants (deep), as
+ * they are in [configuration]. Other entries are kept.
+ */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.recordHistory(configuration: StateConfiguration, exited: Collection<StateId>): Map<StateId, Set<StateId>> {
+    val history = configuration.history.toMutableMap()
+    for (id in exited) {
+        for (node in hierarchy.histories[id].orEmpty()) {
+            val recorded = if (node.deep) {
+                activeLeaves(configuration).filter { isDescendant(it, id) }
+            } else {
+                childrenOf(id).filter { it !is HistoryState && it.id in configuration.active }.map { it.id }
+            }
+            if (recorded.isNotEmpty()) history[node.id] = recorded.toSet()
+        }
+    }
+    return history
+}
+
+/**
  * Fires [transitions] (already selected, non-conflicting) in [configuration]: exits the union of
- * their exit sets innermost first (ties in reverse declaration order), then enters the union of
- * their entry paths outermost first (ties in declaration order).
+ * their exit sets innermost first (ties in reverse declaration order), records history for the
+ * exited nodes (see [recordHistory]), then enters the union of their entry paths outermost first
+ * (ties in declaration order). A transition into a history state enters what the history
+ * remembers after this step's recording.
  */
 @OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.microstep(configuration: StateConfiguration, transitions: List<Transition>): Microstep {
     val exitSet = linkedSetOf<StateId>()
+    for (transition in transitions) exitSet += exitSet(configuration, transition)
+    val history = recordHistory(configuration, exitSet)
     val entrySet = linkedSetOf<StateId>()
-    for (transition in transitions) {
-        exitSet += exitSet(configuration, transition)
-        entrySet += entryPath(domainOf(transition), transition.target)
-    }
+    for (transition in transitions) entrySet += entryPath(domainOf(transition), transition.target, history)
     val exited = exitSet.sortedWith(compareByDescending<StateId> { depth(it) }.thenByDescending { declarationOrder(it) })
     val entered = entrySet.sortedWith(compareBy<StateId> { depth(it) }.thenBy { declarationOrder(it) })
-    return Microstep(exited, entered, configuration.copy(active = (configuration.active - exitSet) + entered))
+    return Microstep(exited, entered, StateConfiguration(active = (configuration.active - exitSet) + entered, history = history))
 }

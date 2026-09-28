@@ -26,6 +26,12 @@ private fun isPlainMermaidId(value: String): Boolean =
  * source and its target, after the nested blocks. A transition is labelled with its action name
  * and, when present, its guard in brackets, for example `Idle --> Loading : Submit [isValid]`.
  *
+ * A history state has no Mermaid syntax of its own, so it is drawn as a state labelled `[H]`
+ * (shallow) or `[H*]` (deep) in its parent's block, always declared with a label, for example
+ * `state "[H]" as ChatHistory`. Its default, when set, is drawn as an unlabelled edge from it
+ * (`ChatHistory --> Composing`), placed like a transition. Transitions into it are drawn like any
+ * other.
+ *
  * State ids that are not plain identifiers, or that are Mermaid keywords, are declared with an
  * alias (`state "Signed in" as koma_state_0`, or `state "Signed in" as koma_state_0 { ... }` for a
  * compound state), so any [StateId] renders safely. Aliases never collide with a plain id used by
@@ -38,7 +44,9 @@ private fun isPlainMermaidId(value: String): Boolean =
 @ExperimentalKomaApi
 fun StateChartDefinition.toMermaid(): String = buildString {
     val compoundInitials = hierarchy.nodes.values.filterIsInstance<CompoundState>().map { it.initial }
-    val ids = (states.map { it.id } + initial + compoundInitials + transitions.flatMap { listOf(it.source, it.target) }).distinct()
+    val histories = hierarchy.nodes.values.filterIsInstance<HistoryState>()
+    val historyDefaults = histories.mapNotNull { it.default }
+    val ids = (states.map { it.id } + initial + compoundInitials + historyDefaults + transitions.flatMap { listOf(it.source, it.target) }).distinct()
     val taken = ids.map { it.value }.filterTo(mutableSetOf(), ::isPlainMermaidId)
     var nextAlias = 0
     val refs = ids.associateWith { id ->
@@ -53,14 +61,24 @@ fun StateChartDefinition.toMermaid(): String = buildString {
     fun containerChain(id: StateId): List<StateId?> = generateSequence(containerOf(id)) { containerOf(it) }.toList() + null
     fun declaration(id: StateId): String {
         val ref = refs.getValue(id)
-        return if (ref == id.value) ref else "state \"${id.value.replace("\"", "'")}\" as $ref"
+        val node = hierarchy.nodes[id]
+        return when {
+            node is HistoryState -> "state \"${if (node.deep) "[H*]" else "[H]"}\" as $ref"
+            ref == id.value -> ref
+            else -> "state \"${id.value.replace("\"", "'")}\" as $ref"
+        }
     }
-    val transitionsByBlock = transitions.groupBy { transition ->
-        val targetChain = containerChain(transition.target)
-        containerChain(transition.source).first { it in targetChain }
+    fun blockOf(source: StateId, target: StateId): StateId? {
+        val targetChain = containerChain(target)
+        return containerChain(source).first { it in targetChain }
     }
+    val transitionsByBlock = transitions.groupBy { blockOf(it.source, it.target) }
+    val defaultsByBlock = histories.filter { it.default != null }.groupBy { blockOf(it.id, it.default!!) }
 
     fun appendTransitions(block: StateId?, indent: String) {
+        for (history in defaultsByBlock[block].orEmpty()) {
+            appendLine("$indent${refs.getValue(history.id)} --> ${refs.getValue(history.default!!)}")
+        }
         for (transition in transitionsByBlock[block].orEmpty()) {
             append("$indent${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : ${transition.on.name}")
             transition.guard?.let { append(" [$it]") }
@@ -83,7 +101,8 @@ fun StateChartDefinition.toMermaid(): String = buildString {
 
     appendLine("stateDiagram-v2")
     for (id in ids) {
-        if (containerOf(id) == null && hierarchy.nodes[id] !is CompoundState && refs.getValue(id) != id.value) {
+        val node = hierarchy.nodes[id]
+        if (containerOf(id) == null && node !is CompoundState && (refs.getValue(id) != id.value || node is HistoryState)) {
             appendLine("    ${declaration(id)}")
         }
     }

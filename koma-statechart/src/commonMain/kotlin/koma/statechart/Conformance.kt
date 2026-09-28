@@ -60,6 +60,17 @@ sealed interface ConformanceViolation {
  * matches a change to any leaf it enters. In a flat chart this is simply a transition from `from`
  * to `to`.
  *
+ * History: the plugin remembers what the chart's [HistoryState]s would record as the Store moves
+ * from leaf to leaf (the same rules as [StateChartRuntime], applied to the configuration of the
+ * old leaf; after a change no declared transition explains, the ancestors of the old leaf that are
+ * not ancestors of the new one count as exited). A transition is then taken from the old leaf's
+ * configuration with that history, so a transition into a history state leads exactly to what the
+ * chart would restore, and a Store that forgets to restore is reported. When the plugin has not
+ * seen the history record anything, the Store may have started from a saved state whose history
+ * the plugin never saw, so any leaf the history could restore is accepted: its default and, for
+ * every child (shallow) or atomic descendant (deep) of its parent, what restoring that one enters.
+ * A self-loop records nothing.
+ *
  * Start: the Store may start in any declared state, not only [StateChartDefinition.initial],
  * because a [koma.core.StateSaver] or `patch { initialState(...) }` may provide the first state.
  * Only an undeclared start state is reported, as [ConformanceViolation.UndeclaredState].
@@ -98,6 +109,7 @@ class StateChartConformance<S : State, A : Action, E : Event>(
     private var lastAction: A? = null
     private var trigger: A? = null
     private var pendingSelfLoop: Transition? = null
+    private var history: Map<StateId, Set<StateId>> = emptyMap()
 
     /**
      * Violations seen so far, in the order they happened.
@@ -134,10 +146,17 @@ class StateChartConformance<S : State, A : Action, E : Event>(
         pendingSelfLoop = null
         checkDeclared(to)
 
-        val candidates = definition.candidatesFor(from).filter { to in enteredBy(from, it) }.toList()
+        val tracked = definition.configurationOf(from).copy(history = history)
+        val candidates = definition.candidatesFor(from).filter { leadsTo(tracked, it, to) }.toList()
         val action = trigger
         trigger = null
         val taken = if (action == null) candidates.firstOrNull() else candidates.firstOrNull { it.on.matches(action) }
+        history = if (taken != null) {
+            definition.microstep(tracked, listOf(taken)).configuration.history
+        } else {
+            val kept = definition.ancestorsOf(to) + to
+            definition.recordHistory(tracked, tracked.active.filter { it !in kept })
+        }
         when {
             taken != null -> recordedCovered += taken
             candidates.isEmpty() -> recordedViolations += ConformanceViolation.UndeclaredTransition(from = from, to = to, lastAction = lastAction)
@@ -145,11 +164,25 @@ class StateChartConformance<S : State, A : Action, E : Event>(
         }
     }
 
-    private fun enteredBy(leaf: StateId, transition: Transition): List<StateId> =
-        definition.microstep(definition.configurationOf(leaf), listOf(transition)).entered
+    /**
+     * Whether [transition], taken from [configuration], enters [to]; for a history target the
+     * plugin has seen record nothing, whether it enters [to] for any record the history could hold.
+     */
+    private fun leadsTo(configuration: StateConfiguration, transition: Transition, to: StateId): Boolean {
+        if (to in enteredBy(configuration, transition)) return true
+        val target = definition.node(transition.target) as? HistoryState ?: return false
+        if (target.id in configuration.history) return false
+        val records = definition.states.filter { node ->
+            node !is HistoryState && if (target.deep) node is AtomicState && definition.isDescendant(node.id, target.parent) else node.parent == target.parent
+        }
+        return records.any { node -> to in enteredBy(configuration.copy(history = configuration.history + (target.id to setOf(node.id))), transition) }
+    }
+
+    private fun enteredBy(configuration: StateConfiguration, transition: Transition): List<StateId> =
+        definition.microstep(configuration, listOf(transition)).entered
 
     private fun leafAfter(leaf: StateId, transition: Transition): StateId =
-        definition.microstep(definition.configurationOf(leaf), listOf(transition)).leaf(definition)
+        definition.microstep(definition.configurationOf(leaf).copy(history = history), listOf(transition)).leaf(definition)
 
     private fun checkDeclared(id: StateId) {
         if (id !in declaredStates) recordedViolations += ConformanceViolation.UndeclaredState(id)

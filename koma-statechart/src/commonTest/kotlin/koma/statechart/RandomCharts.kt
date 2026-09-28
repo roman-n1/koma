@@ -23,8 +23,9 @@ sealed interface RandomAction : Action {
 data class RandomState(val id: StateId, val attempts: Int = 0) : State
 
 /**
- * Seeded generator of [StateChartDefinition]s for property-based tests: flat charts ([chart]) and
- * hierarchical ones ([hierarchicalChart], [malformed]).
+ * Seeded generator of [StateChartDefinition]s for property-based tests: flat charts ([chart]),
+ * hierarchical ones ([hierarchicalChart], [malformed]) and ones with history states
+ * ([withHistory], [malformedHistory]).
  *
  * Charts mix plain identifiers with ids that Mermaid cannot use directly (spaces, dashes, quotes,
  * unicode, keywords, and ids that look like the exporter's own aliases), and may contain
@@ -176,6 +177,7 @@ internal object RandomCharts {
         fun withParent(node: StateNode, parent: StateId?): StateNode = when (node) {
             is AtomicState -> node.copy(parent = parent)
             is CompoundState -> node.copy(parent = parent)
+            is HistoryState -> node.copy(parent = parent ?: node.parent)
         }
         repeat(random.nextInt(1, 4)) {
             val index = random.nextInt(states.size)
@@ -195,6 +197,86 @@ internal object RandomCharts {
             }
         }
         return chart.copy(states = states)
+    }
+
+    /** Ids of generated history states: disjoint from [allIds], some needing a Mermaid alias. */
+    val historyIds: List<StateId> = listOf("H", "H*", "hist", "deep history", "Chat.H", "koma_state_3", "history", "end_h").map(::StateId)
+
+    /**
+     * Adds random [HistoryState]s to a well-formed [hierarchicalChart]: each compound state gets
+     * none, one or two (shallow or deep, with no default, or a valid one: a child for shallow, any
+     * descendant for deep), inserted at random positions. Then random transitions are pointed at
+     * them: some existing targets are replaced, and new ones are added from random states, so
+     * walks leave a compound state and come back through its history.
+     */
+    fun withHistory(random: Random, chart: StateChartDefinition): StateChartDefinition {
+        val compounds = chart.states.filterIsInstance<CompoundState>()
+        val pool = historyIds.shuffled(random).toMutableList()
+        val histories = mutableListOf<HistoryState>()
+        for (compound in compounds) {
+            repeat(listOf(0, 1, 1, 2).random(random)) {
+                val id = pool.removeFirstOrNull() ?: return@repeat
+                val deep = random.nextBoolean()
+                val options = chart.states.filter { if (deep) chart.isDescendant(it.id, compound.id) else it.parent == compound.id }
+                val default = if (random.nextInt(3) == 0) null else options.random(random).id
+                histories += HistoryState(id, parent = compound.id, deep = deep, default = default)
+            }
+        }
+        if (histories.isEmpty()) return chart
+        val states = chart.states.toMutableList()
+        for (history in histories) states.add(random.nextInt(states.size + 1), history)
+        val ids = chart.states.map { it.id }
+        val transitions = chart.transitions.map {
+            if (random.nextInt(4) == 0) it.copy(target = histories.random(random).id) else it
+        }.toMutableList()
+        repeat(random.nextInt(1, 6)) {
+            val history = histories.random(random)
+            val source = if (random.nextBoolean()) ids.random(random) else chart.states.filter { chart.isDescendant(it.id, history.parent) }.random(random).id
+            transitions.add(random.nextInt(transitions.size + 1), Transition(source, history.id, matchers.random(random)))
+        }
+        return chart.copy(states = states, transitions = transitions)
+    }
+
+    /**
+     * Breaks the history states of [chart] (adding one when it has none) in one to three random
+     * ways: a child of a history state, a history state under an atomic or an undeclared parent, a
+     * default outside its parent (or a history state as default), a transition from a history
+     * state, a history state as a compound's or the chart's initial state.
+     */
+    fun malformedHistory(random: Random, chart: StateChartDefinition): StateChartDefinition {
+        var states = chart.states
+        var transitions = chart.transitions
+        var initial = chart.initial
+        fun histories() = states.filterIsInstance<HistoryState>()
+        if (histories().isEmpty()) {
+            val compound = states.filterIsInstance<CompoundState>().randomOrNull(random)
+                ?: CompoundState(StateId("box"), initial = StateId("inner")).also { states = states + it + AtomicState(StateId("inner"), parent = it.id) }
+            states = states + HistoryState(StateId("added history"), parent = compound.id, deep = random.nextBoolean())
+        }
+        fun replace(old: StateNode, new: StateNode) {
+            states = states.toMutableList().also { it[it.indexOf(old)] = new }
+        }
+        repeat(random.nextInt(1, 4)) { round ->
+            val history = histories().random(random)
+            when (random.nextInt(7)) {
+                0 -> states = states + AtomicState(StateId("child $round"), parent = history.id)
+                1 -> states.filterIsInstance<AtomicState>().randomOrNull(random)?.let { states = states + HistoryState(StateId("atomic h $round"), parent = it.id) }
+                2 -> states = states + HistoryState(StateId("orphan h $round"), parent = StateId("ghost $round"), deep = random.nextBoolean())
+                3 -> replace(history, history.copy(default = (states.map { it.id } + StateId("ghost default")).random(random)))
+                4 -> transitions = transitions + Transition(history.id, states.random(random).id, matchers.random(random))
+                5 -> (states.firstOrNull { it.id == history.parent } as? CompoundState)?.let { replace(it, it.copy(initial = history.id)) }
+                else -> initial = history.id
+            }
+        }
+        return StateChartDefinition(initial, states, transitions)
+    }
+
+    /** [hierarchicalChart] with [withHistory], for the first [count] seeds. */
+    fun forEachHistoryChart(count: Int = seeds.size, block: (seed: Int, random: Random, chart: StateChartDefinition) -> Unit) {
+        for (seed in seeds.take(count)) {
+            val random = Random(seed)
+            block(seed, random, withHistory(random, hierarchicalChart(random)))
+        }
     }
 
     fun forEachHierarchicalChart(block: (seed: Int, random: Random, chart: StateChartDefinition) -> Unit) {
