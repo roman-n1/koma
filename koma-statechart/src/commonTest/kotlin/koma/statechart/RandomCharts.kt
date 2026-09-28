@@ -39,9 +39,9 @@ internal object RandomCharts {
     val allIds: List<StateId> = (plainIds + trickyIds).map(::StateId)
 
     val matchers = listOf(
-        ActionMatcher.of<RandomAction.Ping>(),
-        ActionMatcher.of<RandomAction.Pong>(),
-        ActionMatcher.of<RandomAction.Go>(),
+        ActionMatcher.of<RandomAction.Ping>("Ping"),
+        ActionMatcher.of<RandomAction.Pong>("Pong"),
+        ActionMatcher.of<RandomAction.Go>("Go"),
         ActionMatcher("Reset"),
         ActionMatcher("Go"),
         ActionMatcher("Anything", RandomAction::class),
