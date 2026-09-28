@@ -67,7 +67,7 @@ fun <S : State, A : Action, E : Event> Store<S, A, E>.patch(
 }
 
 @OptIn(InternalKomaApi::class)
-private fun <S : State, A : Action, E : Event> Store<S, A, E>.requireStoreInternalApi(): StoreInternalApi<S, A, E> {
+internal fun <S : State, A : Action, E : Event> Store<S, A, E>.requireStoreInternalApi(): StoreInternalApi<S, A, E> {
     @Suppress("UNCHECKED_CAST")
     return this as? StoreInternalApi<S, A, E>
         ?: throw IllegalStateException("[Koma] This API is only supported for Store instances created by Koma DSL")
