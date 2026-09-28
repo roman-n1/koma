@@ -43,6 +43,7 @@ kotlin {
             api(project(":koma-core"))
         }
         commonTest.dependencies {
+            implementation(project(":koma-test"))
             implementation(libs.kotlin.test)
             implementation(libs.coroutines.test)
         }
