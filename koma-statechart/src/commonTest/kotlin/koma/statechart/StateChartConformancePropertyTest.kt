@@ -163,7 +163,7 @@ class StateChartConformancePropertyTest {
         val taken = mutableListOf<Transition>()
         actions.forEachIndexed { index, action ->
             val transition = chart.transitions.firstOrNull { t ->
-                t.source == current && referenceMatches(t.on, action) && (t.guard == null || guards.getValue(t.guard!!)(action))
+                t.source == current && referenceMatches(t.on, action) && (t.guard == null || guards.getValue(t.guard)(action))
             }
             val to = if (mutation?.index == index) mutation.target else transition?.target ?: current
             if (mutation?.index != index && transition != null && to != current) taken += transition
