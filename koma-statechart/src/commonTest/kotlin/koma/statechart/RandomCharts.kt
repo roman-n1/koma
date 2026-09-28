@@ -79,7 +79,30 @@ internal object RandomCharts {
             transitions += next
         }
         val initial = if (!valid && undeclared.isNotEmpty() && random.nextInt(6) == 0) undeclared.first() else ids.random(random)
+        // Grow the part reachable from the initial state, inserting at random positions, so that
+        // most charts have deep, branching reachable parts and not only unreachable noise.
+        repeat(random.nextInt(0, maxTransitions / 2 + 1)) {
+            val source = reachableFrom(initial, transitions).random(random)
+            val grown = Transition(source, endpoint(), matchers.random(random), if (random.nextInt(4) == 0) guards.random(random) else null)
+            transitions.add(random.nextInt(transitions.size + 1), grown)
+        }
         return StateChartDefinition(initial, ids.map(::AtomicState), transitions)
+    }
+
+    /** Plain fixed-point reachability, independent of the library's own [reachableStates]. */
+    private fun reachableFrom(initial: StateId, transitions: List<Transition>): List<StateId> {
+        val reachable = mutableListOf(initial)
+        var changed = true
+        while (changed) {
+            changed = false
+            for (t in transitions) {
+                if (t.source in reachable && t.target !in reachable) {
+                    reachable += t.target
+                    changed = true
+                }
+            }
+        }
+        return reachable
     }
 
     fun forEachChart(valid: Boolean = true, block: (seed: Int, random: Random, chart: StateChartDefinition) -> Unit) {
