@@ -1,6 +1,6 @@
 # Statechart-слой поверх Koma: roadmap
 
-- 更新日: 2026-09-28
+- 更新日: 2026-09-28 (добавлена upstream-стратегия по шагам)
 
 ## 背景
 
@@ -144,12 +144,48 @@ Shallow / deep history.
 - Mermaid-экспорт строится без runtime reflection;
 - есть unit-тесты.
 
-## Upstream
+## Upstream-стратегия: маленькие шаги
 
-Сначала прототип в форке `roman-n1/koma`, потом модель, валидация, Mermaid,
-работающий прототип. Только после этого — RFC issue в `koma-kt/koma`
-(«Proposal: optional introspectable statechart model for Koma»), и затем PR
-небольшими шагами.
+Цель — чтобы автор Koma (`koma-kt/koma`) принимал изменения по одному. Для
+этого каждый шаг:
+
+- полезен Koma сам по себе, даже если statechart-слой не появится;
+- опирается на то, что автор уже сам записал в `doc/internal/`;
+- аддитивен и не меняет поведение существующих Store;
+- начинается с feature request и только после согласия превращается в
+  небольшой PR.
+
+Порядок и размещение:
+
+| # | Шаг | Где | Польза для Koma сама по себе | Что даёт statechart-слою |
+|---|---|---|---|---|
+| 1 | Хранить matcher-метаданные (`StateType(S2::class)` / `AnyState`, `ActionType(A2::class)` / `AnyAction`) рядом с предикатами в реестре `StoreBuilder`. Публичный API не меняется. | core, internal | Основа для диагностики роутинга, которую автор предлагает в `notes/2026-04-25-unhandled-action-behavior.md` (раздел про `build()`-проверки прямо называет это препятствием) | Первые данные о структуре: какие типы состояний и действий объявлены |
+| 2 | Routing diagnostics в `:koma-test`: `diagnoseActionMatches`, assert числа совпадений при dispatch | `koma-test` | Ровно пункты 2–3 из той же записки автора | Проверка, что переход в модели и handler в Store совпадают |
+| 3 | Read-only таблица роутинга (`state type × action type`) под `@ExperimentalKomaApi` | core, experimental | Документация Store, handler coverage в тестах | Проверка покрытия и первая визуализация без собственного DSL |
+| 4 | Причина изменения состояния для наблюдателей (action / enter / launch transaction / recover) | core, спорно | Debug timeline и trace (upstream #189), `receiveTransition` в тестовом драйвере (upstream #176) | Метаданные перехода для coverage и MBT |
+| 5 | Модуль `koma-statechart`: модель, валидация, Mermaid, генерация путей | отдельный модуль (в форке) | — | Phase 1–2 и часть Phase 8 |
+| 6 | Runtime и адаптер к Store через обычный DSL | отдельный модуль | — | Phase 3–4 |
+| 7 | Opt-in иерархические state scope: `enter` / `exit` / `launch` у sealed-родителя переживают переходы между его дочерними вариантами (LCA по sealed-иерархии) | core, RFC + ADR | Сегодня `state<Parent> { enter {} }` перезапускается при каждой смене дочернего варианта, это неудобно и без statecharts. Оформляется как policy-enum, по образцу `doc/internal/adr/2026-05-07-runtime-policy-enum.md` | Phase 5 без собственного управления корутинами |
+| 8 | Параллельные регионы, history | отдельный модуль | — | Phase 6–7, в ядро не предлагаем |
+| 9 | RFC «optional introspectable statechart model for Koma»: модуль как companion или внешний артефакт | upstream issue | — | Официальный статус слоя |
+
+Замечания по рискам:
+
+- Шаг 4 противоречит текущей позиции автора: в
+  `notes/2026-05-02-plugin-design.md` Plugin наблюдает только границы Store
+  (вход и выход) и отдельного хука на смену типа нет. Поэтому шаг 4 идёт
+  после 1–3 и предлагается как данные, а не как новый хук. Если автор
+  откажет, слой коррелирует `onAction` → `onState` сам (под одним mutex) или
+  отдаёт метаданные из собственного runtime.
+- Шаг 7 меняет семантику scope, поэтому только opt-in и только после
+  отдельного ADR.
+- Шаги 5, 6 и 8 не требуют ничего от upstream и идут в форке параллельно
+  с 1–4.
+- Номера upstream-issues (#175, #176, #189) взяты из handoff и записок
+  автора и в этой сессии не проверялись.
+
+Черновик первого feature request (шаг 1):
+[`notes/2026-09-28-upstream-fr-handler-matcher-metadata.md`](../notes/2026-09-28-upstream-fr-handler-matcher-metadata.md).
 
 ## 補足
 
