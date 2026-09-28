@@ -34,12 +34,12 @@ class StateChartPathTest {
     private val error = StateId("Error")
     private val orphan = StateId("Orphan")
 
-    private val submitValid = Transition(idle, loading, ActionMatcher.of<FormAction.Submit>(), guard = "isValid")
-    private val submitInvalid = Transition(idle, error, ActionMatcher.of<FormAction.Submit>())
-    private val loaded = Transition(loading, ready, ActionMatcher.of<FormAction.Loaded>())
-    private val retry = Transition(error, loading, ActionMatcher.of<FormAction.Retry>())
-    private val refresh = Transition(ready, ready, ActionMatcher.of<FormAction.Refresh>())
-    private val orphanRetry = Transition(orphan, idle, ActionMatcher.of<FormAction.Retry>())
+    private val submitValid = Transition(idle, loading, ActionMatcher.of<FormAction.Submit>("Submit"), guard = "isValid")
+    private val submitInvalid = Transition(idle, error, ActionMatcher.of<FormAction.Submit>("Submit"))
+    private val loaded = Transition(loading, ready, ActionMatcher.of<FormAction.Loaded>("Loaded"))
+    private val retry = Transition(error, loading, ActionMatcher.of<FormAction.Retry>("Retry"))
+    private val refresh = Transition(ready, ready, ActionMatcher.of<FormAction.Refresh>("Refresh"))
+    private val orphanRetry = Transition(orphan, idle, ActionMatcher.of<FormAction.Retry>("Retry"))
 
     private val chart = StateChartDefinition(
         initial = idle,

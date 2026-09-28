@@ -5,6 +5,7 @@ import koma.core.ExperimentalKomaApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -34,10 +35,10 @@ class StateChartDefinitionTest {
     private val ready = StateId("Ready")
     private val error = StateId("Error")
 
-    private val submit = ActionMatcher.of<FormAction.Submit>()
-    private val loaded = ActionMatcher.of<FormAction.Loaded>()
-    private val failed = ActionMatcher.of<FormAction.Failed>()
-    private val retry = ActionMatcher.of<FormAction.Retry>()
+    private val submit = ActionMatcher.of<FormAction.Submit>("Submit")
+    private val loaded = ActionMatcher.of<FormAction.Loaded>("Loaded")
+    private val failed = ActionMatcher.of<FormAction.Failed>("Failed")
+    private val retry = ActionMatcher.of<FormAction.Retry>("Retry")
 
     private val chart = StateChartDefinition(
         initial = idle,
@@ -51,9 +52,27 @@ class StateChartDefinitionTest {
         ),
     )
 
+    sealed interface ChatAction : Action {
+        data class Send(val text: String) : ChatAction
+        data object Clear : ChatAction
+    }
+
     @Test
-    fun actionMatcherIsNamedAfterActionType() {
+    fun actionMatcherOfUsesTheGivenNameAndTheType() {
         assertEquals(ActionMatcher("Submit", FormAction.Submit::class), submit)
+        assertEquals(ActionMatcher("Send message", ChatAction.Send::class), ActionMatcher.of<ChatAction.Send>("Send message"))
+        assertFailsWith<IllegalArgumentException> { ActionMatcher.of<ChatAction.Send>(" ") }
+    }
+
+    @Test
+    fun matchesByTypeIncludingSubtypesOrBySimpleName() {
+        val any = ActionMatcher.of<ChatAction>("Chat")
+        assertTrue(any.matches(ChatAction.Send("hi")))
+        assertTrue(any.matches(ChatAction.Clear))
+        assertFalse(any.matches(FormAction.Submit))
+        assertTrue(ActionMatcher.of<ChatAction.Send>("Renamed").matches(ChatAction.Send("hi")))
+        assertTrue(ActionMatcher("Send").matches(ChatAction.Send("hi")))
+        assertFalse(ActionMatcher("Renamed").matches(ChatAction.Send("hi")))
     }
 
     @Test
@@ -73,6 +92,7 @@ class StateChartDefinitionTest {
     @Test
     fun validChartHasNoIssues() {
         assertTrue(chart.validate().isEmpty())
+        assertTrue(chart.validate(listOf(FormAction.Submit, FormAction.Loaded, FormAction.Failed, FormAction.Retry)).isEmpty())
     }
 
     @Test
@@ -121,6 +141,62 @@ class StateChartDefinitionTest {
                 ),
             ),
             ambiguous.validate(),
+        )
+    }
+
+    private val chatIdle = StateId("ChatIdle")
+    private val sending = StateId("Sending")
+    private val cleared = StateId("Cleared")
+    private val anyChat = ActionMatcher.of<ChatAction>("Chat")
+    private val send = ActionMatcher.of<ChatAction.Send>("Send")
+    private val chatSamples = listOf(ChatAction.Send("hi"), ChatAction.Clear)
+
+    /**
+     * ```
+     * [*] --> ChatIdle
+     * ChatIdle --Chat--> Cleared      (matches every ChatAction)
+     * ChatIdle --Send--> Sending      (never fires: Chat is declared first)
+     * ```
+     */
+    private val shadowing = StateChartDefinition(
+        initial = chatIdle,
+        states = listOf(AtomicState(chatIdle), AtomicState(sending), AtomicState(cleared)),
+        transitions = listOf(Transition(chatIdle, cleared, anyChat), Transition(chatIdle, sending, send)),
+    )
+
+    @Test
+    fun supertypeMatcherShadowingSubtypeIsReportedOnlyWithSamples() {
+        assertEquals(emptyList(), shadowing.validate())
+        assertEquals(
+            listOf(
+                ValidationIssue.ShadowedTransitions(
+                    source = chatIdle,
+                    sample = ChatAction.Send("hi"),
+                    transitions = listOf(Transition(chatIdle, cleared, anyChat), Transition(chatIdle, sending, send)),
+                ),
+            ),
+            shadowing.validate(chatSamples),
+        )
+    }
+
+    @Test
+    fun guardedOverlapIsNotShadowing() {
+        val guarded = shadowing.copy(
+            transitions = listOf(Transition(chatIdle, cleared, anyChat, guard = "isEmpty"), Transition(chatIdle, sending, send)),
+        )
+
+        assertEquals(emptyList(), guarded.validate(chatSamples))
+    }
+
+    @Test
+    fun equalMatchersAreReportedAsAmbiguityNotShadowing() {
+        val sameMatcher = shadowing.copy(
+            transitions = listOf(Transition(chatIdle, cleared, send), Transition(chatIdle, sending, send)),
+        )
+
+        assertEquals(
+            listOf(ValidationIssue.AmbiguousTransitions(chatIdle, send, sameMatcher.transitions)),
+            sameMatcher.validate(chatSamples),
         )
     }
 
