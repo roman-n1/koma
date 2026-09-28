@@ -1,75 +1,90 @@
 # Draft feature request: keep matcher metadata in the handler registry
 
-- 更新日: 2026-09-28
-- Status: draft, not filed. Target: koma-kt/koma.
+- 更新日: 2026-09-28 (thank-you opening, links to the working change in the fork)
+- Status: draft, not filed. Target: koma-kt/koma. Roman posts it himself.
 
 ---
 
 **Title:** Proposal: keep matcher metadata in the handler registry (groundwork for routing diagnostics)
 
+Hello, and thank you for Koma.
+
+I use it and like it very much. I especially like the direction of the recent
+releases: explicit state variants, state-scoped work, `LaunchControl`,
+`recover {}`, plugins and `koma-test`. Each step makes the state machine side of
+Koma stronger, and I would like to help in the same direction.
+
+Here is what I would like to propose as a first, small step.
+
 ### Background
 
-`doc/internal/notes/2026-04-25-unhandled-action-behavior.md` identifies a
-diagnostics gap: from the outside, users cannot tell an unhandled action apart
-from a handled action that left the state unchanged, and first-match-wins
-shadowing is invisible. That note proposes `:koma-test` routing diagnostics
-(`diagnoseActionMatches`, a dispatch-time match-count assert) and mentions
-`build()`-time checks as a later option.
+`doc/internal/notes/2026-04-25-unhandled-action-behavior.md` describes a
+diagnostics gap. From the outside, it is hard to tell an unhandled action from a
+handled action that did not change the state. Shadowing by first-match-wins is
+also hard to see. The note proposes routing diagnostics in `:koma-test`
+(`diagnoseActionMatches`, and an assert on the match count at dispatch time). It
+also mentions checks at `build()` time as a later option.
 
-It also points out what blocks the `build()`-time checks: `StoreBuilder`
-currently keeps only predicate lambdas (`it is S2`, `it is A2`), so the
-information about which matcher a handler came from is lost at registration.
+The note also explains what blocks the `build()`-time checks: `StoreBuilder`
+keeps only predicate lambdas (`it is S2`, `it is A2`). The information about
+which types a handler was declared for is lost at registration.
 
 ### Proposal
 
-Keep a small matcher descriptor next to each predicate when `state<S2> {}` and
-`action<A2> {}` register handlers, for example:
+When `state<S2> {}`, `action<A2> {}` and `recover<T> {}` register a handler, keep
+a small matcher next to the predicate:
 
 ```kotlin
-internal sealed interface StateMatcher {
-    data object AnyState : StateMatcher
-    data class StateType(val type: KClass<out State>) : StateMatcher
-}
-
-internal sealed interface ActionMatcher {
-    data object AnyAction : ActionMatcher
-    data class ActionType(val type: KClass<out Action>) : ActionMatcher
-}
+@PublishedApi
+internal data class HandlerMatcher(
+    val stateType: KClass<*>,      // S2
+    val inputType: KClass<*>? = null, // A2 for action {}, T for recover {}, null for enter {} / exit {}
+)
 ```
 
-`reified` already gives us `S2::class` and `A2::class` at the call site, so this
-needs no reflection and works on every KMP target.
+`reified` already gives `S2::class`, `A2::class` and `T::class` at the call
+site, so no reflection is needed and it works on every KMP target.
 
-In the first PR, nothing public changes:
+In this first step, nothing public changes:
 
-- handler selection stays first-match-wins by predicate, exactly as today;
-- the descriptors are internal and only exposed to `:koma-test` through
-  `StoreInternalApi` (the same bridge `startAndAwait` / `patch` already use).
+- Handler selection is still first-match-wins by predicate, exactly as today.
+- The matchers are internal. The built Store keeps them as a list per handler
+  kind (`enter`, `action`, `exit`, `recover`), in registration order, so index
+  `i` in the list is handler `i` in first-match order.
+- `StateHandler` and `ThreadedHandler` keep their old constructors. Inline code
+  that was compiled against 4.0.0 still works; its handlers simply have no
+  matcher.
 
-### What it unlocks
+### Working change
 
-1. The `:koma-test` routing diagnostics that the note already sketches:
-   `diagnoseActionMatches(state, action)` returning matched and selected handler
-   indices, plus their matcher descriptors, so a failing test can say *"handler
-   #3 `state<Loading> / action<Retry>` is shadowed by #1 `anyState / action<Retry>`"*
-   instead of printing only an index.
-2. Optional `build()`-time or test-time checks for possible shadowing, reported
-   as facts, not errors, in line with the note's position that the library
-   should not decide whether an overlap is intentional.
-3. Later, if wanted, a read-only routing table ("which action types each state
-   type handles") that tools can render as documentation or use for handler
-   coverage in tests.
+I made this change in my fork so you can look at real code:
+
+- Branch: https://github.com/roman-n1/koma/tree/feature/handler-matcher-metadata
+- Diff: https://github.com/roman-n1/koma/compare/main...feature/handler-matcher-metadata
+
+It touches `StoreBuilder.kt` and `StoreImpl.kt` and adds `HandlerMatcher.kt`.
+`StoreHandlerRegistryTest` checks that the matchers record the right types in
+first-match order for `enter`, `action`, `exit` and `recover`, including a broad
+`state<AppState> { action<AppAction> {} }` fallback registered last. The
+existing `koma-core` tests pass without changes.
+
+### What it enables later
+
+1. The `:koma-test` routing diagnostics from the note. A failing test could say
+   "handler #3 `state<Loading> / action<Retry>` is shadowed by handler #1
+   `state<AppState> / action<Retry>`" instead of only an index.
+2. Optional checks for possible shadowing at `build()` time or in tests. They
+   would report facts, not errors, as the note suggests.
+3. If you want it later, a read-only routing table ("which action types each
+   state type handles") for documentation or for handler coverage in tests.
 
 ### Non-goals
 
-- No change to runtime semantics, handler ordering or the public DSL.
-- No new runtime policy for unhandled actions (the note argues against that and
-  this proposal agrees).
+- No change to runtime behavior, handler order or the public DSL.
+- No new runtime policy for unhandled actions. I agree with the note on this.
 
-### Compatibility
+If this direction is fine for you, I can open a small PR with this change first,
+and then a separate PR for the `:koma-test` diagnostics. I am also happy to
+change the naming or the shape to fit your plans.
 
-The change is purely additive and internal. Existing stores behave identically.
-
-If this direction works for you, I am happy to open a small PR with the
-registry change and tests first, and follow up with the `:koma-test`
-diagnostics as a separate PR.
+Thank you for your time.

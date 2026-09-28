@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
+import kotlin.reflect.KClass
 
 /**
  * Builder used by the Store DSL to configure runtime behavior and register state-specific
@@ -110,7 +111,11 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     internal class StateHandler<P, SC : StoreScope>(
         val predicate: P,
         val handler: suspend SC.() -> Unit,
-    )
+        val matcher: HandlerMatcher?,
+    ) {
+        // Keeps inline code compiled against earlier Koma versions working; such handlers have no matcher.
+        constructor(predicate: P, handler: suspend SC.() -> Unit) : this(predicate, handler, null)
+    }
 
     @PublishedApi
     internal val registeredEnterHandlers = mutableListOf<StateHandler<(S) -> Boolean, EnterScope<S, E, S>>>()
@@ -152,7 +157,12 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             private val dispatcher: CoroutineDispatcher?,
             val predicate: P,
             private val handler: suspend SC.() -> Unit,
+            val inputType: KClass<*>?,
         ) {
+            // Keeps inline code compiled against earlier Koma versions working; such handlers have no input type.
+            constructor(dispatcher: CoroutineDispatcher?, predicate: P, handler: suspend SC.() -> Unit) :
+                this(dispatcher, predicate, handler, null)
+
             suspend operator fun invoke(scope: SC) {
                 if (dispatcher == null) {
                     handler(scope)
@@ -208,6 +218,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                         @Suppress("UNCHECKED_CAST")
                         block(this as ActionScope<S, A2, E, S2>)
                     },
+                    inputType = A2::class,
                 ),
             )
         }
@@ -244,6 +255,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                         @Suppress("UNCHECKED_CAST")
                         block(this as RecoverScope<S, E, S2, T>)
                     },
+                    inputType = T::class,
                 ),
             )
         }
@@ -281,6 +293,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                         @Suppress("UNCHECKED_CAST")
                         enterHandler.invoke(this as EnterScope<S, E, S2>)
                     },
+                    matcher = HandlerMatcher(stateType = S2::class),
                 ),
             )
         }
@@ -293,6 +306,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                         @Suppress("UNCHECKED_CAST")
                         actionHandler.invoke(this as ActionScope<S, A, E, S2>)
                     },
+                    matcher = HandlerMatcher(stateType = S2::class, inputType = actionHandler.inputType),
                 ),
             )
         }
@@ -305,6 +319,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                         @Suppress("UNCHECKED_CAST")
                         exitHandler.invoke(this as ExitScope<S, E, S2>)
                     },
+                    matcher = HandlerMatcher(stateType = S2::class),
                 ),
             )
         }
@@ -317,6 +332,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
                         @Suppress("UNCHECKED_CAST")
                         errorHandler.invoke(this as RecoverScope<S, E, S2, Exception>)
                     },
+                    matcher = HandlerMatcher(stateType = S2::class, inputType = errorHandler.inputType),
                 ),
             )
         }
@@ -337,6 +353,12 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
             override val onError: suspend RecoverScope<S, E, S, Exception>.() -> Unit = this@StoreBuilder.onError
+            override val handlerRegistry: HandlerRegistry = HandlerRegistry(
+                enter = registeredEnterHandlers.map { it.matcher },
+                action = registeredActionHandlers.map { it.matcher },
+                exit = registeredExitHandlers.map { it.matcher },
+                recover = registeredErrorHandlers.map { it.matcher },
+            )
         }
     }
 }
