@@ -426,8 +426,11 @@ internal object RandomCharts {
         return chart.copy(transitions = transitions)
     }
 
-    /** [parallelChart] with [withHistory] and [withTimers], for the first [count] seeds. */
-    fun forEachTimerChart(count: Int = seeds.size, block: (seed: Int, random: Random, chart: StateChartDefinition) -> Unit) {
+    /**
+     * [parallelChart] with [withHistory] and [withTimers], for the first [count] seeds. Inline, so
+     * suspending tests (Store walks under virtual time) can suspend in [block].
+     */
+    inline fun forEachTimerChart(count: Int = seeds.size, block: (seed: Int, random: Random, chart: StateChartDefinition) -> Unit) {
         for (seed in seeds.take(count)) {
             val random = Random(seed)
             val base = if (seed % 3 == 0) hierarchicalChart(random) else parallelChart(random)
