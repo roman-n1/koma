@@ -4,6 +4,7 @@ import koma.core.Action
 import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import koma.core.State
+import koma.core.StateSaver
 import koma.core.Store
 import koma.test.dispatchAndAwait
 import koma.test.patch
@@ -24,7 +25,7 @@ import kotlin.test.assertTrue
  * Error   --Retry--> Loading
  * ```
  * The Store below follows it, except that `Reset` jumps from Ready to Idle, which the chart does
- * not declare.
+ * not declare, and `Bump` changes data inside Loading.
  */
 @OptIn(ExperimentalKomaApi::class)
 class StateChartConformanceTest {
@@ -63,6 +64,15 @@ class StateChartConformanceTest {
         ),
     )
 
+    private val stateIdOf: (FormState) -> StateId = { state ->
+        when (state) {
+            FormState.Idle -> idle
+            is FormState.Loading -> loading
+            FormState.Ready -> ready
+            FormState.Error -> error
+        }
+    }
+
     private fun createStore(initial: FormState = FormState.Idle): Store<FormState, FormAction, FormEvent> {
         return Store(initial) {
             coroutineContext(Dispatchers.Unconfined)
@@ -83,8 +93,8 @@ class StateChartConformanceTest {
         }
     }
 
-    private fun conformingStore(initial: FormState = FormState.Idle) =
-        StateChartConformance<FormState, FormAction, FormEvent>(chart).let { conformance ->
+    private fun conformingStore(initial: FormState = FormState.Idle, chart: StateChartDefinition = this.chart) =
+        StateChartConformance<FormState, FormAction, FormEvent>(chart, stateIdOf).let { conformance ->
             createStore(initial).patch { plugin(conformance) } to conformance
         }
 
@@ -128,15 +138,75 @@ class StateChartConformanceTest {
     }
 
     @Test
-    fun unexpectedInitialStateIsReported() = runTest {
+    fun changeWithATriggerTheChartDoesNotDeclareIsReportedAndNotCovered() = runTest {
+        // The chart moves Ready to Idle on Retry, but the Store does it on Reset.
+        val backOnRetry = Transition(ready, idle, ActionMatcher.of<FormAction.Retry>("Retry"))
+        val (store, conformance) = conformingStore(chart = chart.copy(transitions = chart.transitions + backOnRetry))
+
+        store.dispatchAndAwait(FormAction.Submit)
+        store.dispatchAndAwait(FormAction.Loaded)
+        store.dispatchAndAwait(FormAction.Reset)
+
+        assertEquals(listOf(ConformanceViolation.UnexpectedTrigger(from = ready, to = idle, action = FormAction.Reset)), conformance.violations)
+        assertEquals(listOf(chart.transitions[0], chart.transitions[1]), conformance.coveredTransitions.toList())
+    }
+
+    @Test
+    fun selfLoopIsCoveredByItsActionEvenWithoutAStateChange() = runTest {
+        // Bump only changes data inside Loading; Retry in Loading has no handler at all.
+        val bump = Transition(loading, loading, ActionMatcher.of<FormAction.Bump>("Bump"))
+        val retry = Transition(loading, loading, ActionMatcher.of<FormAction.Retry>("Retry"))
+        val (store, conformance) = conformingStore(chart = chart.copy(transitions = chart.transitions + bump + retry))
+
+        store.dispatchAndAwait(FormAction.Submit)
+        store.dispatchAndAwait(FormAction.Bump)
+        assertEquals(listOf(chart.transitions[0], bump), conformance.coveredTransitions.toList())
+
+        store.dispatchAndAwait(FormAction.Retry)
+        store.dispatchAndAwait(FormAction.Loaded)
+
+        assertEquals(FormState.Ready, store.currentState)
+        assertTrue(conformance.violations.isEmpty())
+        assertEquals(listOf(chart.transitions[0], bump, retry, chart.transitions[1]), conformance.coveredTransitions.toList())
+    }
+
+    @Test
+    fun startingInADeclaredNonInitialStateIsAccepted() = runTest {
         val (store, conformance) = conformingStore(initial = FormState.Error)
+        store.startAndAwait()
+        store.dispatchAndAwait(FormAction.Retry)
+
+        val patched = StateChartConformance<FormState, FormAction, FormEvent>(chart, stateIdOf)
+        val patchedStore = createStore().patch {
+            initialState(FormState.Ready)
+            plugin(patched)
+        }
+        patchedStore.startAndAwait()
+
+        val restored = StateChartConformance<FormState, FormAction, FormEvent>(chart, stateIdOf)
+        val restoredStore = createStore().patch {
+            stateSaver(StateSaver(save = {}, restore = { FormState.Loading(attempt = 4) }))
+            plugin(restored)
+        }
+        restoredStore.dispatchAndAwait(FormAction.Loaded)
+
+        assertEquals(emptyList(), conformance.violations)
+        assertEquals(listOf(chart.transitions[3]), conformance.coveredTransitions.toList())
+        assertEquals(FormState.Ready, patchedStore.currentState)
+        assertEquals(emptyList(), patched.violations)
+        assertEquals(FormState.Ready, restoredStore.currentState)
+        assertEquals(emptyList(), restored.violations)
+        assertEquals(listOf(chart.transitions[1]), restored.coveredTransitions.toList())
+    }
+
+    @Test
+    fun startingInAnUndeclaredStateIsReported() = runTest {
+        val withoutError = chart.copy(states = chart.states.filter { it.id != error })
+        val (store, conformance) = conformingStore(initial = FormState.Error, chart = withoutError)
 
         store.startAndAwait()
 
-        assertEquals(
-            listOf(ConformanceViolation.UnexpectedInitialState(expected = idle, actual = error)),
-            conformance.violations,
-        )
+        assertEquals(listOf(ConformanceViolation.UndeclaredState(error)), conformance.violations)
     }
 
     @Test
@@ -145,7 +215,7 @@ class StateChartConformanceTest {
             states = chart.states.filter { it.id != error },
             transitions = chart.transitions.filter { it.source != error && it.target != error },
         )
-        val conformance = StateChartConformance<FormState, FormAction, FormEvent>(smallChart)
+        val conformance = StateChartConformance<FormState, FormAction, FormEvent>(smallChart, stateIdOf)
         val store = createStore().patch { plugin(conformance) }
 
         store.dispatchAndAwait(FormAction.Submit)
@@ -158,10 +228,5 @@ class StateChartConformanceTest {
             ),
             conformance.violations,
         )
-    }
-
-    @Test
-    fun defaultStateIdIsTheSimpleClassName() {
-        assertEquals(loading, defaultStateId(FormState.Loading(attempt = 3)))
     }
 }
