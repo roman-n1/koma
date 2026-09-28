@@ -4,7 +4,7 @@ import koma.core.ExperimentalKomaApi
 
 /**
  * A walk through a statechart: [transitions] taken one after another, starting with [start] as the
- * active leaf.
+ * active leaf, one action per transition.
  *
  * Paths are plain data for model-based tests. A test dispatches an action for each transition in
  * order and checks that the Store ends in [end], or in `leaves[i]` after the i-th action. When a
@@ -15,15 +15,26 @@ import koma.core.ExperimentalKomaApi
  * previous leaf and may enter a compound state, so the new leaf can differ from its target; use
  * the paths built by [shortestPathTo] and [transitionCoveragePaths], which carry the leaves.
  *
- * @property start The active leaf the path starts in
- * @property transitions The transitions to take, in order
- * @property leaves The active leaf after each transition; as many as [transitions]
+ * With parallel states several leaves are active at once. [start] and [leaves] then name the first
+ * active leaf in declaration order, and [startLeaves] and [activeLeaves] name all of them. The
+ * action for a transition may also fire transitions in other regions, as the runtime does; the
+ * leaves after it already include what those did (see [shortestPathTo]).
+ *
+ * @property start The active leaf the path starts in (the first one, with parallel states)
+ * @property transitions The transitions to take, in order; each stands for the action that takes it
+ * @property leaves The active leaf after each transition (the first one, with parallel states); as
+ * many as [transitions]
+ * @property startLeaves All active leaves the path starts in, in declaration order
+ * @property activeLeaves All active leaves after each transition, in declaration order; as many
+ * as [transitions]
  */
 @ExperimentalKomaApi
 data class StateChartPath(
     val start: StateId,
     val transitions: List<Transition>,
     val leaves: List<StateId>,
+    val startLeaves: List<StateId> = listOf(start),
+    val activeLeaves: List<List<StateId>> = leaves.map { listOf(it) },
 ) {
     /**
      * A path through a flat chart: each transition must leave the previous one's target (the first
@@ -36,6 +47,9 @@ data class StateChartPath(
     init {
         require(leaves.size == transitions.size) {
             "[Koma] Path has ${transitions.size} transitions but ${leaves.size} leaves"
+        }
+        require(activeLeaves.size == transitions.size) {
+            "[Koma] Path has ${transitions.size} transitions but ${activeLeaves.size} sets of active leaves"
         }
     }
 
@@ -68,13 +82,20 @@ private fun requireConnected(start: StateId, transitions: List<Transition>): Lis
  * may be taken. For a flat chart this is a shortest path from [StateChartDefinition.initial] to
  * [target].
  *
+ * With parallel states a step follows the runtime, so that dispatching one action per transition
+ * replays the path: taking transition `t` also takes, in every other region, what the runtime
+ * would choose for an action that matches exactly the transitions whose matcher equals `t.on`
+ * (an equal [ActionMatcher], not merely an overlapping one), with guards true, and leaves out any
+ * transition that conflicts with `t` (see [StateChartRuntime]). Without parallel states a step is
+ * `t` alone.
+ *
  * Among paths of equal length, the one found first by following transitions in declaration order
  * is returned, so the result is stable for a given definition.
  */
 @ExperimentalKomaApi
 fun StateChartDefinition.shortestPathTo(target: StateId): StateChartPath? {
     val graph = configurationGraph
-    return graph.firstReaching[target]?.let { StateChartPath(graph.start, it.transitions, it.leaves) }
+    return graph.firstReaching[target]?.let { graph.pathTo(it) }
 }
 
 /**
@@ -93,13 +114,13 @@ fun StateChartDefinition.transitionCoveragePaths(): List<StateChartPath> {
     val graph = configurationGraph
     val candidates = transitions.mapNotNull { transition ->
         graph.firstReaching[transition.source]?.let { prefix ->
-            val step = microstep(prefix.configuration, listOf(transition))
-            ReachedConfiguration(step.configuration, prefix.transitions + transition, prefix.leaves + step.leaf(this))
+            val step = graphStep(prefix.configuration, transition)
+            ReachedConfiguration(step.configuration, prefix.transitions + transition, prefix.leafSets + listOf(step.leaves(this)))
         }
     }.distinctBy { it.transitions }
     return candidates
         .filter { path -> candidates.none { other -> other.transitions.size > path.transitions.size && other.transitions.subList(0, path.transitions.size) == path.transitions } }
-        .map { StateChartPath(graph.start, it.transitions, it.leaves) }
+        .map { graph.pathTo(it) }
 }
 
 /**
@@ -109,30 +130,33 @@ fun StateChartDefinition.transitionCoveragePaths(): List<StateChartPath> {
 internal class ReachedConfiguration(
     val configuration: StateConfiguration,
     val transitions: List<Transition>,
-    val leaves: List<StateId>,
+    val leafSets: List<List<StateId>>,
 )
 
 /**
  * Configurations reachable from the initial one; see [configurationGraph].
  *
- * @property start The active leaf of the initial configuration
+ * @property startLeaves The active leaves of the initial configuration, never empty
  * @property firstReaching For every node that can become active, the first configuration found
  * with it active, in the order found
  */
 @OptIn(ExperimentalKomaApi::class)
 internal class ConfigurationGraph(
-    val start: StateId,
+    val startLeaves: List<StateId>,
     val firstReaching: Map<StateId, ReachedConfiguration>,
-)
+) {
+    fun pathTo(reached: ReachedConfiguration): StateChartPath =
+        StateChartPath(startLeaves.first(), reached.transitions, reached.leafSets.map { it.first() }, startLeaves, reached.leafSets)
+}
 
 /**
  * Breadth-first search over configurations from the initial one. In each configuration every
- * transition whose source is active is followed, in declaration order.
+ * transition whose source is active is followed, in declaration order, as a [graphStep].
  */
 @OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.buildConfigurationGraph(): ConfigurationGraph {
     val initialConfiguration = initialConfiguration()
-    val start = activeLeaves(initialConfiguration).firstOrNull() ?: initial
+    val startLeaves = activeLeaves(initialConfiguration).ifEmpty { listOf(initial) }
     val first = ReachedConfiguration(initialConfiguration, emptyList(), emptyList())
     val seen = mutableSetOf(initialConfiguration)
     val firstReaching = linkedMapOf<StateId, ReachedConfiguration>()
@@ -142,12 +166,12 @@ internal fun StateChartDefinition.buildConfigurationGraph(): ConfigurationGraph 
         val current = queue.removeFirst()
         for (transition in transitions) {
             if (transition.source !in current.configuration.active) continue
-            val step = microstep(current.configuration, listOf(transition))
+            val step = graphStep(current.configuration, transition)
             if (!seen.add(step.configuration)) continue
-            val next = ReachedConfiguration(step.configuration, current.transitions + transition, current.leaves + step.leaf(this))
+            val next = ReachedConfiguration(step.configuration, current.transitions + transition, current.leafSets + listOf(step.leaves(this)))
             step.configuration.active.forEach { firstReaching.getOrPut(it) { next } }
             queue.addLast(next)
         }
     }
-    return ConfigurationGraph(start, firstReaching)
+    return ConfigurationGraph(startLeaves, firstReaching)
 }

@@ -24,8 +24,9 @@ data class RandomState(val id: StateId, val attempts: Int = 0) : State
 
 /**
  * Seeded generator of [StateChartDefinition]s for property-based tests: flat charts ([chart]),
- * hierarchical ones ([hierarchicalChart], [malformed]) and ones with history states
- * ([withHistory], [malformedHistory]).
+ * hierarchical ones ([hierarchicalChart], [malformed]), ones with history states
+ * ([withHistory], [malformedHistory]) and ones with parallel states ([parallelChart],
+ * [malformedParallel]).
  *
  * Charts mix plain identifiers with ids that Mermaid cannot use directly (spaces, dashes, quotes,
  * unicode, keywords, and ids that look like the exporter's own aliases), and may contain
@@ -177,6 +178,7 @@ internal object RandomCharts {
         fun withParent(node: StateNode, parent: StateId?): StateNode = when (node) {
             is AtomicState -> node.copy(parent = parent)
             is CompoundState -> node.copy(parent = parent)
+            is ParallelState -> node.copy(parent = parent)
             is HistoryState -> node.copy(parent = parent ?: node.parent)
         }
         repeat(random.nextInt(1, 4)) {
@@ -203,14 +205,15 @@ internal object RandomCharts {
     val historyIds: List<StateId> = listOf("H", "H*", "hist", "deep history", "Chat.H", "koma_state_3", "history", "end_h").map(::StateId)
 
     /**
-     * Adds random [HistoryState]s to a well-formed [hierarchicalChart]: each compound state gets
+     * Adds random [HistoryState]s to a well-formed [hierarchicalChart] or [parallelChart]: each
+     * compound or parallel state gets
      * none, one or two (shallow or deep, with no default, or a valid one: a child for shallow, any
      * descendant for deep), inserted at random positions. Then random transitions are pointed at
      * them: some existing targets are replaced, and new ones are added from random states, so
      * walks leave a compound state and come back through its history.
      */
     fun withHistory(random: Random, chart: StateChartDefinition): StateChartDefinition {
-        val compounds = chart.states.filterIsInstance<CompoundState>()
+        val compounds = chart.states.filter { it is CompoundState || it is ParallelState }
         val pool = historyIds.shuffled(random).toMutableList()
         val histories = mutableListOf<HistoryState>()
         for (compound in compounds) {
@@ -269,6 +272,111 @@ internal object RandomCharts {
             }
         }
         return StateChartDefinition(initial, states, transitions)
+    }
+
+    /**
+     * A random well-formed tree of atomic, compound and [ParallelState]s at most [maxDepth] levels
+     * deep, built top-down so every compound state has one to three children (one of them its
+     * initial state) and every parallel state two or three regions (mostly compound, sometimes
+     * atomic or parallel). The first top-level node is usually parallel. Nodes are declared in
+     * shuffled order. Transitions are random, with self-loops, duplicates and guards, and some
+     * groups share one matcher across the regions of a parallel state, so one action fires in
+     * several regions at once. The initial state is usually a top-level node, sometimes a nested
+     * one, whose parallel ancestors then enter their other regions too.
+     *
+     * Sizes are capped ([maxStates] is a soft limit: children a container needs are added anyway)
+     * so the configuration graph, which multiplies the regions' configurations, stays small.
+     */
+    fun parallelChart(random: Random, maxStates: Int = 13, maxDepth: Int = 4, maxTransitions: Int = 18): StateChartDefinition {
+        val pool = allIds.shuffled(random).toMutableList()
+        val nodes = mutableListOf<StateNode>()
+        fun build(parent: StateId?, depth: Int, kind: Int): StateId {
+            val id = pool.removeAt(0)
+            val container = depth < maxDepth - 1 && pool.size > 3
+            val room = { allIds.size - pool.size < maxStates }
+            when {
+                container && kind == 1 -> {
+                    val children = List(random.nextInt(1, 4)) { build(id, depth + 1, if (room()) random.nextInt(6) else 0) }
+                    nodes += CompoundState(id, initial = children.random(random), parent = parent)
+                }
+                container && kind == 2 -> {
+                    repeat(random.nextInt(2, 4)) { build(id, depth + 1, if (room()) listOf(0, 1, 1, 1, 2).random(random) else 0) }
+                    nodes += ParallelState(id, parent = parent)
+                }
+                else -> nodes += AtomicState(id, parent = parent)
+            }
+            return id
+        }
+        build(null, 0, if (random.nextInt(5) == 0) 1 else 2)
+        repeat(random.nextInt(0, 3)) { if (pool.size > 3) build(null, 0, random.nextInt(3)) }
+        val shuffled = nodes.shuffled(random)
+        val ids = shuffled.map { it.id }
+
+        val transitions = mutableListOf<Transition>()
+        repeat(random.nextInt(0, maxTransitions + 1)) {
+            val roll = random.nextInt(10)
+            transitions += when {
+                roll == 0 && transitions.isNotEmpty() -> transitions.random(random)
+                roll == 1 -> ids.random(random).let { Transition(it, it, matchers.random(random)) }
+                else -> Transition(ids.random(random), ids.random(random), matchers.random(random), if (random.nextInt(3) == 0) guards.random(random) else null)
+            }
+        }
+        val parallels = shuffled.filterIsInstance<ParallelState>()
+        fun inside(id: StateId): List<StateId> = shuffled.filter { n -> generateSequence(n.parent) { p -> shuffled.first { it.id == p }.parent }.any { it == id } }.map { it.id }
+        repeat(if (parallels.isEmpty()) 0 else random.nextInt(1, 5)) {
+            val parallel = parallels.random(random)
+            val matcher = matchers.random(random)
+            for (region in shuffled.filter { it.parent == parallel.id }.shuffled(random).take(random.nextInt(2, 4))) {
+                val within = inside(region.id)
+                if (within.isEmpty()) continue
+                val transition = Transition(within.random(random), within.random(random), matcher, if (random.nextInt(4) == 0) guards.random(random) else null)
+                transitions.add(random.nextInt(transitions.size + 1), transition)
+            }
+        }
+        val roots = shuffled.filter { it.parent == null }.map { it.id }
+        val initial = if (random.nextInt(5) == 0) ids.random(random) else roots.random(random)
+        return StateChartDefinition(initial, shuffled, transitions)
+    }
+
+    /**
+     * Breaks the parallel states of [chart] (adding one when it has none) in one to three random
+     * ways: a parallel state with no region or with one, a compound state turned parallel (keeping
+     * its children), a history state of a parallel state with a default outside it or on a
+     * grandchild while shallow, a node moved under an atomic region.
+     */
+    fun malformedParallel(random: Random, chart: StateChartDefinition): StateChartDefinition {
+        var states = chart.states
+        fun parallels() = states.filterIsInstance<ParallelState>()
+        if (parallels().isEmpty()) {
+            states = states + ParallelState(StateId("pair")) + AtomicState(StateId("left"), StateId("pair")) + AtomicState(StateId("right"), StateId("pair"))
+        }
+        repeat(random.nextInt(1, 4)) { round ->
+            val parallel = parallels().random(random)
+            when (random.nextInt(5)) {
+                0 -> states = states + ParallelState(StateId("bare $round"), parent = parallel.id.takeIf { random.nextBoolean() })
+                1 -> states = states + ParallelState(StateId("single $round")) + AtomicState(StateId("only $round"), StateId("single $round"))
+                2 -> states.filterIsInstance<CompoundState>().randomOrNull(random)?.let { c ->
+                    states = states.map { if (it == c) ParallelState(c.id, c.parent) else it }
+                }
+                3 -> {
+                    val grandchildren = states.filter { n -> n.parent != null && states.firstOrNull { it.id == n.parent }?.parent == parallel.id }
+                    val default = (grandchildren.map { it.id } + StateId("ghost default")).random(random)
+                    states = states + HistoryState(StateId("bad h $round"), parent = parallel.id, deep = false, default = default)
+                }
+                else -> states.filter { it is AtomicState && it.parent == parallel.id }.randomOrNull(random)?.let { atomic ->
+                    states = states + AtomicState(StateId("under atomic $round"), parent = atomic.id)
+                }
+            }
+        }
+        return chart.copy(states = states)
+    }
+
+    /** [parallelChart] with [withHistory], for the first [count] seeds. */
+    fun forEachParallelChart(count: Int = seeds.size, block: (seed: Int, random: Random, chart: StateChartDefinition) -> Unit) {
+        for (seed in seeds.take(count)) {
+            val random = Random(seed)
+            block(seed, random, withHistory(random, parallelChart(random)))
+        }
     }
 
     /** [hierarchicalChart] with [withHistory], for the first [count] seeds. */

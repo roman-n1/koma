@@ -79,9 +79,20 @@ sealed interface ValidationIssue {
      * The [HistoryState.default] of history state [id] cannot be entered from it: for a shallow
      * history it must be a child of the history's parent, for a deep one a proper descendant of it,
      * and in both cases a declared state that is not a history state. Only checked when the
-     * history's parent is a declared compound state.
+     * history's parent is a declared compound or parallel state; for a parallel parent the
+     * children are its regions.
      */
     data class InvalidHistoryDefault(val id: StateId, val default: StateId) : ValidationIssue
+
+    /**
+     * Parallel state [id] has fewer than two regions, so it is not really parallel: with one
+     * region it behaves like a compound state with that region as its initial child, with none
+     * like an atomic state. The runtime accepts it; this is a warning.
+     *
+     * @property regions The regions it has (its children that are not history states), in
+     * declaration order
+     */
+    data class TooFewRegions(val id: StateId, val regions: List<StateId>) : ValidationIssue
 
     /**
      * [transition] leaves a [HistoryState]. A history state is never active, so the transition
@@ -129,8 +140,9 @@ sealed interface ValidationIssue {
  * Issues are reported in a stable order: duplicates, initial state, hierarchy (unknown, atomic or
  * history parents by state, parent cycles, compound initial states, empty compound states),
  * history (a history state as the chart's initial state, then as a compound's initial state, then
- * invalid history defaults), transition endpoints (per transition: unknown source, unknown target,
- * source is a history state), reachability, ambiguity, shadowing.
+ * invalid history defaults), parallel states with fewer than two regions (in declaration order),
+ * transition endpoints (per transition: unknown source, unknown target, source is a history
+ * state), reachability, ambiguity, shadowing.
  *
  * Hierarchy issues use the first declaration of a duplicated id. A state is reachable when it can
  * become active: the initial configuration and every configuration reached by taking any
@@ -165,6 +177,9 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
 
     issues += hierarchyIssues()
     issues += historyIssues()
+    for ((id, regions) in hierarchy.regions) {
+        if (regions.size < 2) issues += ValidationIssue.TooFewRegions(id, regions)
+    }
 
     for (transition in transitions) {
         if (transition.source !in declared) issues += ValidationIssue.UnknownTransitionSource(transition)
@@ -215,7 +230,7 @@ internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
             null -> issues += ValidationIssue.UnknownParent(node.id, parent)
             is AtomicState -> issues += ValidationIssue.AtomicParent(node.id, parent)
             is HistoryState -> issues += ValidationIssue.HistoryParent(node.id, parent)
-            is CompoundState -> Unit
+            is CompoundState, is ParallelState -> Unit
         }
     }
     val cycles = mutableListOf<List<StateId>>()
@@ -257,7 +272,7 @@ internal fun StateChartDefinition.historyIssues(): List<ValidationIssue> {
         }
     }
     for (node in hierarchy.nodes.values) {
-        if (node !is HistoryState || node(node.parent) !is CompoundState) continue
+        if (node !is HistoryState || node(node.parent).let { it !is CompoundState && it !is ParallelState }) continue
         val default = node.default ?: continue
         val target = node(default)
         val valid = target != null && target !is HistoryState &&
@@ -271,7 +286,9 @@ internal fun StateChartDefinition.historyIssues(): List<ValidationIssue> {
  * Returns the states that can become active, starting from the initial configuration (see
  * [StateChartRuntime.initialConfiguration]) and taking, in every configuration reached, any
  * transition whose source is active. Guards and transition priority are ignored, and entering a
- * state makes its ancestors active too. For a flat chart these are the states reachable from
+ * state makes its ancestors active too. With parallel states, taking a transition also takes the
+ * transitions other regions would take for the same action, as the runtime does (see
+ * [shortestPathTo]). For a flat chart these are the states reachable from
  * [StateChartDefinition.initial] by following transitions, including the initial state itself.
  *
  * Configurations include what history states remember (see [StateConfiguration.history]), so a
