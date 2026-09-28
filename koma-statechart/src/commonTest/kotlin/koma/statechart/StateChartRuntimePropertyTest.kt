@@ -63,7 +63,7 @@ class StateChartRuntimePropertyTest {
         for (t in chart.transitions) {
             if (t.source != current) continue
             if (!referenceMatches(t.on, action)) continue
-            if (t.guard != null && !table.holds(t.guard!!, action)) continue
+            if (t.guard != null && !table.holds(t.guard, action)) continue
             return StepResult.Transitioned(t)
         }
         return StepResult.Ignored
