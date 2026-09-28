@@ -101,7 +101,10 @@ fun <S : State, A : Action, E : Event> Store<S, A, E>.diagnoseActionMatches(
  * [action], without dispatching.
  *
  * Startup is awaited first, as with [startAndAwait], so the check uses the state after the
- * startup `enter {}` chain.
+ * startup `enter {}` chain. Like [startAndAwait], this waits for the Store's lock even when the
+ * Store is already running: if an action is being processed, the check runs after it finishes
+ * and sees the resulting state. Do not call it from inside a Store handler, where it would wait
+ * for itself; use the non-suspending overload with an explicit state there.
  *
  * This extension is available for Store instances created by the Koma DSL.
  *
