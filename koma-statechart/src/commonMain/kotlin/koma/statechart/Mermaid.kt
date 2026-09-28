@@ -5,32 +5,52 @@ import koma.core.ExperimentalKomaApi
 private val mermaidIdentifier = Regex("[A-Za-z_][A-Za-z0-9_]*")
 
 /**
+ * Words the Mermaid state-diagram grammar reads as keywords (case-insensitively), so they cannot be
+ * used as bare state references.
+ */
+private val mermaidKeywords = setOf(
+    "state", "note", "direction", "class", "classdef", "style", "scale", "hide", "end", "click",
+    "acctitle", "accdescr",
+)
+
+private fun isPlainMermaidId(value: String): Boolean =
+    mermaidIdentifier.matches(value) && value.lowercase() !in mermaidKeywords
+
+/**
  * Renders this definition as a Mermaid `stateDiagram-v2`.
  *
  * States are listed in declaration order, then transitions in declaration order. A transition is
  * labelled with its action name and, when present, its guard in brackets, for example
- * `Idle --> Loading : Submit [isValid]`. State ids that are not plain identifiers are declared
- * with an alias, so any [StateId] renders safely.
+ * `Idle --> Loading : Submit [isValid]`. State ids that are not plain identifiers, or that are
+ * Mermaid keywords, are declared with an alias, so any [StateId] renders safely. Aliases never
+ * collide with a plain id used by the chart, and ids that only appear as the initial state or a
+ * transition endpoint are declared too.
  *
  * The output is built from the model only; nothing runs and no reflection is used.
  */
 @ExperimentalKomaApi
 fun StateChartDefinition.toMermaid(): String = buildString {
-    val aliases = mutableMapOf<StateId, String>()
-    fun ref(id: StateId): String = aliases.getOrPut(id) {
-        if (mermaidIdentifier.matches(id.value)) id.value else "koma_state_${aliases.size}"
+    val ids = (states.map { it.id } + initial + transitions.flatMap { listOf(it.source, it.target) }).distinct()
+    val taken = ids.map { it.value }.filterTo(mutableSetOf(), ::isPlainMermaidId)
+    var nextAlias = 0
+    val refs = ids.associateWith { id ->
+        if (isPlainMermaidId(id.value)) {
+            id.value
+        } else {
+            generateSequence { "koma_state_${nextAlias++}" }.first { it !in taken }.also { taken += it }
+        }
     }
 
     appendLine("stateDiagram-v2")
-    for (state in states) {
-        val alias = ref(state.id)
-        if (alias != state.id.value) {
-            appendLine("    state \"${state.id.value.replace("\"", "'")}\" as $alias")
+    for (id in ids) {
+        val ref = refs.getValue(id)
+        if (ref != id.value) {
+            appendLine("    state \"${id.value.replace("\"", "'")}\" as $ref")
         }
     }
-    appendLine("    [*] --> ${ref(initial)}")
+    appendLine("    [*] --> ${refs.getValue(initial)}")
     for (transition in transitions) {
-        append("    ${ref(transition.source)} --> ${ref(transition.target)} : ${transition.on.name}")
+        append("    ${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : ${transition.on.name}")
         transition.guard?.let { append(" [$it]") }
         appendLine()
     }
