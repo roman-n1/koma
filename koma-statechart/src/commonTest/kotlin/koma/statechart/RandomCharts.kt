@@ -2,6 +2,7 @@ package koma.statechart
 
 import koma.core.Action
 import koma.core.ExperimentalKomaApi
+import koma.core.State
 import kotlin.random.Random
 
 /**
@@ -14,6 +15,12 @@ sealed interface RandomAction : Action {
     data object Reset : RandomAction
     data class Go(val n: Int) : RandomAction
 }
+
+/**
+ * A Koma state for runtime tests: a chart node plus data that guards can read.
+ */
+@OptIn(ExperimentalKomaApi::class)
+data class RandomState(val id: StateId, val attempts: Int = 0) : State
 
 /**
  * Seeded generator of [StateChartDefinition]s for property-based tests.
