@@ -4,7 +4,9 @@ package koma.core
  * Handles non-fatal exceptions raised while a Store is running.
  *
  * This includes exceptions from DSL handlers, plugin hooks, launched coroutines, and state
- * persistence callbacks.
+ * persistence callbacks. A launched coroutine that fails after its state has already exited
+ * (for example blocking work that finishes after cancellation and then throws) is not reported:
+ * its state is gone, so neither `recover {}` nor this handler sees it.
  */
 interface ExceptionHandler {
     /**

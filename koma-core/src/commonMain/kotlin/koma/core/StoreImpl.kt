@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.concurrent.Volatile
+import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.KClass
@@ -182,11 +183,24 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     final override suspend fun startAndAwait() {
+        checkNotInsideThisStore("startAndAwait")
         launchStartup().join()
     }
 
     final override suspend fun dispatchAndAwait(action: A) {
+        checkNotInsideThisStore("dispatchAndAwait")
         launchDispatch(action).join()
+    }
+
+    // Handlers, plugin hooks and transactions run in coroutines that carry this marker. Awaiting
+    // the Store from one of them would wait for the lock the caller holds: a permanent deadlock
+    // that used to be silent.
+    private val insideStore = InsideStore(this)
+
+    private suspend fun checkNotInsideThisStore(name: String) {
+        check(currentCoroutineContext()[InsideStore]?.store !== this) {
+            "[Koma] $name must not be called from a handler, plugin hook or transaction of the same Store: it would wait for itself. Call it from a launch {} or from outside the Store"
+        }
     }
 
     final override fun matchActionHandlers(state: S, action: A): List<ActionHandlerMatch> {
@@ -236,7 +250,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun launchStartup(): Job {
-        return coroutineScope.launch {
+        return coroutineScope.launch(insideStore) {
             mutex.withLock {
                 initializeIfNeeded()
             }
@@ -245,7 +259,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun launchDispatch(action: A): Job {
         val previousDispatchJob = CompletableDeferred<Job?>()
-        val job = dispatchScope.launch {
+        val job = dispatchScope.launch(insideStore) {
             // Keeps dispatch order: a cancelled or failed predecessor completes too, so this never
             // waits forever. Waiting here costs nothing extra, as the lock serializes dispatches anyway.
             previousDispatchJob.await()?.join()
@@ -564,7 +578,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             block(launchScope)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
-            coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
+            coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore) {
                 mutex.withLock {
                     if (stateRuntime.scope.isActive) {
                         onErrorOccurred(currentState, t as Exception)
@@ -592,7 +606,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
             override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend EnterTransactionScope<S, E, S>.() -> Unit) {
                 val caller = currentCoroutineContext()[Job]
-                val job = coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
+                val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore) {
                     mutex.withLock {
                         if (canRunTransaction(stateScope, caller)) {
                             var newState: S? = null
@@ -641,7 +655,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
             override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend ActionTransactionScope<S, A, E, S>.() -> Unit) {
                 val caller = currentCoroutineContext()[Job]
-                val job = coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
+                val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore) {
                     mutex.withLock {
                         if (canRunTransaction(stateScope, caller)) {
                             var newState: S? = null
@@ -765,17 +779,17 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private suspend fun processPlugins(block: suspend Plugin<S, A, E>.() -> Unit) {
+        if (plugins.isEmpty()) return
         try {
             pluginMutex.withLock {
-                when (pluginExecutionPolicy) {
+                // A single plugin needs no scope: its hooks are sequential under either policy.
+                if (pluginExecutionPolicy == PluginExecutionPolicy.InRegistrationOrder || plugins.size == 1) {
+                    plugins.forEach { plugin -> plugin.block() }
+                } else {
                     // async + awaitAll, not launch: a hook failing with a CancellationException (an
                     // expired withTimeout) would otherwise end its own coroutine silently.
-                    PluginExecutionPolicy.Concurrent -> coroutineScope {
+                    coroutineScope {
                         plugins.map { plugin -> async { plugin.block() } }.awaitAll()
-                    }
-
-                    PluginExecutionPolicy.InRegistrationOrder -> plugins.forEach { plugin ->
-                        plugin.block()
                     }
                 }
             }
@@ -819,6 +833,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private class InternalError(val original: Throwable) : Throwable(original)
+
+    private class InsideStore(val store: Any) : AbstractCoroutineContextElement(InsideStore) {
+        companion object Key : CoroutineContext.Key<InsideStore>
+    }
 
     private companion object {
         const val MAX_ENTER_CHAIN = 500

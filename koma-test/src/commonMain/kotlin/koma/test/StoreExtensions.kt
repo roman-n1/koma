@@ -15,6 +15,9 @@ import koma.core.StorePatchBuilder
  *
  * This waits for plugin `onStart` hooks and the synchronous `enter {}` chain triggered by startup.
  * It does not wait for additional work launched from `enter {}` handlers.
+ * Calling it from inside a handler, plugin hook or transaction of the same Store throws
+ * [IllegalStateException]: it would wait for itself. On a closed Store it returns at once and
+ * nothing runs.
  *
  * This extension is available for Store instances created by the Koma DSL.
  *
@@ -32,8 +35,10 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.startAndAwait() {
  * state transition work triggered by that dispatch.
  * It does not wait for additional work launched from `enter {}` or `action {}` handlers.
  * It also returns normally when the action was discarded before it ran, by
- * [koma.core.PendingActionPolicy.ClearOnStateExit] or `clearPendingActions()`; check the state
- * or a [StoreRecorder] rather than relying on the return alone.
+ * [koma.core.PendingActionPolicy.ClearOnStateExit] or `clearPendingActions()`, and on a closed
+ * Store, where nothing runs; check the state or a [StoreRecorder] rather than relying on the
+ * return alone. Calling it from inside a handler, plugin hook or transaction of the same Store
+ * throws [IllegalStateException]: it would wait for itself. Call it from a `launch {}` instead.
  *
  * This extension is available for Store instances created by the Koma DSL.
  *

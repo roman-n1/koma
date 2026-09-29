@@ -483,4 +483,39 @@ class StoreRegressionTest {
         assertTrue("loop" in error.message.orEmpty(), error.message)
         assertEquals(1, pokes)
     }
+
+    data object Nested : Action
+
+    /**
+     * Awaiting the Store from inside one of its own handlers or plugin hooks used to deadlock it
+     * silently (the wait is for the lock the caller holds). It now fails fast with an error that
+     * names the problem, and the Store keeps working. From a `launch {}` it is allowed.
+     */
+    @Test
+    fun awaitingTheStoreFromInsideItsOwnHandler_failsFastInsteadOfDeadlocking() = runTest(testDispatcher) {
+        val handled = mutableListOf<Throwable>()
+        val recovered = mutableListOf<String>()
+        var pokes = 0
+        lateinit var store: Store<Booting, Action, Nothing>
+        store = Store(Booting()) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(ExceptionHandler { handled += it })
+            plugin(Plugin(onAction = { _, action -> if (action is Enter) store.dispatchAndAwaitForTest(Poke) }))
+            state<Booting> {
+                enter { store.startAndAwaitForTest() }
+                action<Nested> { store.dispatchAndAwaitForTest(Poke) }
+                action<Poke> { pokes++ }
+                recover<IllegalStateException> { recovered += error.message.orEmpty().substringBefore(":") }
+            }
+        }
+
+        store.dispatchAndAwaitForTest(Nested)
+        store.dispatchAndAwaitForTest(Enter)
+        store.dispatchAndAwaitForTest(Poke)
+
+        assertEquals(1, pokes)
+        assertEquals(listOf("[Koma] startAndAwait must not be called from a handler, plugin hook or transaction of the same Store", "[Koma] dispatchAndAwait must not be called from a handler, plugin hook or transaction of the same Store"), recovered)
+        // The plugin hook's failure bypasses recover {} and reaches the exception handler.
+        assertEquals(listOf("dispatchAndAwait"), handled.map { it.message.orEmpty().substringAfter("[Koma] ").substringBefore(" ") })
+    }
 }

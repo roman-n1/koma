@@ -175,6 +175,38 @@ Statecharts (`koma-statechart`)
   `true` after `close()`; `launch {}` called after the enter hook returned was dropped silently.
   Fixed: `false`, `false`, and an error naming the hook.
 
+## Fixed in the fourth round
+
+The fourth round audited the documentation against the behaviour, the test helpers under
+misuse, the throughput of the round-3 locks, and ran an end-to-end messenger scenario and
+property-based fuzzing of the statechart tooling against the runtime.
+
+Core and helpers
+
+- `dispatchAndAwait`, `startAndAwait` and the suspending `diagnoseActionMatches` called from a
+  handler, plugin hook or transaction of the same Store deadlocked it silently and for good: the
+  call waits for the lock its caller holds. Such calls now fail with an error naming the
+  problem; from a `launch {}` they still work.
+- One `StoreRecorder` registered on two Stores lost events (hook rounds are serialized per
+  Store, the lists are plain). A recorder now rejects a second Store. `createRecorder()` after
+  startup names itself in its error.
+- The round-3 plugin lock cost about 80% of the event throughput from launched coroutines
+  under contention (four launches streaming events into one plugin: 800k to 140k events/s).
+  Hook rounds with no plugins now skip the lock, and a single plugin runs without the
+  `coroutineScope`/`async` round. The lock itself stays: correctness first, and 140k events/s
+  is far above what a UI consumes. Dispatch throughput (55-60k/s) is unchanged since round 2.
+
+Documentation
+
+- Two README samples were wrong: `nextState { state.copy(count = loadCount()) }` does not
+  compile (`nextState {}` is not suspending), and `launch {}` inside `withContext {}` resolves
+  to `CoroutineScope.launch`, so the handler waited for the collection and the Store never
+  started. Corrected, with the rule spelled out.
+- Corrected README claims: a transaction is not ordered against queued dispatches; launches are
+  cancelled on a state *variant* change only; the default launch lane is the action type, not
+  the `action {}` block; non-`Exception` throwables are fatal, not "handled" by the exception
+  handler. Documented that a launch failing after its state exited is not reported.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing

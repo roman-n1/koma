@@ -37,7 +37,13 @@ class StoreRecorder<S : State, A : Action, E : Event> internal constructor() : P
         recordedEvents.clear()
     }
 
+    // The Store this recorder was started on; the lists are plain, so one recorder cannot serve
+    // two Stores (their hook rounds are serialized per Store only).
+    private var owner: PluginScope<S, A>? = null
+
     override suspend fun onStart(scope: PluginScope<S, A>, state: S) {
+        check(owner == null || owner === scope) { "[Koma] A StoreRecorder records one Store; create one per Store with createRecorder()" }
+        owner = scope
         recordedStates.add(state)
     }
 
@@ -61,7 +67,11 @@ class StoreRecorder<S : State, A : Action, E : Event> internal constructor() : P
  */
 fun <S : State, A : Action, E : Event> Store<S, A, E>.createRecorder(): StoreRecorder<S, A, E> {
     val recorder = StoreRecorder<S, A, E>()
-    patch { plugin(recorder) }
+    try {
+        patch { plugin(recorder) }
+    } catch (e: IllegalStateException) {
+        throw IllegalStateException("[Koma] createRecorder() must be called before the Store is started or dispatched to", e)
+    }
     return recorder
 }
 
