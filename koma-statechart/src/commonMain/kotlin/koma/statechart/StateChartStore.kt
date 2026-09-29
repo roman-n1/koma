@@ -138,7 +138,8 @@ interface ChartLaunchScope<C, A : Action, E : Event> : StoreScope {
     val isActive: Boolean
 
     /**
-     * Emits [event] immediately.
+     * Emits [event] immediately if this activation is still active and the Store is open.
+     * Calls from a previous activation are ignored, even if the same node has been entered again.
      */
     suspend fun event(event: E)
 
@@ -577,7 +578,9 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         // The activation is a plain Job that close() does not cancel; the transactor's scope is.
         override val isActive: Boolean get() = activation.isActive && transactor.isActive
 
-        override suspend fun event(event: E) = transactor.event(event)
+        override suspend fun event(event: E) {
+            if (isActive) transactor.event(event)
+        }
 
         override suspend fun updateContext(transform: (C) -> C): Boolean {
             var applied = false

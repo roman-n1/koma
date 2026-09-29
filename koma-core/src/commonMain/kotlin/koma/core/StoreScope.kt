@@ -93,6 +93,8 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
 
         /**
          * Emits an event immediately from the launched coroutine.
+         * Calls after the state exits, the Store closes or the launch is cancelled are ignored,
+         * including calls from `NonCancellable` cleanup.
          *
          * @param event The event to emit
          */
@@ -102,9 +104,13 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
          * Runs a mutually exclusive transaction against the current Store state and suspends until it
          * completes.
          *
-         * If the state has already exited, or the coroutine that called this function was cancelled
+         * If the state has already exited, or the launch or coroutine that called this function was cancelled
          * (for example by [LaunchControl.CancelPrevious] or `cancelLaunch()`), by the time the
          * transaction would run, the transaction is skipped. Once started, it runs to completion.
+         * `NonCancellable` cleanup does not bypass these checks.
+         *
+         * @throws IllegalStateException if called from a handler or transaction of this Store,
+         * which would wait for the lock it already holds.
          *
          * @param dispatcher Optional CoroutineDispatcher override for this operation.
          * When null, the transaction inherits the Store's current execution context.
@@ -316,6 +322,8 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
 
         /**
          * Emits an event immediately from the launched coroutine.
+         * Calls after the state exits, the Store closes or the launch is cancelled are ignored,
+         * including calls from `NonCancellable` cleanup.
          *
          * @param event The event to emit
          */
@@ -325,9 +333,13 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
          * Runs a mutually exclusive transaction against the current Store state and suspends until it
          * completes.
          *
-         * If the state has already exited, or the coroutine that called this function was cancelled
+         * If the state has already exited, or the launch or coroutine that called this function was cancelled
          * (for example by [LaunchControl.CancelPrevious] or `cancelLaunch()`), by the time the
          * transaction would run, the transaction is skipped. Once started, it runs to completion.
+         * `NonCancellable` cleanup does not bypass these checks.
+         *
+         * @throws IllegalStateException if called from a handler or transaction of this Store,
+         * which would wait for the lock it already holds.
          *
          * @param dispatcher Optional CoroutineDispatcher override for this operation.
          * When null, the transaction inherits the Store's current execution context.
