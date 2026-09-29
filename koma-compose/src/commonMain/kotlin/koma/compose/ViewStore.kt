@@ -113,7 +113,11 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
      * Collects only events of type [E2] while this composable is in the composition.
      *
      * Collection starts after the composable enters the composition.
-     * Events emitted earlier are not replayed.
+     * Events emitted earlier are not replayed: the Store commits a state and runs its `enter {}`
+     * before the frame that composes `stateContent` for it, so an `eventEffect` placed inside a
+     * `stateContent` block misses the events of that state's `enter {}`, and one placed at screen
+     * level misses the events of the startup `enter {}`. Model signals that must not be lost
+     * as state, and keep `eventEffect` at screen level for the rest.
      *
      * @param block Function to process the event
      */
@@ -140,7 +144,7 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
 }
 
 /**
- * Remembers a [Store], collects its state as Compose state, and exposes it through a [ViewStore].
+ * Collects the state of an existing [Store] as Compose state and exposes it through a [ViewStore].
  *
  * Use this overload when a Store is already provided by a ViewModel or dependency injection.
  * For a given Store instance, this function returns the same [ViewStore] instance across

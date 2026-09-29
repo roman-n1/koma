@@ -335,21 +335,37 @@ internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
  * current parent, including after the chart's hierarchy changes between versions.
  */
 @OptIn(ExperimentalKomaApi::class)
-internal fun StateChartDefinition.isConsistent(configuration: StateConfiguration): Boolean {
-    if (!hasConsistentActiveNodes(configuration.active)) return false
-    return configuration.history.all { (id, remembered) ->
-        val history = node(id) as? HistoryState ?: return@all false
-        if (remembered.isEmpty() || remembered.any { node(it) is HistoryState || !isDescendant(it, history.parent) }) return@all false
-        if (!history.deep) {
-            when (val parent = node(history.parent)) {
-                is CompoundState -> remembered.size == 1 && node(remembered.single())?.parent == parent.id
-                is ParallelState -> remembered == hierarchy.regions.getValue(parent.id).toSet()
-                else -> false
-            }
-        } else {
-            val restored = configurationOf(remembered).active.filterTo(linkedSetOf()) { it == history.parent || isDescendant(it, history.parent) }
-            hasConsistentActiveNodes(restored, history.parent) && activeLeaves(StateConfiguration(restored)).toSet() == remembered
+internal fun StateChartDefinition.isConsistent(configuration: StateConfiguration): Boolean =
+    hasConsistentActiveNodes(configuration.active) &&
+        configuration.history.all { (id, remembered) -> isConsistentHistoryRecord(id, remembered) }
+
+/**
+ * [configuration] with the history records this chart cannot restore removed, or `null` when its
+ * active nodes are not a configuration of this chart. A record left behind by an earlier version
+ * of the chart (a leaf that became compound, a region added to a parallel state, a removed leaf)
+ * only affects the next transition into its history state, which then takes the default target,
+ * so it does not justify discarding a snapshot whose active nodes are valid.
+ */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.consistentPart(configuration: StateConfiguration): StateConfiguration? {
+    if (!hasConsistentActiveNodes(configuration.active)) return null
+    val history = configuration.history.filter { (id, remembered) -> isConsistentHistoryRecord(id, remembered) }
+    return if (history.size == configuration.history.size) configuration else StateConfiguration(configuration.active, history)
+}
+
+@OptIn(ExperimentalKomaApi::class)
+private fun StateChartDefinition.isConsistentHistoryRecord(id: StateId, remembered: Set<StateId>): Boolean {
+    val history = node(id) as? HistoryState ?: return false
+    if (remembered.isEmpty() || remembered.any { node(it) is HistoryState || !isDescendant(it, history.parent) }) return false
+    return if (!history.deep) {
+        when (val parent = node(history.parent)) {
+            is CompoundState -> remembered.size == 1 && node(remembered.single())?.parent == parent.id
+            is ParallelState -> remembered == hierarchy.regions.getValue(parent.id).toSet()
+            else -> false
         }
+    } else {
+        val restored = configurationOf(remembered).active.filterTo(linkedSetOf()) { it == history.parent || isDescendant(it, history.parent) }
+        hasConsistentActiveNodes(restored, history.parent) && activeLeaves(StateConfiguration(restored)).toSet() == remembered
     }
 }
 

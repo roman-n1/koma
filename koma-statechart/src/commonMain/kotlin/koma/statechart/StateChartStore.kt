@@ -14,6 +14,7 @@ import koma.core.StoreBuilder
 import koma.core.StoreInternalApi
 import koma.core.StoreScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
@@ -328,6 +329,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
     private val tasks = Channel<Task>(Channel.UNLIMITED)
     private val activations = mutableMapOf<StateId, Job>()
     private lateinit var transactor: EnterLaunchScope<ChartState<C>, E, ChartState<C>>
+    private lateinit var workScope: CoroutineScope
     private lateinit var store: Store<ChartState<C>, A, E>
 
     /** Timer firings ignored because their token was stale; read by tests. */
@@ -371,11 +373,16 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
     private suspend fun EnterScope<ChartState<C>, E, ChartState<C>>.start() {
         launch { work(this) }
         val restored = state
-        // A restored configuration that this chart cannot produce (for example one saved by an
-        // older version of the chart) starts over from the initial configuration, keeping the context.
-        val consistent = restored === declaredInitial || definition.isConsistent(restored.configuration)
-        val state = if (consistent) restored else declaredInitial.copy(context = restored.context)
-        val fresh = state === declaredInitial || !consistent
+        // A restored configuration whose active nodes this chart cannot produce (for example one
+        // saved by an older version of the chart) starts over from the initial configuration,
+        // keeping the context. History records the chart cannot restore are dropped on their own.
+        val consistent = if (restored === declaredInitial) restored.configuration else definition.consistentPart(restored.configuration)
+        val state = when (consistent) {
+            null -> declaredInitial.copy(context = restored.context)
+            restored.configuration -> restored
+            else -> restored.copy(configuration = consistent)
+        }
+        val fresh = state === declaredInitial || consistent == null
         val active = definition.inEntryOrder(state.configuration.active)
         var context = state.context
         val entered = linkedMapOf<StateId, Job>()
@@ -488,7 +495,6 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         tasks.trySend(
             Task(activation) {
                 delay(timer.after!!)
-                var failure: Exception? = null
                 transactor.transaction {
                     try {
                         fire(this, index, token)
@@ -496,12 +502,11 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
                         if (e is CancellationException && !currentCoroutineContext().isActive) throw e
                         // The step failed, so the chart stays where it is and the timer is spent:
                         // drop it, or `timers.running` would list a timer that never fires again.
-                        failure = e
+                        // The error reaches the Store's recover {} handlers once this has committed.
                         nextState { state.copy(timers = state.timers.copy(running = state.timers.running - index)) }
+                        report(e)
                     }
                 }
-                // Rethrown here, the error reaches the Store's recover {} handlers (see runTask).
-                failure?.let { throw it }
             },
         )
     }
@@ -524,6 +529,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
     private suspend fun work(scope: EnterLaunchScope<ChartState<C>, E, ChartState<C>>) {
         transactor = scope
         supervisorScope {
+            workScope = this
             for (task in tasks) {
                 if (!task.activation.isActive) continue
                 launch { runTask(task) }
@@ -540,11 +546,21 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
             // The task's own cancellation (its node exited, the Store closed) ends it; any other
             // exception, including an expired withTimeout, is a failure of the task.
             if (e is CancellationException && !currentCoroutineContext().isActive) throw e
-            // Rethrown inside a transaction, the error reaches the Store's recover {} handlers.
-            transactor.transaction { throw e }
+            report(e)
         } finally {
             handle.dispose()
         }
+    }
+
+    /**
+     * Reports a failure of a task or timer step to the Store's `recover {}` handlers by rethrowing
+     * it inside a transaction. The transaction is requested from the chart's own work scope, not
+     * from the failed task: a transaction whose caller is cancelled is skipped, and the task's node
+     * may exit (cancelling the task) before the transaction gets the lock. The transaction still
+     * runs after the step that exits the node, so the handlers see the committed state.
+     */
+    private fun report(failure: Exception) {
+        workScope.launch { transactor.transaction { throw failure } }
     }
 
     private inner class ExitScope(

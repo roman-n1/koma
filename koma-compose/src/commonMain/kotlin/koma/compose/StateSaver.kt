@@ -19,15 +19,18 @@ private class StateSaverImpl<S : State> : StateSaver<S> {
 }
 
 /**
- * Remembers an in-memory [StateSaver] that survives recomposition.
+ * Remembers an in-memory [StateSaver] that survives recomposition and configuration changes.
  *
- * This saver is retained in memory via `rememberRetained` and is intended for Compose-driven
- * state restoration.
+ * The saver is retained through `rememberRetained` (rin), which needs a `ViewModelStoreOwner`
+ * and a `LifecycleOwner` in the composition. It keeps the value while the composable leaves
+ * during a configuration change and drops it when the composable leaves an active screen; it
+ * does not survive process death. Retained values are keyed by the call site's position, so
+ * content repeated in a loop or a list must wrap each item in `key(itemId) { }`, or the savers
+ * are handed out in composition order and swap on reorder.
  *
  * @return A [StateSaver] for preserving state snapshots in Compose
  */
 @ExperimentalKomaApi
-@Suppress("unused")
 @Composable
 fun <S : State> rememberStateSaver(): StateSaver<S> {
     return rememberRetained {

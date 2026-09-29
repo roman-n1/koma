@@ -41,3 +41,12 @@ These are retained as directions, but the concrete API and runtime policy will b
 
 - [The `recover {}` DSL is limited to the recovery path for `Exception`](./2026-05-01-error-dsl-exception-boundary.md)
 - [`Plugin` design memo](../notes/2026-05-02-plugin-design.md)
+
+## Addendum (2026-09-29, stability review)
+
+The second round of the [stability review](../notes/2026-09-29-stability-review.md) adopted
+"report and continue" for the persistence and observer boundaries: a failing `StateSaver.save`,
+`Plugin.onState` or `Plugin.onEvent` is reported to `exceptionHandler()` and the transition
+finishes (the state is already committed when they run). `Plugin.onAction` and `onStart`
+failures still abort the action or the startup. The dedicated system-side handler is still not
+added.

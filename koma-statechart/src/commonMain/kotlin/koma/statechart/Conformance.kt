@@ -214,7 +214,7 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         val next = mutableListOf<Map<StateId, Set<StateId>>>()
         for (history in histories) {
             val tracked = definition.configurationOf(from).copy(history = history)
-            val (taken, _) = explain(tracked, action, to) ?: continue
+            val taken = explain(tracked, action, to) ?: continue
             if (explained == null) explained = taken
             // Recorded from what is known, never from an inferred record: a guess is not kept.
             val after = definition.microstep(tracked, taken).configuration.history
@@ -288,22 +288,20 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
     }
 
     /**
-     * The transitions the runtime takes from [tracked] to end in the leaves [to], with the
-     * configuration they were evaluated in (which may carry an inferred history record, see
-     * [withInferredHistory]), or `null`. Candidates are the transitions of the active leaves and
+     * The transitions the runtime takes from [tracked] to end in the leaves [to], or `null`. A
+     * transition into a history state is evaluated with an inferred record (see
+     * [withInferredHistory]). Candidates are the transitions of the active leaves and
      * their ancestors in priority order. For an action: the runtime's selection with every
      * matching transition enabled (several regions of a parallel state moving together, or one
      * transition exiting the whole parallel state), then the first matching transition that ends
      * in [to] alone, then the other guard assignments, then a timer of an active source fired
      * alone. Without an action: the first transition that ends in [to] alone, whatever its trigger.
      */
-    private fun explain(tracked: StateConfiguration, action: A?, to: Set<StateId>): Pair<List<Transition>, StateConfiguration>? {
+    private fun explain(tracked: StateConfiguration, action: A?, to: Set<StateId>): List<Transition>? {
         fun endsIn(configuration: StateConfiguration, transitions: List<Transition>): Boolean =
             transitions.isNotEmpty() && definition.microstep(configuration, transitions).leaves(definition).toSet() == to
-        fun alone(transition: Transition): Pair<List<Transition>, StateConfiguration>? {
-            val configuration = withInferredHistory(tracked, transition, to)
-            return if (endsIn(configuration, listOf(transition))) listOf(transition) to configuration else null
-        }
+        fun alone(transition: Transition): List<Transition>? =
+            listOf(transition).takeIf { endsIn(withInferredHistory(tracked, transition, to), it) }
         val candidates = definition.activeLeaves(tracked).flatMap { definition.candidatesFor(it) }.distinct()
         if (action == null) {
             // No trigger: the first transition that leads there, whatever its trigger.
@@ -314,14 +312,14 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         // The runtime's own choice with every guard true: what a Store following the chart does,
         // including the transitions of several regions taken together.
         val allEnabled = enumerated.toSet()
-        definition.selectTransitions(tracked) { it in allEnabled }.let { if (endsIn(tracked, it)) return it to tracked }
+        definition.selectTransitions(tracked) { it in allEnabled }.let { if (endsIn(tracked, it)) return it }
         // One matching transition alone, in priority order (with a history record inferred).
         matching.firstNotNullOfOrNull(::alone)?.let { return it }
         // The other guard assignments.
         for (mask in (1 shl enumerated.size) - 2 downTo 1) {
             val enabled = enumerated.filterIndexed { i, _ -> mask and (1 shl i) != 0 }.toSet()
             val taken = definition.selectTransitions(tracked) { it in enabled }
-            if (endsIn(tracked, taken)) return taken to tracked
+            if (endsIn(tracked, taken)) return taken
         }
         // No action transition explains it: a timer of an active source fired alone.
         return candidates.filter { it.isTimer }.firstNotNullOfOrNull(::alone)

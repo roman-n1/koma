@@ -4,8 +4,11 @@
 
 This document fixes the semantics of phases 4–7 from the
 [roadmap](2026-09-28-statechart-roadmap.md) ahead of the code. Everything lives in the
-`koma-statechart` module and uses only the public API of `koma-core` (plan B). All
-new public types are marked `@ExperimentalKomaApi`.
+`koma-statechart` module. It was written for the public API of `koma-core` only (plan B); since
+the stability review's sixth round the adapter also uses the `@InternalKomaApi` bridge
+(`StoreInternalApi.dispatchIf`, `StoreBuilder.validateRecovery`), see the
+[stability review](../notes/2026-09-29-stability-review.md). All new public types are marked
+`@ExperimentalKomaApi`.
 
 ## Model
 
@@ -449,8 +452,9 @@ Refinements; code in branch `feature/statechart-store` (`StateChartStore.kt`).
 - **An error in a hook or effect.** The exception goes to Koma (`recover {}` / exceptionHandler),
   the step is not committed; the activations created in this step are cancelled, so work started by a
   hook does not start. Events already emitted by the hooks of the failed step are not retracted. A timer whose step
-  failed is listed in the state as running but will not fire again until re-entry (or
-  a Store restart).
+  failed is spent: it is removed from `timers.running` when the failure is reported (stability
+  review, second round; this document first said it stayed listed) and fires again only after
+  re-entry (or a Store restart).
 - **Node work without `LaunchLane`.** `cancelLaunch` exists only in `ActionScope`, and a timer
   fires in a transaction, which has neither `launch` nor `cancelLaunch`. So `enter {}` once
   starts a Koma `launch` that lives for the whole lifetime of the Store: it reads a task channel (`Channel.UNLIMITED`,
@@ -483,9 +487,12 @@ Refinements; code in branch `feature/statechart-store` (`StateChartStore.kt`).
   activities start, running timers start over with the full delay (as
   `activeTimers`). If the `running` set does not match the timers of the active nodes, tokens are issued
   anew (from `issued + 1`) and this is committed; otherwise the old tokens are reused — the coroutines
-  of the previous process are gone. That the restored configuration conforms to the definition is the
-  caller's concern. An exception in a hook at start goes to `recover {}`; the start's activations and timers
-  are then not started.
+  of the previous process are gone. The adapter checks the restored configuration against the
+  definition (stability review, first and sixth rounds): active nodes the chart cannot produce fall
+  back to the initial configuration, keeping the context; a history record the chart cannot
+  restore is dropped on its own. An exception in a hook at start goes to `recover {}` once the
+  state is committed; the start's activations, activities and timers exist anyway (second and
+  third rounds), only the failed hooks' context changes and launches are dropped.
 - **Conformance.** `StateChartConformance.withActiveLeaves<ChartState<C>, A, E>(definition) { it.activeLeaves(definition).toSet() }`
   on the adapter yields no violations; self-loop timers remain uncovered (wave 4 decision).
 - **Tests.** `StateChartStoreTest` — the messenger (parallel: a connection with `retry`/`giveUp` at 5 s,

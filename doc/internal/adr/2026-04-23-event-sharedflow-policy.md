@@ -35,3 +35,11 @@ The adopted assumptions are as follows.
 - If, in the future, a problem of "Store-side processing stalling due to a slow event handler" is confirmed in real use, the proposal to add a small `extraBufferCapacity` as an internal implementation detail will be reconsidered first. Even then, the first candidate is a small-capacity buffer while keeping `SUSPEND`.
 - A change that makes it explicit, such as `MutableSharedFlow(replay = 0, extraBufferCapacity = 0)`, for readability is possible, but that is treated as making the intent explicit, not as a behavior change.
 - Introducing an internal buffer is re-evaluated only when a concrete case emerges in real use where event collector delay becomes a problem.
+
+## Addendum (2026-09-29, stability review)
+
+- `MessageHub` now uses `extraBufferCapacity = 64` (first round of the
+  [stability review](../notes/2026-09-29-stability-review.md)): a `sendMessage` from inside a
+  Store handler no longer suspends on a slow subscriber while the handler holds the Store lock.
+  Overflow still suspends (`SUSPEND`), so nothing is dropped.
+- `Store.event` stays unbuffered as decided above.
