@@ -43,7 +43,8 @@ Decompose, domain/repository, Room, транспорт сообщений, Pagin
 | `StateChartStore` | Context, hooks, activities, корутины и интеграция с Store | Hooks могут выполнять I/O и отправлять события до commit; такой код не является автоматически replayable |
 | `ChartState` / `ChartTimers` | Активная конфигурация, history, context, токены таймеров | Нет полного checkpoint очередей, команд и оставшегося времени; таймеры сейчас адресуются индексами переходов |
 | `Plugin.onAction/onState/onEvent` | Наблюдение границ Store | Нет полного результата каждого входа, причинности транзакций, команд и таймеров |
-| `StoreProbe` / `StoreTrace` — реализовано 2026-09-29 | Границы обработки: приём и discard входов с причиной, начало и исход каждой обработки, commits с revision, события и отчёты об ошибках с привязкой к входу; startup, dispatch, transaction и recovery как четыре вида входов | Не журнал: без `StoreSeq`/`GroupSeq`, retention, `PayloadPolicy` и sanitization; см. [ADR](../adr/2026-09-29-store-probe-processing-observation.md) |
+| `StoreProbe` / `StoreTrace` — реализовано 2026-09-29 | Границы обработки: приём и discard входов с причиной, начало и исход каждой обработки, commits с revision, события и отчёты об ошибках с привязкой к входу; startup, dispatch, transaction и recovery как четыре вида входов | Сам по себе не журнал; журнал поверх него — `koma-observability`; см. [ADR](../adr/2026-09-29-store-probe-processing-observation.md) |
+| `RecordingSession` / `JournalRecord` (`koma-observability`) — реализовано 2026-09-29 | Envelope записей с `RuntimeSessionId`/`MachineGroupId`/`StoreInstanceId`, `GroupSeq`/`StoreSeq` под одним lock при публикации, `PayloadPolicy` до retention, `FailureDescriptor`, bounded ring, один writer, sinks, `JournalGap`, счётчики потерь; `LoggerJournalSink` в `koma-logging` | Только in-memory: нет файлового формата, сегментов, checksums, ротации, экспорта и group cut; capability всегда `InspectOnly`; бюджеты — плейсхолдеры; см. [ADR](../adr/2026-09-29-journal-identity-ordering-and-payload-policy.md) |
 | `StoreRecorder` | Список состояний и событий одного Store для тестов | Не журнал replay, не общий потокобезопасный recorder нескольких Store |
 | `simpleLogging` | Текстовые записи через `Logger` | Использует `toString()` payload; при dispatcher порядок вывода может измениться |
 | `StateSaver` / `rememberStateSaver` | Восстановление состояния; Compose saver хранится в памяти | Не точное восстановление runtime и не готовая поддержка process death |
@@ -475,9 +476,10 @@ CI также должен проверять API/ABI и отсутствие de
 | Элемент | Статус | Где |
 |---|---|---|
 | Core probes: `StoreProbe`/`StoreTrace`, четыре вида входов, причины discard, исходы обработки, `InputId` / ordinal / revision, перенос входа через `CoroutineContext` | Реализовано (первая часть этапа 1) | `koma-core`, [ADR](../adr/2026-09-29-store-probe-processing-observation.md), `StoreProbeTest` |
-| `koma-observability`: envelope записей, `StoreSeq`/`GroupSeq` при публикации, bounded журнал, `PayloadPolicy` до retention | Не начато | — |
-| Адаптер структурированных записей к `Logger` в `koma-logging` | Не начато | — |
-| Этап 0 (ADR по identity/ordering) | Частично: ADR probe фиксирует identity ядра; формат, budgets и правила публикации ещё не описаны | — |
+| `koma-observability`: envelope записей, `StoreSeq`/`GroupSeq` при публикации, bounded ring, один writer и sinks, `JournalGap` и счётчики потерь, `PayloadPolicy` до retention, `FailureDescriptor` | Реализовано (in-memory; вторая часть этапа 1) | `koma-observability`, [ADR](../adr/2026-09-29-journal-identity-ordering-and-payload-policy.md), `RecordingSessionTest`, `JournalProbeTest` |
+| Адаптер структурированных записей к `Logger` в `koma-logging` | Реализовано: `LoggerJournalSink` + `JournalFormat`; `simpleLogging` остаётся для локальной отладки одного Store | `koma-logging`, `LoggerJournalSinkTest` |
+| Файловый формат журнала: сегменты, framing/checksum, ротация, экспорт, crash tail | Не начато | — |
+| Этап 0 (ADR по identity/ordering) | Частично: два ADR фиксируют identity ядра, порядок публикации, политику payload и словарь wire-имён (`JOURNAL_FORMAT_VERSION` = 1); budgets заданы как плейсхолдеры до замеров; правила публикации модулей не описаны | [ADR probe](../adr/2026-09-29-store-probe-processing-observation.md), [ADR journal](../adr/2026-09-29-journal-identity-ordering-and-payload-policy.md) |
 | Этапы 2–7 | Не начато | — |
 
 Предпочтительный пилот — поиск address-book-picker: быстрые смены query, старые ответы,
@@ -513,6 +515,7 @@ dispatch и таймеров добавлять воспроизводящий �
 - [StoreInternalApi: существующий внутренний bridge](../../../koma-core/src/commonMain/kotlin/koma/core/StoreInternalApi.kt)
 - [Plugin: текущие границы наблюдения](../../../koma-core/src/commonMain/kotlin/koma/core/Plugin.kt)
 - [StoreProbe и StoreTrace: границы обработки для журнала](../../../koma-core/src/commonMain/kotlin/koma/core/StoreProbe.kt) и [тесты границ](../../../koma-core/src/commonTest/kotlin/koma/core/StoreProbeTest.kt)
+- [RecordingSession: журнал группы, GroupSeq при публикации, writer и sinks](../../../koma-observability/src/commonMain/kotlin/koma/observability/RecordingSession.kt), [JournalProbe и PayloadPolicy](../../../koma-observability/src/commonMain/kotlin/koma/observability/JournalProbe.kt), [LoggerJournalSink](../../../koma-logging/src/commonMain/kotlin/koma/logging/JournalSink.kt)
 - [StateChartRuntime и StepResult](../../../koma-statechart/src/commonMain/kotlin/koma/statechart/Runtime.kt)
 - [StateChartStore, ChartState, ChartTimers и activities](../../../koma-statechart/src/commonMain/kotlin/koma/statechart/StateChartStore.kt)
 - [simpleLogging](../../../koma-logging/src/commonMain/kotlin/koma/logging/Plugin.kt) и [Logger](../../../koma-logging/src/commonMain/kotlin/koma/logging/Logger.kt)

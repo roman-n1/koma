@@ -1,4 +1,4 @@
-@file:OptIn(InternalKomaApi::class, ExperimentalCoroutinesApi::class)
+@file:OptIn(InternalKomaApi::class, ExperimentalKomaApi::class, ExperimentalCoroutinesApi::class)
 
 package koma.core
 
