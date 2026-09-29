@@ -196,6 +196,26 @@ Core and helpers
   `coroutineScope`/`async` round. The lock itself stays: correctness first, and 140k events/s
   is far above what a UI consumes. Dispatch throughput (55-60k/s) is unchanged since round 2.
 
+End-to-end messenger scenario (core + statechart + message + logging + test)
+
+- A plugin hook that threw in one round hid that round from the plugins registered after it
+  (`coroutineScope` cancelled the sibling hooks; registration order stopped at the failure): a
+  recorder or a conformance checker behind a failing analytics plugin missed the state. Every
+  plugin now sees every round; the first failure is reported with the others suppressed. As a
+  consequence, when a plugin's `onStart` fails, the other plugins' `onStart` still ran, and runs
+  again on the retried startup.
+- A handler or transaction past its last suspension point when `close()` was called still
+  committed: state updated, saver called, plugins run after close. A screen closed and reopened
+  at once could restore a snapshot and then have it overwritten by the old Store. Nothing
+  commits after close now: the commit checks the handler's own cancellation first.
+- In `StateChartStore`, an expired `withTimeout {}` in an initial enter hook was treated as the
+  Store's own cancellation, so the initial configuration lost its activities and timers (the
+  round-3 fix covered other exceptions only). It now follows the core rule everywhere.
+- `koma-message`'s `message()` could not be called from statechart hooks and activities:
+  `StoreScope` was sealed, so `ChartHookScope` and `ChartLaunchScope` could not implement it.
+  `StoreScope` is now an open marker interface (binary compatible for callers) and the chart
+  scopes implement it.
+
 Documentation
 
 - Two README samples were wrong: `nextState { state.copy(count = loadCount()) }` does not
@@ -256,3 +276,17 @@ messenger features.
 - `rememberViewStore` starts the Store from `collectAsState()` before `eventEffect` subscribes,
   so events from the startup `enter {}` race the subscription on `Dispatchers.Default` and are
   lost: another reason to model navigation and errors as state.
+- `StateChartConformance` credits a timer firing to the first declared timer of the source when
+  several timers with different guards share it (documented as "first such timer"); the coverage
+  report then lists the other timer as uncovered although it fired. A snapshot of an older chart
+  restored by `start()` is reported as `UndeclaredState` plus an `UndeclaredTransition` from the
+  vanished state to the initial configuration; the second is noise.
+- A chart activity's `dispatch` carries no activation token: an activity cancelled between a
+  suspending call returning and its `dispatch` can, on a multi-threaded dispatcher, inject its
+  action into a later activation of the same node (a window of microseconds). Timers do carry
+  tokens. Check the context or a generation counter in the handler when that matters.
+- A self-loop timer exits and re-enters its source, as SCXML requires, so an `activity` of that
+  node restarts on every firing: keep a heartbeat timer in its own region, apart from a socket
+  reader.
+- Collectors and `currentState` see a new state before `StateSaver.save` runs; a process death
+  in that window persists the previous state after the UI reacted to the new one.

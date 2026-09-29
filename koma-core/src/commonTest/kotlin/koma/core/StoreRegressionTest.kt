@@ -518,4 +518,32 @@ class StoreRegressionTest {
         // The plugin hook's failure bypasses recover {} and reaches the exception handler.
         assertEquals(listOf("dispatchAndAwait"), handled.map { it.message.orEmpty().substringAfter("[Koma] ").substringBefore(" ") })
     }
+
+    /**
+     * A plugin whose hook throws must not hide the round from the plugins after it: a recorder
+     * registered after a failing analytics plugin still sees every state. The first failure is
+     * reported, later ones as suppressed.
+     */
+    @Test
+    fun aFailingPluginHook_doesNotHideTheRoundFromOtherPlugins() = runTest(testDispatcher) {
+        for (policy in PluginExecutionPolicy.entries) {
+            val handled = mutableListOf<Throwable>()
+            val seen = mutableListOf<Int>()
+            val store: Store<Booting, Poke, Nothing> = Store(Booting()) {
+                coroutineContext(Dispatchers.Unconfined)
+                exceptionHandler(ExceptionHandler { handled += it })
+                pluginExecutionPolicy(policy)
+                plugin(Plugin(onState = { _, _ -> throw IllegalStateException("analytics down") }))
+                plugin(Plugin(onState = { _, state -> seen += if (state.ready) 1 else 0 }))
+                plugin(Plugin(onState = { _, _ -> throw IllegalArgumentException("second") }))
+                state<Booting> { action<Poke> { nextState { state.copy(ready = true) } } }
+            }
+
+            store.dispatchAndAwaitForTest(Poke)
+
+            assertEquals(listOf(1), seen, "$policy")
+            val reported = assertIs<IllegalStateException>(handled.single(), "$policy")
+            assertEquals(listOf("second"), reported.suppressedExceptions.map { it.message }, "$policy")
+        }
+    }
 }

@@ -13,6 +13,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -368,6 +369,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
      * reaction to the new state, for example by plugins or state collectors, are kept.
      */
     private suspend fun commitTransition(state: S, nextState: S, inErrorHandling: Boolean) {
+        // Nothing commits after close(): a handler past its last suspension point would otherwise
+        // still update the state, call the saver and the plugins after the Store was closed. The
+        // current coroutine is checked, not the Store scope, so the cancellation seen here is the
+        // handler's own and is never mistaken for a handler failure.
+        currentCoroutineContext().ensureActive()
         val variantChanged = state::class != nextState::class
         if (variantChanged) {
             processStateExit(state)
@@ -782,20 +788,38 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         if (plugins.isEmpty()) return
         try {
             pluginMutex.withLock {
-                // A single plugin needs no scope: its hooks are sequential under either policy.
-                if (pluginExecutionPolicy == PluginExecutionPolicy.InRegistrationOrder || plugins.size == 1) {
-                    plugins.forEach { plugin -> plugin.block() }
-                } else {
-                    // async + awaitAll, not launch: a hook failing with a CancellationException (an
-                    // expired withTimeout) would otherwise end its own coroutine silently.
-                    coroutineScope {
-                        plugins.map { plugin -> async { plugin.block() } }.awaitAll()
+                // Every plugin sees every round: one plugin's failure must not hide the state or
+                // event from the plugins after it (a recorder, a conformance checker). Failures are
+                // collected and the first is thrown with the others suppressed.
+                val failures: List<Throwable> =
+                    // A single plugin needs no scope: its hooks are sequential under either policy.
+                    if (pluginExecutionPolicy == PluginExecutionPolicy.InRegistrationOrder || plugins.size == 1) {
+                        plugins.mapNotNull { plugin -> hookFailure { plugin.block() } }
+                    } else {
+                        coroutineScope {
+                            plugins.map { plugin -> async { hookFailure { plugin.block() } } }.awaitAll().filterNotNull()
+                        }
                     }
+                failures.firstOrNull()?.let { first ->
+                    failures.drop(1).forEach { first.addSuppressed(it) }
+                    throw first
                 }
             }
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             throw InternalError(t)
+        }
+    }
+
+    // Runs one plugin hook and returns its failure, if any. The coroutine's own cancellation (the
+    // Store closing, a concurrent round being cancelled) is not a failure and propagates.
+    private suspend inline fun hookFailure(block: () -> Unit): Throwable? {
+        return try {
+            block()
+            null
+        } catch (t: Throwable) {
+            if (t is CancellationException && !currentCoroutineContext().isActive) throw t
+            t
         }
     }
 

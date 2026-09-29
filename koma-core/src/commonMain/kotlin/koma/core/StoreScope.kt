@@ -4,8 +4,12 @@ import kotlinx.coroutines.CoroutineDispatcher
 
 /**
  * Marker supertype for DSL scopes exposed from Store handlers.
+ *
+ * Extensions declared on it, such as `koma-message`'s `message()`, are available in every scope
+ * that implements it: Koma's own `enter {}`, `action {}`, `exit {}`, `recover {}`, launch and
+ * transaction scopes, and the hook and launch scopes of `koma-statechart`.
  */
-sealed interface StoreScope
+interface StoreScope
 
 /**
  * Scope available to an `enter {}` handler for the current state.

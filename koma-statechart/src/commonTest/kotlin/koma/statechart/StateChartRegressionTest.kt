@@ -452,4 +452,54 @@ class StateChartRegressionTest {
         runCurrent()
         assertEquals(false, activeAfterClose)
     }
+
+    /**
+     * An expired `withTimeout {}` in an initial enter hook is a failed hook, not the Store being
+     * cancelled: the initial configuration keeps its activities and timers, as for any other
+     * exception.
+     */
+    @Test
+    fun anExpiredWithTimeout_inAnInitialEnterHook_keepsActivitiesAndTimersRunning() = runTest {
+        val timed = chart.copy(transitions = listOf(Transition(a, b, Trigger.After(1.seconds))))
+        var activityRan = false
+        val recovered = mutableListOf<String>()
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(timed, Unit, backgroundScope.coroutineContext) {
+            onEnter(a) { withTimeout(10.milliseconds) { delay(1.seconds) } }
+            activity(a) { activityRan = true }
+            store { state<ChartState<Unit>> { recover<Exception> { recovered += error::class.simpleName.orEmpty() } } }
+        }
+
+        store.startAndAwait()
+        runCurrent()
+        assertTrue(activityRan)
+        assertEquals(listOf("TimeoutCancellationException"), recovered)
+
+        advanceTimeBy(1.5.seconds)
+        runCurrent()
+        assertEquals(listOf(b), store.currentState.activeLeaves(timed))
+        store.close()
+    }
+
+    /**
+     * Chart hook and launch scopes are Store scopes, so extensions declared on `StoreScope`, such
+     * as `koma-message`'s `message()`, work from them.
+     */
+    @Test
+    fun chartScopes_areStoreScopes() = runTest {
+        val scopes = mutableListOf<Any>()
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(chart, Unit, backgroundScope.coroutineContext) {
+            onEnter(a) { scopes += this }
+            onExit(a) { scopes += this }
+            activity(a) { scopes += this }
+        }
+
+        store.startAndAwait()
+        runCurrent() // the activity of A runs
+        store.dispatchAndAwait(ChartAction.Go)
+        runCurrent()
+
+        assertEquals(3, scopes.size)
+        assertTrue(scopes.all { it is koma.core.StoreScope })
+        store.close()
+    }
 }

@@ -10,6 +10,7 @@ import koma.core.KomaStoreDsl
 import koma.core.State
 import koma.core.Store
 import koma.core.StoreBuilder
+import koma.core.StoreScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -76,7 +77,7 @@ data class ChartTimers(
  */
 @ExperimentalKomaApi
 @KomaStoreDsl
-interface ChartHookScope<C, E : Event> {
+interface ChartHookScope<C, E : Event> : StoreScope {
     /**
      * The node being exited or entered.
      */
@@ -123,7 +124,7 @@ interface ChartEnterScope<C, A : Action, E : Event> : ChartHookScope<C, E> {
  */
 @ExperimentalKomaApi
 @KomaStoreDsl
-interface ChartLaunchScope<C, A : Action, E : Event> {
+interface ChartLaunchScope<C, A : Action, E : Event> : StoreScope {
     /**
      * The node this work belongs to.
      */
@@ -371,10 +372,13 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         for (id in active) entered[id] = Job()
         try {
             if (fresh) for (id in active) context = enter(id, entered.getValue(id), context, null, launches) { event(it) }
-        } catch (e: CancellationException) {
-            entered.values.forEach { it.cancel() }
-            throw e
         } catch (e: Exception) {
+            // The Store's own cancellation ends the start; any other exception, including an
+            // expired withTimeout, is a failed hook (the core rule).
+            if (e is CancellationException && !currentCoroutineContext().isActive) {
+                entered.values.forEach { it.cancel() }
+                throw e
+            }
             // Unlike a failed action step, a failed start has no previous configuration to stay
             // in: the Store is in this one, so its activations, activities and timers must exist.
             // Only the failed hooks' context changes and launches are dropped; the error reaches
