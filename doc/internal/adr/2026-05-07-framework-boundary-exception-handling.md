@@ -1,43 +1,43 @@
-# `recover {}` に流さない framework boundary の例外処理は当面現状維持とする
+# Exception handling at framework boundaries not passed to `recover {}` stays as is for now
 
-- 更新日: 2026-05-07
+- Updated: 2026-05-07
 
-## 背景
+## Background
 
-既存の判断として、`recover {}` DSL は Store の通常 runtime path における `Exception` の回復経路に限定している。
-そのため、plugin hook、observer callback、`StateSaver.save()` / `restore()` など、framework boundary で起きた例外は `recover {}` に再投入しない。
+As an existing decision, the `recover {}` DSL is limited to the recovery path for `Exception` in the Store's normal runtime path.
+Therefore, exceptions raised at framework boundaries such as plugin hooks, observer callbacks and `StateSaver.save()` / `restore()` are not re-injected into `recover {}`.
 
-この整理は、state machine の回復責務と framework 側の失敗を分離するうえでは自然である。
-一方で、plugin や saver の失敗の中には、state transition 自体の整合性を必ずしも壊さず、レポートしつつ続行できそうなものもある。
+This arrangement is natural for separating the state machine's recovery responsibility from failures on the framework side.
+On the other hand, some plugin or saver failures do not necessarily break the consistency of the state transition itself and seem like they could be reported and then continued.
 
-ただし、この種の例外を一律に「続行可能」とみなすのは粗すぎる。
-起動前後の `restore()` や `Plugin.onStart()` のように、失敗時に Store の初期化状態へ直接影響するものもあり、同じ扱いにはできない。
-また、`recover {}` に流さない例外は現在 `exceptionHandler()` 側で受けるため、設定次第では利用者が failure を見落としやすい、という別の論点もある。
+However, uniformly regarding this kind of exception as "continuable" is too coarse.
+Some, such as `restore()` around startup and `Plugin.onStart()`, directly affect the Store's initialization state on failure and cannot be treated the same way.
+There is also the separate point that exceptions not passed to `recover {}` are currently received by `exceptionHandler()`, so depending on configuration, users can easily overlook failures.
 
-このため、今の時点で runtime 挙動や handler 境界を拡張するかどうかを決めておく必要がある。
+For these reasons, it needs to be decided at this point whether to extend the runtime behavior or handler boundaries.
 
-## 決定
+## Decision
 
-framework boundary の例外処理は、当面は現状コードを維持する。
+Exception handling at framework boundaries keeps the current code for the time being.
 
-- plugin、observer、persistence など `recover {}` に流さない例外を、今すぐ一律に「report して続行」へ寄せる変更は採用しない
-- `exceptionHandler()` と別に、system-side の例外専用 handler を直ちに追加する変更も採用しない
-- 現時点では、「Store DSL 内の recovery path」と「framework boundary の last-resort path」を既存どおり分けたままにする
+- A change that immediately and uniformly moves exceptions not passed to `recover {}`, such as plugin, observer and persistence ones, toward "report and continue" is not adopted
+- A change that immediately adds a dedicated handler for system-side exceptions separate from `exceptionHandler()` is not adopted either
+- At this point, "the recovery path inside the Store DSL" and "the last-resort path at framework boundaries" remain separated as they are
 
-ただし、将来の拡張候補として次は残す。
+However, the following remain as future extension candidates.
 
-- 個々の失敗点ごとに、Store 整合性への影響と observability の要求を見極めたうえで、例外発生後も続行できる箇所だけを限定的に増やす
-- `recover {}` に流さない system-side の例外について、現行の `exceptionHandler()` とは別の handler を導入し、利用者が business error と framework error を分けて扱えるようにする
+- After assessing, for each individual failure point, the impact on Store consistency and the observability requirements, increase in a limited way only the places that can continue after an exception
+- For system-side exceptions not passed to `recover {}`, introduce a handler separate from the current `exceptionHandler()`, so users can handle business errors and framework errors separately
 
-これらは方向性としては保持するが、具体的な API や runtime policy は、実例となるユースケースや運用上の不足が揃ってから判断する。
+These are retained as directions, but the concrete API and runtime policy will be decided once real use cases and operational shortcomings have been gathered.
 
-## 補足
+## Notes
 
-- 今回の判断は、「現行実装は完全であり、将来も変えない」という意味ではない。変更の粒度を例外の発生源ごとに分解せず、一括で広げることを避けるための保留である。
-- 特に `Plugin.onStart()` と `StateSaver.restore()` は、通常の `onAction` / `onState` / `save()` と違って初期化可否に関わるため、将来見直すとしても別の扱いになる可能性が高い。
-- observability の不足と continuation policy の不足は別問題である。将来、継続可否を変えずに reporting だけ分離・強化する案もありうる。
+- This decision does not mean "the current implementation is complete and will never change". It is a deferral to avoid broadening changes in bulk without breaking them down by exception source.
+- In particular, `Plugin.onStart()` and `StateSaver.restore()` are involved in whether initialization succeeds, unlike ordinary `onAction` / `onState` / `save()`, so even if reviewed in the future they are likely to be handled differently.
+- The lack of observability and the lack of a continuation policy are separate problems. In the future, there could also be a proposal to separate and strengthen reporting alone without changing whether to continue.
 
-## 関連
+## Related
 
-- [`recover {}` DSL は `Exception` の回復経路に限定する](./2026-05-01-error-dsl-exception-boundary.md)
-- [`Plugin` 設計メモ](../notes/2026-05-02-plugin-design.md)
+- [The `recover {}` DSL is limited to the recovery path for `Exception`](./2026-05-01-error-dsl-exception-boundary.md)
+- [`Plugin` design memo](../notes/2026-05-02-plugin-design.md)

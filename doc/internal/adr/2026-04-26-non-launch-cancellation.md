@@ -1,30 +1,30 @@
-# 非 `launch` 処理には cancellation API を入れない
+# No cancellation API for non-`launch` work
 
-- 更新日: 2026-04-30
+- Updated: 2026-04-30
 
-## 背景
+## Background
 
-`#190` では、`action { launch { ... } }` で開始した仕事を lane 単位で明示的に止める `cancelLaunch(lane)` を検討している。
+`#190` is considering `cancelLaunch(lane)`, which explicitly stops, per lane, work started with `action { launch { ... } }`.
 
-一方で、`launch` を使わない通常の `action {}`、`enter {}`、`exit {}`、`recover {}`、および `transaction {}` には、いま実行中の処理を途中で止める API はない。
+On the other hand, ordinary `action {}`, `enter {}`, `exit {}`, `recover {}` and `transaction {}` that do not use `launch` have no API for stopping the currently running work midway.
 
-ここで判断したいのは、`#190` のような cancellation を非 `launch` の store work にも広げるべきかどうかである。
+What needs to be decided here is whether cancellation like that of `#190` should be extended to non-`launch` store work as well.
 
-## 決定
+## Decision
 
-非 `launch` の store work には、in-flight cancellation API を追加しない。
+No in-flight cancellation API is added for non-`launch` store work.
 
-- 通常の `action {}`、`enter {}`、`exit {}`、`recover {}`、`transaction {}` は、短く終わる直列・原子的な store work として扱う。
-- cancellation が必要な非同期処理や長く生きる仕事は、`launch {}` に出して扱う。
-- `clearPendingActions()` は引き続き「後ろに積まれた pending action を捨てる API」として扱い、現在実行中の store work は止めない。
+- Ordinary `action {}`, `enter {}`, `exit {}`, `recover {}` and `transaction {}` are treated as short-lived, serial and atomic store work.
+- Asynchronous work that needs cancellation, or long-lived work, is moved out to `launch {}` and handled there.
+- `clearPendingActions()` continues to be treated as "an API that discards the pending actions queued behind", and does not stop the store work currently in progress.
 
-## 補足
+## Notes
 
-- 非 `launch` の store work は、`dispatchAndWait()` の完了単位であり、middleware 実行や state 遷移判定とも同じ直列 pipeline に載っている。途中 cancel を入れると、「どこまで反映済みか」「middleware は完了扱いか」「error はどう扱うか」が読みにくくなる。
-- 通常の handler の中で長い suspend 処理や I/O を直接走らせると、cancel 可否以前に Store 全体を塞ぎやすい。その種の処理は `launch {}` へ移す前提で考える。
-- Koma では「action は処理開始のきっかけであり、継続中の仕事の所有者は state」という整理を取っている。`launch {}` の仕事が state scope にぶら下がるのはそのためであり、明示 cancellation もまずはその範囲に閉じるのが自然である。
-- したがって `#190` は、一般 cancellation の入口ではなく、`action { launch { ... } }` という既存の state-owned な非同期処理に対する局所的な拡張として扱う。
+- Non-`launch` store work is the completion unit of `dispatchAndWait()` and sits on the same serial pipeline as middleware execution and state transition decisions. Introducing mid-way cancellation makes it hard to read "how much has been applied", "are the middlewares considered complete" and "how are errors handled".
+- Running long suspend work or I/O directly inside an ordinary handler tends to block the whole Store, regardless of whether it can be cancelled. Such work is assumed to be moved to `launch {}`.
+- Koma takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". That is why `launch {}` work hangs off the state scope, and it is natural for explicit cancellation to be confined to that range first.
+- Therefore, `#190` is treated not as an entry point for general cancellation but as a local extension to the existing state-owned asynchronous work of `action { launch { ... } }`.
 
-## 関連
+## Related
 
 - [#190](https://github.com/koma-kt/koma/issues/190)

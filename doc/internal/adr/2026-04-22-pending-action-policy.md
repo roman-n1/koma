@@ -1,34 +1,34 @@
-# PendingActionPolicy 拡張案の却下
+# Rejection of the PendingActionPolicy extension proposals
 
-- 更新日: 2026-04-29
+- Updated: 2026-04-29
 
-## 背景
+## Background
 
-現在の `PendingActionPolicy.ClearOnStateExit` は、別の state variant への遷移が確定したときだけ、すでに待機している action を捨てる。
+The current `PendingActionPolicy.ClearOnStateExit` discards already-pending actions only when a transition to a different state variant is confirmed.
 
-検討対象にしたのは、次の 2 案。
+The following two proposals were considered.
 
-- 同じ state 型のまま値だけ更新されたケース
-- ある `dispatch()` の処理中に別の `dispatch()` が呼ばれ、待機列に積まれたケース
+- The case where only the value is updated while the state type stays the same
+- The case where another `dispatch()` is called while one `dispatch()` is being processed, and the action is queued
 
-どちらも「古い前提で積まれた action を後続で実行しない」を自動化したい、という動機から出た案だった。
+Both proposals came from the motivation of automating "do not later execute an action that was queued under stale assumptions".
 
-## 決定
+## Decision
 
-次の 2 案は、どちらも `PendingActionPolicy` には入れない。
+Neither of the following two proposals goes into `PendingActionPolicy`.
 
-- state が変更されたら、待機中の action を捨てる
-- ある `dispatch()` の処理中に追加で `dispatch()` された action を捨てる
+- Discard pending actions when the state changes
+- Discard actions that were additionally `dispatch()`ed while a `dispatch()` was being processed
 
-現状の `PendingActionPolicy` は維持し、必要な場面では `clearPendingActions()` などの明示的な手段で対処する。
+The current `PendingActionPolicy` is kept, and where needed, explicit means such as `clearPendingActions()` are used.
 
-## 補足
+## Notes
 
-- 現状の `ClearOnStateExit` は「state exit ベース」の挙動であり、「state change ベース」ではない。
-- 「state が変更されたら捨てる」は、`state != nextState` を基準にすると効きすぎる。通常の `copy(...)` を含む多くの更新で待機 action が消えるため、一般 policy としては強すぎる。
-- 「state が変更されたら捨てる」は、利用者から見ても挙動が読みづらい。見た目には通常の state 更新でも待機 action が消えるため、どの更新が action 破棄を引き起こすのかを追いにくい。
-- その種の要件は利用頻度も高くなさそうで、汎用機能として持つより、必要な箇所で `clearPendingActions()` を呼ぶか、state の分け方や世代管理で表現するほうが意図が読みやすい。
-- 「`dispatch()` の処理中に `dispatch()` された action を捨てる」は state ベースではなくタイミングベースのルールで、挙動が読みづらい。
-- 同じ action でも「いつ dispatch されたか」で実行可否が変わるため、`dispatchAndWait()`、middleware、follow-up action との整合も悪くなりやすい。
-- どちらも `PendingActionPolicy` の責務を広げすぎるため、現時点では採用しない。
-- 関連する動きとして、検索、再送防止、二重 submit 防止、同じ非同期処理の多重起動抑止のようなユースケース向けに、`PendingActionPolicy` ではなく `action { launch(...) }` に局所的な重なり制御を入れる [PR #181](https://github.com/koma-kt/koma/pull/181) を進めている。
+- The current `ClearOnStateExit` is "state exit based" behavior, not "state change based".
+- "Discard when the state changes" fires too often if `state != nextState` is the criterion. Pending actions would disappear on many updates, including ordinary `copy(...)`, so it is too strong as a general policy.
+- "Discard when the state changes" is also hard to read from the user's perspective. Pending actions disappear on what looks like an ordinary state update, so it is hard to track which updates cause actions to be discarded.
+- That kind of requirement does not seem to be needed often either; rather than having it as a general-purpose feature, calling `clearPendingActions()` where needed, or expressing it through how states are split or through generation management, makes the intent easier to read.
+- "Discard actions `dispatch()`ed while a `dispatch()` is being processed" is a timing-based rule rather than a state-based one, and its behavior is hard to read.
+- Because whether the same action runs would depend on "when it was dispatched", consistency with `dispatchAndWait()`, middleware and follow-up actions also tends to suffer.
+- Both would widen the responsibility of `PendingActionPolicy` too much, so neither is adopted at this point.
+- As a related effort, for use cases such as search, resend prevention, double-submit prevention and suppressing multiple launches of the same asynchronous work, [PR #181](https://github.com/koma-kt/koma/pull/181) is in progress, which adds local overlap control to `action { launch(...) }` rather than to `PendingActionPolicy`.

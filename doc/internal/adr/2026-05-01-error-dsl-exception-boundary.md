@@ -1,50 +1,50 @@
-# `recover {}` DSL は `Exception` の回復経路に限定する
+# The `recover {}` DSL is limited to the recovery path for `Exception`
 
-- 更新日: 2026-05-01
+- Updated: 2026-05-01
 
-## 背景
+## Background
 
-Koma の `recover {}` DSL（deprecated な `error {}` alias を含む）は、state machine の中で発生した失敗を state 遷移として扱うための入口である。
-一方で Kotlin の `Throwable` には、通常の業務例外として回復を試みるべき `Exception` だけでなく、`AssertionError` などの `Error` 系や、独自 `Throwable` のような非標準の失敗も含まれる。
+Koma's `recover {}` DSL (including the deprecated `error {}` alias) is the entry point for treating failures that occur inside the state machine as state transitions.
+On the other hand, Kotlin's `Throwable` includes not only `Exception`, for which recovery should be attempted as an ordinary business exception, but also the `Error` family such as `AssertionError`, and non-standard failures such as custom `Throwable`s.
 
-これまでの実装では、fatal として即再送出していたものを除き、広く `Throwable` を `recover {}` 側へ流しうる形になっていた。
-しかしこの形だと、次の境界が曖昧になる。
+In the implementation so far, except for those immediately rethrown as fatal, `Throwable`s could broadly flow into the `recover {}` side.
+With that shape, however, the following boundaries become vague.
 
-- `recover {}` が回復対象として扱う失敗
-- `exceptionHandler()` が最後の受け皿として扱う失敗
-- coroutine / job として成功完了にしてよい失敗
-- job failure として扱うべき失敗
+- Failures that `recover {}` treats as recovery targets
+- Failures that `exceptionHandler()` treats as the last resort
+- Failures that may be treated as successful completion as a coroutine / job
+- Failures that should be treated as job failure
 
-また、公開 DSL の型境界を `Throwable` のまま保つと、利用者からは「どの `Throwable` まで回復対象なのか」が読み取りにくい。
+Also, if the type boundary of the public DSL stays at `Throwable`, users have a hard time reading "up to which `Throwable` is a recovery target".
 
-## 決定
+## Decision
 
-`recover {}` DSL は、`Exception` を回復するための経路に限定する。
+The `recover {}` DSL is limited to a path for recovering `Exception`.
 
-- `recover<T>` の `T` は `Exception` のみを受け付ける
-- `RecoverScope.error` の型も `Exception` に限定する
-- Store 内の recoverable path は `Exception` のみを `recover {}` に流す
-- `Exception` ではない `Throwable` は recoverable とみなさず、job failure として扱う
-- `Exception` ではない `Throwable` は `exceptionHandler()` に流れるが、`recover {}` には入れない
-- middleware / observer / persistence など framework boundary で発生した `Exception` も、`recover {}` の回復対象には入れない
+- The `T` of `recover<T>` accepts only `Exception`
+- The type of `RecoverScope.error` is also limited to `Exception`
+- The recoverable path inside the Store passes only `Exception` to `recover {}`
+- A `Throwable` that is not an `Exception` is not regarded as recoverable and is treated as job failure
+- A `Throwable` that is not an `Exception` flows to `exceptionHandler()`, but does not enter `recover {}`
+- `Exception`s raised at framework boundaries such as middleware / observer / persistence are also not included in the recovery targets of `recover {}`
 
-この判断により、意味づけは次のように固定する。
+With this decision, the meanings are fixed as follows.
 
-- `recover {}` は recovery path
-- `exceptionHandler()` は last-resort path
-- `recover {}` で処理できた失敗は、Store work としては成功完了でよい
-- `recover {}` に乗らない失敗は、未回復のまま success 扱いにしない
+- `recover {}` is the recovery path
+- `exceptionHandler()` is the last-resort path
+- A failure handled by `recover {}` may be treated as successful completion of the Store work
+- A failure that does not go through `recover {}` is not treated as success while unrecovered
 
-## 補足
+## Notes
 
-- `CancellationException` は `Exception` ではあるが、coroutine cancellation の制御信号でもあるため、通常の recovery 対象には入れない。
-- したがって runtime 上は、「`Exception` なら常に recoverable」ではなく、「recoverable exception path へ流してよい `Exception` だけを対象にする」という整理になる。
-- recoverable / non-recoverable の境界は型だけでは決まらない。state handler や launched `transaction {}` の中で投げられた `Exception` は recovery path に流すが、middleware hook、observer callback、`stateSaver.save()` など framework boundary で投げられた `Exception` は recovery path に再投入しない。
-- そのため実装では、framework boundary で起きた `Exception` を `InternalError` で包み、`recover {}` に再突入しないようにしている。`exceptionHandler()` に渡す直前には unwrap して、利用者には元の `Exception` を見せる。
-- `action {}` / `enter {}` / `exit {}` / launched `transaction {}` の中では、利用者は Kotlin の言語仕様上 `throw Throwable(...)` を書ける。この点は API 上の違和感になりうるため、README / KDoc では `recover {}` が `Exception` 専用の recovery path であることを明示する。
-- この判断は source-compatible ではない。旧 `error<Throwable> { ... }` や custom `Throwable` を回復対象にしていたコードは移行が必要になる。
-- 本メモは、Store の通常 runtime path における error handling 境界を対象とする。起動時の state restore など、`_state` 初期化まわりの個別事情はここでは扱わない。
+- `CancellationException` is an `Exception`, but it is also a control signal for coroutine cancellation, so it is not included in ordinary recovery targets.
+- Therefore, at runtime the arrangement is not "always recoverable if it is an `Exception`", but "only `Exception`s that may be passed to the recoverable exception path are targeted".
+- The recoverable / non-recoverable boundary is not determined by type alone. `Exception`s thrown inside a state handler or a launched `transaction {}` are passed to the recovery path, but `Exception`s thrown at framework boundaries such as middleware hooks, observer callbacks and `stateSaver.save()` are not re-injected into the recovery path.
+- For this reason, the implementation wraps `Exception`s raised at framework boundaries in `InternalError` so they do not re-enter `recover {}`. Right before passing to `exceptionHandler()`, it is unwrapped so the user sees the original `Exception`.
+- Inside `action {}` / `enter {}` / `exit {}` / launched `transaction {}`, users can write `throw Throwable(...)` under the Kotlin language specification. This can feel odd at the API level, so the README / KDoc state explicitly that `recover {}` is a recovery path dedicated to `Exception`.
+- This decision is not source-compatible. Code that used the old `error<Throwable> { ... }` or treated a custom `Throwable` as a recovery target needs migration.
+- This memo covers the error handling boundary in the Store's normal runtime path. Individual circumstances around `_state` initialization, such as state restore at startup, are not covered here.
 
-## 関連
+## Related
 
-- [Koma の設計原則](../design/2026-04-23-design-principles.md)
+- [Koma design principles](../design/2026-04-23-design-principles.md)

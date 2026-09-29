@@ -1,42 +1,42 @@
-# `clearPendingActions()` は store work / transaction に閉じる
+# `clearPendingActions()` is confined to store work / transaction
 
-- 更新日: 2026-04-27
+- Updated: 2026-04-27
 
-## 背景
+## Background
 
-`clearPendingActions()` は、現在実行中の store work 自体を止める API ではなく、その後ろに待機している dispatch を捨てる API である。
+`clearPendingActions()` is not an API that stops the currently running store work itself; it is an API that discards the dispatches waiting behind it.
 
-一方で、公開面としては `enter {}`、`action {}`、`exit {}`、`recover {}`、および launched coroutine 内の `transaction {}` から呼べる。
-このため、次の 2 点を整理しておきたい。
+On the other hand, in terms of the public surface it can be called from `enter {}`, `action {}`, `exit {}`, `recover {}`, and from `transaction {}` inside a launched coroutine.
+For this reason, the following two points should be sorted out.
 
-- `clearPendingActions()` をさらに狭い場所に限定すべきか
-- `launch {}` 本体からも呼べるようにすべきか
+- Whether `clearPendingActions()` should be restricted to an even narrower set of places
+- Whether it should also be callable from the `launch {}` body itself
 
-`clearPendingActions()` は queue 制御であり、state-owned な非同期仕事そのものの cancellation とは役割が異なる。
-この境界が API surface から読めるかどうかが重要になる。
+`clearPendingActions()` is queue control, and its role differs from cancellation of state-owned asynchronous work itself.
+Whether this boundary can be read from the API surface is what matters.
 
-## 決定
+## Decision
 
-`clearPendingActions()` は、引き続き store の直列 pipeline 上で実行される scope と、そこへ明示的に戻る `transaction {}` からのみ呼べる API として扱う。
+`clearPendingActions()` continues to be treated as an API callable only from scopes executed on the store's serial pipeline, and from `transaction {}`, which explicitly returns to that pipeline.
 
-- `enter {}`、`action {}`、`exit {}`、`recover {}` では公開を維持する
-- launched coroutine 内では `transaction {}` からのみ呼べるようにし、`launch {}` 本体には公開しない
-- middleware やその他の非 store-work 文脈には広げない
+- It remains exposed in `enter {}`, `action {}`, `exit {}` and `recover {}`
+- Inside a launched coroutine it is callable only from `transaction {}`, and is not exposed in the `launch {}` body itself
+- It is not extended to middleware or other non-store-work contexts
 
-また、利用上の重心は `action {}` と launched coroutine 内の `transaction {}` に置く。
-`enter {}`、`exit {}`、`recover {}` での利用は escape hatch として許容するが、常用の中心には置かない。
+Also, the center of gravity of its use is placed on `action {}` and `transaction {}` inside launched coroutines.
+Use in `enter {}`, `exit {}` and `recover {}` is permitted as an escape hatch, but is not the center of regular use.
 
-## 補足
+## Notes
 
-- `clearPendingActions()` が意味を持つのは、「いま何が current store work で、その後ろに何が pending か」が直列 pipeline 上で定まっているときである。
-- `launch {}` 本体は state に所有される非同期処理であり、store の直列 pipeline そのものではない。ここで queue を直接掃除できるようにすると、遅延や I/O の後の任意の時点で pending action を破棄できてしまい、挙動を追いにくくなる。
-- `launch {}` 本体で必要なのは queue 制御よりも、state-owned job の寿命制御である。そちらは `cancelLaunch(lane)` のような action-launch cancellation で扱う方が役割分離として自然である。
-- launched coroutine から `transaction {}` に入った時点では、処理は再び store の直列 pipeline に戻る。そのため、その瞬間に「この結果を採用するなら、古い pending action は不要」と判断して `clearPendingActions()` を呼ぶのは意味が通る。
-- `enter {}`、`exit {}`、`recover {}` も技術的には store work であり、そこで pending action を捨てる意味はある。したがって公開面から完全に外す必要まではない。
-- ただし、可読性の観点では `action {}` と `transaction {}` の方が「何を確定させた結果として queue を切るのか」を読み取りやすい。README や KDoc では、この利用の重心を明示した方がよい。
+- `clearPendingActions()` is meaningful when "what is the current store work now, and what is pending behind it" is determined on the serial pipeline.
+- The `launch {}` body is asynchronous work owned by the state, not the store's serial pipeline itself. Allowing the queue to be cleaned up directly there would make it possible to discard pending actions at an arbitrary point after a delay or I/O, making behavior hard to follow.
+- What the `launch {}` body needs is lifetime control of state-owned jobs rather than queue control. In terms of separation of roles, that is more naturally handled by action-launch cancellation such as `cancelLaunch(lane)`.
+- Once a launched coroutine enters `transaction {}`, processing returns to the store's serial pipeline. So it makes sense to decide at that moment that "if this result is adopted, the old pending actions are no longer needed" and call `clearPendingActions()`.
+- `enter {}`, `exit {}` and `recover {}` are technically store work too, and discarding pending actions there has meaning. Therefore there is no need to go as far as removing them from the public surface entirely.
+- However, from a readability standpoint, `action {}` and `transaction {}` make it easier to read "what has been settled, as a result of which the queue is being cut". The README and KDoc should make this center of use explicit.
 
-## 関連
+## Related
 
-- [PendingActionPolicy 拡張案の却下](./2026-04-22-pending-action-policy.md)
-- [非 `launch` 処理には cancellation API を入れない](./2026-04-26-non-launch-cancellation.md)
-- [`action` の async 境界は明示のまま維持する](./2026-04-26-action-async-boundary.md)
+- [Rejection of the PendingActionPolicy extension proposals](./2026-04-22-pending-action-policy.md)
+- [No cancellation API for non-`launch` work](./2026-04-26-non-launch-cancellation.md)
+- [The async boundary of `action` stays explicit](./2026-04-26-action-async-boundary.md)

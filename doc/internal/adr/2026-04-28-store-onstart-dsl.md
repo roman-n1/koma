@@ -1,39 +1,39 @@
-# `Store{}` DSL に state 非依存の `onStart {}` は追加しない
+# No state-independent `onStart {}` is added to the `Store{}` DSL
 
-- 更新日: 2026-04-30
+- Updated: 2026-04-30
 
-## 背景
+## Background
 
-現状の `Store{}` DSL では、`enter {}` から `launch {}` を使って外部 resource の `Flow` や callback bridge を購読できる。
+In the current `Store{}` DSL, `enter {}` can use `launch {}` to subscribe to an external resource's `Flow` or a callback bridge.
 
-ただし、この購読は current state の runtime に属する。
-そのため、state が遷移すると、その state に紐づく runtime は終了し、`enter {}` で始めた購読も止まる。
+However, this subscription belongs to the runtime of the current state.
+So when the state transitions, the runtime tied to that state ends, and the subscription started in `enter {}` stops as well.
 
-ここで検討したのは、state 遷移に左右されず Store start 時に 1 回だけ動く `onStart {}` を `Store{}` DSL に追加する案である。
-これがあれば、state ごとの寿命ではなく Store 全体の寿命に紐づく購読を、`Store{}` DSL 内で直接書ける。
+What was considered here was a proposal to add to the `Store{}` DSL an `onStart {}` that runs once at Store start, unaffected by state transitions.
+With this, subscriptions tied to the lifetime of the whole Store rather than of each state could be written directly inside the `Store{}` DSL.
 
-一方で、この `onStart {}` に state 更新を許すべきかどうかは現時点で決めきれない。
-`Middleware` に直接 state 更新 API を入れないとした判断と同様に、state machine の外側に見える start hook へ state 書き込み capability を載せると、責務境界が曖昧になりやすい。
+On the other hand, whether this `onStart {}` should be allowed to update state cannot be settled at this point.
+Just like the decision not to add a direct state update API to `Middleware`, putting a state-writing capability on a start hook that is visible outside the state machine tends to blur the boundary of responsibilities.
 
-逆に、state 更新を許さず、外部入力を受けて action を `dispatch()` するだけの hook として扱うなら、`Middleware(onStart = { ... })` で代替できる。
-その場合、専用の `onStart {}` を `Store{}` DSL に増やしても、実質的には middleware の別名を増やすに留まる。
+Conversely, if state updates are not allowed and it is treated as a hook that only receives external input and `dispatch()`es actions, then `Middleware(onStart = { ... })` can substitute for it.
+In that case, adding a dedicated `onStart {}` to the `Store{}` DSL would effectively amount to no more than adding another alias for middleware.
 
-## 決定
+## Decision
 
-現時点では、state 遷移に依存しない `onStart {}` を `Store{}` DSL に追加しない。
+At this point, no `onStart {}` that is independent of state transitions is added to the `Store{}` DSL.
 
-- `enter {}` で扱う購読は、引き続き active state の runtime に属するものとして扱う。
-- state 遷移に左右されない購読や監視が必要な場合は、`Middleware(onStart = { ... })` を使って外部入力を受け、必要な action を `dispatch()` する。
-- state 非依存の start hook に state 更新を許すかどうかが整理できるまでは、`Store{}` DSL に専用 API は増やさない。
+- Subscriptions handled in `enter {}` continue to be treated as belonging to the runtime of the active state.
+- When a subscription or observation unaffected by state transitions is needed, use `Middleware(onStart = { ... })` to receive external input and `dispatch()` the required actions.
+- Until it is sorted out whether a state-independent start hook should be allowed to update state, no dedicated API is added to the `Store{}` DSL.
 
-## 補足
+## Notes
 
-- 今回見送る主因は、「state 更新を許す hook にするのか」「dispatch 専用 hook にするのか」が未確定なまま API を増やしたくないためである。
-- もし将来、代替としても state を更新しない版の `onStart {}` を用意するなら、実装上は `Middleware(onStart = { ... })` のシンタックスシュガーにするのがもっとも簡単である。
-- ただしその場合は、`overrides {}` 内の `clearMiddlewares()` や `replaceMiddlewares()` とどう整合させるかを先に決める必要がある。`Store{}` DSL の `onStart {}` が middleware の一部として消えるのか、別枠で残るのかが曖昧だと、override semantics が読みづらくなる。
-- もしこの相互作用が不自然になる、または実装上の扱いが複雑になるなら、シンタックスシュガー案は採らず、`StoreImpl` に専用の入口を用意して扱いを明示した方がよい。
+- The main reason for deferring this time is that we do not want to add an API while it is undetermined whether it should be "a hook that allows state updates" or "a dispatch-only hook".
+- If, in the future, a version of `onStart {}` that does not update state is provided as an alternative, the simplest implementation is syntactic sugar over `Middleware(onStart = { ... })`.
+- In that case, however, how it should be reconciled with `clearMiddlewares()` and `replaceMiddlewares()` inside `overrides {}` needs to be decided first. If it is ambiguous whether the `onStart {}` of the `Store{}` DSL disappears as part of the middlewares or remains as a separate slot, the override semantics become hard to read.
+- If this interaction turns out unnatural, or the implementation handling becomes complicated, the syntactic sugar approach should not be taken; instead a dedicated entry point should be provided in `StoreImpl` to make the handling explicit.
 
-## 関連
+## Related
 
-- [Store の開始タイミング policy 案](../notes/2026-04-23-store-start-policy.md)
-- [Middleware には直接 state 更新 API を入れない](./2026-04-26-middleware-dispatch-only.md)
+- [Store start timing policy proposal](../notes/2026-04-23-store-start-policy.md)
+- [No direct state update API in Middleware](./2026-04-26-middleware-dispatch-only.md)

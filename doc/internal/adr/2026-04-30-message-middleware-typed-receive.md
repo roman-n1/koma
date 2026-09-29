@@ -1,34 +1,34 @@
-# `receiveMessages<MainMessage>` のような型絞り込み API は追加しない
+# No type-narrowing API such as `receiveMessages<MainMessage>` is added
 
-- 更新日: 2026-04-30
+- Updated: 2026-04-30
 
-## 背景
+## Background
 
-`koma-message` の `receiveMessages()` に、次のような message 型指定を追加する案を検討した。
+We considered a proposal to add message type specification to `receiveMessages()` in `koma-message`, as follows.
 
 - `receiveMessages<MainMessage> { ... }`
 - `receiveMessages { message: MainMessage -> ... }`
 
-狙いは、`Message` 全体を受けて `when` や `is` で振り分ける代わりに、受信側で任意の message 型だけを自然に購読できるようにすることである。
+The aim was to let the receiving side naturally subscribe to only an arbitrary message type, instead of receiving all `Message`s and branching with `when` or `is`.
 
-ただし `koma-message` は別モジュールであり、`StoreBuilder` に専用 DSL を追加して `Store { receiveMessages<Hoge> { ... } }` のような形に寄せることはできない。
-そのため、検討対象になるのは top-level の middleware factory である `receiveMessages()` に型指定 API を足す方向になる。
+However, `koma-message` is a separate module, so it is not possible to add a dedicated DSL to `StoreBuilder` and move toward a form like `Store { receiveMessages<Hoge> { ... } }`.
+Therefore, what comes under consideration is adding a type-specifying API to the top-level middleware factory `receiveMessages()`.
 
-## 決定
+## Decision
 
-`receiveMessages<MainMessage>` や `receiveMessages { message: MainMessage -> ... }` のような型絞り込み API は追加しない。
+No type-narrowing API such as `receiveMessages<MainMessage>` or `receiveMessages { message: MainMessage -> ... }` is added.
 
-現時点では、既存の `receiveMessages { message -> ... }` を維持する。
+At this point, the existing `receiveMessages { message -> ... }` is kept.
 
-## 補足
+## Notes
 
-- `receiveMessages()` は `Middleware<S, A, E>` を返す generic factory であり、message 型だけを追加すると `M` と `S / A / E` の複数型引数を同時に扱うことになる。
-- Kotlin では「先頭の型引数だけ明示して残りを自然に省略する」形が取りづらく、`receiveMessages<MainMessage>` の見た目を素直に成立させにくい。API 形によっては `_` を含む型引数補完に寄りやすく、呼び出しが不格好になりやすい。
-- `receiveMessages { message: MainMessage -> ... }` の形なら型引数の見た目は避けやすいが、今度は「lambda 引数型で購読対象を切り替える API」になる。現在の `receiveMessages { message -> ... }` よりも契約が見えづらく、単なる引数注釈以上の意味を持つ書き方になるため、API としてやや回りくどい。
-- `StoreBuilder` 側に member DSL を生やせれば別の見せ方もありうるが、`koma-message` が別モジュールである以上、その方向は採れない。
-- そのため今回は、「型で絞れること」よりも「top-level factory として無理のない呼び出し形」を優先し、既存 API を維持する。
-- 必要な絞り込みは、引き続き `receiveMessages { message -> when (message) { ... } }` や `if (message is MainMessage) { ... }` で表現する。
+- `receiveMessages()` is a generic factory that returns `Middleware<S, A, E>`, so adding only a message type means handling the multiple type parameters `M` and `S / A / E` at the same time.
+- In Kotlin, the form "specify only the first type argument explicitly and naturally omit the rest" is hard to achieve, so the appearance of `receiveMessages<MainMessage>` is hard to make work cleanly. Depending on the API shape, it tends to lean toward type argument completion involving `_`, and the call site tends to become awkward.
+- The `receiveMessages { message: MainMessage -> ... }` form avoids the appearance of type arguments, but then it becomes "an API that switches the subscription target by the lambda parameter type". The contract is less visible than with the current `receiveMessages { message -> ... }`, and the notation carries meaning beyond a mere parameter annotation, so it is somewhat roundabout as an API.
+- If a member DSL could be grown on the `StoreBuilder` side, a different presentation would be possible, but since `koma-message` is a separate module, that direction cannot be taken.
+- Therefore, this time, "a call form that is natural as a top-level factory" is prioritized over "being able to narrow by type", and the existing API is kept.
+- The necessary narrowing continues to be expressed with `receiveMessages { message -> when (message) { ... } }` or `if (message is MainMessage) { ... }`.
 
-## 関連
+## Related
 
-- [MessageMiddleware は簡易な built-in に留める](./2026-04-27-message-middleware-lightweight.md)
+- [MessageMiddleware stays a simple built-in](./2026-04-27-message-middleware-lightweight.md)

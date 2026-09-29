@@ -1,36 +1,36 @@
-# `ViewStore.render` / `handle` の PascalCase 置き換えは採用しない
+# PascalCase replacement of `ViewStore.render` / `handle` is not adopted
 
-- 更新日: 2026-05-25
+- Updated: 2026-05-25
 
-## 背景
+## Background
 
-`ViewStore.render` / `ViewStore.handle` は `@Composable` であり、Compose の naming guideline にそのまま寄せるなら、`Unit` を返す public composable として PascalCase の名前にしたくなる。
+`ViewStore.render` / `ViewStore.handle` are `@Composable`, and if we followed Compose's naming guideline directly, we would want PascalCase names for them as public composables returning `Unit`.
 
-このため、次の 2 方向を検討した。
+For this reason, the following two directions were considered.
 
-- トップレベル関数として `StateContent(viewStore) {}` / `EventHandler(viewStore) {}`
-- `ViewStore` のメンバ関数として `viewStore.StateContent {}` / `viewStore.EventHandler {}`
+- Top-level functions `StateContent(viewStore) {}` / `EventHandler(viewStore) {}`
+- Member functions of `ViewStore`: `viewStore.StateContent {}` / `viewStore.EventHandler {}`
 
-ただし、どちらも現在の `viewStore.render {}` / `viewStore.handle {}` が持つ DSL としての自然さを崩す懸念があった。
+However, both raised the concern of breaking the naturalness as a DSL that the current `viewStore.render {}` / `viewStore.handle {}` has.
 
-## 決定
+## Decision
 
-`ViewStore.render` / `ViewStore.handle` を PascalCase の別 API に置き換える案は採用しない。
+The proposal to replace `ViewStore.render` / `ViewStore.handle` with separate PascalCase APIs is not adopted.
 
-現時点では、既存の lowerCamelCase API を維持する。
+At this point, the existing lowerCamelCase API is kept.
 
 - `viewStore.render<...> { ... }`
 - `viewStore.handle<...> { ... }`
 
-## 補足
+## Notes
 
-- トップレベル関数案は、型引数の見た目が不格好になりやすい。`StateContent<MainState>(viewStore)` のように素直に書けないことがあり、`_` を含む型引数補完や、追加の引数設計を考えないと呼び出しが整いにくい。
-- `viewStore.StateContent {}` / `viewStore.EventHandler {}` は Compose の naming guideline には寄せやすいが、明示 receiver を持つメンバ呼び出しとしては不自然に見える。`viewStore.Some()` の PascalCase は、トップレベル composable や暗黙 receiver DSL とは違い、型名やプロパティ名のような見え方になりやすい。
-- そのため今回は「Compose guideline への整合」より、「`ViewStore` DSL としての自然さ」を優先する。
-- 既存 API には `@Suppress("ComposableNaming")` が必要だが、このコストは上記の不自然さを受け入れるより小さいと判断する。
-- 将来、トップレベルでもメンバでもない、より自然な API 形が見つかった場合はあらためて検討してよい。
+- The top-level function approach tends to make the appearance of type arguments awkward. It sometimes cannot be written plainly as `StateContent<MainState>(viewStore)`, and the call does not come together without considering type argument completion involving `_` or additional parameter design.
+- `viewStore.StateContent {}` / `viewStore.EventHandler {}` are easier to align with Compose's naming guideline, but as member calls with an explicit receiver they look unnatural. Unlike top-level composables or implicit-receiver DSLs, the PascalCase of `viewStore.Some()` tends to look like a type name or property name.
+- Therefore, this time, "naturalness as the `ViewStore` DSL" is prioritized over "alignment with the Compose guideline".
+- The existing API requires `@Suppress("ComposableNaming")`, but this cost is judged to be smaller than accepting the unnaturalness above.
+- If, in the future, a more natural API shape is found that is neither top-level nor member, it may be reconsidered.
 
-## 2026-05-25 追記
+## Addendum 2026-05-25
 
-その後、API 名は `render` / `handle` から `stateContent` / `eventEffect` へリネームされた。
-この rename により、API の意味は Compose 文脈により沿うようになったが、member composable を PascalCase にするかという論点自体は変わっていない。
+Since then, the API names have been renamed from `render` / `handle` to `stateContent` / `eventEffect`.
+With this rename, the meaning of the API is more aligned with the Compose context, but the question itself of whether member composables should be PascalCase is unchanged.

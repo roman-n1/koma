@@ -1,29 +1,29 @@
-# `LaunchControl` API のデザイン
+# Design of the `LaunchControl` API
 
-- 更新日: 2026-05-01
+- Updated: 2026-05-01
 
-## 背景
+## Background
 
-`LaunchControl` は `action { launch { ... } }` に対して、tracked lane 上で launched job をどう調停するかを表す API である。
+`LaunchControl` is an API that expresses, for `action { launch { ... } }`, how launched jobs are arbitrated on a tracked lane.
 
-この control は、dispatch 自体を捨てるわけではないが、dispatch をきっかけに始まる launched work を開始しない、あるいは前回の launched work を取り消すことがある。
-そのため便利な一方で、意図せず使うと「一見すると action が無視されたように見える」振る舞いにつながりうる。
+This control does not discard the dispatch itself, but it may not start the launched work triggered by the dispatch, or may cancel the previous launched work.
+So while it is convenient, unintended use can lead to behavior that "looks at first glance as if the action were ignored".
 
-利用者が混乱なく利用できる API であることが求められる。
+The API is required to be usable by users without confusion.
 
-## 決定
+## Decision
 
-`LaunchControl` は、次の case を持つ API として公開する。
+`LaunchControl` is exposed as an API with the following cases.
 
-- `LaunchControl.Untracked` (デフォルト。通常は省略される。)
+- `LaunchControl.Untracked` (the default; normally omitted.)
 - `LaunchControl.CancelPrevious`
 - `LaunchControl.DropIfRunning`
 
-canonical な書き方は、`launch(control = LaunchControl.CancelPrevious(...)) { ... }` および `launch(control = LaunchControl.DropIfRunning(...)) { ... }` とする。
+The canonical notation is `launch(control = LaunchControl.CancelPrevious(...)) { ... }` and `launch(control = LaunchControl.DropIfRunning(...)) { ... }`.
 
-## 補足
+## Notes
 
-- `CancelPrevious` は「前回の tracked launch を止めて次を始める」、`DropIfRunning` は「tracked launch が動作中なら新しい launch を始めない」という挙動が call site から直接読める。
-- `launchCancelPrevious()` / `launchDropIfRunning()` のような API 群へ置き換えも検討したが、利用者が覚えるべき `launchXxx` 構文が増えるので採用しない。
-- `launchCancelPrevious()` / `launchDropIfRunning()` を置き換えでなく alias として追加することも検討したが、同じ制御に複数の入口を用意すると、README、レビュー、会話、検索のどれでも表記が混ざり、認知負荷が上がる。そのため public surface は 1 つの書き方に絞る。
-- `launch(control = LaunchControl.CancelPrevious(searchLane)) { ... }` のような少し長めの表記でも、コード中で視認しやすい方が、コードレビュー中に見落としづらい。
+- The behavior can be read directly from the call site: `CancelPrevious` means "stop the previous tracked launch and start the next", and `DropIfRunning` means "do not start a new launch while a tracked launch is running".
+- Replacement with a family of APIs such as `launchCancelPrevious()` / `launchDropIfRunning()` was also considered, but it is not adopted because it increases the `launchXxx` syntax users have to remember.
+- Adding `launchCancelPrevious()` / `launchDropIfRunning()` as aliases rather than replacements was also considered, but providing multiple entry points for the same control mixes notations in the README, reviews, conversations and searches alike, raising cognitive load. So the public surface is narrowed to one notation.
+- Even with a slightly longer notation such as `launch(control = LaunchControl.CancelPrevious(searchLane)) { ... }`, being easier to spot in code makes it harder to overlook during code review.

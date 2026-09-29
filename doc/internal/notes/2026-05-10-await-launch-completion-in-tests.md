@@ -1,111 +1,111 @@
-# enter / action 内 launch の完了を待つテスト用 API 案
+# Proposal for a test API that waits for launches inside enter / action to complete
 
-- 更新日: 2026-05-10
+- Updated: 2026-05-10
 
-## 背景
+## Background
 
-`enter {}` および `action {}` の中で、Store DSL の `launch {}` を使って副作用処理を起動できる。
-テストコードからこの launch の完了を待ちたい場面がある。
-具体的には、次のような前提を置く。
+Inside `enter {}` and `action {}`, side-effect processing can be started with the Store DSL's `launch {}`.
+There are situations where test code wants to wait for this launch to complete.
+Concretely, the following premises are assumed.
 
-- `launch(Dispatchers.IO)` のように dispatcher を直書きしているケースもある
-- そのため、テスト側は `kotlinx-coroutines-test` の `TestDispatcher` / `runTest` / `advanceUntilIdle` などには寄せたくない
-- 既存の `startAndWait()` / `dispatchAndWait()` は、起動 / dispatch 自体の同期部分の完了は待つが、その内部から `launch` で起動された子 job の完了は待たない
+- There are cases where the dispatcher is hard-coded, such as `launch(Dispatchers.IO)`
+- Because of that, the test side does not want to lean on `TestDispatcher` / `runTest` / `advanceUntilIdle` etc. from `kotlinx-coroutines-test`
+- The existing `startAndWait()` / `dispatchAndWait()` wait for the completion of the synchronous part of the start / dispatch itself, but do not wait for the completion of child jobs started with `launch` from inside it
 
-副作用の結末が必ず state 遷移か event 発火に出る設計であれば、テストは標準の Flow API（`state.first { ... }` 等）で待てる。
-ただし、副作用だけで完了する fire-and-forget な launch（ロギング、計測、外部送信のみ等）は state / event 経由では観測できない。
-このような launch も含めて「Store が落ち着いた状態」を待ちたい、というのが本 note の動機である。
+If the design guarantees that the outcome of a side effect always shows up as a state transition or an event emission, tests can wait with the standard Flow API (`state.first { ... }` etc.).
+However, a fire-and-forget launch that completes with side effects only (logging, metrics, external sending only, etc.) cannot be observed via state / event.
+The motivation for this note is wanting to wait for "the Store has settled", including such launches.
 
-## 現在の考え
+## Current thinking
 
-Store 内部に「現在動いている launch の子 job 群を join するまで待つ」API を入れる方針。
-便宜上ここでは `awaitIdle()` と呼ぶ。
+The approach is to add an API inside the Store that "waits until the currently running child jobs of launches are joined".
+For convenience it is called `awaitIdle()` here.
 
-実装上の足場はすでに揃っている。
-[StoreImpl.kt:131](../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt) の `stateRuntimes` が state クラスごとに `StateRuntime` を持ち、
-[StoreImpl.kt:143](../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt) の `StateRuntime` は `scope` と `actionLaunchJobs` を保持する。
-enter / action の `launch {}` は [StoreImpl.kt:443](../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt) の `launchInStateRuntime()` を経由してこの scope 上で起動される。
-したがって、現在追跡されている子 job をすべて辿って join できる。
+The footing for the implementation is already in place.
+`stateRuntimes` at [StoreImpl.kt:131](../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt) holds a `StateRuntime` per state class, and
+`StateRuntime` at [StoreImpl.kt:143](../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt) holds a `scope` and `actionLaunchJobs`.
+`launch {}` in enter / action is started on this scope via `launchInStateRuntime()` at [StoreImpl.kt:443](../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt).
+Therefore, all currently tracked child jobs can be traversed and joined.
 
-概念実装は次の通り。
+The conceptual implementation is as follows.
 
 ```kt
 internal suspend fun StoreImpl<*, *, *>.awaitIdle() {
     while (true) {
         val jobs = stateRuntimes.values.flatMap { runtime ->
             runtime.actionLaunchJobs.values + listOfNotNull(
-                // enter 内 launch も追跡対象に含めるなら、ここで参照できる形に揃える
+                // If launches inside enter are also to be tracked, arrange them so they can be referenced here
             )
         }
         if (jobs.none { it.isActive }) return
         jobs.joinAll()
-        // join 中に新たな launch が積まれた可能性があるので、安定するまで反復する
+        // New launches may have been queued during the join, so iterate until stable
     }
 }
 ```
 
-特徴は次のとおり。
+The characteristics are as follows.
 
-- dispatcher の種類に依存しない。`Dispatchers.IO` 直書きでも、Job は state-scope の子なので追跡できる
-- 固定 sleep を使わない。Job の完了という事実を直接見る
-- `Store.close()` とは目的が異なる。`close()` は「打ち切る」、`awaitIdle()` は「終わるまで待つ」
+- Does not depend on the kind of dispatcher. Even with a hard-coded `Dispatchers.IO`, the Job is a child of the state scope and can be tracked
+- Does not use a fixed sleep. Looks directly at the fact of Job completion
+- Its purpose differs from `Store.close()`. `close()` "cuts off", `awaitIdle()` "waits until finished"
 
-### 終わらない launch (Flow 購読など) の扱い
+### Handling launches that never finish (Flow subscriptions, etc.)
 
-`awaitIdle()` の素直な実装には穴がある。
-launch の中で Flow を購読しているケース、例えば `launch { repository.userFlow.collect { ... } }` のようなものは、
-state が遷移して scope が cancel されるまで完了しない。
-`joinAll()` するとそのまま固まる。
+The straightforward implementation of `awaitIdle()` has a hole.
+Cases where a Flow is subscribed inside a launch, for example something like `launch { repository.userFlow.collect { ... } }`,
+do not complete until the state transitions and the scope is cancelled.
+`joinAll()` would simply hang.
 
-`Job` だけを見て「処理中」と「`collect` 等で suspend して待機中」を区別する手段はない。
-`kotlinx-coroutines-test` の `advanceUntilIdle` がこれを実現できているのは、
-TestDispatcher のキューを直接覗いて「実行待ちタスクの有無」を判定しているためで、
-実 dispatcher (`Dispatchers.IO` 等) では原理的に同じことができない。
-TestDispatcher を使わない方針を取る以上、この区別は Koma 側で何らかの形で持ち込む必要がある。
+There is no way to distinguish "processing" from "suspended and waiting in `collect` etc." by looking at the `Job` alone.
+`advanceUntilIdle` of `kotlinx-coroutines-test` can achieve this because
+it looks directly into the TestDispatcher's queue to determine "whether there are tasks waiting to run",
+and with a real dispatcher (`Dispatchers.IO` etc.) the same thing is fundamentally impossible.
+Given the approach of not using a TestDispatcher, this distinction has to be brought in on the Koma side in some form.
 
-考えられる方向はいくつかある。
+There are several conceivable directions.
 
-- **DSL 側で長命購読を別 API に分ける**。`launch {}` は短命副作用前提、長命購読は `subscribe { ... }` 相当の別 API に切り出し、`awaitIdle()` の追跡対象からは外す。意味付けはきれいだが API 追加が要る
-- **launch にフラグを足す**。`launch(awaitable = false) { ... }` のような形で、待機対象から除外することを呼び出し側が宣言する。互換性は保ちやすいが、書き忘れによるテスト固まりが起きうる
-- **quiescence ベースに切り替える**。「state も event も一定時間動かない」を idle とみなす。実装は単純だがタイミング依存で fragile。本方針の前提（TestDispatcher を使わない）と相性が悪い
-- **`awaitIdle()` 自体を諦める**。終わる予定の launch だけ標準の Flow API で待ち、購読系を含む全体待機はサポートしない。例えば次のように書ける
+- **Separate long-lived subscriptions into a different API on the DSL side**. `launch {}` assumes short-lived side effects, long-lived subscriptions are split out into a separate API equivalent to `subscribe { ... }` and excluded from the tracking target of `awaitIdle()`. The semantics are clean, but an API addition is required
+- **Add a flag to launch**. In a form such as `launch(awaitable = false) { ... }`, the caller declares exclusion from the wait target. Compatibility is easy to maintain, but a hanging test can occur if the flag is forgotten
+- **Switch to a quiescence basis**. Consider idle to be "neither state nor event moves for a certain period". The implementation is simple but timing-dependent and fragile. It fits poorly with the premise of this approach (not using a TestDispatcher)
+- **Give up on `awaitIdle()` itself**. Wait only for launches that are expected to finish with the standard Flow API, and do not support waiting for the whole including subscriptions. For example, one can write
 
   ```kt
   val loaded = store.state.first { it is Loaded || it is Error }
   ```
 
-  ここで使う `first` / `filter` / `take` などは `kotlinx-coroutines-core` 側の標準 API であり、`kotlinx-coroutines-test` への依存ではない。前提と矛盾しない。
-  ただし、副作用の終端が state / event に必ず出ない launch（fire-and-forget なロギングや計測など）は観測できないため、本 note の動機は満たせない
+  The `first` / `filter` / `take` etc. used here are standard APIs on the `kotlinx-coroutines-core` side, not a dependency on `kotlinx-coroutines-test`. This does not contradict the premise.
+  However, launches whose side-effect end does not necessarily show up in state / event (fire-and-forget logging, metrics, etc.) cannot be observed, so the motivation of this note is not met
 
-### 公開範囲
+### Visibility
 
-既存の `startAndWait()` / `dispatchAndWait()` と同じ二段構成に揃えるのが自然である。
+It is natural to align with the same two-tier structure as the existing `startAndWait()` / `dispatchAndWait()`.
 
-- `koma-core` の [`StoreInternalApi`](../../koma-core/src/commonMain/kotlin/koma/core/StoreInternalApi.kt) (`@InternalKomaApi`) に `suspend fun awaitIdle()` を追加する
-- `StoreImpl` で実装する
-- `koma-test` の [`StoreExtensions`](../../koma-test/src/commonMain/kotlin/koma/test/StoreExtensions.kt) に public extension を置き、`requireStoreInternalApi().awaitIdle()` に委譲する
+- Add `suspend fun awaitIdle()` to [`StoreInternalApi`](../../koma-core/src/commonMain/kotlin/koma/core/StoreInternalApi.kt) (`@InternalKomaApi`) in `koma-core`
+- Implement it in `StoreImpl`
+- Place a public extension in [`StoreExtensions`](../../koma-test/src/commonMain/kotlin/koma/test/StoreExtensions.kt) in `koma-test`, delegating to `requireStoreInternalApi().awaitIdle()`
 
-これにより、テスト用の段階的な待機 API として一貫する。
+This makes the test wait APIs consistent as a graded set.
 
-- `startAndWait()`: start の同期部分まで待つ
-- `dispatchAndWait(action)`: dispatch の同期部分まで待つ
-- `awaitIdle()` (新): start / dispatch から派生した launch がすべて落ち着くまで待つ
+- `startAndWait()`: waits up to the synchronous part of start
+- `dispatchAndWait(action)`: waits up to the synchronous part of dispatch
+- `awaitIdle()` (new): waits until all launches derived from start / dispatch have settled
 
-`dispatchAndWait(action)` の直後に `awaitIdle()` を呼ぶ、というのが典型的な使い方になる。
+Calling `awaitIdle()` right after `dispatchAndWait(action)` would be the typical usage.
 
-### 現時点での見立て
+### Current assessment
 
-- `awaitIdle()` を入れる方向で進める。fire-and-forget な launch まで含めて Store の落ち着きを待てるのは、本案以外には現状ない
-- ただし長命 launch（Flow 購読など）とそれ以外を区別する仕組みを併せて入れることが前提。区別なしでは Flow 購読を含む Store のテストが容易に固まる
-- 区別の仕組みを入れるコストが見合わないと判断する場合に限り、`awaitIdle()` 自体を諦めて Flow API による観測に倒す選択肢が残る
+- Proceed in the direction of adding `awaitIdle()`. There is currently no option other than this proposal for waiting for the Store to settle including fire-and-forget launches
+- However, the premise is that a mechanism to distinguish long-lived launches (Flow subscriptions, etc.) from the rest is added together with it. Without the distinction, tests of Stores that include Flow subscriptions easily hang
+- Only if it is judged that the cost of adding the distinction mechanism is not worth it, the option remains of giving up on `awaitIdle()` itself and falling back to observation via the Flow API
 
-## 未解決事項
+## Open questions
 
-- API 名。`awaitIdle()` / `awaitAllLaunches()` / `quiesce()` のいずれにするか
-- `koma-test` の extension 名。`awaitIdle()` のまま出すか、`startAndWait()` / `dispatchAndWait()` の語感に合わせた別名にするか
-- enter 内 launch の Job 追跡。`actionLaunchJobs` には載っていない可能性があるため、enter 起動の launch も同じ map で追跡するか、別の追跡経路を持つか
-- 反復 join のセマンティクス。`awaitIdle` 中に新規 launch が無限に積まれるケースをどう扱うか（タイムアウト / 上限回数 / そもそも保証しない）
-- 長命 launch の区別方法。本文で挙げた 4 案のうち、どれを採るか
-- state 遷移をまたぐ場合の意味。state が切り替わると前 state の scope は cancel されるので、cancel された Job への join 待ちが意図せず長引かないかを検証する必要がある
-- `public` 公開の是非。本番コードで `awaitIdle()` を呼びたくなる場面が出るかどうか。テスト専用に留めるなら API surface に出さない方が安全
-- タイマー駆動など、dispatch 起点でない launch をどう扱うか。完全な idle を待つ意味付けにするか、dispatch 由来のものに限定するか
+- API name. Which of `awaitIdle()` / `awaitAllLaunches()` / `quiesce()`
+- Name of the `koma-test` extension. Whether to expose it as `awaitIdle()` as-is, or under a different name matching the feel of `startAndWait()` / `dispatchAndWait()`
+- Tracking of Jobs of launches inside enter. They may not be in `actionLaunchJobs`, so whether to track launches started from enter in the same map, or to have a separate tracking path
+- Semantics of the iterated join. How to handle the case where new launches are queued endlessly during `awaitIdle` (timeout / upper bound on iterations / no guarantee at all)
+- How to distinguish long-lived launches. Which of the 4 proposals listed in the body to adopt
+- Meaning when crossing state transitions. When the state switches, the scope of the previous state is cancelled, so it needs to be verified that waiting on a join of a cancelled Job does not unintentionally take long
+- Whether to expose it as `public`. Whether there will be situations where one wants to call `awaitIdle()` in production code. If it stays test-only, it is safer not to expose it in the API surface
+- How to handle launches that are not triggered by dispatch, such as timer-driven ones. Whether to define it as waiting for complete idle, or limit it to those derived from dispatch

@@ -1,15 +1,15 @@
-# タイトル
+# Title
 
-- 更新日: YYYY-MM-DD
+- Updated: YYYY-MM-DD
 
-## 背景
+## Background
 
-[なぜこの判断が必要か]
+[Why this decision is needed]
 
-## 決定
+## Decision
 
-[採用した判断、または採用しないと決めた判断]
+[The decision adopted, or the decision deliberately rejected]
 
-## 補足
+## Notes
 
-- [判断理由、影響、後続対応などがあれば]
+- [Reasons for the decision, impact, follow-up work, etc., if any]

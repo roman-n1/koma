@@ -1,27 +1,27 @@
-# Runtime policy API は enum を維持する
+# Runtime policy APIs keep using enum
 
-- 更新日: 2026-05-07
+- Updated: 2026-05-07
 
-## 背景
+## Background
 
-`PendingActionPolicy` や `PluginExecutionPolicy` のような runtime policy は、現在 `enum` として公開している。
+Runtime policies such as `PendingActionPolicy` and `PluginExecutionPolicy` are currently exposed as `enum`.
 
-これらを `sealed interface` に寄せておけば、将来の拡張性が上がるのではないか、という論点がある。
-一方で、Koma の public policy API は、利用者に独自実装を許す戦略 interface ではなく、Store が解釈する少数の高水準 mode を表すものとして設計している。
+There is the point that moving these to `sealed interface` might improve future extensibility.
+On the other hand, Koma's public policy APIs are designed not as strategy interfaces that allow users to implement their own, but as a small number of high-level modes interpreted by the Store.
 
-## 決定
+## Decision
 
-`PendingActionPolicy`、`PluginExecutionPolicy`、および将来追加する同種の runtime policy は、原則として `enum` を維持する。
+`PendingActionPolicy`, `PluginExecutionPolicy`, and similar runtime policies added in the future keep using `enum` in principle.
 
-`sealed interface` を使うのは、`LaunchControl` のように case ごとに payload を持たせたいとき、または variant の形が単純な named mode を超えるときに限る。
+`sealed interface` is used only when each case should carry a payload, as with `LaunchControl`, or when the shape of the variants goes beyond simple named modes.
 
-runtime policy 間で表現形式を無理に統一することはしない。
-少数の固定 mode を選ぶ policy は `enum`、payload 付き variant や非対称な入力形を持つ policy は `sealed interface` とし、概念の形に合わせて選ぶ。
+The representation is not forcibly unified across runtime policies.
+A policy that chooses among a small number of fixed modes is an `enum`; a policy with payload-carrying variants or asymmetric input shapes is a `sealed interface`; the choice follows the shape of the concept.
 
-## 補足
+## Notes
 
-- `enum` は「閉じた少数の mode」を表す型として意味が直感的であり、call site からも用途が読み取りやすい。
-- `sealed interface` にしても、外部利用者が独自 policy を実装できるようになるわけではない。Koma では policy を library 側が意味付けするため、単なる named mode の拡張性は `enum` でも足りる。
-- `enum` から `sealed interface` への変更は public API / ABI の変更であり、互換性コストがある。
-- `koma-core` は JVM target を持ち、Java compilation support も有効にしているため、Java から扱いやすい `enum` の利点も捨てない。
-- 将来、policy に `KeepUntil(...)` のような payload 付き variant や、case ごとに異なる入力形が必要になった場合は、その時点で `sealed interface` 化または別型の導入を再検討する。
+- `enum` has an intuitive meaning as a type representing "a closed, small set of modes", and its purpose is easy to read from the call site.
+- Making it a `sealed interface` does not enable external users to implement their own policies. Since in Koma the library side gives meaning to policies, the extensibility of mere named modes is sufficient with `enum`.
+- Changing from `enum` to `sealed interface` is a public API / ABI change and has a compatibility cost.
+- `koma-core` has a JVM target and Java compilation support enabled, so the advantage of `enum` being easy to handle from Java is not discarded either.
+- If, in the future, a policy needs payload-carrying variants such as `KeepUntil(...)` or different input shapes per case, conversion to `sealed interface` or introduction of a separate type will be reconsidered at that point.

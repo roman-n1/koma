@@ -1,37 +1,37 @@
-# Event 用 MutableSharedFlow の設定方針
+# Configuration policy for the MutableSharedFlow used for events
 
-- 更新日: 2026-04-23
+- Updated: 2026-04-23
 
-## 背景
+## Background
 
-`Store.event` は UI 向けの one-shot event を流す用途で使っている。現在は `MutableSharedFlow()` をそのまま使っており、実質的には `replay = 0`、`extraBufferCapacity = 0`、`onBufferOverflow = BufferOverflow.SUSPEND` になっている。
+`Store.event` is used to deliver one-shot events for the UI. Currently `MutableSharedFlow()` is used as is, which effectively means `replay = 0`, `extraBufferCapacity = 0` and `onBufferOverflow = BufferOverflow.SUSPEND`.
 
-ここで検討したのは次の 3 点。
+The following three points were considered here.
 
-- `replay` を増やすべきか、または明示的に設定しておくべきか
-- `buffer` や `overflow` を内部で明示的に設定しておくべきか
-- それらの挙動を利用者が policy として選べるようにするべきか
+- Whether `replay` should be increased, or at least set explicitly
+- Whether `buffer` and `overflow` should be set explicitly internally
+- Whether users should be able to choose those behaviors as a policy
 
-## 決定
+## Decision
 
-現時点では、`Store.event` と `MessageHub` の `MutableSharedFlow` について、`replay`、`buffer`、`overflow` は追加で設定しない。
+At this point, no additional `replay`, `buffer` or `overflow` settings are applied to the `MutableSharedFlow` of `Store.event` and `MessageHub`.
 
-あわせて、`SharedFlow` の生の設定値を利用者に公開して選ばせる API も追加しない。
+Likewise, no API is added that exposes the raw `SharedFlow` settings for users to choose from.
 
-採用する前提は次のとおり。
+The adopted assumptions are as follows.
 
-- `replay = 0` を維持する
-- `extraBufferCapacity = 0` を維持する
-- `onBufferOverflow` は明示しない
+- Keep `replay = 0`
+- Keep `extraBufferCapacity = 0`
+- Do not specify `onBufferOverflow` explicitly
 
-## 補足
+## Notes
 
-- `replay = 0` は、後から購読を始めた側に過去イベントを再配送しないために適している。UI event の再配信は、画面の再生成や再購読のたびに navigation、toast、snackbar などの one-shot event が再発火する原因になりやすい。
-- `replay` を 1 以上にする案も検討対象だったが、`Store.event` の意味を「その場で購読していた側に届く通知」から「直近イベントの再通知があり得る通知」に変えてしまうため採用しない。
-- `extraBufferCapacity` は「すでに購読中だが遅い collector がいるときに、producer を少し先行させる」ための設定であり、「購読前のイベントを保持する」ための設定ではない。
-- `onBufferOverflow` は buffer を持たせたときにだけ実質的な意味を持つ。`DROP_OLDEST` や `DROP_LATEST` はイベントを黙って捨てる方針なので、汎用の event delivery policy としては強すぎる。
-- 現状の `emit` が suspend する挙動は、遅い collector がいるときに backpressure をそのまま受けるが、そのぶんイベントを静かに落とさない。`Store.event` の既定動作としてはこちらを優先する。
-- 設定値をそのまま公開すると、利用者に `SharedFlow` 内部仕様の理解を要求しやすく、API 表面積のわりに得られる一貫した意味づけが弱い。特に `replay` は UI event の再配送と密接に結びつくため、生の数値を公開するより高水準の意味で設計すべき項目である。
-- 将来、実運用で「遅い event handler により Store 側の処理が詰まる」問題が確認された場合は、まず内部実装として小さい `extraBufferCapacity` を追加する案を再検討する。その場合でも、最初の候補は `SUSPEND` を維持したままの小容量 buffer とする。
-- 可読性のために `MutableSharedFlow(replay = 0, extraBufferCapacity = 0)` のように明示する変更はあり得るが、これは挙動変更ではなく意図の明文化として扱う。
-- 実利用で event collector の遅延が問題になる具体例が出た場合にのみ、内部 buffer の導入を再評価する。
+- `replay = 0` is appropriate for not redelivering past events to subscribers that start later. Redelivery of UI events tends to cause one-shot events such as navigation, toasts and snackbars to fire again every time the screen is recreated or resubscribed.
+- Setting `replay` to 1 or more was also considered, but it is not adopted because it would change the meaning of `Store.event` from "a notification delivered to whoever was subscribed at that moment" to "a notification whose most recent event may be re-notified".
+- `extraBufferCapacity` is a setting for "letting the producer run slightly ahead when there is an already-subscribed but slow collector", not a setting for "retaining events from before subscription".
+- `onBufferOverflow` only has practical meaning when a buffer is present. `DROP_OLDEST` and `DROP_LATEST` are policies that silently drop events, so they are too strong as a general-purpose event delivery policy.
+- The current behavior where `emit` suspends takes backpressure directly when there is a slow collector, but in exchange it does not silently drop events. As the default behavior of `Store.event`, this is preferred.
+- Exposing the settings as they are tends to require users to understand `SharedFlow` internals, and the consistent meaning gained is weak relative to the API surface. `replay` in particular is closely tied to redelivery of UI events, so it is an item that should be designed in terms of higher-level meaning rather than by exposing a raw number.
+- If, in the future, a problem of "Store-side processing stalling due to a slow event handler" is confirmed in real use, the proposal to add a small `extraBufferCapacity` as an internal implementation detail will be reconsidered first. Even then, the first candidate is a small-capacity buffer while keeping `SUSPEND`.
+- A change that makes it explicit, such as `MutableSharedFlow(replay = 0, extraBufferCapacity = 0)`, for readability is possible, but that is treated as making the intent explicit, not as a behavior change.
+- Introducing an internal buffer is re-evaluated only when a concrete case emerges in real use where event collector delay becomes a problem.

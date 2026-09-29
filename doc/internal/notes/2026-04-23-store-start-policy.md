@@ -1,65 +1,65 @@
-# Store の開始タイミング policy 案
+# Proposal for a Store start timing policy
 
-- 更新日: 2026-04-26
+- Updated: 2026-04-26
 
-## 背景
+## Background
 
-現状の Store は、最初の `dispatch()` または `state.collect` / `collectState()` をきっかけに起動する。
+Currently the Store starts on the first `dispatch()` or the first `state.collect` / `collectState()`.
 
-起動時には `initializeIfNeeded()` が呼ばれ、middleware の `onStart` を含む start 時の処理が実行される。
+On startup, `initializeIfNeeded()` is called and the start-time processing, including the middleware `onStart`, runs.
 
-このため、利用者が `state` を collect しただけでも start に紐づく副作用が走る。
-Compose の `rememberViewStore()` は内部で `store.state.collectAsState()` を呼ぶため、画面が Store を購読した時点で Store が起動しうる。
+As a result, side effects tied to start run even when the user only collects `state`.
+Compose's `rememberViewStore()` calls `store.state.collectAsState()` internally, so the Store can start as soon as the screen subscribes to it.
 
-一方で、次の挙動は start 前でも成立している。
+On the other hand, the following behaviors already hold before start.
 
-- `currentState` は読める
-- `stateSaver.restore()` により復元された state も start 前に見える
-- `attachObserver()` は start 前にだけ許可される
-- `collectEvent()` は現状 start のトリガーではない
+- `currentState` can be read
+- State restored via `stateSaver.restore()` is also visible before start
+- `attachObserver()` is only allowed before start
+- `collectEvent()` is currently not a start trigger
 
-この組み合わせを見ると、検討対象は個別の handler 単位ではなく、「Store をいつ start とみなすか」の方が自然である。
+Looking at this combination, the natural subject of discussion is not individual handlers but "when the Store is considered started".
 
-## 現在の考え
+## Current thinking
 
-初期化ポリシーを追加するなら、個別の DSL handler ではなく Store の開始タイミング全体を制御する policy として導入する。
+If an initialization policy is added, it should be introduced not as an individual DSL handler but as a policy that controls the Store's start timing as a whole.
 
-名前は仮に `StoreStartPolicy` とし、まずは次の 3 つを候補にする。
+The tentative name is `StoreStartPolicy`, with the following three candidates to begin with.
 
 - `ON_FIRST_DISPATCH_OR_STATE_COLLECTION`
-  - 現状互換の default
-  - 最初の `dispatch()` または `state` の collect で start する
+  - Backward-compatible default
+  - Starts on the first `dispatch()` or the first collect of `state`
 - `ON_FIRST_DISPATCH`
-  - `dispatch()` でのみ start する
-  - `state` の collect は start のトリガーにしない
+  - Starts only on `dispatch()`
+  - Collecting `state` is not a start trigger
 - `MANUAL`
-  - 自動 start しない
-  - 利用者が明示的に `start()` を呼んだときだけ start する
+  - No automatic start
+  - Starts only when the user explicitly calls `start()`
 
-設定 API は既存の policy と同じ流儀で `StoreBuilder` / `StoreOverridesBuilder` に追加するのが自然である。
+The natural place for the configuration API is `StoreBuilder` / `StoreOverridesBuilder`, in the same style as the existing policies.
 
 ```kt
 fun startPolicy(policy: StoreStartPolicy)
 ```
 
-`MANUAL` を成立させるために、明示的に start する API が別途必要になる。
+To make `MANUAL` work, a separate API for explicit start is required.
 
-## 補足
+## Notes
 
-- `PendingActionPolicy` や `MiddlewareExecutionPolicy` と同じく、enum ベースの高水準 policy にした方が API の意味を保ちやすい。`Boolean` や生の trigger 群を公開すると、組み合わせは増えるが利用者から見た意味が弱くなる。
-- policy が制御する対象は startup processing 全体とする。ここを分けると start の概念が二重化し、middleware・observer・テストの整合が崩れやすい。
-- `ON_FIRST_STATE_COLLECTION` のような collect 専用 policy は v1 では不要。`dispatch()` したのに start しない挙動は直感に反しやすい。
-- 未採用候補として `EAGER` も考えられる。これは「`dispatch()` や `state` の collect を待たず、Store 作成直後に start する」という意味になる。v1 では見送るのがよい。`attachObserver()` が start 前のみ許可という現行前提と衝突しやすい。
-- `ON_FIRST_DISPATCH` では、`state` を collect しても start しない。その場合でも `StateFlow` としては current snapshot を読めるので、UI が「現在値の監視」と「副作用の開始」を分離しやすくなる。
-- start 直後に `enter { event(...) }` のような one-shot event を出したい場合、現状の default では `state` の collect が先に start trigger になり、あとから `event` を購読した側が初回 event を見逃しうる。
-- この問題は Compose の `rememberViewStore()` でも起こりうる。`rememberViewStore()` は内部で `store.state.collectAsState()` を行う一方、event の collect は `ViewStore.eventEffect()` 側の `LaunchedEffect` で始まるため、同じ画面内で両方を書いていても event collector が start 前に間に合う保証はない。
-- この問題に対しては start policy が有効な回避策になりうる。`ON_FIRST_DISPATCH` なら `state` / `event` の購読を張ったあとに明示的な最初の `dispatch()` で start でき、`MANUAL` なら購読を張ったあとに `start()` を呼ぶ順序をさらに明示しやすい。
-- ただし start policy が解決するのは「購読前に start しない」ことまでであり、`Store.event` 自体の replay semantics は変えない。start 後に購読した側へ過去 event を再配送するわけではない。
-- `MANUAL` で start 前に `dispatch()` された場合は、暗黙 start や silently ignore ではなく、例外で失敗させる方がバグを早く見つけやすい。
+- As with `PendingActionPolicy` and `MiddlewareExecutionPolicy`, an enum-based high-level policy keeps the meaning of the API clearer. Exposing a `Boolean` or a raw set of triggers would allow more combinations, but the meaning from the user's point of view becomes weaker.
+- What the policy controls is the startup processing as a whole. Splitting it would duplicate the concept of start, and consistency between middleware, observers and tests would easily break.
+- A collect-only policy such as `ON_FIRST_STATE_COLLECTION` is not needed in v1. Behavior where `dispatch()` is called but the Store does not start is likely to be counterintuitive.
+- `EAGER` is another candidate that was not adopted. It would mean "start immediately after Store creation, without waiting for `dispatch()` or a collect of `state`". It is better to defer it in v1. It easily conflicts with the current premise that `attachObserver()` is only allowed before start.
+- With `ON_FIRST_DISPATCH`, collecting `state` does not start the Store. Even then, the current snapshot can be read as a `StateFlow`, so the UI can more easily separate "observing the current value" from "starting side effects".
+- When a one-shot event such as `enter { event(...) }` should be emitted right after start, with the current default the collect of `state` becomes the start trigger first, and a side that subscribes to `event` later can miss the initial event.
+- This problem can also occur with Compose's `rememberViewStore()`. `rememberViewStore()` calls `store.state.collectAsState()` internally, while collecting events starts in the `LaunchedEffect` on the `ViewStore.eventEffect()` side, so even if both are written in the same screen there is no guarantee that the event collector is in place before start.
+- A start policy can be an effective workaround for this problem. With `ON_FIRST_DISPATCH`, the Store can be started by an explicit first `dispatch()` after the `state` / `event` subscriptions are set up, and with `MANUAL` the order of calling `start()` after setting up the subscriptions can be made even more explicit.
+- However, what the start policy solves is only "not starting before subscription"; it does not change the replay semantics of `Store.event` itself. Past events are not redelivered to a side that subscribes after start.
+- If `dispatch()` is called before start under `MANUAL`, failing with an exception rather than starting implicitly or silently ignoring it makes bugs easier to find early.
 
-## 未解決事項
+## Open questions
 
-- 明示 start API を `Store` interface に載せるか、core 内の extension として追加するかは未決定。interface 追加は fake 実装への影響があり、extension は Koma 実装依存であることをどう見せるかを考える必要がある。
-- `collectEvent()` を start trigger に含めるかは未決定。現状は含まれていないが、利用者視点では `event` 監視も start と結び付くと期待される可能性がある。
-- `MANUAL` で start 前に `state` を collect した場合の README 上の説明を明確にする必要がある。current snapshot は流れるが、start に紐づく副作用はまだ走らない、という説明になる見込み。
-- `rememberViewStore()` 利用時に `ON_FIRST_DISPATCH` や `MANUAL` を選んだときのサンプルを README / Compose 側テストに追加する必要がある。
+- Whether to put the explicit start API on the `Store` interface or add it as an extension inside core is undecided. Adding it to the interface affects fake implementations, and with an extension we need to think about how to present the fact that it depends on the Koma implementation.
+- Whether to include `collectEvent()` as a start trigger is undecided. It is currently not included, but from the user's point of view observing `event` may be expected to be tied to start as well.
+- The README explanation for the case where `state` is collected before start under `MANUAL` needs to be made clear. The explanation is expected to be that the current snapshot flows, but side effects tied to start do not run yet.
+- Samples for choosing `ON_FIRST_DISPATCH` or `MANUAL` when using `rememberViewStore()` need to be added to the README / the Compose-side tests.

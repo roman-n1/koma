@@ -1,79 +1,79 @@
-# AutoStartPolicy.OnDispatchOrStateCollection または AutoStartPolicy.OnDispatch の挙動について
+# On the behavior of AutoStartPolicy.OnDispatchOrStateCollection or AutoStartPolicy.OnDispatch
 
-- 更新日: 2026-05-10
+- Updated: 2026-05-10
 
-## 背景
+## Background
 
-`AutoStartPolicy.OnDispatchOrStateCollection`（default）と `AutoStartPolicy.OnDispatch` のいずれも、`dispatch()` を起点として Store の開始処理が走り得る。
-このとき、開始処理と dispatch の関係、特に `PendingActionPolicy.ClearOnStateExit` との相互作用について、UI 側から見たときの前提を整理しておく。
+With both `AutoStartPolicy.OnDispatchOrStateCollection` (default) and `AutoStartPolicy.OnDispatch`, the Store's startup processing can run with `dispatch()` as the trigger.
+Here we summarize the premises, as seen from the UI side, about the relationship between startup processing and dispatch, and in particular the interaction with `PendingActionPolicy.ClearOnStateExit`.
 
-## 現在の考え
+## Current thinking
 
-### dispatch 時の開始処理の見え方
+### How startup processing appears at dispatch time
 
-`dispatch()` 時に Store がまだ開始していなければ、開始処理を実行した上で、**開始処理完了後の state に対して本 dispatch および開始処理中に積まれた dispatch を適用する**仕組みである。
+If the Store has not yet started at the time of `dispatch()`, the mechanism is that the startup processing is executed, and then **this dispatch and the dispatches queued during startup processing are applied to the state after startup processing has completed**.
 
-つまり、dispatch する UI 側から見れば、Store の開始処理が実際にされている/されていないに関わらず、`dispatch()` する時点で「開始処理が終わっている」前提で書ける。
-開始処理が遅延しているせいで自分の dispatch が落ちる、という挙動を UI 側に意識させない。
+In other words, from the point of view of the UI side that dispatches, regardless of whether the Store's startup processing has actually happened or not, the code can be written on the premise that "startup processing has finished" at the time of `dispatch()`.
+The UI side is not made aware of behavior where its own dispatch is dropped because startup processing is delayed.
 
-「開始処理中に積まれた dispatch」には、外部（UI 等）からの dispatch だけでなく、**`Plugin.onStart` 内部から発火された dispatch も含まれる**。`Plugin.onStart` は開始処理の一部として走るため、そこから dispatch されたものも同じレールに乗り、開始処理完了後の state に対して適用される。Plugin 作者側も「onStart で dispatch すると消える / 落ちる」といったエッジケースを意識せずに書ける。
+"Dispatches queued during startup processing" include not only dispatches from outside (UI, etc.) but also **dispatches fired from inside `Plugin.onStart`**. `Plugin.onStart` runs as part of startup processing, so what is dispatched from there rides the same rail and is applied to the state after startup processing has completed. Plugin authors can also write without being aware of edge cases such as "dispatching in onStart disappears / is dropped".
 
-### collect / `Store.start()` 起点の場合
+### When triggered by collect / `Store.start()`
 
-開始処理のトリガーが `dispatch()` 以外の場合も同様の見え方になる。
+The same view holds when the trigger of startup processing is something other than `dispatch()`.
 
-- `state` / `event` の collect が startup を起こす場合（`OnDispatchOrStateCollection`）: collect が開始処理のトリガーになるだけで、利用者から見たときの前提は dispatch 起点と同じ。
-- `Store.start()` を明示呼び出しする場合: 明示的に開始処理を走らせるだけで、その後の `dispatch()` / collect の挙動は通常通り。
+- When a collect of `state` / `event` causes startup (`OnDispatchOrStateCollection`): the collect merely becomes the trigger of startup processing, and the premise from the user's point of view is the same as when triggered by dispatch.
+- When `Store.start()` is called explicitly: it merely runs startup processing explicitly, and the subsequent behavior of `dispatch()` / collect is as usual.
 
-いずれの場合も「`dispatch()` 時点で開始処理が終わっている前提で書ける」のと同じ要領で、開始処理の内部挙動を意識せずに書ける。
+In either case, in the same way that "code can be written on the premise that startup processing has finished at the time of `dispatch()`", code can be written without being aware of the internal behavior of startup processing.
 
-### PendingActionPolicy.ClearOnStateExit との関係
+### Relationship with PendingActionPolicy.ClearOnStateExit
 
-開始処理中に state が変更され、かつ `PendingActionPolicy.ClearOnStateExit` の場合でも、**開始処理中の state class 遷移では本 dispatch および開始処理中の dispatch は削除しない**。
+Even when the state changes during startup processing and the policy is `PendingActionPolicy.ClearOnStateExit`, **state class transitions during startup processing do not remove this dispatch or the dispatches made during startup processing**.
 
-実装上は、`clearPendingActionsOnStateExitIfNeeded()` が `isInitialized == true` のときだけ pending dispatch をクリアするようにしている（[StoreImpl.kt:727](../../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt:727)）。
+In the implementation, `clearPendingActionsOnStateExitIfNeeded()` clears pending dispatches only when `isInitialized == true` ([StoreImpl.kt:727](../../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt:727)).
 
-#### 実装補足
+#### Implementation notes
 
-- 現状は collect / `Store.start()` 起点の場合でも、開始処理中の state class 遷移での dispatch 削除は行わないが、もし仮に将来、dispatch 起点のみの挙動とする場合は [StoreImpl.kt:727](../../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt:727) の判定を次のように変更する。
+- Currently, even when triggered by collect / `Store.start()`, dispatches are not removed on state class transitions during startup processing, but if in the future the behavior were to apply only when triggered by dispatch, the condition at [StoreImpl.kt:727](../../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt:727) would be changed as follows.
   - `if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit && !(activeDispatchJob != null && !isInitialized))`
-- 仮に将来、開始処理中の state class 遷移で dispatch を落とす要件が出てきた場合、単純に `clearPendingActionsOnStateExitIfNeeded()` の `isInitialized == true` の判定を削除するだけでは足りず、[StoreImpl.kt:194](../../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt:194) の mutex に既に入っている dispatch の onActionDispatched() の実行を防止する必要がある。
+- If in the future a requirement arises to drop dispatches on state class transitions during startup processing, simply removing the `isInitialized == true` check in `clearPendingActionsOnStateExitIfNeeded()` is not enough; it is also necessary to prevent the execution of onActionDispatched() for a dispatch that has already entered the mutex at [StoreImpl.kt:194](../../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt:194).
 
-### 根拠: 構成フェーズには ClearOnStateExit がそもそも適用されない
+### Rationale: ClearOnStateExit does not apply to the configuration phase in the first place
 
-Store の lifecycle は 2 フェーズに分けられる。
+The Store lifecycle is divided into 2 phases.
 
-- **構成フェーズ**: Store 生成から startup 完了まで。初期 state の復元・確定、observer / overrides の固定、最初の `enter {}` 連鎖を含む。`currentState` はこの間、稼働中の state ではなく初期 state を確定する過程の placeholder。
-- **稼働フェーズ**: startup 完了以降。state は `dispatch()` でドライブする対象になる。
+- **Configuration phase**: from Store creation until startup completion. Includes restoring and settling the initial state, fixing observers / overrides, and the first `enter {}` chain. During this period, `currentState` is not the operating state but a placeholder in the process of settling the initial state.
+- **Operating phase**: from startup completion onward. The state becomes the target driven by `dispatch()`.
 
-この区切りは新しいものではなく、`stateSaver.restore()` / `attachObserver()` / `applyOverrides()` がすべて「startup 前のみ許可」になっていることと同じ線。
+This division is not new; it is the same line as `stateSaver.restore()` / `attachObserver()` / `applyOverrides()` all being "allowed only before startup".
 
-`ClearOnStateExit` の意図は「**稼働中のある state class を狙って積まれた古い dispatch を、その state を抜けたら捨てる**」である（例: EditPost で積んだ `Save` を、PostList に遷移したら捨てる）。これが成立するのは稼働フェーズだけ。構成フェーズの `Loading → Main` は、利用者がまだ稼働窓に入っていないので「state exit」自体が定義できない。
+The intent of `ClearOnStateExit` is "**discard old dispatches that were queued targeting a certain state class during operation, once that state is exited**" (e.g. discard a `Save` queued in EditPost once transitioned to PostList). This holds only in the operating phase. For `Loading → Main` in the configuration phase, the user has not yet entered the operating window, so "state exit" itself cannot be defined.
 
-したがって、構成フェーズの遷移は `ClearOnStateExit` の **例外ではなく適用範囲外**。起点（dispatch / collect / `Store.start()`）に依存しないのも、フェーズ境界だけで決まるため。
+Therefore, transitions in the configuration phase are **outside the scope of** `ClearOnStateExit`, **not an exception to it**. That it does not depend on the trigger (dispatch / collect / `Store.start()`) is also because it is determined solely by the phase boundary.
 
-### 仕様文（案）
+### Specification text (draft)
 
-> `PendingActionPolicy.ClearOnStateExit` は **稼働フェーズ**（startup 完了以降）の state class 遷移にのみ適用される。**構成フェーズ**（startup 完了まで）の遷移は初期 state 確定の過程であり、適用対象外。
+> `PendingActionPolicy.ClearOnStateExit` applies only to state class transitions in the **operating phase** (from startup completion onward). Transitions in the **configuration phase** (until startup completion) are part of the process of settling the initial state and are out of scope.
 >
-> 利用者から見れば、startup の進行状況によらず `dispatch()` した時点で Store は稼働状態に入っている前提で書ける。
+> From the user's point of view, regardless of the progress of startup, code can be written on the premise that the Store has entered the operating state at the time of `dispatch()`.
 
-### 補足: handler matching が暗黙の安全弁になる
+### Note: handler matching acts as an implicit safety valve
 
-「構成フェーズが分岐して、想定外の state class に dispatch が着地する」リスクは理屈上ありうるが、Koma の handler matching は `(state class, action class)` ペアでマッチさせており、マッチしなければ **無音で no-op**（[StoreBuilder.kt:124-127](../../../koma-core/src/commonMain/kotlin/koma/core/StoreBuilder.kt:124)）。
+The risk that "the configuration phase branches and a dispatch lands on an unexpected state class" is theoretically possible, but Koma's handler matching matches on the `(state class, action class)` pair, and if nothing matches it is a **silent no-op** ([StoreBuilder.kt:124-127](../../../koma-core/src/commonMain/kotlin/koma/core/StoreBuilder.kt:124)).
 
-そのため、たとえば `Loading → if 認証済 then Home else Login` の分岐 startup 中に `OpenPost` を dispatch しても、`Login` 側に `action<OpenPost>` が無ければそのまま破棄される。事故が起きるのは「同じ action を複数 state class で意図的に handle しており、かつ副作用が state ごとに異なる」場合に限られ、これは利用者が明示的にリスクを引き受けている setup である。
+So, for example, even if `OpenPost` is dispatched during a branching startup such as `Loading → if authenticated then Home else Login`, it is simply discarded if the `Login` side has no `action<OpenPost>`. An accident occurs only in the case where "the same action is intentionally handled in multiple state classes, and the side effects differ per state", which is a setup in which the user explicitly takes on the risk.
 
-つまり、構成フェーズで `ClearOnStateExit` が働かないことの実害は、handler matching の per-state class 設計によって大部分が吸収されている。
+In other words, the practical harm of `ClearOnStateExit` not working in the configuration phase is largely absorbed by the per-state class design of handler matching.
 
-## 補足
+## Notes
 
-- AutoStartPolicy に `Never` や `OnStateCollection` を追加する余地はあるが、優先度は低い。導入する場合の懸念として次がある。
-  - `Never`: Store の開始前に dispatch された action を捨てることになる、または例外を投げることになる。いずれも UI 側の負担が増える。
-  - `Never`: start 忘れに気づきづらい。
-  - `OnStateCollection`: `dispatch()` したのに start しないという挙動が直感に反しやすい。
+- There is room to add `Never` or `OnStateCollection` to AutoStartPolicy, but the priority is low. Concerns if introduced are as follows.
+  - `Never`: actions dispatched before the Store starts would be discarded, or an exception would be thrown. Either increases the burden on the UI side.
+  - `Never`: forgetting to start is hard to notice.
+  - `OnStateCollection`: behavior where `dispatch()` is called but the Store does not start is likely to be counterintuitive.
 
-## 未解決事項
+## Open questions
 
-- 上記「開始処理中の dispatch は ClearOnStateExit から除外する」挙動は、README やリファレンス側で明示されていないため、ドキュメント側に補記するかは要検討。
-- `AutoStartPolicy.Never` を将来追加する場合、start 前 dispatch の扱い（例外 / 破棄 / キュー保持）に加え、startup 中の dispatch を queue するか、startup 中の state 変更を `ClearOnStateExit` の対象とするかなど、いくつか論点を整理する必要がある。
+- The above behavior, "dispatches during startup processing are excluded from ClearOnStateExit", is not stated explicitly in the README or the reference, so whether to add a note on the documentation side needs consideration.
+- If `AutoStartPolicy.Never` is added in the future, in addition to the handling of dispatches before start (exception / discard / keep in queue), several points need to be worked out, such as whether to queue dispatches during startup and whether state changes during startup are subject to `ClearOnStateExit`.
