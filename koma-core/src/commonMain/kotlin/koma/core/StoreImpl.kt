@@ -158,8 +158,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private var isInitialized: Boolean = false
 
-    // Plugins are started once. A startup whose `enter {}` fails is retried on the next dispatch
-    // or start(), and running `onStart` again would, for example, subscribe a message plugin twice.
+    // Plugins are started once. Only a plugin's own `onStart` failure retries startup (nothing has
+    // been entered yet); running `onStart` again after a failed `enter {}` would, for example,
+    // subscribe a message plugin twice.
     private var arePluginsStarted: Boolean = false
 
     private data class StateRuntime(
