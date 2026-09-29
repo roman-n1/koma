@@ -156,6 +156,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private var isInitialized: Boolean = false
 
+    // Plugins are started once. A startup whose `enter {}` fails is retried on the next dispatch
+    // or start(), and running `onStart` again would, for example, subscribe a message plugin twice.
+    private var arePluginsStarted: Boolean = false
+
     private data class StateRuntime(
         val scope: CoroutineScope,
         val actionLaunchJobs: MutableMap<Any, Job> = mutableMapOf(),
@@ -295,7 +299,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     // Must be called only while holding `mutex`.
     private suspend fun initializeIfNeeded() {
         if (isInitialized) return
-        processPlugins { onStart(pluginScope, currentState) }
+        if (!arePluginsStarted) {
+            processPlugins { onStart(pluginScope, currentState) }
+            arePluginsStarted = true
+        }
         onStateEntered(currentState)
         isInitialized = true
     }

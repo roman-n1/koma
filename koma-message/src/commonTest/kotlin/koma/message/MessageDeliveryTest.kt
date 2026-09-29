@@ -136,4 +136,42 @@ class MessageDeliveryTest {
             }
         }
     }
+
+    /**
+     * A startup whose initial `enter {}` fails is retried on the next dispatch. The plugin must
+     * not subscribe a second time then, or every message would be handled twice.
+     */
+    @Test
+    fun retriedStartup_doesNotSubscribeTwice() = runTest(testDispatcher) {
+        var enterCalls = 0
+        val seen = mutableListOf<String>()
+        val receiver: Store<ChatState, ChatAction, Nothing> = Store(ChatState()) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(ExceptionHandler.Ignore)
+            plugin(
+                receiveMessages { message ->
+                    if (message is ChatMessage) {
+                        seen += message.text
+                        dispatch(ChatAction.Received(message.text))
+                    }
+                },
+            )
+            state<ChatState> {
+                enter { if (++enterCalls == 1) throw IllegalStateException("transient") }
+                action<ChatAction.Received> { nextState { state.copy(received = state.received + action.text) } }
+                action<ChatAction.Send> { }
+            }
+        }
+        receiver.dispatch(ChatAction.Send("ignored")) // startup fails
+        receiver.dispatch(ChatAction.Send("ignored")) // startup is retried and succeeds
+        val sender = senderStore()
+
+        sender.dispatch(ChatAction.Send("hello"))
+
+        assertEquals(2, enterCalls)
+        assertEquals(listOf("hello"), seen)
+        assertEquals(listOf("hello"), receiver.currentState.received)
+        sender.close()
+        receiver.close()
+    }
 }

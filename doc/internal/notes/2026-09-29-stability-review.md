@@ -106,6 +106,30 @@ Statecharts (`koma-statechart`)
   failed; the failed hooks' context changes and launches are dropped, and the error reaches
   `recover {}` after the state is committed.
 
+Startup retry (`koma-core`, `koma-message`, `koma-test`)
+
+- A startup whose initial `enter {}` failed was retried on the next dispatch, and the retry ran
+  every plugin's `onStart` again: `receiveMessages {}` subscribed a second time, so every message
+  was handled (and dispatched) twice after one transient failure, and `StoreRecorder` recorded the
+  start state once per attempt. Plugins are now started once per Store; only when a plugin's own
+  `onStart` throws does the retry start the plugins again.
+
+Logging (`koma-logging`)
+
+- A `Logger` that threw (or a state whose `toString()` threw) aborted the action or transition
+  being logged; after a variant change the new state was left half-entered (see the core fix
+  above). `simpleLogging` now reports logger exceptions to the exception handler and lets the
+  Store continue.
+
+Compose (`koma-compose`)
+
+- The narrowed `ViewStore` of `stateContent<S2> {}` remembered the last `S2` state only once
+  `state` had been read while the Store was in `S2`. A callback that read `state` only when
+  invoked (a click handler) still threw `ClassCastException` after the Store moved on. The last
+  `S2` state is now captured when the narrowed `ViewStore` is created. (Not run locally: the
+  Compose JVM tests need artifacts from Google's Maven repository, which this environment's
+  network policy denies; CI runs them.)
+
 ## 未解決事項
 
 Known behavior that is by design or needs a decision; take it into account when writing
@@ -128,3 +152,16 @@ messenger features.
   multi-threaded dispatcher.
 - `simpleLogging` logs full `toString()` of actions, events and states; do not enable it in release
   builds for messenger data.
+- A plugin's `onAction` or `onStart` that throws still aborts the action or the startup (nothing
+  is committed yet at that point); `onState` and `onEvent` failures are only reported. A plugin
+  whose `onStart` can throw must make its own `onStart` idempotent, since a failed startup runs
+  every plugin's `onStart` again.
+- Dispatches are processed in dispatch order, but a `transaction {}` from a launched coroutine
+  is not ordered against them: it takes the lock whenever it gets its turn.
+- `rememberStateSaver()` (rin's `rememberRetained`) needs a `ViewModelStoreOwner` in the
+  composition; a plain `Composition` in tests or some desktop hosts has none.
+- `Store.patch {}` and `createRecorder()` are for tests and must be called before `start()` or
+  the first dispatch: on a multi-threaded dispatcher a patch right after `start()` can still slip
+  in before the startup coroutine takes the lock and mutate the plugin list while it is read.
+- The message bus is process-wide: a receiver that falls 64 messages behind stalls every sender
+  in every Store, not only the ones that talk to it.

@@ -277,4 +277,38 @@ class StoreRegressionTest {
         assertEquals(Emitting(done = true), store.currentState)
         assertEquals(listOf("onEvent failed"), handled.map { it.message })
     }
+
+    data class Booting(val ready: Boolean = false) : State
+
+    data object Poke : Action
+
+    /**
+     * When the initial `enter {}` fails, startup is retried on the next dispatch, but the plugins
+     * are not started again: a message plugin would otherwise subscribe twice and a recorder would
+     * record the start state twice.
+     */
+    @Test
+    fun retriedStartup_doesNotStartPluginsAgain() = runTest(testDispatcher) {
+        var enterCalls = 0
+        var pluginStarts = 0
+        val store: Store<Booting, Poke, Nothing> = Store(Booting()) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(ExceptionHandler.Ignore)
+            plugin(Plugin(onStart = { pluginStarts++ }))
+            state<Booting> {
+                enter {
+                    if (++enterCalls == 1) throw IllegalStateException("transient")
+                    nextState { state.copy(ready = true) }
+                }
+                action<Poke> { }
+            }
+        }
+
+        store.dispatchAndAwaitForTest(Poke)
+        store.dispatchAndAwaitForTest(Poke)
+
+        assertEquals(Booting(ready = true), store.currentState)
+        assertEquals(2, enterCalls)
+        assertEquals(1, pluginStarts)
+    }
 }
