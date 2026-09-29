@@ -257,10 +257,11 @@ Divergence by group:
 - **Depends on the step 1 request.** Steps 2 and 3 read the matcher metadata of step 1. If upstream
   accepts step 1, row 1 goes away on synchronization, and steps 2–3 can be proposed next; if it
   declines, steps 2–3 stay in the fork or are discarded; the statechart layer does not depend on them.
-- **Public API only.** All of `koma-statechart` (#5, #7–#14 and wave 6): depends on the
-  public API of `koma-core` 4.0.0 (`Store`, DSL, `Plugin`, `StateSaver`) and on `koma-test` only in
-  tests. It builds on top of official Koma without the core fork (plan B) and does not go into this
-  table.
+- **Public API only (superseded).** `koma-statechart` (#5, #7–#14 and wave 6) was designed against
+  the public API of `koma-core` 4.0.0 (`Store`, DSL, `Plugin`, `StateSaver`) and on `koma-test` only
+  in tests (plan B). Since the stability review's sixth round it also uses the `@InternalKomaApi`
+  bridge (`StoreInternalApi.dispatchIf`, `StoreBuilder.validateRecovery`), so it is built with the
+  fork's `koma-core`, and it does not go into this table.
 
 ### Synchronization with upstream
 
@@ -301,18 +302,20 @@ Divergence by group:
 
 ## Remaining work
 
-1. **Publishing.** There are no artifacts now; the messenger connects the fork with a composite build
-   (`includeBuild`). Needed: a separate publishing workflow for the fork (GitHub Packages, a macOS runner for
-   iOS), the group `io.github.roman-n1` for **all** fork modules (currently only
-   `koma-statechart` has it, while the fork's `koma-core` and `koma-test` are under `io.github.koma-kt`, see the
-   divergence table), a version of the form `4.0.0-sc.1`. Until then `koma-statechart/README.md` describes only
-   the composite build.
+1. **Publishing.** Set up: `.github/workflows/publish.yml` publishes every module to Maven Central
+   as `io.github.roman-n1:<module>:4.0.0-sc.1` from a GitHub pre-release, and the publish convention
+   sets each project's group and version to the same coordinates, so a composite build
+   (`includeBuild`) substitutes them (the build files keep `io.github.koma-kt` to stay close to
+   upstream). No release has been published yet, so the messenger still connects the fork with a
+   composite build; `koma-statechart/README.md` describes both.
 2. **Known limitations of wave 5** (decisions in the semantics document, "Wave 5 decisions"):
    - after restore from `StateSaver`, enter hooks are not run again, and timers start with the full
      delay (the remaining time is not saved);
-   - events emitted by the hooks of a failed step are not retracted; a timer whose step failed is listed as
-     running but will not fire until the node is entered again;
-   - conformance of the restored configuration to the definition is not checked;
+   - events emitted by the hooks of a failed step are not retracted; a timer whose step failed is
+     removed from `timers.running` and does not fire until the node is entered again;
+   - a restored configuration is checked against the definition: active nodes the chart cannot
+     produce fall back to the initial configuration (keeping the context), an unrestorable history
+     record is dropped;
    - `enter {}`/`action {}` for `ChartState` from `store {}` do not work, `initialState` there is
      ignored, `PendingActionPolicy.ClearOnStateExit` does not affect chart steps;
    - conformance does not see guards or clocks: self-loop timers are not counted (wave 4), and of two

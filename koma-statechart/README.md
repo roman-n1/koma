@@ -13,16 +13,19 @@ draw it, generate test paths from it, and run it as an ordinary Koma `Store`.
   step function underneath, if you want to hold the configuration yourself.
 
 The semantics follow SCXML (Harel statecharts): external transitions, exit innermost first, enter
-outermost first, inner transitions take priority over outer ones. The module uses `koma-core` and
-its companion-module bridge for lifecycle checks.
+outermost first, inner transitions take priority over outer ones. The module uses `koma-core`
+through its `@InternalKomaApi` bridge (`dispatchIf`, `validateRecovery`), so it is built and
+published together with the fork's `koma-core` and is not meant to run against another version.
 
 Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
 fork [roman-n1/koma](https://github.com/roman-n1/koma), not in upstream Koma.
 
 ## Dependency
 
-Publishing is **not set up yet**: there is no artifact in any repository. Until there is, include
-the fork as a Gradle composite build (for example as a git submodule):
+The fork publishes every module as `io.github.roman-n1:<module>:4.0.0-sc.1` to Maven Central from
+a GitHub pre-release (`.github/workflows/publish.yml`); until a release is published, include the
+fork as a Gradle composite build (for example as a git submodule), which substitutes the same
+coordinates:
 
 ```kotlin
 // settings.gradle.kts
@@ -34,7 +37,7 @@ includeBuild("koma")
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.roman-n1:koma-statechart:4.0.0")
+            implementation("io.github.roman-n1:koma-statechart:4.0.0-sc.1")
         }
     }
     compilerOptions {
@@ -44,8 +47,9 @@ kotlin {
 ```
 
 Gradle substitutes the included project for these coordinates. The module brings the fork's
-`koma-core` with it (as an `api` dependency); do not also depend on the official `koma-core` in the
-same app. Targets: Android, iOS (arm64, simulator arm64), JVM, JS and Wasm.
+`koma-core` with it (as an `api` dependency, `io.github.roman-n1:koma-core`); do not also depend
+on the official `io.github.koma-kt:koma-core` in the same app. Targets: Android, iOS (arm64,
+simulator arm64), JVM, JS and Wasm.
 
 ## Quick start
 
@@ -156,8 +160,17 @@ from completing a newer one.
 
 In `store { state<ChartState<C>> { recover<Exception> { ... } } }`, recovery may update `context`.
 It cannot replace `configuration` or `timers`, since that would bypass exit/entry hooks and leave
-the old activities running. To recover into another node, dispatch an action declared in the
-chart; in-place recovery can use `nextState { state.copy(context = ...) }`.
+the old activities running; a recovery that tries is reported as an `IllegalArgumentException`
+with the original error attached as a suppressed exception. To recover into another node, dispatch
+an action declared in the chart from outside the handler: `recover {}` cannot dispatch itself, so
+either emit an event there and dispatch from a plugin's `onEvent`, or let the error reach the
+Store's `exceptionHandler` and dispatch from it. In-place recovery can use
+`nextState { state.copy(context = ...) }`.
+
+A heartbeat modelled as a self-loop timer on a node restarts that node's activities on every
+firing, and an action one of them dispatched just before the firing is discarded with the old
+activation. Keep such a timer in a parallel region of its own, apart from the node whose
+activities dispatch.
 
 ## Hierarchy, history, parallel regions, timers
 
@@ -278,12 +291,14 @@ provided the chart does not rely on them either:
 - **Saved state is data.** `ChartState` holds `StateId` strings, the history and timer tokens keyed
   by transition index, so a `StateSaver` can persist it without reflection. Treat a change to the
   chart as a change to the saved format. The active nodes and history records are checked against
-  the new hierarchy; an inconsistent snapshot falls back to the initial configuration while
-  retaining its context. Context schema migrations remain the application's responsibility.
+  the new hierarchy: a snapshot whose active nodes the chart cannot produce falls back to the
+  initial configuration while retaining its context, and a history record the chart cannot restore
+  is dropped on its own (the next transition into that history state takes the default target).
+  Context schema migrations remain the application's responsibility.
 
 ## Limitations
 
-- Not published; experimental API that may change.
+- Experimental API that may change; no release has been published yet.
 - No eventless (completion) transitions, final states, internal transitions or SCXML `invoke`.
   Model "when the work is done" as an action that the state's work dispatches.
 - Guards and effects are labels in the model; their code lives in the Store builder, so tools see

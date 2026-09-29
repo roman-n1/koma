@@ -243,7 +243,8 @@ Documentation
 - Corrected README claims: a transaction is not ordered against queued dispatches; launches are
   cancelled on a state *variant* change only; the default launch lane is the action type, not
   the `action {}` block; non-`Exception` throwables are fatal, not "handled" by the exception
-  handler. Documented that a launch failing after its state exited is not reported.
+  handler. Documented that a launch failing after its state exited is not reported (changed in
+  the eighth round: it is reported to the exception handler, not to `recover {}`).
 
 ## Fixed in the fifth round
 
@@ -313,7 +314,8 @@ The regression tests live in `StoreShutdownRegressionTest`, `StoreLaunchRetentio
 
 Cross-platform checks also cover core, message and statechart on Android host, iOS Simulator
 Arm64, JavaScript/Node and Wasm/Node (468 tests per target). Node's Mocha timeout now matches the
-existing browser limits for core and statechart property tests. The common close-during-load
+existing browser limits for core and statechart property tests (JS in this round; Wasm/Node got
+the same timeout in the eighth round; the GitHub CI matrix runs the browser targets only). The common close-during-load
 test uses an explicit producer barrier: with `ClearOnStateExit`, waiting for a count threshold
 could hang on single-threaded dispatchers because the counted actions may all be discarded.
 Its producer and Store are now cleaned up even when an assertion or timeout fails.
@@ -366,15 +368,76 @@ JavaScript/Node and Wasm/Node, and all five GitHub CI targets passed. The initia
 incremental link hit a Kotlin/Native deserializer error; a full rebuild without the build cache
 passed. The final PR revision reruns the full CI matrix with the additional isolation tests.
 
+## Fixed in the eighth round (whole-project review after the sixth and seventh)
+
+Three reviewers re-read the whole project after the sixth and seventh rounds, one each for
+core/message/logging/test, statechart and Compose/build/CI/docs, with scratch probes run on the
+JVM. The sixth and seventh rounds' changes held up under the probes (lane tracking under load,
+partial plugin-start retry, the owner check of launch scopes, recovery validation, restore of
+history records of the same chart, gated dispatch). Five defects were reproduced and fixed:
+
+- A restored snapshot whose active nodes were valid was discarded whenever one history record no
+  longer fit the chart (a leaf that became compound, a region added to a parallel state, a
+  removed leaf): the user landed on the initial screen after an app update although the runtime
+  itself tolerates such records. `start()` now keeps the active nodes and drops only the
+  unrestorable records (`consistentPart`); the next transition into that history state takes the
+  default target. Falling back to the initial configuration still happens when the active nodes
+  are not a configuration of the chart.
+- A statechart activity or timer step whose failure raced the exit of its node lost the report:
+  the failure was rethrown inside a transaction requested from the task itself, and a transaction
+  whose caller is cancelled is skipped. Reports are now requested from the chart's own work scope
+  (`report`), so they run after the step that exits the node and `recover {}` sees the committed
+  state. The timer path reports from inside the transaction that spends the timer, so a queued
+  action can no longer cancel the report between the two.
+- A core `launch {}` failure whose state exited before the report got the lock vanished (neither
+  `recover {}` nor the exception handler), while the failure of a launch that was already
+  cancelled was reported to the handler. Both now reach the exception handler; `recover {}` still
+  runs only while the state is active.
+- `recover {}` ran after `close()` when an `exit {}` finished its `NonCancellable` cleanup and
+  then threw: `onErrorOccurred` now checks for cancellation before running the handlers, so
+  nothing of the user's runs in a closed Store (the transition could not have been committed).
+- `project.group` and `project.version` stayed at `io.github.koma-kt` / `4.0.0` while the
+  publications used `io.github.roman-n1` / `4.0.0-sc.1`, so a composite build substituted a
+  different "group:artifact" than the published POMs name (the POMs themselves were consistent:
+  `koma-statechart-jvm` depends on `io.github.roman-n1:koma-core-jvm:4.0.0-sc.1`, checked with
+  `publishToMavenLocal`). The publish convention now sets both from the fork properties.
+
+Smaller items from the same review: `wasmJs { nodejs() }` got the same Mocha timeout as JS; the
+`~/.konan` cache key in CI hashed a file that does not exist (`**/.lock`) and now hashes the
+version catalog and wrapper properties; the close-mid-work soak test waits until the Store has
+processed at least one action of the storm before closing; `Conformance.explain` no longer
+returns the configuration it never used; `StoreInternalApi.dispatchIf` documents a throwing
+predicate; `createRecorder()`'s message names state collection; `rememberStateSaver` documents
+the owners rin needs, the removal rule and `key()` for repeated content; `eventEffect` documents
+which `enter {}` events it misses; `CLAUDE.md` names the Gradle tasks that exist (`allTests`,
+`jvmTest`, `iosSimulatorArm64Test`; there is no `test` task or iosX64 target); the README sample
+`rememberStateSaver<CounterState>()` compiles; the statechart README states the published
+coordinates, the `@InternalKomaApi` bridge, the recover-from-outside pattern and the heartbeat
+rule; the semantics, roadmap and comparison documents and three ADRs got addenda for what the
+rounds changed (timer removal on failure, restore checks, `MessageHub` buffer, report-and-continue
+at the persistence and observer boundaries, the `CancellationException` rule).
+
+Reviewed and left as is: the tracked-lane bookkeeping costs one coroutine and one lock
+acquisition per launch completion (about 73k launches/s against 173k untracked on the JVM);
+`ExceptionHandler.Rethrow` as the default turns a handler report into an uncaught exception, so
+the messenger must set a handler; `patch()` after `collectState {}` is rejected only once the
+collector has run (it is rejected deterministically after `state.first()`); the messenger example
+re-sends a message when `MessageDelivered` arrives while Settings is open (the send should live
+in a region that Settings does not exit); rin drags `compose.ui` 1.6.10 into a consumer's graph,
+so a JS/Wasm consumer needs a newer Compose Multiplatform of its own; `publish.yml` fires on
+pre-releases only and signs only with the Central credentials in the environment.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing
 messenger features.
 
 - Store events use an unbuffered `SharedFlow` (see the event SharedFlow ADR): events emitted with
-  no collector are lost (for example from startup `enter {}` before `eventEffect` subscribes), and
-  a slow collector blocks the Store while it holds its lock. Model anything that must not be lost
-  (errors, navigation) as state.
+  no collector are lost (from the startup `enter {}` before `eventEffect` subscribes, and from
+  the `enter {}` of a state when `eventEffect` sits inside that state's `stateContent` block, which
+  is composed only after the commit), and a slow collector blocks the Store while it holds its
+  lock. Keep `eventEffect` at screen level and model anything that must not be lost (errors,
+  navigation) as state.
 - The lambda overload of `rememberViewStore` defaults to `autoClose = false`, although the
   composable creates the Store; pass `autoClose = true` or the Store (and its message
   subscription) outlives the screen.
@@ -408,6 +471,10 @@ messenger features.
   wait for its own Store's state (for example `state.first { }` after a `dispatch`): a handler
   of that Store sending more than 64 messages then holds the lock while its own receiver waits
   for it, and the bus is stuck for every Store in the process. Dispatch and return.
+- The GitHub CI matrix runs the JS and Wasm tests in a browser (Karma) and never `jsNodeTest` or
+  `wasmJsNodeTest`, never compiles `iosArm64` (the device architecture is first built by
+  `publish.yml`), and runs no Android device tests. There is no binary-compatibility check, and
+  `StoreInternalApi` gained an abstract member (`dispatchIf`) in the sixth round.
 - Non-`Exception` throwables (`AssertionError`, `StackOverflowError`, out of memory) are fatal:
   they propagate untouched, so one thrown by `StateSaver.save` or a plugin hook still aborts the
   transition it interrupts.
@@ -435,7 +502,16 @@ messenger features.
   restored by `start()` is reported as `UndeclaredState` plus an `UndeclaredTransition` from the
   vanished state to the initial configuration; the second is noise.
 - A self-loop timer exits and re-enters its source, as SCXML requires, so an `activity` of that
-  node restarts on every firing: keep a heartbeat timer in its own region, apart from a socket
-  reader.
+  node restarts on every firing, and since the sixth round an action the activity dispatched
+  just before the firing is discarded with its activation (a disconnect noticed as the heartbeat
+  fires is lost and the node stays put; pinned by
+  `anActionQueuedByAnActivityBeforeASelfLoopTimerFires_isDiscarded`). Keep a heartbeat timer in
+  its own region, apart from a socket reader. Gating on "the node is still active" instead of
+  the activation would keep such actions but let an action from a previous activation through
+  after a quick exit and re-entry; a decision for the messenger's design.
+- An invalid `recover {}` in a `StateChartStore` (one that changes configuration or timers) is
+  reported as the `IllegalArgumentException` of the validation with the original failure attached
+  as a suppressed exception; a logger that does not print suppressed exceptions shows only the
+  validation message.
 - Collectors and `currentState` see a new state before `StateSaver.save` runs; a process death
   in that window persists the previous state after the UI reacted to the new one.

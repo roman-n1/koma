@@ -5,7 +5,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
@@ -42,11 +44,11 @@ class StoreSoakTest {
 
     data object Ev : Event
 
-    private fun soakStore(handled: MutableList<Throwable>, policy: PendingActionPolicy): Store<S, A, Ev> = Store(S.Idle()) {
+    private fun soakStore(handled: MutableList<Throwable>, policy: PendingActionPolicy, processed: MutableStateFlow<Int>? = null): Store<S, A, Ev> = Store(S.Idle()) {
         coroutineContext(Dispatchers.Default)
         pendingActionPolicy(policy)
         exceptionHandler(ExceptionHandler { handled += it })
-        plugin(Plugin(onState = { _, _ -> }, onEvent = { _, _ -> }))
+        plugin(Plugin(onAction = { _, _ -> processed?.update { it + 1 } }, onState = { _, _ -> }, onEvent = { _, _ -> }))
         state<S.Idle> {
             action<A.Go> { nextState { S.Busy(state.count) } }
             action<A.Fail> { throw IllegalStateException("fail") }
@@ -135,12 +137,14 @@ class StoreSoakTest {
     @Test
     fun soak_closeMidWork_stopsEverything() = runTest {
         val handled = mutableListOf<Throwable>()
-        val store = soakStore(handled, PendingActionPolicy.ClearOnStateExit)
+        val processed = MutableStateFlow(0)
+        val store = soakStore(handled, PendingActionPolicy.ClearOnStateExit, processed)
         try {
             withContext(Dispatchers.Default) {
                 withTimeout(30_000) {
                     // Start the state-owned ticker before racing close against queued actions.
                     store.dispatchAndAwaitForTest(A.Go)
+                    val processedBeforeStorm = processed.value
                     val queued = CompletableDeferred<Unit>()
                     coroutineScope {
                         val storm = launch {
@@ -155,8 +159,10 @@ class StoreSoakTest {
                             }
                         }
                         // ClearOnStateExit may discard every increment in a batch on a
-                        // single-threaded dispatcher, so a count threshold is not a barrier.
+                        // single-threaded dispatcher, so a count threshold is not a barrier;
+                        // the plugin counts what the Store processed, discarded or not.
                         queued.await()
+                        processed.first { it > processedBeforeStorm }
                         store.close()
                         storm.cancelAndJoin()
                     }

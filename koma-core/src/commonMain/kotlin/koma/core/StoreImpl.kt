@@ -436,6 +436,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private var enterChainDepth = 0
 
     private suspend fun onErrorOccurred(state: S, exception: Exception) {
+        // A handler that failed after the Store was closed (an exit {} in NonCancellable cleanup,
+        // for example) is not recovered: nothing may run in a closed Store, and the transition it
+        // would produce could not be committed anyway.
+        currentCoroutineContext().ensureActive()
         try {
             val nextState = processError(state, exception)
             validateRecoveredState(state, nextState)
@@ -633,6 +637,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 mutex.withLock {
                     if (stateRuntime.scope.isActive && failedJob?.isCancelled != true) {
                         onErrorOccurred(currentState, t as Exception)
+                    } else {
+                        // The state exited before this report got the lock: there is no state to
+                        // recover into, but the failure is not dropped. Like the failure of a
+                        // launch that was already cancelled, it reaches the exception handler.
+                        throw t
                     }
                 }
             }

@@ -48,3 +48,11 @@ With this decision, the meanings are fixed as follows.
 ## Related
 
 - [Koma design principles](../design/2026-04-23-design-principles.md)
+
+## Addendum (2026-09-29, stability review)
+
+The third round of the [stability review](../notes/2026-09-29-stability-review.md) refined the
+`CancellationException` rule: a `CancellationException` thrown while the current coroutine is
+still active (an expired `withTimeout {}`, an `await()` on a cancelled `Deferred`) is an ordinary
+failure of that handler and reaches `recover {}`; only the cancellation of the current coroutine
+(the Store closing, the state exiting) is passed through untouched.

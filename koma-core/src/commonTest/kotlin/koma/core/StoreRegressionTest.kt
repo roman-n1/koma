@@ -14,7 +14,9 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -698,5 +700,86 @@ class StoreRegressionTest {
 
         val reported = assertIs<IllegalArgumentException>(handled.single())
         assertEquals(listOf("original"), reported.suppressedExceptions.map { it.message })
+    }
+
+    /**
+     * A launched coroutine that fails while its state is exiting (here the exit handler is
+     * suspended, so the report queues behind it) has no state to recover into, but the failure
+     * still reaches the exception handler instead of vanishing.
+     *
+     * ```
+     * Idle --Ping--> (exit suspends; the launch fails meanwhile) --> Done   // handler sees the failure
+     * ```
+     */
+    @Test
+    fun aLaunchFailingWhileItsStateExits_reachesTheExceptionHandler() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val handled = mutableListOf<Throwable>()
+        val gate = CompletableDeferred<Unit>()
+        var recovered = 0
+        val store: Store<Net, NetAction, Nothing> = Store(Net.Idle) {
+            coroutineContext(dispatcher)
+            exceptionHandler(ExceptionHandler { handled += it })
+            state<Net.Idle> {
+                action<NetAction.Load> {
+                    launch {
+                        gate.await()
+                        throw IllegalStateException("launch failed")
+                    }
+                }
+                action<NetAction.Ping> { nextState { Net.Done("pong") } }
+                exit { delay(1_000) }
+                recover<Exception> { recovered++ }
+            }
+        }
+
+        store.startAndAwaitForTest()
+        store.dispatch(NetAction.Load)
+        runCurrent()
+        store.dispatch(NetAction.Ping)
+        runCurrent()
+        gate.complete(Unit)
+        runCurrent()
+        advanceTimeBy(2_000)
+        runCurrent()
+
+        assertEquals(Net.Done("pong"), store.currentState)
+        assertEquals(0, recovered)
+        assertEquals(listOf("launch failed"), handled.map { it.message })
+    }
+
+    /**
+     * An `exit {}` that fails after the Store was closed (its cleanup ran in `NonCancellable`)
+     * does not run `recover {}`: nothing runs in a closed Store, and the state stays as it was.
+     */
+    @Test
+    fun anExitFailingAfterClose_doesNotRunRecover() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val handled = mutableListOf<Throwable>()
+        val release = CompletableDeferred<Unit>()
+        var recovered = 0
+        val store: Store<Net, NetAction, Nothing> = Store(Net.Idle) {
+            coroutineContext(dispatcher)
+            exceptionHandler(ExceptionHandler { handled += it })
+            state<Net.Idle> {
+                action<NetAction.Ping> { nextState { Net.Done("pong") } }
+                exit {
+                    withContext(kotlinx.coroutines.NonCancellable) { release.await() }
+                    throw IllegalStateException("exit failed")
+                }
+                recover<Exception> { recovered++ }
+            }
+        }
+
+        store.startAndAwaitForTest()
+        store.dispatch(NetAction.Ping)
+        runCurrent()
+        store.close()
+        release.complete(Unit)
+        runCurrent()
+
+        assertEquals(Net.Idle, store.currentState)
+        assertEquals(0, recovered)
+        assertEquals(emptyList(), handled.map { it.message })
     }
 }

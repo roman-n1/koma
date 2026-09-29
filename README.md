@@ -810,7 +810,7 @@ fun CounterStore(
 @Composable
 fun CounterScreen() { // wrapper for the preview-friendly CounterScreen below
     val coroutineScope = rememberCoroutineScope()
-    val stateSaver = rememberStateSaver()
+    val stateSaver = rememberStateSaver<CounterState>()
     val viewStore: ViewStore<CounterState, CounterAction, CounterEvent> = rememberViewStore {
         CounterStore(
             coroutineContext = coroutineScope.coroutineContext, // or, specify the autoClose option in rememberViewStore{}

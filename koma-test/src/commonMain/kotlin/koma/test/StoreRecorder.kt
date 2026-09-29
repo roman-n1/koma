@@ -70,7 +70,7 @@ fun <S : State, A : Action, E : Event> Store<S, A, E>.createRecorder(): StoreRec
     try {
         patch { plugin(recorder) }
     } catch (e: IllegalStateException) {
-        throw IllegalStateException("[Koma] createRecorder() must be called before the Store is started or dispatched to", e)
+        throw IllegalStateException("[Koma] createRecorder() must be called before the Store is started, dispatched to or its state collected", e)
     }
     return recorder
 }

@@ -39,7 +39,11 @@ kotlin {
     @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
     wasmJs {
         browser()
-        nodejs()
+        nodejs {
+            testTask {
+                useMocha { timeout = "300s" }
+            }
+        }
     }
 
     sourceSets {

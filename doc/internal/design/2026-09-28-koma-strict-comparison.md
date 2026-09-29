@@ -99,13 +99,12 @@ LCA) and model-based testing tools. They overlap only in "the transition model a
 - A sensible split for a messenger: simple screens (LCE, forms) — koma-strict; complex machines
   with regions, history and timers (connection + chat) — koma-statechart.
 - **Dependencies.** Both pull in `koma-core`: koma-strict — the official `io.github.koma-kt:koma-core`
-  (`4.0.0-rc03` in the clone), the fork — its own `koma-core`. In the fork, `koma-core` currently has the same group
-  `io.github.koma-kt` (only `koma-statechart` has its own group `io.github.roman-n1`), so with a
-  composite build (`includeBuild`) Gradle will substitute the fork's `koma-core` for koma-strict's
-  transitive dependency as well — the classes will not be duplicated. I did not check API compatibility
-  `4.0.0-rc03` → `4.0.0`. If the fork ever publishes `koma-core` under `io.github.roman-n1`, a
-  `dependencySubstitution` rule (or a capability) will be needed, otherwise two `koma-core`s with
-  identical classes end up on the classpath.
+  (`4.0.0-rc03` in the clone), the fork — its own `koma-core`. The fork now publishes (and, in a
+  composite build, substitutes) every module as `io.github.roman-n1:*:4.0.0-sc.1`, so koma-strict's
+  transitive `io.github.koma-kt:koma-core` is **not** substituted: two `koma-core`s with identical
+  classes end up on the classpath unless the messenger adds a `dependencySubstitution` rule (or a
+  capability) mapping `io.github.koma-kt:koma-core` to the fork's. I did not check API compatibility
+  `4.0.0-rc03` → `4.0.0`.
 - Names: both modules declare `StateId` (`me.tbsten.koma.strict.diagram.model.StateId` and
   `koma.statechart.StateId`); in a file that needs both, use `import ... as`.
 

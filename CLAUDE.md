@@ -5,10 +5,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build Commands
 
 - Build all modules: `./gradlew build`
-- Run all tests: `./gradlew test`
-- Run single module tests: `./gradlew :koma-core:test`
-- Run specific test target: `./gradlew iosX64Test`
-- Debug tests with: `./gradlew test --info`
+- Run all tests: `./gradlew allTests`
+- Run single module tests: `./gradlew :koma-core:jvmTest` (or `:koma-core:allTests`)
+- Run specific test target: `./gradlew iosSimulatorArm64Test` (targets: jvm, iosArm64, iosSimulatorArm64, js, wasmJs, Android host)
+- Debug tests with: `./gradlew jvmTest --info`
 - Lint: `./gradlew lint`
 
 ## Code Style Guidelines

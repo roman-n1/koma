@@ -646,4 +646,163 @@ class StateChartRegressionTest {
         assertEquals(emptyList(), conformance.violations)
         store.close()
     }
+
+    /**
+     * A snapshot whose active nodes are valid but whose history record was left by an earlier
+     * version of the chart (here `Old` was a leaf of `P` that no longer exists) keeps its active
+     * nodes; only the record is dropped, so the next transition into the history state takes the
+     * default target. Falling back to the initial configuration would sign the user out of the
+     * screen they were on.
+     *
+     * ```
+     * [*] --> I
+     * I --Go--> S
+     * S --Go--> P.H
+     * P: [*] --> X
+     * ```
+     */
+    @Test
+    fun aRestoredSnapshotWithAStaleHistoryRecord_keepsItsActiveNodes() = runTest {
+        val i = StateId("I")
+        val s = StateId("S")
+        val p = StateId("P")
+        val x = StateId("X")
+        val h = StateId("H")
+        val versioned = StateChartDefinition(
+            initial = i,
+            states = listOf(AtomicState(i), AtomicState(s), CompoundState(p, x), AtomicState(x, p), HistoryState(h, p)),
+            transitions = listOf(Transition(i, s, go), Transition(s, h, go)),
+        )
+        val saved = ChartState(StateConfiguration(active = setOf(s), history = mapOf(h to setOf(StateId("Old")))), context = 42)
+        val entered = mutableListOf<StateId>()
+        val store = StateChartStore<Int, ChartAction, ChartEvent>(versioned, 0, backgroundScope.coroutineContext) {
+            onEnter(i) { entered += node }
+            onEnter(s) { entered += node }
+            store { stateSaver(StateSaver(save = {}, restore = { saved })) }
+        }
+
+        store.startAndAwait()
+        runCurrent()
+        assertEquals(listOf(s), store.currentState.activeLeaves(versioned))
+        assertEquals(emptyMap(), store.currentState.configuration.history)
+        assertEquals(42, store.currentState.context)
+        assertEquals(emptyList(), entered, "a restored configuration is not entered again")
+
+        store.dispatchAndAwait(ChartAction.Go)
+        assertEquals(listOf(x), store.currentState.activeLeaves(versioned))
+        store.close()
+    }
+
+    /**
+     * An activity that fails while a step out of its node is suspended in an enter hook is still
+     * reported: the step commits first and cancels the activity, but the report is requested from
+     * the chart's own scope, so it is not skipped with the cancelled task.
+     */
+    @Test
+    fun anActivityFailureThatRacesTheNodesExit_isStillReported() = runTest {
+        val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val recovered = mutableListOf<String>()
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(chart, Unit, backgroundScope.coroutineContext) {
+            activity(a) {
+                gate.await()
+                error("activity failed")
+            }
+            onEnter(b) { delay(1.seconds) }
+            store { state<ChartState<Unit>> { recover<IllegalStateException> { recovered += error.message.orEmpty() } } }
+        }
+
+        store.startAndAwait()
+        runCurrent()
+        store.dispatch(ChartAction.Go)
+        runCurrent()
+        gate.complete(Unit)
+        runCurrent()
+        advanceTimeBy(2.seconds)
+        runCurrent()
+
+        assertEquals(listOf(b), store.currentState.activeLeaves(chart))
+        assertEquals(listOf("activity failed"), recovered)
+        store.close()
+    }
+
+    /**
+     * A timer step whose enter hook fails commits the spent timer first; an action queued behind
+     * that commit may exit the timer's source before the failure is reported. The report still
+     * reaches `recover {}`, with the state the queued action produced.
+     *
+     * ```
+     * [*] --> A
+     * A --after 1s--> B
+     * A --Go--> C
+     * ```
+     */
+    @Test
+    fun aTimerStepFailureThatRacesAQueuedAction_isStillReported() = runTest {
+        val c = StateId("C")
+        val timed = StateChartDefinition(
+            initial = a,
+            states = listOf(AtomicState(a), AtomicState(b), AtomicState(c)),
+            transitions = listOf(Transition(a, b, Trigger.After(1.seconds)), Transition(a, c, go)),
+        )
+        val recovered = mutableListOf<String>()
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(timed, Unit, backgroundScope.coroutineContext) {
+            onEnter(b) {
+                delay(1.seconds)
+                error("enter failed")
+            }
+            store { state<ChartState<Unit>> { recover<IllegalStateException> { recovered += error.message.orEmpty() } } }
+        }
+
+        store.startAndAwait()
+        advanceTimeBy(1.seconds)
+        runCurrent()
+        store.dispatch(ChartAction.Go)
+        runCurrent()
+        advanceTimeBy(2.seconds)
+        runCurrent()
+
+        assertEquals(listOf(c), store.currentState.activeLeaves(timed))
+        assertEquals(emptyMap(), store.currentState.timers.running)
+        assertEquals(listOf("enter failed"), recovered)
+        store.close()
+    }
+
+    /**
+     * Documented behaviour to change deliberately, if ever: an action an activity dispatched is
+     * tied to that activation of its node, so a self-loop timer that restarts the node between
+     * the dispatch and its processing discards the action. A heartbeat timer therefore belongs in
+     * a region of its own, not on the node whose activities report.
+     *
+     * ```
+     * [*] --> A
+     * A --after 1s--> A
+     * A --Go--> B
+     * ```
+     */
+    @Test
+    fun anActionQueuedByAnActivityBeforeASelfLoopTimerFires_isDiscarded() = runTest {
+        val looped = chart.copy(transitions = listOf(Transition(a, a, Trigger.After(1.seconds))) + chart.transitions)
+        var activations = 0
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(looped, Unit, backgroundScope.coroutineContext) {
+            // Entering A takes a second, so the first activity's dispatch (half a second into the
+            // timer's step) is queued behind the step that restarts A.
+            onEnter(a) { delay(1.seconds) }
+            activity(a) {
+                if (activations++ == 0) {
+                    delay(1.5.seconds)
+                    dispatch(ChartAction.Go)
+                }
+            }
+        }
+
+        store.startAndAwait()
+        advanceTimeBy(2.5.seconds)
+        runCurrent()
+
+        assertEquals(2, activations, "the self-loop restarted the node's activity")
+        assertEquals(listOf(a), store.currentState.activeLeaves(looped))
+        store.dispatchAndAwait(ChartAction.Go)
+        assertEquals(listOf(b), store.currentState.activeLeaves(looped))
+        store.close()
+    }
 }
