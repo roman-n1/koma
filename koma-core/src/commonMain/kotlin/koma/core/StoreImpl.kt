@@ -532,7 +532,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private fun <LS> launchInStateRuntime(
         stateRuntime: StateRuntime,
         dispatcher: CoroutineDispatcher?,
-        buildLaunchScope: () -> LS,
+        buildLaunchScope: suspend () -> LS,
         block: suspend LS.() -> Unit,
     ): Job {
         return stateRuntime.scope.launch(dispatcher ?: EmptyCoroutineContext) {
@@ -550,7 +550,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         action: A,
         control: LaunchControl,
         dispatcher: CoroutineDispatcher?,
-        buildLaunchScope: () -> LS,
+        buildLaunchScope: suspend () -> LS,
         block: suspend LS.() -> Unit,
     ) {
         when (control) {
@@ -617,7 +617,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun <LS> executeLaunchInStateRuntime(
         stateRuntime: StateRuntime,
         dispatcher: CoroutineDispatcher?,
-        buildLaunchScope: () -> LS,
+        buildLaunchScope: suspend () -> LS,
         block: suspend LS.() -> Unit,
     ) {
         val launchScope = buildLaunchScope()
@@ -625,9 +625,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             block(launchScope)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
+            // A failure during cancellation cleanup belongs to the cancelled request. Report it
+            // normally, but never recover it by changing the current request's state.
+            val failedJob = currentCoroutineContext()[Job]
+            if (failedJob?.isCancelled == true) throw t
             coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore) {
                 mutex.withLock {
-                    if (stateRuntime.scope.isActive) {
+                    if (stateRuntime.scope.isActive && failedJob?.isCancelled != true) {
                         onErrorOccurred(currentState, t as Exception)
                     }
                 }
@@ -639,23 +643,27 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     // skipped if, by the time it gets the lock, its state has exited or the coroutine that
     // requested it was cancelled (for example by [LaunchControl.CancelPrevious] or
     // `cancelLaunch()`); otherwise a cancelled launch could still commit a stale result.
-    private fun canRunTransaction(stateScope: CoroutineScope, caller: Job?): Boolean {
-        return stateScope.isActive && caller?.isActive != false
+    private fun canRunLaunchOperation(stateScope: CoroutineScope, caller: Job?, owner: Job?): Boolean {
+        // NonCancellable replaces the caller's Job during cleanup. Keep the original launch's
+        // cancellation identity too, so cleanup cannot resurrect a cancelled request.
+        return stateScope.isActive && caller?.isActive != false && owner?.isCancelled != true
     }
 
-    private fun buildEnterLaunchScope(stateScope: CoroutineScope): EnterLaunchScope<S, E, S> {
+    private suspend fun buildEnterLaunchScope(stateScope: CoroutineScope): EnterLaunchScope<S, E, S> {
+        val owner = currentCoroutineContext()[Job]
         return object : EnterLaunchScope<S, E, S> {
             override val isActive: Boolean get() = stateScope.isActive
 
             override suspend fun event(event: E) {
-                emit(event)
+                if (canRunLaunchOperation(stateScope, currentCoroutineContext()[Job], owner)) emit(event)
             }
 
             override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend EnterTransactionScope<S, E, S>.() -> Unit) {
+                checkNotInsideThisStore("transaction")
                 val caller = currentCoroutineContext()[Job]
                 val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore) {
                     mutex.withLock {
-                        if (canRunTransaction(stateScope, caller)) {
+                        if (canRunLaunchOperation(stateScope, caller, owner)) {
                             var newState: S? = null
                             val transactionScope = object : EnterTransactionScope<S, E, S> {
                                 override val state: S = currentState
@@ -691,20 +699,22 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    private fun buildActionLaunchScope(stateScope: CoroutineScope, launchedAction: A): ActionLaunchScope<S, A, E, S> {
+    private suspend fun buildActionLaunchScope(stateScope: CoroutineScope, launchedAction: A): ActionLaunchScope<S, A, E, S> {
+        val owner = currentCoroutineContext()[Job]
         return object : ActionLaunchScope<S, A, E, S> {
             override val isActive: Boolean get() = stateScope.isActive
             override val action: A = launchedAction
 
             override suspend fun event(event: E) {
-                emit(event)
+                if (canRunLaunchOperation(stateScope, currentCoroutineContext()[Job], owner)) emit(event)
             }
 
             override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend ActionTransactionScope<S, A, E, S>.() -> Unit) {
+                checkNotInsideThisStore("transaction")
                 val caller = currentCoroutineContext()[Job]
                 val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore) {
                     mutex.withLock {
-                        if (canRunTransaction(stateScope, caller)) {
+                        if (canRunLaunchOperation(stateScope, caller, owner)) {
                             var newState: S? = null
                             val transactionScope = object : ActionTransactionScope<S, A, E, S> {
                                 override val state: S = currentState

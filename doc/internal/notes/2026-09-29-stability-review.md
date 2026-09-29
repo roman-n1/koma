@@ -318,6 +318,34 @@ test uses an explicit producer barrier: with `ClearOnStateExit`, waiting for a c
 could hang on single-threaded dispatchers because the counted actions may all be discarded.
 Its producer and Store are now cleaned up even when an assertion or timeout fails.
 
+## Fixed in seventh round (second stability-review wave)
+
+This pass rechecked launch cancellation, transaction reentrancy and the lifetime of statechart
+callbacks, then reviewed the surrounding runtime, restoration, conformance, validation, diagram,
+Compose, message, logging and test-helper code. Five additional defects were reproduced:
+
+- A cancelled action launch could commit a stale result from `NonCancellable` cleanup even after
+  `cancelLaunch(lane)` had applied a newer result. Launch scopes now retain the original job's
+  cancellation identity and check it before starting a transaction, in addition to the caller
+  job and owning state runtime. Normally completed launches retain their existing callback use.
+- An exception thrown while a cancelled launch was cleaning up could invoke `recover {}` over
+  the next request's state. Such exceptions now go to the exception handler without recovering
+  the cancelled request; queued recovery also checks the original job before it runs.
+- Launch event calls from cleanup could reach collectors and plugins after state exit or Store
+  closure, or after lane cancellation while the state remained active. They now check the same
+  launch lifetime before emitting, including when cleanup uses `NonCancellable`.
+- A transaction could call another transaction through its captured launch scope, wait for its
+  own lock and leave queued work that ran after the outer call timed out. Both enter and action
+  launch scopes now reject reentrant transactions before enqueueing them.
+- A callback retaining an old `ChartLaunchScope` could emit an event into a later activation of
+  the same node. Chart event calls now check the originating activation, as context updates and
+  dispatch already do. Callbacks for the current activation continue to work.
+
+The first four regression tests failed before the core fixes, and the chart regression failed
+before its activation check. Six new tests in `StoreLaunchCancellationTest` and
+`StateChartActivityEventTest` cover these failures, including both transaction scope types,
+event delivery to plugins and collectors, explicit lane cancellation, state exit and close.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing
@@ -346,7 +374,7 @@ messenger features.
   idempotent. Successful plugin registrations are not restarted.
 - Dispatches are processed in dispatch order, but a `transaction {}` from a launched coroutine
   is not ordered against them: it takes the lock whenever it gets its turn.
-- The fail-fast check for `dispatchAndAwait` and `startAndAwait` is carried by the coroutine
+- The fail-fast check for `dispatchAndAwait`, `startAndAwait` and `transaction` is carried by the coroutine
   context, so a coroutine created from a handler with `CoroutineScope(currentCoroutineContext()
   + Job())` is rejected too although it would not deadlock; use `launch {}` for work started
   from a handler.
