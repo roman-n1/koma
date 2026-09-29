@@ -151,11 +151,13 @@ internal class ReachedConfiguration(
  * @property startLeaves The active leaves of the initial configuration, never empty
  * @property firstReaching For every node that can become active, the first configuration found
  * with it active, in the order found
+ * @property reachable Every configuration found, the initial one first, then in the order found
  */
 @OptIn(ExperimentalKomaApi::class)
 internal class ConfigurationGraph(
     val startLeaves: List<StateId>,
     val firstReaching: Map<StateId, ReachedConfiguration>,
+    val reachable: List<StateConfiguration>,
 ) {
     fun pathTo(reached: ReachedConfiguration): StateChartPath =
         StateChartPath(startLeaves.first(), reached.transitions, reached.leafSets.map { it.first() }, startLeaves, reached.leafSets)
@@ -170,7 +172,7 @@ internal fun StateChartDefinition.buildConfigurationGraph(): ConfigurationGraph 
     val initialConfiguration = initialConfiguration()
     val startLeaves = activeLeaves(initialConfiguration).ifEmpty { listOf(initial) }
     val first = ReachedConfiguration(initialConfiguration, emptyList(), emptyList())
-    val seen = mutableSetOf(initialConfiguration)
+    val seen = linkedSetOf(initialConfiguration)
     val firstReaching = linkedMapOf<StateId, ReachedConfiguration>()
     initialConfiguration.active.forEach { firstReaching.getOrPut(it) { first } }
     val queue = ArrayDeque(listOf(first))
@@ -185,5 +187,5 @@ internal fun StateChartDefinition.buildConfigurationGraph(): ConfigurationGraph 
             queue.addLast(next)
         }
     }
-    return ConfigurationGraph(startLeaves, firstReaching)
+    return ConfigurationGraph(startLeaves, firstReaching, seen.toList())
 }

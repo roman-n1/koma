@@ -518,6 +518,7 @@ You can also create an `ExceptionHandler` instance with the `ExceptionHandler()`
 
 ### Asynchronous Work
 
+Handlers run one at a time: the *Store* processes dispatched actions in dispatch order, and a `transaction{}` from a launched coroutine waits for its turn in the same queue.
 You can use `launch{}` in both `enter{}` and `action{}` blocks to run asynchronous work and update *State* (or emit *Event*s).
 This is useful for integrating long-running tasks such as flow collection, network calls, and background processing:
 
@@ -611,6 +612,7 @@ val store = Store(MyState.Active()) {
 `LaunchControl.DropIfRunning(lane)` ignores a new launch while tracked work in the same lane is still active.
 When the lane is omitted, `LaunchControl.CancelPrevious()` and `LaunchControl.DropIfRunning()` use the same internal default lane for that `action {}` block.
 `LaunchControl.Untracked` keeps the default behavior and runs launches independently.
+A `transaction {}` requested by a launch that was cancelled (by `CancelPrevious`, `cancelLaunch(lane)` or a state exit) before the transaction got its turn is skipped, so a cancelled search never commits a stale result; once a transaction has started it runs to completion.
 `cancelLaunch(lane)` only affects coroutines started from `action { launch { ... } }` in the current active state's runtime that use tracked controls such as `LaunchControl.CancelPrevious(...)` and `LaunchControl.DropIfRunning(...)`. Use an explicit `LaunchLane()` when you need to share a lane across multiple launches or cancel it later. It does not cancel `LaunchControl.Untracked` launches or `enter { launch { ... } }`.
 
 ### Specifying coroutineContext

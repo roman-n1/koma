@@ -12,6 +12,10 @@ package koma.core
 interface Plugin<S : State, A : Action, E : Event> {
     /**
      * Called once when Store startup begins, before the initial `enter {}` processing starts.
+     *
+     * When the initial `enter {}` fails, startup is retried on the next dispatch or [Store.start],
+     * but the plugins are not started again. Only when a plugin's own `onStart` throws is startup
+     * aborted before the plugins are marked as started, so every `onStart` runs again on the retry.
      */
     suspend fun onStart(scope: PluginScope<S, A>, state: S) {}
 
@@ -22,11 +26,17 @@ interface Plugin<S : State, A : Action, E : Event> {
 
     /**
      * Called after a new state snapshot is committed, persisted, and reported to observers.
+     *
+     * An exception thrown here is reported to the Store's [ExceptionHandler]; the transition
+     * continues, since the state is already committed.
      */
     suspend fun onState(scope: PluginScope<S, A>, prevState: S, state: S) {}
 
     /**
      * Called after an event is emitted to collectors and observers.
+     *
+     * An exception thrown here is reported to the Store's [ExceptionHandler]; the handler that
+     * emitted the event continues.
      */
     suspend fun onEvent(scope: PluginScope<S, A>, state: S, event: E) {}
 }

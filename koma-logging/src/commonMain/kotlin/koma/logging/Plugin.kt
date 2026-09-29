@@ -19,6 +19,9 @@ import kotlinx.coroutines.CoroutineDispatcher
  * Entries include the full `toString()` of actions, events and states. Avoid enabling this plugin
  * in release builds when those contain personal data or credentials.
  *
+ * An exception thrown by [logger] (or by a `toString()`) is reported to the Store's exception
+ * handler; the action, event or state change being logged is processed as usual.
+ *
  * @param tag The tag to use for logging
  * @param severity The severity level for log messages
  * @param logger The logger implementation to use
@@ -46,7 +49,13 @@ fun <S : State, A : Action, E : Event> simpleLogging(
 
         private fun log(scope: PluginScope<S, A>, message: () -> String) {
             if (dispatcher == null) {
-                logger.log(severity = severity, tag = tag, throwable = null, message = message)
+                try {
+                    logger.log(severity = severity, tag = tag, throwable = null, message = message)
+                } catch (e: Exception) {
+                    // A failing logger (or a toString() that throws) must not abort the action or
+                    // transition being logged; report it through the Store's exception handler.
+                    scope.launch { throw e }
+                }
             } else {
                 scope.launch(dispatcher) {
                     logger.log(severity = severity, tag = tag, throwable = null, message = message)

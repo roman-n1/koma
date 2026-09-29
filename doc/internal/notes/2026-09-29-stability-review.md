@@ -66,6 +66,70 @@ Build
 - `koma-compose`, `koma-logging`, `koma-message` and `koma-test` expose core types in their public
   API but declared `koma-core` (and `compose.runtime`) as `implementation`; they are now `api`.
 
+## Fixed in the second round
+
+Core (`koma-core`)
+
+- Actions were not processed in dispatch order on a multi-threaded dispatcher (the default,
+  `Dispatchers.Default`): every `dispatch()` launched its own coroutine, and coroutines scheduled
+  on different worker threads reached the Store's lock in arbitrary order. Two hundred sequential
+  dispatches from one thread came out with several pairs swapped. Each dispatch now waits for
+  its predecessor before it competes for the lock; the lock already serialized them, so nothing
+  gets slower.
+- A `transaction {}` queued by a launch that `LaunchControl.CancelPrevious` or `cancelLaunch()`
+  then cancelled still committed. The transaction runs in the Store's root scope so that it is
+  atomic once started, but it only checked that the state was still active, not that its caller
+  was. In the README's search example this commits the result of the previous query after the
+  new one was requested. A transaction is now skipped when its caller was cancelled before it
+  got the lock.
+- When `StateSaver.save` or a plugin's `onState` threw while a new state variant was committed,
+  the rest of the transition was aborted: the state was already visible, but its `enter {}`
+  never ran and its runtime was never created, so every later `launch {}` in that state failed
+  with "State scope is not found". Such errors are now reported to the exception handler and the
+  transition finishes. The same applies to `onEvent`: the handler that emitted the event
+  continues. `onAction` and `onStart` failures still abort as before (nothing is committed yet).
+
+Statecharts (`koma-statechart`)
+
+- The zero-delay timer loop check approximated what a firing enters (target, its descendants,
+  its ancestors) and so missed loops through a parallel state re-entered from one of its
+  regions and through a history state, while rejecting a valid chart whose timer entered a
+  compound state with a zero-delay timer in a child that is not its initial one. It now follows
+  the real entry set from every reachable configuration.
+- A timer whose step failed (an exit or enter hook or an effect threw) was silently spent: it
+  never fired again but stayed listed in `ChartState.timers.running`, so a restored Store would
+  have restarted it while the live one did not. Such a timer is now removed from the running
+  timers when the error is reported.
+- When an enter hook threw on a fresh start, the Store stayed in the initial configuration
+  without any activation, so its activities never ran and its timers never fired. The
+  activations, activities and timers of the initial configuration now exist even when a hook
+  failed; the failed hooks' context changes and launches are dropped, and the error reaches
+  `recover {}` after the state is committed.
+
+Startup retry (`koma-core`, `koma-message`, `koma-test`)
+
+- A startup whose initial `enter {}` failed was retried on the next dispatch, and the retry ran
+  every plugin's `onStart` again: `receiveMessages {}` subscribed a second time, so every message
+  was handled (and dispatched) twice after one transient failure, and `StoreRecorder` recorded the
+  start state once per attempt. Plugins are now started once per Store; only when a plugin's own
+  `onStart` throws does the retry start the plugins again.
+
+Logging (`koma-logging`)
+
+- A `Logger` that threw (or a state whose `toString()` threw) aborted the action or transition
+  being logged; after a variant change the new state was left half-entered (see the core fix
+  above). `simpleLogging` now reports logger exceptions to the exception handler and lets the
+  Store continue.
+
+Compose (`koma-compose`)
+
+- The narrowed `ViewStore` of `stateContent<S2> {}` remembered the last `S2` state only once
+  `state` had been read while the Store was in `S2`. A callback that read `state` only when
+  invoked (a click handler) still threw `ClassCastException` after the Store moved on. The last
+  `S2` state is now captured when the narrowed `ViewStore` is created. (Not run locally: the
+  Compose JVM tests need artifacts from Google's Maven repository, which this environment's
+  network policy denies; CI runs them.)
+
 ## 未解決事項
 
 Known behavior that is by design or needs a decision; take it into account when writing
@@ -88,3 +152,16 @@ messenger features.
   multi-threaded dispatcher.
 - `simpleLogging` logs full `toString()` of actions, events and states; do not enable it in release
   builds for messenger data.
+- A plugin's `onAction` or `onStart` that throws still aborts the action or the startup (nothing
+  is committed yet at that point); `onState` and `onEvent` failures are only reported. A plugin
+  whose `onStart` can throw must make its own `onStart` idempotent, since a failed startup runs
+  every plugin's `onStart` again.
+- Dispatches are processed in dispatch order, but a `transaction {}` from a launched coroutine
+  is not ordered against them: it takes the lock whenever it gets its turn.
+- `rememberStateSaver()` (rin's `rememberRetained`) needs a `ViewModelStoreOwner` in the
+  composition; a plain `Composition` in tests or some desktop hosts has none.
+- `Store.patch {}` and `createRecorder()` are for tests and must be called before `start()` or
+  the first dispatch: on a multi-threaded dispatcher a patch right after `start()` can still slip
+  in before the startup coroutine takes the lock and mutate the plugin list while it is read.
+- The message bus is process-wide: a receiver that falls 64 messages behind stalls every sender
+  in every Store, not only the ones that talk to it.

@@ -99,4 +99,49 @@ class LoggingOutputTest {
         assertEquals(expected, entries)
         store.close()
     }
+
+    private sealed interface FlowState : State {
+        data object Loading : FlowState
+        data class Ready(val work: Int = 0) : FlowState
+    }
+
+    private sealed interface FlowAction : Action {
+        data object Go : FlowAction
+        data object Work : FlowAction
+    }
+
+    /**
+     * A logger that throws (or a state whose `toString()` throws) is reported to the exception
+     * handler; the action and the state change being logged are still processed, and the new
+     * state is entered normally.
+     */
+    @Test
+    fun simpleLogging_throwingLogger_doesNotAbortActionsOrTransitions() = runTest(testDispatcher) {
+        val handled = mutableListOf<Throwable>()
+        var readyEntered = 0
+        val logger = Logger { _, _, _, message -> throw IllegalStateException("logger failed on: ${message()}") }
+        val store: Store<FlowState, FlowAction, Nothing> = Store(FlowState.Loading) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(koma.core.ExceptionHandler { handled += it })
+            plugin(simpleLogging(logger = logger))
+            state<FlowState.Loading> {
+                action<FlowAction.Go> { nextState { FlowState.Ready() } }
+            }
+            state<FlowState.Ready> {
+                enter { readyEntered++ }
+                action<FlowAction.Work> { launch { transaction { nextState { state.copy(work = state.work + 1) } } } }
+            }
+        }
+
+        store.dispatch(FlowAction.Go)
+        store.dispatch(FlowAction.Work)
+
+        assertEquals(FlowState.Ready(work = 1), store.currentState)
+        assertEquals(1, readyEntered)
+        assertEquals(
+            listOf("Action: Go", "State: Ready(work=0) <- Loading", "Action: Work", "State: Ready(work=1) <- Ready(work=0)"),
+            handled.map { it.message?.removePrefix("logger failed on: ") },
+        )
+        store.close()
+    }
 }

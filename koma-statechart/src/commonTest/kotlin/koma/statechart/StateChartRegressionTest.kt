@@ -194,4 +194,153 @@ class StateChartRegressionTest {
         assertTrue(diagram.lines().drop(1).all { it.startsWith("    ") }, diagram)
         assertTrue("A --> B : Go [online and ready] / log, count" in diagram, diagram)
     }
+
+    /**
+     * A zero-delay timer restarts itself not only through a plain self-loop: a transition from one
+     * region of a parallel state into another re-enters the whole parallel state (so the timer's
+     * source again), and a transition into a history state restores its source. Both must be
+     * rejected, or the Store would fire the timer forever without time passing.
+     *
+     * ```
+     * P (parallel) { R1 { [*] --> a; a; b }  R2 { [*] --> c; c; d } }   a --after 0--> d
+     * C { [*] --> c1; c1; c2; H }                                        c1 --after 0--> H
+     * ```
+     */
+    @Test
+    fun zeroDelayTimerLoopsThroughParallelRegionsAndHistoryAreRejected() {
+        val p = StateId("P")
+        val r1 = StateId("R1")
+        val r2 = StateId("R2")
+        val c = StateId("c")
+        val d = StateId("d")
+        val throughParallel = StateChartDefinition(
+            initial = p,
+            states = listOf(
+                ParallelState(p),
+                CompoundState(r1, initial = a, parent = p), AtomicState(a, r1), AtomicState(b, r1),
+                CompoundState(r2, initial = c, parent = p), AtomicState(c, r2), AtomicState(d, r2),
+            ),
+            transitions = listOf(Transition(a, d, Trigger.After(Duration.ZERO))),
+        )
+        val container = StateId("C")
+        val c1 = StateId("c1")
+        val c2 = StateId("c2")
+        val h = StateId("H")
+        val throughHistory = StateChartDefinition(
+            initial = container,
+            states = listOf(CompoundState(container, initial = c1), AtomicState(c1, container), AtomicState(c2, container), HistoryState(h, parent = container)),
+            transitions = listOf(Transition(c1, h, Trigger.After(Duration.ZERO))),
+        )
+
+        assertEquals(listOf(throughParallel.transitions), throughParallel.instantTimerCycles())
+        assertEquals(listOf(throughHistory.transitions), throughHistory.instantTimerCycles())
+        assertFailsWith<IllegalArgumentException> { StateChartStore<Unit, ChartAction, ChartEvent>(throughParallel, Unit) }
+        assertFailsWith<IllegalArgumentException> { StateChartStore<Unit, ChartAction, ChartEvent>(throughHistory, Unit) }
+    }
+
+    /**
+     * Entering a compound state enters only its initial child, so a zero-delay timer of another
+     * child is not started by it; such a chart is valid.
+     *
+     * ```
+     * [*] --> x;  x --after 0--> C;  C { [*] --> c1; c1 --Go--> c2 };  c2 --after 0--> x
+     * ```
+     */
+    @Test
+    fun aZeroDelayTimerIntoACompoundStateDoesNotStartTheTimersOfItsOtherChildren() {
+        val x = StateId("x")
+        val container = StateId("C")
+        val c1 = StateId("c1")
+        val c2 = StateId("c2")
+        val chart = StateChartDefinition(
+            initial = x,
+            states = listOf(AtomicState(x), CompoundState(container, initial = c1), AtomicState(c1, container), AtomicState(c2, container)),
+            transitions = listOf(
+                Transition(x, container, Trigger.After(Duration.ZERO)),
+                Transition(c1, c2, go),
+                Transition(c2, x, Trigger.After(Duration.ZERO)),
+            ),
+        )
+
+        assertEquals(emptyList(), chart.instantTimerCycles())
+        StateChartStore<Unit, ChartAction, ChartEvent>(chart, Unit).close()
+    }
+
+    /**
+     * When the step a timer fires fails (here `onEnter` of its target throws), the chart stays
+     * where it is and the error reaches `recover {}`. The timer is spent, so it is removed from
+     * the running timers instead of being listed as running while it never fires again.
+     *
+     * ```
+     * A --after 1s--> B (enter throws) --recover--> A, no running timer
+     * ```
+     */
+    @Test
+    fun aTimerWhoseStepFailsIsDroppedAndTheErrorIsRecovered() = runTest {
+        var attempts = 0
+        var recovered = 0
+        val timed = chart.copy(transitions = chart.transitions + Transition(a, b, Trigger.After(1.seconds)))
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(timed, Unit, backgroundScope.coroutineContext) {
+            onEnter(b) { if (++attempts == 1) error("boom") }
+            store { state<ChartState<Unit>> { recover<IllegalStateException> { recovered++ } } }
+        }
+
+        store.startAndAwait()
+        advanceTimeBy(1.5.seconds)
+        runCurrent()
+
+        assertEquals(listOf(a), store.currentState.activeLeaves(timed))
+        assertEquals(1, attempts)
+        assertEquals(1, recovered)
+        assertEquals(emptyMap(), store.currentState.timers.running)
+
+        // The chart still works: the action transition enters B.
+        store.dispatchAndAwait(ChartAction.Go)
+        assertEquals(listOf(b), store.currentState.activeLeaves(timed))
+        store.close()
+    }
+
+    /**
+     * When an enter hook fails during a fresh start there is no earlier configuration to stay in:
+     * the Store is in the initial one, so its activities run and its timers fire; only the failed
+     * hooks' context changes and launches are dropped. The error still reaches `recover {}`.
+     *
+     * ```
+     * Root { [*] --> A (enter throws); A --Go--> B }  Root --after 5s--> Other
+     * ```
+     */
+    @Test
+    fun aFailedFreshStartStillRunsTheActivitiesAndTimersOfTheInitialConfiguration() = runTest {
+        val root = StateId("Root")
+        val other = StateId("Other")
+        val chart = StateChartDefinition(
+            initial = root,
+            states = listOf(CompoundState(root, initial = a), AtomicState(a, root), AtomicState(b, root), AtomicState(other)),
+            transitions = listOf(Transition(a, b, go), Transition(root, other, Trigger.After(5.seconds))),
+        )
+        var rootActivityRan = false
+        var recovered = 0
+        val store = StateChartStore<Int, ChartAction, ChartEvent>(chart, 0, backgroundScope.coroutineContext) {
+            activity(root) { rootActivityRan = true }
+            onEnter(a) {
+                context = 42
+                error("boom")
+            }
+            store { state<ChartState<Int>> { recover<IllegalStateException> { recovered++ } } }
+        }
+
+        store.startAndAwait()
+        runCurrent()
+        assertEquals(1, recovered)
+        assertEquals(0, store.currentState.context)
+        assertTrue(rootActivityRan)
+
+        store.dispatchAndAwait(ChartAction.Go)
+        assertEquals(listOf(b), store.currentState.activeLeaves(chart))
+
+        advanceTimeBy(10.seconds)
+        runCurrent()
+        assertEquals(listOf(other), store.currentState.activeLeaves(chart))
+        store.close()
+    }
 }

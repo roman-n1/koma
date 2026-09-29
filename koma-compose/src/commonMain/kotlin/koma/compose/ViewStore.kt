@@ -85,7 +85,9 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
         private val source: ComposeState<T>,
         private val isNarrowed: (T) -> Boolean,
     ) : ComposeState<N> {
-        private var last: N? = null
+        // Seeded at creation: a callback that never read `state` during composition must still
+        // find the last narrowed value after the Store moved on.
+        private var last: N? = source.value.takeIf(isNarrowed)?.narrowed()
 
         override val value: N
             get() {

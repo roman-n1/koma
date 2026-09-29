@@ -9,6 +9,9 @@ interface StateSaver<S : State> {
     /**
      * Persists a committed state snapshot.
      *
+     * An exception thrown here is reported to the Store's [ExceptionHandler]; the state stays
+     * committed and the transition continues.
+     *
      * @param state The state to save
      */
     fun save(state: S)

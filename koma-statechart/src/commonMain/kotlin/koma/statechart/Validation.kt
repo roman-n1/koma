@@ -274,29 +274,35 @@ internal fun StateChartDefinition.endpointIssues(): List<ValidationIssue> {
  * themselves again, so they would fire forever without time passing. Each cycle is reported once,
  * by its timers in firing order starting with the first declared one.
  *
- * Taking a timer starts the timers of the states it enters: its target, the target's descendants,
- * and the target's ancestors that do not contain its source (or are its source). Guards are
- * ignored, so a cycle is reported even if a guard would end it.
+ * A timer starts when its source is entered, so the check follows what firing really enters,
+ * from every configuration the chart can reach (see [reachableStates]): the target's initial
+ * descendants, the other regions of a parallel state that is entered again, and what a history
+ * state restores. Guards are ignored, so a cycle is reported even if a guard would end it.
  */
 @OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
     val instant = transitions.withIndex().filter { (_, t) -> t.after?.isPositive() == false }
-    fun enters(t: Transition, id: StateId): Boolean =
-        id == t.target ||
-            isDescendant(id, t.target) ||
-            (isDescendant(t.target, id) && (id == t.source || !isDescendant(t.source, id)))
-    val next: Map<Int, List<Int>> = instant.associate { (i, t) ->
-        i to instant.filter { (_, u) -> enters(t, u.source) }.map { it.index }
+    if (instant.isEmpty()) return emptyList()
+    // A node is an instant timer that has just been started in a configuration; an edge leads to
+    // the timers its firing starts, in the configuration the firing produces.
+    data class Node(val configuration: StateConfiguration, val timer: Int)
+    val next = mutableMapOf<Node, List<Node>>()
+    fun successors(node: Node): List<Node> = next.getOrPut(node) {
+        val step = microstep(node.configuration, listOf(transitions[node.timer]))
+        instant.filter { (_, u) -> u.source in step.entered }.map { Node(step.configuration, it.index) }
+    }
+    val nodes = configurationGraph.reachable.flatMap { configuration ->
+        instant.filter { (_, t) -> t.source in configuration.active }.map { Node(configuration, it.index) }
     }
     val cycles = mutableListOf<List<Int>>()
-    for ((start, _) in instant) {
+    for (start in nodes) {
         // Shortest cycle through start, found breadth-first.
-        val previous = mutableMapOf<Int, Int>()
+        val previous = mutableMapOf<Node, Node>()
         val queue = ArrayDeque(listOf(start))
-        var closing: Int? = null
+        var closing: Node? = null
         while (queue.isNotEmpty() && closing == null) {
             val current = queue.removeFirst()
-            for (candidate in next.getValue(current)) {
+            for (candidate in successors(current)) {
                 if (candidate == start) {
                     closing = current
                     break
@@ -308,10 +314,10 @@ internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
             }
         }
         var current = closing ?: continue
-        val cycle = mutableListOf(current)
+        val cycle = mutableListOf(current.timer)
         while (current != start) {
             current = previous.getValue(current)
-            cycle += current
+            cycle += current.timer
         }
         cycle.reverse()
         val first = cycle.indexOf(cycle.min())
