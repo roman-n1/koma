@@ -40,7 +40,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":koma-core"))
+            api(project(":koma-core"))
             implementation(libs.logger.kermit)
         }
         commonTest.dependencies {

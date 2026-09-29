@@ -243,7 +243,10 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
  * On start, with the declared initial state: the enter hooks of the initial configuration run
  * (with a `null` action), then activities and timers start. With a state restored by a
  * [koma.core.StateSaver], the enter hooks do not run again (the context already reflects them),
- * but activities start and the running timers restart with their full delay.
+ * but activities start and the running timers restart with their full delay. A restored
+ * configuration that [definition] cannot produce, such as one naming a state that no longer
+ * exists or missing a region, is replaced by the initial configuration as on a fresh start; the
+ * restored context is kept.
  *
  * @param definition The chart; its hierarchy must be well formed (see [StateChartRuntime])
  * @param context The initial context
@@ -251,7 +254,8 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
  * @param builder Guards, effects, hooks and Store configuration
  * @throws IllegalArgumentException if a guard or effect label used by [definition] has no
  * implementation, if a hook or activity is added for an undeclared node or a [HistoryState], if
- * a guard or effect label is implemented twice, or if the hierarchy of [definition] is malformed
+ * a guard or effect label is implemented twice, if the hierarchy of [definition] is malformed or
+ * refers to undeclared states, or if timers without a positive delay restart each other in a loop
  */
 @ExperimentalKomaApi
 fun <C, A : Action, E : Event> StateChartStore(
@@ -282,6 +286,15 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         val declared = definition.states.filter { it !is HistoryState }.map { it.id }.toSet()
         val undeclared = (config.enterHooks.keys + config.exitHooks.keys + config.activities.keys).filter { it !in declared }
         require(undeclared.isEmpty()) { "[Koma] Hooks for undeclared states: ${undeclared.joinToString()}" }
+        // The runtime steps any chart; a Store refuses charts whose steps would leave the declared
+        // states, where a typo in a target would silently exit the whole configuration.
+        val undeclaredStates = definition.endpointIssues()
+        require(undeclaredStates.isEmpty()) { "[Koma] Chart refers to undeclared or duplicate states: ${undeclaredStates.joinToString()}" }
+        val loops = definition.instantTimerCycles()
+        require(loops.isEmpty()) {
+            "[Koma] Timers without a positive delay restart each other forever: " +
+                loops.joinToString { cycle -> cycle.joinToString(" -> ") { "${it.source.value} --after ${it.after}--> ${it.target.value}" } }
+        }
     }
 
     private val timersBySource: Map<StateId, List<Int>> = definition.transitions.withIndex()
@@ -335,34 +348,41 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
 
     private suspend fun EnterScope<ChartState<C>, E, ChartState<C>>.start() {
         launch { work(this) }
-        val state = state
-        val fresh = state === declaredInitial
+        val restored = state
+        // A restored configuration that this chart cannot produce (for example one saved by an
+        // older version of the chart) starts over from the initial configuration, keeping the context.
+        val consistent = restored === declaredInitial || definition.isConsistent(restored.configuration)
+        val state = if (consistent) restored else declaredInitial.copy(context = restored.context)
+        val fresh = state === declaredInitial || !consistent
         val active = definition.inEntryOrder(state.configuration.active)
         var context = state.context
         val entered = linkedMapOf<StateId, Job>()
+        val launches = mutableListOf<Task>()
         try {
             for (id in active) {
                 val activation = Job()
                 entered[id] = activation
-                if (fresh) context = enter(id, activation, context, null) { event(it) }
+                if (fresh) context = enter(id, activation, context, null, launches) { event(it) }
             }
         } catch (e: Throwable) {
             entered.values.forEach { it.cancel() }
             throw e
         }
         activations.putAll(entered)
+        launches.forEach(tasks::trySend)
         active.forEach(::startActivities)
         val expected = timersOf(active)
         val timers = if (state.timers.running.keys == expected.toSet()) state.timers else issue(ChartTimers(issued = state.timers.issued), expected)
         expected.forEach { schedule(it, timers.running.getValue(it)) }
         val next = state.copy(context = context, timers = timers)
-        if (next != state) nextState { next }
+        if (next != restored) nextState { next }
     }
 
     /** Runs the hooks and effects of [result] and returns the state to commit. */
     private suspend fun takeStep(state: ChartState<C>, result: StepResult.Transitioned, action: Action, emit: suspend (E) -> Unit): ChartState<C> {
         var context = state.context
         val entered = linkedMapOf<StateId, Job>()
+        val launches = mutableListOf<Task>()
         try {
             for (id in result.exited) {
                 for (hook in config.exitHooks[id].orEmpty()) {
@@ -377,7 +397,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
             for (id in result.entered) {
                 val activation = Job()
                 entered[id] = activation
-                context = enter(id, activation, context, action, emit)
+                context = enter(id, activation, context, action, launches, emit)
             }
         } catch (e: Throwable) {
             entered.values.forEach { it.cancel() }
@@ -385,6 +405,8 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         }
         result.exited.forEach { activations.remove(it)?.cancel() }
         activations.putAll(entered)
+        // Work launched by enter hooks starts only now that every hook of the step has succeeded.
+        launches.forEach(tasks::trySend)
         result.entered.forEach(::startActivities)
         val cancelled = timersOf(result.exited)
         val started = timersOf(result.entered)
@@ -393,10 +415,17 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         return ChartState(result.configuration, context, timers)
     }
 
-    private suspend fun enter(id: StateId, activation: Job, context: C, action: Action?, emit: suspend (E) -> Unit): C {
+    private suspend fun enter(
+        id: StateId,
+        activation: Job,
+        context: C,
+        action: Action?,
+        launches: MutableList<Task>,
+        emit: suspend (E) -> Unit,
+    ): C {
         var current = context
         for (hook in config.enterHooks[id].orEmpty()) {
-            val scope = EnterHookScope(id, action, current, emit, activation)
+            val scope = EnterHookScope(id, action, current, emit, activation, launches)
             scope.hook()
             current = scope.context
         }
@@ -409,8 +438,11 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
     }
 
     private fun launchFor(id: StateId, activation: Job, block: suspend ChartLaunchScope<C, A, E>.() -> Unit) {
-        tasks.trySend(Task(activation) { LaunchScope(id, activation).block() })
+        tasks.trySend(taskFor(id, activation, block))
     }
+
+    private fun taskFor(id: StateId, activation: Job, block: suspend ChartLaunchScope<C, A, E>.() -> Unit): Task =
+        Task(activation) { LaunchScope(id, activation).block() }
 
     private fun schedule(index: Int, token: Long) {
         val timer = definition.transitions[index]
@@ -478,10 +510,13 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         override var context: C,
         private val emit: suspend (E) -> Unit,
         private val activation: Job,
+        private val launches: MutableList<Task>,
     ) : ChartEnterScope<C, A, E> {
         override suspend fun event(event: E) = emit(event)
 
-        override fun launch(block: suspend ChartLaunchScope<C, A, E>.() -> Unit) = launchFor(node, activation, block)
+        override fun launch(block: suspend ChartLaunchScope<C, A, E>.() -> Unit) {
+            launches += taskFor(node, activation, block)
+        }
     }
 
     private inner class LaunchScope(override val node: StateId, private val activation: Job) : ChartLaunchScope<C, A, E> {

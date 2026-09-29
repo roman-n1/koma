@@ -57,7 +57,10 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
     /**
      * Invokes [block] only when the current [state] is of type [S2].
      *
-     * Inside [block], this [ViewStore] is narrowed to [S2].
+     * Inside [block], this [ViewStore] is narrowed to [S2]: its `state` is the latest state of type
+     * [S2]. Callbacks created in [block], such as click handlers, may run after the Store has moved
+     * to another state type but before recomposition removes them; they then read the last [S2]
+     * state instead of failing with a `ClassCastException`.
      *
      * @param block Composable function to render content for the narrowed state
      */
@@ -65,9 +68,34 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
     @Composable
     inline fun <reified S2 : S> stateContent(block: @Composable ViewStore<S2, A, E>.() -> Unit) {
         if (state is S2) {
-            @Suppress("UNCHECKED_CAST")
-            block(this as ViewStore<S2, A, E>)
+            val narrowed = remember(this) { narrow<S2> { it is S2 } }
+            block(narrowed)
         }
+    }
+
+    @PublishedApi
+    internal fun <S2 : S> narrow(isNarrowed: (S) -> Boolean): ViewStore<S2, A, E> =
+        ViewStore(stateRef = NarrowedState(stateRef, isNarrowed), dispatch = dispatch, eventFlow = eventFlow)
+
+    /**
+     * Reads [source] (so Compose still tracks it) and returns its value while it is of type [S2],
+     * otherwise the last value that was.
+     */
+    private class NarrowedState<T, N : T>(
+        private val source: ComposeState<T>,
+        private val isNarrowed: (T) -> Boolean,
+    ) : ComposeState<N> {
+        private var last: N? = null
+
+        override val value: N
+            get() {
+                val current = source.value
+                if (isNarrowed(current)) last = current.narrowed()
+                return last ?: current.narrowed()
+            }
+
+        @Suppress("UNCHECKED_CAST")
+        private fun T.narrowed(): N = this as N
     }
 
     @Deprecated(

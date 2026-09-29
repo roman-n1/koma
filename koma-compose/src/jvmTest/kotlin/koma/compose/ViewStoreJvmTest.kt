@@ -378,6 +378,32 @@ class ViewStoreJvmTest {
     }
 
     @Test
+    fun stateContent_callbackRunAfterStateTypeChanged_readsLastNarrowedState() = runTest(testDispatcher) {
+        val store = TestStore(UiState.Ready(1))
+        lateinit var readValue: () -> Int
+
+        withComposition(
+            content = {
+                rememberViewStore { store }.stateContent<UiState.Ready> {
+                    readValue = { state.value }
+                }
+            },
+            afterSetContent = {
+                assertEquals(1, readValue())
+
+                store.state.value = UiState.Ready(5)
+                testScheduler.runCurrent()
+                assertEquals(5, readValue())
+
+                // A click handler of the Ready content that runs before recomposition removes it.
+                store.state.value = UiState.Loading
+                testScheduler.runCurrent()
+                assertEquals(5, readValue())
+            },
+        )
+    }
+
+    @Test
     fun childThatDoesNotReadViewStoreState_doesNotUpdateRenderedNodeOnStateUpdate() = runTest(testDispatcher) {
         val store = TestStore(UiState.Ready(1))
         val root = TestNode()

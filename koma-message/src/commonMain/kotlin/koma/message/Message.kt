@@ -1,8 +1,8 @@
 package koma.message
 
 import koma.core.StoreScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 /**
  * Marker interface for process-wide messages sent through Koma's shared message bus.
@@ -10,8 +10,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 interface Message
 
 internal object MessageHub {
-    private val _messages = MutableSharedFlow<Message>()
-    val messages: Flow<Message> get() = _messages
+    // The buffer lets a sender continue while receivers are still handling earlier messages; a
+    // sender suspends only when a receiver falls this far behind.
+    private val _messages = MutableSharedFlow<Message>(extraBufferCapacity = 64)
+    val messages: SharedFlow<Message> get() = _messages
 
     suspend fun send(message: Message) {
         _messages.emit(message)
@@ -25,6 +27,9 @@ internal object MessageHub {
  * launch, and transaction scopes.
  * Messages are not replayed, so receivers that are not actively collecting when a message is sent
  * will not receive that past message.
+ * Sending returns once the message is buffered for every active receiver; it suspends only when a
+ * receiver has fallen 64 messages behind, so keep `receiveMessages {}` blocks short and move slow
+ * work into a dispatched action.
  *
  * @param message The message to send
  */

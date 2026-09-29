@@ -16,6 +16,14 @@ private val mermaidKeywords = setOf(
 private fun isPlainMermaidId(value: String): Boolean =
     mermaidIdentifier.matches(value) && value.lowercase() !in mermaidKeywords
 
+private val mermaidLineBreak = Regex("\r\n|\r|\n")
+
+/**
+ * Keeps free text on one Mermaid statement: line breaks become spaces and `;`, which Mermaid reads
+ * as a statement separator, becomes `,`.
+ */
+private fun mermaidText(value: String): String = value.replace(mermaidLineBreak, " ").replace(';', ',')
+
 /**
  * Renders this definition as a Mermaid `stateDiagram-v2`.
  *
@@ -47,7 +55,8 @@ private fun isPlainMermaidId(value: String): Boolean =
  * compound state), so any [StateId] renders safely. Aliases never collide with a plain id used by
  * the chart, and ids that only appear as an initial state or a transition endpoint are declared
  * too, at the top level. A state whose parent is not a declared compound state, or that sits on a
- * parent cycle, is drawn at the top level (see [validate]).
+ * parent cycle, is drawn at the top level (see [validate]). In state labels, action names, guards
+ * and effects, line breaks are written as spaces and `;` as `,`, so each statement stays on one line.
  *
  * The output is built from the model only; nothing runs and no reflection is used.
  */
@@ -77,7 +86,7 @@ fun StateChartDefinition.toMermaid(): String = buildString {
         return when {
             node is HistoryState -> "state \"${if (node.deep) "[H*]" else "[H]"}\" as $ref"
             ref == id.value -> ref
-            else -> "state \"${id.value.replace("\"", "'")}\" as $ref"
+            else -> "state \"${mermaidText(id.value).replace("\"", "'")}\" as $ref"
         }
     }
     fun blockOf(source: StateId, target: StateId): StateId? {
@@ -95,12 +104,12 @@ fun StateChartDefinition.toMermaid(): String = buildString {
         }
         for (transition in transitionsByBlock[block].orEmpty()) {
             val label = when (val trigger = transition.trigger) {
-                is Trigger.OnAction -> trigger.matcher.name
+                is Trigger.OnAction -> mermaidText(trigger.matcher.name)
                 is Trigger.After -> "after ${trigger.delay}"
             }
             append("$indent${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : $label")
-            transition.guard?.let { append(" [$it]") }
-            transition.effect?.let { append(" / $it") }
+            transition.guard?.let { append(" [${mermaidText(it)}]") }
+            transition.effect?.let { append(" / ${mermaidText(it)}") }
             appendLine()
         }
     }

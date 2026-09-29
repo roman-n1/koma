@@ -249,6 +249,106 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
 }
 
 /**
+ * Problems that make a step leave the declared chart, in the order [validate] reports them:
+ * duplicate ids, an undeclared initial state and transitions from or to undeclared states.
+ */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.endpointIssues(): List<ValidationIssue> {
+    val issues = mutableListOf<ValidationIssue>()
+    val ids = states.map { it.id }
+    val declared = ids.toSet()
+    ids.groupingBy { it }.eachCount()
+        .filterValues { it > 1 }
+        .keys
+        .forEach { issues += ValidationIssue.DuplicateStateId(it) }
+    if (initial !in declared) issues += ValidationIssue.UnknownInitialState(initial)
+    for (transition in transitions) {
+        if (transition.source !in declared) issues += ValidationIssue.UnknownTransitionSource(transition)
+        if (transition.target !in declared) issues += ValidationIssue.UnknownTransitionTarget(transition)
+    }
+    return issues
+}
+
+/**
+ * Timers whose delay is not positive and that, directly or through other such timers, start
+ * themselves again, so they would fire forever without time passing. Each cycle is reported once,
+ * by its timers in firing order starting with the first declared one.
+ *
+ * Taking a timer starts the timers of the states it enters: its target, the target's descendants,
+ * and the target's ancestors that do not contain its source (or are its source). Guards are
+ * ignored, so a cycle is reported even if a guard would end it.
+ */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
+    val instant = transitions.withIndex().filter { (_, t) -> t.after?.isPositive() == false }
+    fun enters(t: Transition, id: StateId): Boolean =
+        id == t.target ||
+            isDescendant(id, t.target) ||
+            (isDescendant(t.target, id) && (id == t.source || !isDescendant(t.source, id)))
+    val next: Map<Int, List<Int>> = instant.associate { (i, t) ->
+        i to instant.filter { (_, u) -> enters(t, u.source) }.map { it.index }
+    }
+    val cycles = mutableListOf<List<Int>>()
+    for ((start, _) in instant) {
+        // Shortest cycle through start, found breadth-first.
+        val previous = mutableMapOf<Int, Int>()
+        val queue = ArrayDeque(listOf(start))
+        var closing: Int? = null
+        while (queue.isNotEmpty() && closing == null) {
+            val current = queue.removeFirst()
+            for (candidate in next.getValue(current)) {
+                if (candidate == start) {
+                    closing = current
+                    break
+                }
+                if (candidate !in previous) {
+                    previous[candidate] = current
+                    queue += candidate
+                }
+            }
+        }
+        var current = closing ?: continue
+        val cycle = mutableListOf(current)
+        while (current != start) {
+            current = previous.getValue(current)
+            cycle += current
+        }
+        cycle.reverse()
+        val first = cycle.indexOf(cycle.min())
+        val rotated = cycle.drop(first) + cycle.take(first)
+        if (cycles.none { it.toSet() == rotated.toSet() }) cycles += rotated
+    }
+    return cycles.map { cycle -> cycle.map { transitions[it] } }
+}
+
+/**
+ * Whether [configuration] could have been produced by this chart: every active node is declared,
+ * is not a history state and comes with its parent, exactly one top-level node is active, an
+ * active compound state has exactly one active child and an active parallel state has all its
+ * regions active; history records name declared history states and declared, non-history nodes.
+ */
+@OptIn(ExperimentalKomaApi::class)
+internal fun StateChartDefinition.isConsistent(configuration: StateConfiguration): Boolean {
+    val active = configuration.active
+    for (id in active) {
+        val node = node(id) ?: return false
+        val parent = node.parent
+        if (parent != null && parent !in active) return false
+        val consistent = when (node) {
+            is AtomicState -> true
+            is CompoundState -> childrenOf(id).count { it.id in active } == 1
+            is ParallelState -> hierarchy.regions[id].orEmpty().all { it in active }
+            is HistoryState -> false
+        }
+        if (!consistent) return false
+    }
+    if (childrenOf(null).count { it.id in active } != 1) return false
+    return configuration.history.all { (history, remembered) ->
+        node(history) is HistoryState && remembered.all { id -> node(id).let { it != null && it !is HistoryState } }
+    }
+}
+
+/**
  * Problems that leave the tree of states undefined, in the order [validate] reports them.
  */
 @OptIn(ExperimentalKomaApi::class)
