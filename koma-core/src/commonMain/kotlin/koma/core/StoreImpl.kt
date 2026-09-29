@@ -8,6 +8,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -303,8 +305,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             processPlugins { onStart(pluginScope, currentState) }
             arePluginsStarted = true
         }
-        onStateEntered(currentState)
-        isInitialized = true
+        // A failed initial `enter {}` (no recover {} handled it) is reported, and the Store counts
+        // as started, as after a failed `enter {}` of a later state: otherwise every later dispatch
+        // would run the handler again and drop its action while it keeps failing.
+        try {
+            onStateEntered(currentState)
+        } catch (t: InternalError) {
+            reportWithoutAborting(t)
+        } finally {
+            isInitialized = true
+        }
     }
 
     private suspend fun emit(event: E) {
@@ -355,6 +365,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun onStateEntered(state: S, inErrorHandling: Boolean = false) {
         try {
+            check(++enterChainDepth <= MAX_ENTER_CHAIN) {
+                "[Koma] More than $MAX_ENTER_CHAIN states were entered in one transition; enter {} handlers moving to each other in a loop?"
+            }
             val nextState = processStateEnter(state)
             commitTransition(state, nextState, inErrorHandling = inErrorHandling)
         } catch (t: Throwable) {
@@ -363,8 +376,15 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 throw InternalError(t)
             }
             onErrorOccurred(currentState, t as Exception)
+        } finally {
+            enterChainDepth--
         }
     }
+
+    // Depth of nested `enter {}` transitions in the current commit; a chain longer than
+    // [MAX_ENTER_CHAIN] is an enter loop, which would otherwise overflow the stack or, when the
+    // handlers suspend, spin forever while holding the lock.
+    private var enterChainDepth = 0
 
     private suspend fun onErrorOccurred(state: S, exception: Exception) {
         try {
@@ -372,6 +392,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             commitTransition(state, nextState, inErrorHandling = true)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
+            // A failing recover {} must not hide the error it was handling.
+            if (t !== exception) t.addSuppressed(exception)
             throw InternalError(t)
         }
     }
@@ -739,10 +761,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun processPlugins(block: suspend Plugin<S, A, E>.() -> Unit) {
         try {
             when (pluginExecutionPolicy) {
+                // async + awaitAll, not launch: a hook failing with a CancellationException (an
+                // expired withTimeout) would otherwise end its own coroutine silently.
                 PluginExecutionPolicy.Concurrent -> coroutineScope {
-                    plugins.forEach { plugin ->
-                        launch { plugin.block() }
-                    }
+                    plugins.map { plugin -> async { plugin.block() } }.awaitAll()
                 }
 
                 PluginExecutionPolicy.InRegistrationOrder -> plugins.forEach { plugin ->
@@ -761,7 +783,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
      * [ExceptionHandler.Rethrow] does, the transition is aborted and the error reaches the
      * coroutine exception handler as before.
      */
-    private fun reportWithoutAborting(t: Throwable) {
+    private suspend fun reportWithoutAborting(t: Throwable) {
         val original = if (t is InternalError) t.original else t
         rethrowIfNonRecoverable(original)
         try {
@@ -776,11 +798,21 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         exceptionHandler.handle(handled)
     }
 
-    private fun rethrowIfNonRecoverable(t: Throwable) {
-        if (t is CancellationException || t !is Exception) {
-            throw t
-        }
+    /**
+     * Rethrows [t] when it must not be handled by `recover {}` or the exception handler: fatal
+     * errors (non-[Exception] throwables) and the cancellation of the current coroutine, that is
+     * the Store closing or a state exiting. A [CancellationException] thrown while the current
+     * coroutine is still active, for example a `withTimeout {}` in a handler that expired or an
+     * `await()` on a cancelled `Deferred`, is an ordinary failure of that handler and is handled.
+     */
+    private suspend fun rethrowIfNonRecoverable(t: Throwable) {
+        if (t !is Exception) throw t
+        if (t is CancellationException && !currentCoroutineContext().isActive) throw t
     }
 
     private class InternalError(val original: Throwable) : Throwable(original)
+
+    private companion object {
+        const val MAX_ENTER_CHAIN = 500
+    }
 }

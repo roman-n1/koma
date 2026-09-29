@@ -1,8 +1,8 @@
 # Stability review before production use
 
-- 更新日: 2026-09-29
+- Updated: 2026-09-29
 
-## 背景
+## Background
 
 We plan to build the state machines of a KMP messenger on Koma, so the whole project was reviewed
 for bugs and missing tests. Each issue below was reproduced with a failing test before it was
@@ -130,7 +130,34 @@ Compose (`koma-compose`)
   Compose JVM tests need artifacts from Google's Maven repository, which this environment's
   network policy denies; CI runs them.)
 
-## 未解決事項
+## Fixed in the third round
+
+The third round targeted long-lived, application-scope Stores: a multi-threaded soak test
+(`StoreSoakJvmTest`: eight threads dispatching through variant changes, recover handlers,
+cancelled launches and transactions) found no lost update, deadlock or growth of internal
+bookkeeping. The findings below came from probing lifecycle edge paths.
+
+Core (`koma-core`)
+
+- A `CancellationException` thrown by user code was swallowed everywhere: an expired
+  `withTimeout {}` in a handler, a launch or a transaction ended the work silently, without
+  `recover {}` or the exception handler, and a transaction so cancelled let its caller continue
+  as if it had committed. Only the cancellation of the current coroutine (the Store closing, a
+  state exiting) is now non-recoverable; any other `CancellationException` is a failure of that
+  handler. Under `PluginExecutionPolicy.Concurrent` a plugin hook timing out no longer ends its
+  own coroutine silently either; it fails the step as in registration order.
+- A failing initial `enter {}` that no `recover {}` handled left the Store unstarted: every later
+  dispatch ran the handler again and dropped its action while it kept failing (with an enter
+  loop, that meant a stack overflow on every dispatch). Startup now happens once: the error is
+  reported, the Store counts as started and the actions are processed, as after a failed
+  `enter {}` of a later state. A plugin's `onStart` failure still retries startup.
+- When `recover {}` itself threw, the exception it was handling was lost. It is now attached to
+  the reported one as a suppressed exception.
+- `enter {}` handlers moving to each other forever overflowed the stack, or spun while holding
+  the lock when they suspended. A chain of more than 500 entered states in one transition now
+  fails with an error naming the loop, and the Store keeps working.
+
+## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing
 messenger features.
@@ -164,4 +191,18 @@ messenger features.
   the first dispatch: on a multi-threaded dispatcher a patch right after `start()` can still slip
   in before the startup coroutine takes the lock and mutate the plugin list while it is read.
 - The message bus is process-wide: a receiver that falls 64 messages behind stalls every sender
-  in every Store, not only the ones that talk to it.
+  in every Store, not only the ones that talk to it. A `receiveMessages {}` block must never
+  wait for its own Store's state (for example `state.first { }` after a `dispatch`): a handler
+  of that Store sending more than 64 messages then holds the lock while its own receiver waits
+  for it, and the bus is stuck for every Store in the process. Dispatch and return.
+- Non-`Exception` throwables (`AssertionError`, `StackOverflowError`, out of memory) are fatal:
+  they propagate untouched, so one thrown by `StateSaver.save` or a plugin hook still aborts the
+  transition it interrupts.
+- `dispatchAndAwait` returns normally when its action was discarded by
+  `PendingActionPolicy.ClearOnStateExit` or `clearPendingActions()`; check the state or a
+  `StoreRecorder`.
+- `Store.state` is a `StateFlow`, so an external collector does not complete on `close()`;
+  collect it in a lifecycle scope. `collectState` and `collectEvent` callbacks are cancelled.
+- `rememberViewStore` starts the Store from `collectAsState()` before `eventEffect` subscribes,
+  so events from the startup `enter {}` race the subscription on `Dispatchers.Default` and are
+  lost: another reason to model navigation and errors as state.

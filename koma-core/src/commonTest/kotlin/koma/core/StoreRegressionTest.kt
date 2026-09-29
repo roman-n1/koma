@@ -2,18 +2,23 @@ package koma.core
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 /**
  * Regression tests for issues found in review.
@@ -283,32 +288,199 @@ class StoreRegressionTest {
     data object Poke : Action
 
     /**
-     * When the initial `enter {}` fails, startup is retried on the next dispatch, but the plugins
-     * are not started again: a message plugin would otherwise subscribe twice and a recorder would
-     * record the start state twice.
+     * A failing initial `enter {}` that no `recover {}` handles is reported once; the Store counts
+     * as started, so the action that triggered startup and later ones are processed, and the
+     * plugins are not started again. Startup is not retried: every later dispatch would otherwise
+     * run the failing handler again and drop its action.
      */
     @Test
-    fun retriedStartup_doesNotStartPluginsAgain() = runTest(testDispatcher) {
+    fun failedInitialEnter_isReportedOnceAndTheStoreProcessesActions() = runTest(testDispatcher) {
         var enterCalls = 0
         var pluginStarts = 0
+        var pokes = 0
+        val handled = mutableListOf<Throwable>()
         val store: Store<Booting, Poke, Nothing> = Store(Booting()) {
             coroutineContext(Dispatchers.Unconfined)
-            exceptionHandler(ExceptionHandler.Ignore)
+            exceptionHandler(ExceptionHandler { handled += it })
             plugin(Plugin(onStart = { pluginStarts++ }))
             state<Booting> {
                 enter {
-                    if (++enterCalls == 1) throw IllegalStateException("transient")
-                    nextState { state.copy(ready = true) }
+                    enterCalls++
+                    throw IllegalStateException("boot failed")
                 }
-                action<Poke> { }
+                action<Poke> { pokes++ }
             }
         }
 
         store.dispatchAndAwaitForTest(Poke)
         store.dispatchAndAwaitForTest(Poke)
 
-        assertEquals(Booting(ready = true), store.currentState)
-        assertEquals(2, enterCalls)
+        assertEquals(1, enterCalls)
         assertEquals(1, pluginStarts)
+        assertEquals(2, pokes)
+        assertEquals(listOf("boot failed"), handled.map { it.message })
+    }
+
+    sealed interface Net : State {
+        data object Idle : Net
+        data class Done(val result: String) : Net
+        data class Failed(val error: String) : Net
+    }
+
+    sealed interface NetAction : Action {
+        data object Load : NetAction
+        data object LoadInLaunch : NetAction
+        data object LoadInTransaction : NetAction
+        data object Ping : NetAction
+    }
+
+    private fun netStore(handled: MutableList<Throwable>, dispatcher: TestDispatcher, plugin: Plugin<Net, NetAction, Nothing>? = null, policy: PluginExecutionPolicy = PluginExecutionPolicy.Concurrent): Store<Net, NetAction, Nothing> = Store(Net.Idle) {
+        coroutineContext(dispatcher)
+        exceptionHandler(ExceptionHandler { handled += it })
+        pluginExecutionPolicy(policy)
+        plugin?.let { plugin(it) }
+        state<Net.Idle> {
+            action<NetAction.Load> {
+                withTimeout(10) { delay(10_000) }
+                nextState { Net.Done("loaded") }
+            }
+            action<NetAction.LoadInLaunch> {
+                launch {
+                    withTimeout(10) { delay(10_000) }
+                    transaction { nextState { Net.Done("loaded") } }
+                }
+            }
+            action<NetAction.LoadInTransaction> {
+                launch {
+                    transaction {
+                        withTimeout(10) { delay(10_000) }
+                        nextState { Net.Done("loaded") }
+                    }
+                }
+            }
+            action<NetAction.Ping> { nextState { Net.Done("pong") } }
+            recover<TimeoutCancellationException> { nextState { Net.Failed("timeout") } }
+        }
+    }
+
+    /**
+     * A `withTimeout {}` that expires inside a handler is a failure of that handler, not the
+     * Store being cancelled: it reaches `recover {}` like any other exception. The same holds in
+     * a launched coroutine and inside a transaction.
+     */
+    @Test
+    fun expiredWithTimeout_inHandlerLaunchAndTransaction_isRecovered() = runTest {
+        for (action in listOf(NetAction.Load, NetAction.LoadInLaunch, NetAction.LoadInTransaction)) {
+            val handled = mutableListOf<Throwable>()
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val store = netStore(handled, dispatcher)
+            store.dispatch(action)
+            advanceUntilIdle()
+            assertEquals(Net.Failed("timeout"), store.currentState, "$action")
+            assertEquals(emptyList(), handled, "$action")
+            store.close()
+        }
+    }
+
+    /**
+     * An expired `withTimeout {}` in the initial `enter {}` is recovered too, and the Store
+     * starts.
+     */
+    @Test
+    fun expiredWithTimeout_inInitialEnter_isRecoveredAndTheStoreStarts() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val handled = mutableListOf<Throwable>()
+        var pings = 0
+        val store: Store<Net, NetAction, Nothing> = Store(Net.Idle) {
+            coroutineContext(dispatcher)
+            exceptionHandler(ExceptionHandler { handled += it })
+            state<Net.Idle> {
+                enter { withTimeout(10) { delay(10_000) } }
+                action<NetAction.Ping> { pings++ }
+                recover<TimeoutCancellationException> { }
+            }
+        }
+
+        store.dispatch(NetAction.Ping)
+        store.dispatch(NetAction.Ping)
+        advanceUntilIdle()
+
+        assertEquals(2, pings)
+        assertEquals(emptyList(), handled)
+        store.close()
+    }
+
+    /**
+     * A plugin hook whose `withTimeout {}` expires fails the step under both execution policies;
+     * with [PluginExecutionPolicy.Concurrent] it used to end its own coroutine silently.
+     */
+    @Test
+    fun pluginHookTimingOut_failsTheActionUnderBothPolicies() = runTest {
+        for (policy in PluginExecutionPolicy.entries) {
+            val handled = mutableListOf<Throwable>()
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val store = netStore(handled, dispatcher, plugin = Plugin(onAction = { _, _ -> withTimeout(10) { delay(10_000) } }), policy = policy)
+            store.dispatch(NetAction.Ping)
+            advanceUntilIdle()
+            assertEquals(Net.Idle, store.currentState, "$policy")
+            assertIs<TimeoutCancellationException>(handled.singleOrNull(), "$policy: $handled")
+            store.close()
+        }
+    }
+
+    /**
+     * When `recover {}` itself throws, the error it was handling is kept as a suppressed exception
+     * of the reported one.
+     */
+    @Test
+    fun recoverThatThrows_keepsTheOriginalErrorAsSuppressed() = runTest(testDispatcher) {
+        val handled = mutableListOf<Throwable>()
+        val store: Store<Booting, Poke, Nothing> = Store(Booting()) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(ExceptionHandler { handled += it })
+            state<Booting> {
+                action<Poke> { throw IllegalStateException("original") }
+                recover<IllegalStateException> { throw IllegalArgumentException("recover failed") }
+            }
+        }
+
+        store.dispatchAndAwaitForTest(Poke)
+
+        val reported = assertIs<IllegalArgumentException>(handled.single())
+        assertEquals(listOf("original"), reported.suppressedExceptions.map { it.message })
+    }
+
+    sealed interface Loop : State {
+        data object Start : Loop
+        data class Left(val hop: Int) : Loop
+        data class Right(val hop: Int) : Loop
+    }
+
+    data object Enter : Action
+
+    /**
+     * `enter {}` handlers that move to each other forever would overflow the stack (or spin while
+     * holding the lock, when they suspend). The chain is cut with an error that names the problem,
+     * and the Store keeps working afterwards.
+     */
+    @Test
+    fun enterLoop_failsWithAnErrorInsteadOfOverflowingTheStack() = runTest(testDispatcher) {
+        val handled = mutableListOf<Throwable>()
+        var pokes = 0
+        val store: Store<Loop, Action, Nothing> = Store(Loop.Start) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(ExceptionHandler { handled += it })
+            state<Loop.Start> { action<Enter> { nextState { Loop.Left(0) } } }
+            state<Loop.Left> { enter { nextState { Loop.Right(state.hop + 1) } } }
+            state<Loop.Right> { enter { nextState { Loop.Left(state.hop + 1) } } }
+            state<Loop> { action<Poke> { pokes++ } }
+        }
+
+        store.dispatchAndAwaitForTest(Enter)
+        store.dispatchAndAwaitForTest(Poke)
+
+        val error = assertIs<IllegalStateException>(handled.single())
+        assertTrue("loop" in error.message.orEmpty(), error.message)
+        assertEquals(1, pokes)
     }
 }

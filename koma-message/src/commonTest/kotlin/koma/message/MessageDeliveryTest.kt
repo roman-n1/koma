@@ -138,11 +138,11 @@ class MessageDeliveryTest {
     }
 
     /**
-     * A startup whose initial `enter {}` fails is retried on the next dispatch. The plugin must
-     * not subscribe a second time then, or every message would be handled twice.
+     * A Store whose initial `enter {}` fails still counts as started, with exactly one
+     * subscription: messages are handled once, not once per dispatch that arrived meanwhile.
      */
     @Test
-    fun retriedStartup_doesNotSubscribeTwice() = runTest(testDispatcher) {
+    fun failedStartup_leavesExactlyOneSubscription() = runTest(testDispatcher) {
         var enterCalls = 0
         val seen = mutableListOf<String>()
         val receiver: Store<ChatState, ChatAction, Nothing> = Store(ChatState()) {
@@ -157,18 +157,21 @@ class MessageDeliveryTest {
                 },
             )
             state<ChatState> {
-                enter { if (++enterCalls == 1) throw IllegalStateException("transient") }
+                enter {
+                    enterCalls++
+                    throw IllegalStateException("boot failed")
+                }
                 action<ChatAction.Received> { nextState { state.copy(received = state.received + action.text) } }
                 action<ChatAction.Send> { }
             }
         }
-        receiver.dispatch(ChatAction.Send("ignored")) // startup fails
-        receiver.dispatch(ChatAction.Send("ignored")) // startup is retried and succeeds
+        receiver.dispatch(ChatAction.Send("ignored")) // startup fails once
+        receiver.dispatch(ChatAction.Send("ignored"))
         val sender = senderStore()
 
         sender.dispatch(ChatAction.Send("hello"))
 
-        assertEquals(2, enterCalls)
+        assertEquals(1, enterCalls)
         assertEquals(listOf("hello"), seen)
         assertEquals(listOf("hello"), receiver.currentState.received)
         sender.close()
