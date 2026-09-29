@@ -216,6 +216,24 @@ End-to-end messenger scenario (core + statechart + message + logging + test)
   `StoreScope` is now an open marker interface (binary compatible for callers) and the chart
   scopes implement it.
 
+Statechart tooling (property-based fuzzing, 1200 random charts per property)
+
+- The runtime, `validate()`, `instantTimerCycles()`, the path builders and the Mermaid output
+  held every property tried (exit and entry order, consistent configurations, history records,
+  timers to start and cancel, path replay, Mermaid 11 parsing); no finding there.
+- `StateChartConformance` reported false violations in parallel charts: it explained a change
+  leaf by leaf, so when one transition of a region exited the whole parallel state it picked a
+  region-local transition for the first changed leaf and had nothing left for the others (5 of
+  700 random walks). It now asks the runtime first: every guard assignment over the transitions
+  matching the action is tried through the runtime's own selection, and the change is explained
+  when one ends in the observed leaves.
+- It also rejected a transition into a history state that restored what a self-loop had
+  recorded, because Koma does not show a self-loop that keeps the leaves. The history such a
+  self-loop may have recorded is now kept as a possibility next to the previous one.
+- `StateConfiguration`'s hash was the plain sum of its ids' hashes, so states named by a pattern
+  (`R1_S2`) collapsed onto a few hash codes and the configuration graph degenerated to
+  quadratic time (an 8 x 4 parallel chart took minutes). The hash now mixes each id first.
+
 Documentation
 
 - Two README samples were wrong: `nextState { state.copy(count = loadCount()) }` does not
@@ -276,6 +294,16 @@ messenger features.
 - `rememberViewStore` starts the Store from `collectAsState()` before `eventEffect` subscribes,
   so events from the startup `enter {}` race the subscription on `Dispatchers.Default` and are
   lost: another reason to model navigation and errors as state.
+- `toMermaid()` leaves out a top-level state that no transition, initial or history default
+  mentions (`validate()` reports it as unreachable). Declaring it would break the diagram's
+  stability property (appending a transition only appends a line), so it stays out.
+- The configuration graph behind `validate()`, the path builders, `reachableStates()` and the
+  zero-delay timer check enumerates every reachable configuration, which grows exponentially
+  with the number of parallel regions (8 regions of 4 states: 65 536 configurations). Keep
+  charts that go through these tools to a handful of regions.
+- `instantTimerCycles()` ignores guards, so a guarded zero-delay retry loop
+  (`Retry --after 0--> Retry [attempts < 3]`) is rejected at Store construction; use a small
+  positive delay for immediate retries.
 - `StateChartConformance` credits a timer firing to the first declared timer of the source when
   several timers with different guards share it (documented as "first such timer"); the coverage
   report then lists the other timer as uncovered although it fired. A snapshot of an older chart

@@ -502,4 +502,89 @@ class StateChartRegressionTest {
         assertTrue(scopes.all { it is koma.core.StoreScope })
         store.close()
     }
+
+    private data object Ping : ChartAction
+    private data object Pong : ChartAction
+    private data object Reset : ChartAction
+
+    /**
+     * In a parallel chart, one transition of an outer region can exit the whole parallel state.
+     * The conformance plugin used to explain the change leaf by leaf, pick a region-local
+     * transition for the first changed leaf and then had nothing left for the other region: a
+     * violation for a Store that followed the chart exactly. The step is now explained by the
+     * runtime's own selection first.
+     *
+     * ```
+     * P { R1 { [*] --> A; A; B }  R2 { [*] --> C; C; D }  R3 { [*] --> E; E; F } }   initial F
+     * A --Go--> D,  C --Go--> D
+     * ```
+     */
+    @Test
+    fun conformance_explainsAWholeParallelStepByTheRuntimesSelection() = runTest {
+        val p = StateId("P")
+        val r1 = StateId("R1"); val r2 = StateId("R2"); val r3 = StateId("R3")
+        val c = StateId("C"); val d = StateId("D"); val e = StateId("E"); val f = StateId("F")
+        val parallel = StateChartDefinition(
+            initial = f,
+            states = listOf(
+                ParallelState(p),
+                CompoundState(r1, initial = a, parent = p), AtomicState(a, r1), AtomicState(b, r1),
+                CompoundState(r2, initial = c, parent = p), AtomicState(c, r2), AtomicState(d, r2),
+                CompoundState(r3, initial = e, parent = p), AtomicState(e, r3), AtomicState(f, r3),
+            ),
+            transitions = listOf(Transition(a, d, go), Transition(c, d, go)),
+        )
+        val conformance = StateChartConformance.withActiveLeaves<ChartState<Unit>, ChartAction, ChartEvent>(parallel) { it.activeLeaves(parallel).toSet() }
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(parallel, Unit, backgroundScope.coroutineContext) { store { plugin(conformance) } }
+
+        store.dispatchAndAwait(ChartAction.Go)
+
+        assertEquals(listOf(a, d, e), store.currentState.activeLeaves(parallel))
+        assertEquals(emptyList(), conformance.violations)
+        assertEquals(setOf(Transition(a, d, go)), conformance.coveredTransitions)
+        store.close()
+    }
+
+    /**
+     * A self-loop that keeps the leaves is not shown to plugins, but the runtime records history
+     * on it. The plugin keeps that history as a possibility, so a later transition into the
+     * history state that restores what the self-loop recorded is not a violation.
+     *
+     * ```
+     * Q;  P { [*] --> B; A; B; H }   Q --Ping--> A, A --Pong--> Q, Q --Reset--> B, P --Go--> P, B --Pong--> A, A --Ping--> H
+     * ```
+     */
+    @Test
+    fun conformance_keepsHistoryRecordedByAnUnseenSelfLoopAsAPossibility() = runTest {
+        val q = StateId("Q"); val p = StateId("P"); val h = StateId("H")
+        val ping = ActionMatcher.of<Ping>("Ping"); val pong = ActionMatcher.of<Pong>("Pong"); val reset = ActionMatcher.of<Reset>("Reset")
+        val chart = StateChartDefinition(
+            initial = q,
+            states = listOf(AtomicState(q), CompoundState(p, initial = b), AtomicState(a, p), AtomicState(b, p), HistoryState(h, parent = p)),
+            transitions = listOf(Transition(q, a, ping), Transition(a, q, pong), Transition(q, b, reset), Transition(p, p, go), Transition(b, a, pong), Transition(a, h, ping)),
+        )
+        val conformance = StateChartConformance<ChartState<Unit>, ChartAction, ChartEvent>(chart) { it.activeLeaves(chart).first() }
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(chart, Unit, backgroundScope.coroutineContext) { store { plugin(conformance) } }
+
+        for (action in listOf(Ping, Pong, Reset, ChartAction.Go, Pong, Ping)) store.dispatchAndAwait(action)
+
+        assertEquals(listOf(b), store.currentState.activeLeaves(chart))
+        assertEquals(emptyList(), conformance.violations)
+        store.close()
+    }
+
+    /**
+     * Configurations of states named by a pattern used to share a handful of hash codes (a Set's
+     * hash is the sum of its elements'), which made the configuration graph quadratic.
+     */
+    @Test
+    fun configurationHashesOfPatternNamedStatesStayApart() {
+        val configurations = (0 until 5).flatMap { r -> (0 until 5).map { s -> r to s } }.let { pairs ->
+            (0 until 200).map { i ->
+                StateConfiguration(active = pairs.filter { (r, s) -> (i shr r) and 1 == s % 2 }.map { (r, s) -> StateId("R${r}_S$s") }.toSet())
+            }.distinct()
+        }
+        val hashes = configurations.map { it.hashCode() }.toSet()
+        assertTrue(hashes.size >= configurations.size * 9 / 10, "${hashes.size} hashes for ${configurations.size} configurations")
+    }
 }

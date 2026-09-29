@@ -86,7 +86,9 @@ sealed interface ConformanceViolation {
  * history record anything, the Store may have started from a saved state whose history the plugin
  * never saw, so any leaves the history could restore are accepted: the transition is also tried
  * with the history remembering the new leaves inside its parent (deep), or the children of its
- * parent that contain them (shallow). A self-loop records nothing.
+ * parent that contain them (shallow). A self-loop that keeps the leaves is not shown by Koma, so
+ * the history it may have recorded is kept as a possibility next to the previous one until a
+ * later change settles which was the case.
  *
  * Start: the Store may start in any declared state, not only [StateChartDefinition.initial],
  * because a [koma.core.StateSaver] or `patch { initialState(...) }` may provide the first state.
@@ -143,7 +145,11 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
     private var lastAction: A? = null
     private var trigger: A? = null
     private var pendingSelfLoops: List<Transition> = emptyList()
-    private var history: Map<StateId, Set<StateId>> = emptyMap()
+
+    // What the history states may remember, one entry per possibility. Koma does not show a
+    // self-loop that keeps the leaves, and the runtime records history on it, so after such an
+    // action both "taken" and "not taken" stay possible until a later change settles it.
+    private var histories: List<Map<StateId, Set<StateId>>> = listOf(emptyMap())
 
     /**
      * Violations seen so far, in the order they happened.
@@ -170,10 +176,20 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         lastAction = action
         trigger = action
         val leaves = mapping.leavesOf(state)
-        val configuration = definition.configurationOf(leaves).copy(history = history)
-        val taken = definition.selectTransitions(configuration) { it.on?.matches(action) == true }
-        val same = taken.isNotEmpty() && definition.microstep(configuration, taken).leaves(definition).toSet() == leaves
-        pendingSelfLoops = if (same) taken else emptyList()
+        var selfLoops: List<Transition> = emptyList()
+        val possible = histories.toMutableList()
+        for (history in histories) {
+            val configuration = definition.configurationOf(leaves).copy(history = history)
+            val taken = definition.selectTransitions(configuration) { it.on?.matches(action) == true }
+            if (taken.isEmpty()) continue
+            val step = definition.microstep(configuration, taken)
+            if (step.leaves(definition).toSet() != leaves) continue
+            if (selfLoops.isEmpty()) selfLoops = taken
+            // The self-loop may have recorded history; whether it ran (its guards) is unknown.
+            if (step.configuration.history !in possible && possible.size < MAX_HISTORIES) possible += step.configuration.history
+        }
+        histories = possible
+        pendingSelfLoops = selfLoops
     }
 
     override suspend fun onState(scope: PluginScope<S, A>, prevState: S, state: S) {
@@ -183,9 +199,31 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         pendingSelfLoops = emptyList()
         (to - from).forEach(::checkDeclared)
 
-        val tracked = definition.configurationOf(from).copy(history = history)
         val action = trigger
         trigger = null
+        // First ask the runtime: is there a choice of transitions (guards unknown, so every
+        // assignment is tried) that takes a possible configuration exactly to the new leaves?
+        // Every possibility that explains the change survives, mapped through its explanation.
+        var explained: List<Transition>? = null
+        val next = mutableListOf<Map<StateId, Set<StateId>>>()
+        for (history in histories) {
+            val tracked = definition.configurationOf(from).copy(history = history)
+            val (taken, _) = explain(tracked, action, to) ?: continue
+            if (explained == null) explained = taken
+            // Recorded from what is known, never from an inferred record: a guess is not kept.
+            val after = definition.microstep(tracked, taken).configuration.history
+            if (after !in next) next += after
+        }
+        if (explained != null) {
+            recordedCovered += explained
+            // A change only timers explain used no action: the trigger stays for the next change.
+            if (action != null && explained.all { it.isTimer }) trigger = action
+            histories = next.take(MAX_HISTORIES)
+            return
+        }
+        // Otherwise attribute leaf by leaf, reporting what no transition explains.
+        val history = histories.first()
+        val tracked = definition.configurationOf(from).copy(history = history)
         val byDeclaration = compareBy<StateId> { definition.declarationOrder(it) }
         val added = (to - from).sortedWith(byDeclaration)
         val fromLeaves = definition.activeLeaves(tracked)
@@ -240,7 +278,61 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         val step = definition.microstep(tracked, chosen)
         val kept = definition.configurationOf(to).active
         val chosenExits = step.exited.toSet()
-        history = definition.recordHistory(tracked.copy(history = step.configuration.history), tracked.active.filter { it !in kept && it !in chosenExits })
+        histories = listOf(definition.recordHistory(tracked.copy(history = step.configuration.history), tracked.active.filter { it !in kept && it !in chosenExits }))
+    }
+
+    /**
+     * The transitions the runtime takes from [tracked] to end in the leaves [to], with the
+     * configuration they were evaluated in (which may carry an inferred history record, see
+     * [withInferredHistory]), or `null`. Candidates are the transitions of the active leaves and
+     * their ancestors in priority order. For an action: the first matching transition that ends
+     * in [to] alone; else the runtime's selection under every guard assignment over the matching
+     * transitions (so several regions of a parallel state may move together, or one transition
+     * may exit the whole parallel state). Then a timer of an active source fired alone, and,
+     * without an action, any single transition.
+     */
+    private fun explain(tracked: StateConfiguration, action: A?, to: Set<StateId>): Pair<List<Transition>, StateConfiguration>? {
+        fun endsIn(configuration: StateConfiguration, transitions: List<Transition>): Boolean =
+            transitions.isNotEmpty() && definition.microstep(configuration, transitions).leaves(definition).toSet() == to
+        fun alone(transition: Transition): Pair<List<Transition>, StateConfiguration>? {
+            val configuration = withInferredHistory(tracked, transition, to)
+            return if (endsIn(configuration, listOf(transition))) listOf(transition) to configuration else null
+        }
+        val candidates = definition.activeLeaves(tracked).flatMap { definition.candidatesFor(it) }.distinct()
+        if (action != null) {
+            val matching = candidates.filter { it.on?.matches(action) == true }
+            matching.firstNotNullOfOrNull(::alone)?.let { return it }
+            val enumerated = matching.take(MAX_GUARD_ENUMERATION)
+            for (mask in (1 shl enumerated.size) - 1 downTo 1) {
+                val enabled = enumerated.filterIndexed { i, _ -> mask and (1 shl i) != 0 }.toSet()
+                val taken = definition.selectTransitions(tracked) { it in enabled }
+                if (endsIn(tracked, taken)) return taken to tracked
+            }
+        }
+        candidates.filter { it.isTimer }.firstNotNullOfOrNull(::alone)?.let { return it }
+        if (action == null) candidates.firstNotNullOfOrNull(::alone)?.let { return it }
+        return null
+    }
+
+    /**
+     * [configuration] with, for a [transition] into a history state that has recorded nothing
+     * yet, the record that would make it restore the leaves in [to] (nothing is known about what
+     * was active before the plugin was attached). Otherwise [configuration] itself.
+     */
+    private fun withInferredHistory(configuration: StateConfiguration, transition: Transition, to: Set<StateId>): StateConfiguration {
+        val target = definition.node(transition.target) as? HistoryState ?: return configuration
+        if (target.id in configuration.history) return configuration
+        val domain = definition.domainOf(transition)
+        val reported = to.filter { domain == null || definition.isDescendant(it, domain) }
+        val record = if (target.deep) {
+            reported.filter { definition.isDescendant(it, target.parent) }
+        } else {
+            definition.childrenOf(target.parent)
+                .filter { child -> child !is HistoryState && reported.any { it == child.id || definition.isDescendant(it, child.id) } }
+                .map { it.id }
+        }
+        if (record.isEmpty()) return configuration
+        return configuration.copy(history = configuration.history + (target.id to record.toSet()))
     }
 
     /** The first of [candidates] (a non-empty list) that shares the innermost ancestor with [leaf]. */
@@ -264,17 +356,8 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         val reported = to.filter { domain == null || definition.isDescendant(it, domain) }
         if (reported.isEmpty()) return false
         if (enteredBy(configuration, transition).containsAll(reported)) return true
-        val target = definition.node(transition.target) as? HistoryState ?: return false
-        if (target.id in configuration.history) return false
-        val record = if (target.deep) {
-            reported.filter { definition.isDescendant(it, target.parent) }
-        } else {
-            definition.childrenOf(target.parent)
-                .filter { child -> child !is HistoryState && reported.any { it == child.id || definition.isDescendant(it, child.id) } }
-                .map { it.id }
-        }
-        if (record.isEmpty()) return false
-        return enteredBy(configuration.copy(history = configuration.history + (target.id to record.toSet())), transition).containsAll(reported)
+        val inferred = withInferredHistory(configuration, transition, to)
+        return inferred !== configuration && enteredBy(inferred, transition).containsAll(reported)
     }
 
     private fun enteredBy(configuration: StateConfiguration, transition: Transition): List<StateId> =
@@ -285,6 +368,9 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
     }
 
     companion object {
+        private const val MAX_GUARD_ENUMERATION = 8
+        private const val MAX_HISTORIES = 8
+
         /**
          * Creates the plugin for a chart with [ParallelState]s, where one leaf cannot describe a
          * state: [activeLeavesOf] maps a Koma state to all its active leaves, one per active
