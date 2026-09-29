@@ -1,64 +1,64 @@
-# Store surface の設計メモ
+# Store surface design notes
 
-- 更新日: 2026-05-07
+- Updated: 2026-05-07
 
-## 背景
+## Background
 
-`Store()` の overload、`Store{}` DSL の命名、Store の start semantics のように、Store の surface に関する論点は小さく散らばりやすい。
+Points of discussion about the Store surface, such as the `Store()` overloads, the naming of the `Store{}` DSL and the Store's start semantics, tend to be small and scattered.
 
-一方で、そうした論点のすべてを個別の ADR や notes に切り出すと、かえって見通しが悪くなることもある。
-PR や会話の中だけに残してしまうと、「なぜ今の表面 API がこの形なのか」が後から読み取りにくい。
+On the other hand, splitting every such point out into its own ADR or notes can actually make things harder to survey.
+If they are left only in PRs or conversations, it becomes hard to read back later "why the current surface API has this shape".
 
-ここでは、Store の public API や DSL surface に関する設計上のメモを、節ごとに追加して残していく。
-各節は独立した小さな論点を扱ってよく、粒度や性質が完全に揃っている必要はない。
-個別に明確な採否を記録したくなった論点や、より大きな検討に発展した論点は、必要に応じて別の ADR や notes に切り出す。
+Here we keep design notes about the Store's public API and DSL surface, adding them section by section.
+Each section may deal with an independent small point, and the granularity and nature of the sections need not be fully uniform.
+Points for which we want to record a clear accept/reject decision individually, or which grow into a larger investigation, are split out into a separate ADR or notes as needed.
 
-## `Store()` overload
+## `Store()` overloads
 
-`Store()` の overload は、`initialState` と `CoroutineContext` という 2 つの入力軸を扱いやすくするための API surface として持つ。
-組み合わせ上は単純でも、呼び出し側の style や置かれた文脈に応じて自然に書ける余地を残すことを優先する。
+The `Store()` overloads exist as an API surface that makes the two input axes, `initialState` and `CoroutineContext`, easy to work with.
+Even though the combinations are simple, we prioritize leaving room to write the call naturally depending on the caller's style and the context it sits in.
 
-overload 数は必要以上に増やさないが、「理論上まとめられるから減らす」ことはしない。
-Koma では surface の最小化そのものより、利用者が無理なく宣言を書けることを重く見る。
+The number of overloads is not increased beyond what is needed, but we do not reduce them just because "they could theoretically be merged".
+In Koma, letting users write declarations without strain weighs more than minimizing the surface for its own sake.
 
-## `Store{}` DSL の naming
+## `Store{}` DSL naming
 
-`Store{}` DSL の naming は、`onXxx` や動詞中心の hook 名より、`state {}` `action {}` `event()` のような宣言的な語を優先する。
-Koma は「いつ何が起こるか」を命令的に列挙するより、「どの状態で何を扱うか」を記述する DSL として見せたい。
+The naming of the `Store{}` DSL prefers declarative words such as `state {}` `action {}` `event()` over `onXxx` or verb-centric hook names.
+We want Koma to be seen as a DSL that describes "which state handles what" rather than one that imperatively enumerates "when what happens".
 
-そのため DSL は、timeline や callback sequence を強く想起させる naming より、state machine の構造を前景化する naming を選ぶ。
+Therefore the DSL chooses naming that foregrounds the structure of the state machine over naming that strongly evokes a timeline or a callback sequence.
 
-## Store の start semantics
+## Store start semantics
 
-Store の start は、default では最初の `dispatch()` または `state` の collect を契機に自動で始まる形を維持する。
-これは explicit `start()` を必須にするより、利用者の書き忘れや start 前後の扱いの曖昧さを減らしやすいためである。
+By default, a Store keeps starting automatically on the first `dispatch()` or on collection of `state`.
+Compared with requiring an explicit `start()`, this makes it easier to reduce forgotten calls by users and ambiguity about how things are handled before and after start.
 
-`start()` 明示開始を default にしないのは、`start()` 忘れだけでなく、「どこで start するか」「start 前の `dispatch()` をどう扱うか」という別の設計負債を持ち込みやすいためである。
+Explicit `start()` is not the default not only because of forgotten `start()` calls, but because it easily brings in other design debt: "where to start" and "how to treat a `dispatch()` before start".
 
-`dispatch()` のみを start 契機にすると、初回 state の loading を action 発火に依存させることになる。
-逆に `state` collect のみを start 契機にすると、collect 前の `dispatch()` が失われうる。
-default はそのどちらにも寄せない。
+Making `dispatch()` alone the start trigger would make loading of the first state depend on an action being fired.
+Conversely, making `state` collection alone the start trigger could lose a `dispatch()` issued before collection.
+The default leans toward neither.
 
-`event` collect を start 契機に含めないのは仕様である。
-Koma では first state の loading は state 観測と結び付くべきであり、`event` の購読はあくまで副作用の購読として位置付ける。
+Not including `event` collection among the start triggers is by design.
+In Koma, loading of the first state should be tied to observing state, and subscribing to `event` is positioned purely as subscribing to side effects.
 
-UI の準備が整う前に first state の loading が進む eager start は default にしない。
-Store はまず宣言として作られ、必要になった時点で動き出す方が自然である。
+Eager start, where loading of the first state proceeds before the UI is ready, is not the default.
+It is more natural for a Store to be created first as a declaration and to start moving at the point where it is needed.
 
-現行 default では、`enter {}` 直後に出した one-shot `event` を購読側が取りこぼす可能性はある。
-ただし、そのような初回 event に強く依存する設計は例外的であり、必要なら `enter {}` に寄せず、開始用 action を明示して順序を作る方が分かりやすい。
+With the current default, a one-shot `event` emitted right after `enter {}` may be missed by the subscriber.
+However, a design that depends strongly on such an initial event is exceptional, and if it is needed, it is clearer not to lean on `enter {}` but to make the ordering explicit with a dedicated start action.
 
-start semantics の option を将来追加する余地までは否定しない。
-[Store の開始タイミング policy 案](../notes/2026-04-23-store-start-policy.md) のような `StoreStartPolicy` は、default を変えずに例外的要件へ対応する整理としてはあり得る。
-ただしその場合でも、default として優先するのは現在の「最初の `dispatch()` または `state` collect による自動開始」である。
+This does not rule out room for adding start semantics options in the future.
+A `StoreStartPolicy` such as the [Store start timing policy proposal](../notes/2026-04-23-store-start-policy.md) is conceivable as a way to handle exceptional requirements without changing the default.
+Even in that case, however, the default that takes priority is the current "automatic start on the first `dispatch()` or `state` collection".
 
-test 向けには、startup 完了を明示的に待つための `startAndWait()` を `:koma-test` で提供してよい。
-これは既存の「最初の `dispatch()` または `state` collect による自動開始」を置き換えるものではなく、startup 単体の確認や、最初の action 前に startup 後状態を観測したいテストのために併用で置く補助 API として位置付ける。
+For tests, `:koma-test` may provide `startAndWait()` to explicitly wait for startup to complete.
+This does not replace the existing "automatic start on the first `dispatch()` or `state` collection"; it is positioned as an auxiliary API used alongside it, for checking startup on its own or for tests that want to observe the post-startup state before the first action.
 
-同様に、production 向けの public `start()` を、既存の auto-start と併用できる明示開始 API として追加する余地もある。
-ただし現時点では未定であり、Store surface の default には含めない。
-`dispatch()` や `state` collect で自然に開始できる形を基準にしつつ、action なしで startup だけを先行実行したい要件や、開始順序を利用者が明示したい要件が増えた場合には、必要に応じて再検討してよい。
+Likewise, there is room to add a public `start()` for production as an explicit start API that can be used alongside the existing auto-start.
+At this point, however, it is undecided and is not included in the Store surface default.
+Taking the form that starts naturally through `dispatch()` or `state` collection as the baseline, it may be reconsidered as needed if requirements grow for running startup alone ahead of any action, or for users to make the start order explicit.
 
-## 関連
+## Related
 
-- [Store の開始タイミング policy 案](../notes/2026-04-23-store-start-policy.md)
+- [Store start timing policy proposal](../notes/2026-04-23-store-start-policy.md)
