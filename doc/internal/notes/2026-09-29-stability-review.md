@@ -89,6 +89,23 @@ Core (`koma-core`)
   transition finishes. The same applies to `onEvent`: the handler that emitted the event
   continues. `onAction` and `onStart` failures still abort as before (nothing is committed yet).
 
+Statecharts (`koma-statechart`)
+
+- The zero-delay timer loop check approximated what a firing enters (target, its descendants,
+  its ancestors) and so missed loops through a parallel state re-entered from one of its
+  regions and through a history state, while rejecting a valid chart whose timer entered a
+  compound state with a zero-delay timer in a child that is not its initial one. It now follows
+  the real entry set from every reachable configuration.
+- A timer whose step failed (an exit or enter hook or an effect threw) was silently spent: it
+  never fired again but stayed listed in `ChartState.timers.running`, so a restored Store would
+  have restarted it while the live one did not. Such a timer is now removed from the running
+  timers when the error is reported.
+- When an enter hook threw on a fresh start, the Store stayed in the initial configuration
+  without any activation, so its activities never ran and its timers never fired. The
+  activations, activities and timers of the initial configuration now exist even when a hook
+  failed; the failed hooks' context changes and launches are dropped, and the error reaches
+  `recover {}` after the state is committed.
+
 ## 未解決事項
 
 Known behavior that is by design or needs a decision; take it into account when writing

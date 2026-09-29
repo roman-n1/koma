@@ -240,6 +240,12 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
  * entered and fires [StateChartRuntime.fire] in a Store transaction after its delay, unless its
  * source has been exited. A firing whose guard is false changes nothing but stops the timer.
  *
+ * When a hook or effect of a step throws, the step is abandoned: the chart stays in its previous
+ * configuration and the error reaches the Store's `recover {}` handlers. A timer whose firing
+ * failed that way is spent, so it stops; its source restarts it only when it is entered again.
+ * When an enter hook fails on a fresh start, the Store still is in the initial configuration, so
+ * its activities and timers start; the failed hooks' context changes and launches are dropped.
+ *
  * On start, with the declared initial state: the enter hooks of the initial configuration run
  * (with a `null` action), then activities and timers start. With a state restored by a
  * [koma.core.StateSaver], the enter hooks do not run again (the context already reflects them),
@@ -358,15 +364,24 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         var context = state.context
         val entered = linkedMapOf<StateId, Job>()
         val launches = mutableListOf<Task>()
+        var failure: Exception? = null
         try {
             for (id in active) {
                 val activation = Job()
                 entered[id] = activation
                 if (fresh) context = enter(id, activation, context, null, launches) { event(it) }
             }
-        } catch (e: Throwable) {
+        } catch (e: CancellationException) {
             entered.values.forEach { it.cancel() }
             throw e
+        } catch (e: Exception) {
+            // Unlike a failed action step, a failed start has no previous configuration to stay
+            // in: the Store is in this one, so its activations, activities and timers must exist.
+            // Only the failed hooks' context changes and launches are dropped; the error reaches
+            // the recover {} handlers once the state is committed.
+            failure = e
+            context = state.context
+            launches.clear()
         }
         activations.putAll(entered)
         launches.forEach(tasks::trySend)
@@ -376,6 +391,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         expected.forEach { schedule(it, timers.running.getValue(it)) }
         val next = state.copy(context = context, timers = timers)
         if (next != restored) nextState { next }
+        failure?.let { error -> launch { transaction { throw error } } }
     }
 
     /** Runs the hooks and effects of [result] and returns the state to commit. */
@@ -450,7 +466,21 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         tasks.trySend(
             Task(activation) {
                 delay(timer.after!!)
-                transactor.transaction { fire(this, index, token) }
+                var failure: Exception? = null
+                transactor.transaction {
+                    try {
+                        fire(this, index, token)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // The step failed, so the chart stays where it is and the timer is spent:
+                        // drop it, or `timers.running` would list a timer that never fires again.
+                        failure = e
+                        nextState { state.copy(timers = state.timers.copy(running = state.timers.running - index)) }
+                    }
+                }
+                // Rethrown here, the error reaches the Store's recover {} handlers (see runTask).
+                failure?.let { throw it }
             },
         )
     }
