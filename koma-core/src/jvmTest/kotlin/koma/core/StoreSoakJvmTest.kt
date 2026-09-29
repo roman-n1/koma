@@ -209,12 +209,12 @@ class StoreSoakJvmTest {
         withContext(Dispatchers.Default) {
             store.dispatch(A.Inc)
             store.state.first { it.count == 1 }
-            val last: MutableStateFlow<Job?> = field(store, "lastDispatchJob")
+            val last: MutableStateFlow<Job?> = field(store, "lastDispatchDone")
             val ref = WeakReference(last.value!!)
             repeat(5000) { store.dispatch(A.Inc) }
             store.state.first { it.count == 5001 }
             repeat(5) { System.gc(); delay(50) }
-            assertNull(ref.get(), "first dispatch job is still reachable")
+            assertNull(ref.get(), "first dispatch's completion signal is still reachable")
         }
         store.close()
     }

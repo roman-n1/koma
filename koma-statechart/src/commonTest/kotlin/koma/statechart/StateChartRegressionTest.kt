@@ -587,4 +587,63 @@ class StateChartRegressionTest {
         val hashes = configurations.map { it.hashCode() }.toSet()
         assertTrue(hashes.size >= configurations.size * 9 / 10, "${hashes.size} hashes for ${configurations.size} configurations")
     }
+
+    private sealed interface Leaf : koma.core.State {
+        data object A : Leaf
+        data object B : Leaf
+    }
+
+    /**
+     * Without a trigger (a chained `enter {}` at startup), the first transition that leads there
+     * in priority order is covered whatever its trigger: an action transition declared before a
+     * timer wins, as the class documentation says.
+     */
+    @Test
+    fun conformance_withoutATrigger_coversTheFirstTransitionInPriorityOrder() = runTest {
+        val byAction = Transition(a, b, go)
+        val byTimer = Transition(a, b, Trigger.After(1.seconds))
+        val timed = chart.copy(transitions = listOf(byAction, byTimer))
+        val conformance = StateChartConformance<Leaf, ChartAction, ChartEvent>(timed) { if (it is Leaf.A) a else b }
+        val store = koma.core.Store<Leaf, ChartAction, ChartEvent>(Leaf.A) {
+            coroutineContext(kotlinx.coroutines.Dispatchers.Unconfined)
+            plugin(conformance)
+            state<Leaf.A> { enter { nextState { Leaf.B } } }
+            state<Leaf.B> { }
+        }
+
+        store.startAndAwait()
+
+        assertEquals(listOf(byAction), conformance.coveredTransitions.toList())
+        assertEquals(emptyList(), conformance.violations)
+        store.close()
+    }
+
+    /**
+     * A self-loop of one region taken together with another region's transition is covered too:
+     * the runtime's selection with every guard true explains the step as a whole.
+     *
+     * ```
+     * P { R1 { [*] --> A; A --Go--> B }  R2 { [*] --> C; C --Go--> C } }
+     * ```
+     */
+    @Test
+    fun conformance_coversARegionSelfLoopTakenWithAnotherRegionsTransition() = runTest {
+        val p = StateId("P"); val r1 = StateId("R1"); val r2 = StateId("R2"); val c = StateId("C")
+        val move = Transition(a, b, go)
+        val loop = Transition(c, c, go)
+        val parallel = StateChartDefinition(
+            initial = p,
+            states = listOf(ParallelState(p), CompoundState(r1, initial = a, parent = p), AtomicState(a, r1), AtomicState(b, r1), CompoundState(r2, initial = c, parent = p), AtomicState(c, r2)),
+            transitions = listOf(move, loop),
+        )
+        val conformance = StateChartConformance.withActiveLeaves<ChartState<Unit>, ChartAction, ChartEvent>(parallel) { it.activeLeaves(parallel).toSet() }
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(parallel, Unit, backgroundScope.coroutineContext) { store { plugin(conformance) } }
+
+        store.dispatchAndAwait(ChartAction.Go)
+
+        assertEquals(listOf(b, c), store.currentState.activeLeaves(parallel))
+        assertEquals(setOf(move, loop), conformance.coveredTransitions)
+        assertEquals(emptyList(), conformance.violations)
+        store.close()
+    }
 }

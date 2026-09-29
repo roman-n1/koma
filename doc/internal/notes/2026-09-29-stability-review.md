@@ -245,6 +245,38 @@ Documentation
   the `action {}` block; non-`Exception` throwables are fatal, not "handled" by the exception
   handler. Documented that a launch failing after its state exited is not reported.
 
+## Fixed in the fifth round
+
+The fifth round was a fresh-eyes review of everything the earlier rounds changed, as if it were
+someone else's pull request, plus a soak test in `commonTest` (`StoreSoakTest`) so that the
+multi-threaded scenario runs on iOS, JS and Wasm in CI too. Four of its findings were
+regressions of this review's own fixes.
+
+Core and companions
+
+- The fail-fast check for awaiting a Store from its own hooks (round 4) did not cover the
+  `onEvent` round of an event emitted from a launched coroutine, which runs outside the handler
+  coroutines: `dispatchAndAwait` from there still deadlocked (the round holds the plugin lock).
+  That round now carries the marker.
+- The dispatch-ordering gate (round 2) waited for the predecessor's whole coroutine, so a
+  handler that left a child coroutine behind in its own `Job` stalled every later dispatch. The
+  gate now waits for the predecessor's work under the lock only.
+- With "every plugin sees every round" (round 4), a fatal error from a plugin registered after
+  a failing one was attached as suppressed and swallowed. A fatal error from any plugin stays
+  fatal.
+- The enter-loop guard (round 3) fired before the last entered state got its runtime, leaving
+  the Store in a state where every `launch {}` failed. The guard now refuses the next
+  transition instead, so the state the Store stays in is fully entered.
+- A throwing exception handler (`ExceptionHandler.Rethrow`) was called twice for one saver or
+  plugin failure; the error a `recover {}` was handling was lost when the state it moved to
+  failed in its `enter {}`. Both fixed.
+- `receiveMessages {}` ended its subscription silently on an expired `withTimeout {}` inside the
+  block; it now follows the core rule and reports the failure.
+- `StateChartConformance`: without a trigger, a timer was credited before an earlier-declared
+  action transition, against the class documentation; a region self-loop taken together with
+  another region's transition was not covered. The runtime's selection with every guard true
+  is tried first now, and the class documentation describes the runtime-first explanation.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing
@@ -273,6 +305,12 @@ messenger features.
   every plugin's `onStart` again.
 - Dispatches are processed in dispatch order, but a `transaction {}` from a launched coroutine
   is not ordered against them: it takes the lock whenever it gets its turn.
+- The fail-fast check for `dispatchAndAwait` and `startAndAwait` is carried by the coroutine
+  context, so a coroutine created from a handler with `CoroutineScope(currentCoroutineContext()
+  + Job())` is rejected too although it would not deadlock; use `launch {}` for work started
+  from a handler.
+- An `exit {}` that suspends under `NonCancellable` can still commit after `close()`; the
+  cancellation check runs once, when the transition starts.
 - `rememberStateSaver()` (rin's `rememberRetained`) needs a `ViewModelStoreOwner` in the
   composition; a plain `Composition` in tests or some desktop hosts has none.
 - `Store.patch {}` and `createRecorder()` are for tests and must be called before `start()` or

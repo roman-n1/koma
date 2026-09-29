@@ -246,7 +246,9 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
  * configuration and the error reaches the Store's `recover {}` handlers. A timer whose firing
  * failed that way is spent, so it stops; its source restarts it only when it is entered again.
  * When an enter hook fails on a fresh start, the Store still is in the initial configuration, so
- * its activities and timers start; the failed hooks' context changes and launches are dropped.
+ * its activities and timers start; the context changes and launches of that start's hooks are
+ * dropped, and the error reaches `recover {}` once the state is committed (a dispatch queued
+ * meanwhile may run first).
  *
  * On start, with the declared initial state: the enter hooks of the initial configuration run
  * (with a `null` action), then activities and timers start. With a state restored by a
