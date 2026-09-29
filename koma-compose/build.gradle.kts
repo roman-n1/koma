@@ -49,8 +49,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":koma-core"))
-            implementation(compose.runtime)
+            api(project(":koma-core"))
+            api(compose.runtime)
             implementation(libs.rin)
         }
         commonTest.dependencies {
