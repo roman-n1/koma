@@ -346,6 +346,26 @@ before its activation check. Six new tests in `StoreLaunchCancellationTest` and
 `StateChartActivityEventTest` cover these failures, including both transaction scope types,
 event delivery to plugins and collectors, explicit lane cancellation, state exit and close.
 
+Three additional tests cover two tabs displaying separate instances of the same component,
+including two tabs for the same chat. `StoreInstanceIsolationTest` checks a shared explicit lane
+and the default action-type lane across two Stores. `StateChartInstanceIsolationTest` checks
+context, activities, events and timer deadlines with a shared chart definition, then closes one
+Store while the other continues. `ViewStoreJvmTest` reorders and closes keyed Compose tabs and
+checks their separate ViewStores and retained StateSavers. No additional isolation defect was
+found in these scenarios.
+
+Keep each tab's Store and StateSaver owned by that component instance. Repeated Compose content
+needs `key(tabInstanceId)`, including when two tabs use the same chat id. A shared chart definition
+or lane object is safe; sharing one Store shares its state and close lifecycle. `koma-message`
+is deliberately process-wide: include and filter a tab-instance id for tab-specific commands,
+or a chat id for domain updates intended for every open view of that chat.
+
+The expanded JVM suite has 552 passing tests. Before the three tab-isolation tests were added,
+core and statechart also passed 465 tests on each of Android host, iOS Simulator Arm64,
+JavaScript/Node and Wasm/Node, and all five GitHub CI targets passed. The initial local iOS
+incremental link hit a Kotlin/Native deserializer error; a full rebuild without the build cache
+passed. The final PR revision reruns the full CI matrix with the additional isolation tests.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing
@@ -378,8 +398,9 @@ messenger features.
   context, so a coroutine created from a handler with `CoroutineScope(currentCoroutineContext()
   + Job())` is rejected too although it would not deadlock; use `launch {}` for work started
   from a handler.
-- `rememberStateSaver()` (rin's `rememberRetained`) needs a `ViewModelStoreOwner` in the
-  composition; a plain `Composition` in tests or some desktop hosts has none.
+- `rememberStateSaver()` (rin's `rememberRetained`) needs a `ViewModelStoreOwner` and
+  `LifecycleOwner` in the composition; a plain `Composition` in tests or some desktop hosts has
+  neither.
 - `Store.patch {}` and `createRecorder()` are for tests and must be called before startup is
   requested by `start()`, the first dispatch or state collection.
 - The message bus is process-wide: a receiver that falls 64 messages behind stalls every sender
