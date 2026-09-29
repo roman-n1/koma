@@ -22,7 +22,7 @@ class PublishConventionPlugin : Plugin<Project> {
                     signAllPublications()
                 }
 
-                pom()
+                pom(forkUrl = findProperty("koma.fork.url")?.toString())
             }
 
             val publishConvention = extensions.create("publishConvention", PublishConventionExtension::class)
