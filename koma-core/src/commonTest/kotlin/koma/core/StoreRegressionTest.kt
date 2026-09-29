@@ -9,16 +9,14 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Reproductions of known issues. Each test describes the expected behavior and is ignored until
- * the issue is fixed; remove `@Ignore` together with the fix.
+ * Regression tests for issues found in review.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class StoreKnownIssuesTest {
+class StoreRegressionTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
 
@@ -34,16 +32,14 @@ class StoreKnownIssuesTest {
     }
 
     /**
-     * Known issue: when `exit {}` throws, the state's runtime is cancelled and removed even though
-     * the transition is aborted and the Store stays in the old state. Every later `launch {}` or
-     * `cancelLaunch()` in that state then fails with "State scope is not found", and coroutines
-     * started from its `enter {}` are already cancelled.
+     * When `exit {}` throws, the transition is aborted and the Store stays in the old state, so the
+     * state's runtime must stay usable: later `launch {}` and `cancelLaunch()` calls work and
+     * coroutines started from its `enter {}` keep running.
      *
      * ```
-     * Active --Finish--> (exit throws) --recover--> Active   // runtime of Active is gone
+     * Active --Finish--> (exit throws) --recover--> Active   // runtime of Active is kept
      * ```
      */
-    @Ignore
     @Test
     fun exitException_recoveredInPlace_keepsTheStateRuntimeUsable() = runTest(testDispatcher) {
         val handled = mutableListOf<Throwable>()
@@ -68,15 +64,14 @@ class StoreKnownIssuesTest {
     }
 
     /**
-     * Known issue: with [PendingActionPolicy.ClearOnStateExit], pending actions are cleared after
-     * plugins have been notified through `onState`. An action a plugin dispatches in reaction to
-     * the new state is therefore cancelled together with the stale ones.
+     * With [PendingActionPolicy.ClearOnStateExit], pending actions are cleared before the new state
+     * is committed, so an action a plugin dispatches from `onState` in reaction to the new state is
+     * kept.
      *
      * ```
-     * Active --Finish--> Done   // plugin.onState dispatches FollowUp, which is then dropped
+     * Active --Finish--> Done --FollowUp--> Active(100)   // FollowUp comes from plugin.onState
      * ```
      */
-    @Ignore
     @Test
     fun clearOnStateExit_keepsActionsDispatchedByPluginsForTheNewState() = runTest(testDispatcher) {
         val store: Store<AppState, AppAction, Nothing> = Store(AppState.Active()) {
@@ -102,13 +97,11 @@ class StoreKnownIssuesTest {
     }
 
     /**
-     * Known issue: [Store.state] runs the collector in a child coroutine and then waits in
-     * `awaitCancellation()`. Operators that stop collecting early, such as `first()`, `first {}`
-     * and `take(n)`, abort only that child, so the call never returns.
+     * Operators that stop collecting [Store.state] early, such as `first()`, `first {}` and
+     * `take(n)`, return. They used to abort only an internal child coroutine and hang forever.
      *
-     * Runs on [Dispatchers.Default] with a real timeout so the test fails instead of hanging.
+     * Runs on [Dispatchers.Default] with a real timeout so a regression fails instead of hanging.
      */
-    @Ignore
     @Test
     fun stateFirst_returnsOnceThePredicateMatches() = runTest(testDispatcher) {
         val store: Store<AppState, AppAction, Nothing> = Store(AppState.Active()) {

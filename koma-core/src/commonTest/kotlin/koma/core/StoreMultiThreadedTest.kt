@@ -2,7 +2,7 @@ package koma.core
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -52,9 +52,8 @@ class StoreMultiThreadedTest {
                     }
                 }
             }
-            // Polls instead of `state.first {}`, see StoreKnownIssuesTest.stateFirst_returnsOnceThePredicateMatches.
             withTimeout(10_000) {
-                while (store.currentState.count != total) delay(10)
+                store.state.first { it.count == total }
             }
         }
 

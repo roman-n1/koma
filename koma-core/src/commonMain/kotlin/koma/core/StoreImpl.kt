@@ -7,7 +7,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -48,14 +47,20 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         object : StateFlow<S> {
             override val replayCache: List<S> get() = _state.replayCache
             override val value: S get() = _state.value
-            override suspend fun collect(collector: FlowCollector<S>): Nothing = coroutineScope {
-                launch {
-                    _state.collect(collector)
+            // Collects in the caller's coroutine so operators that stop early, such as first() or
+            // take(n), end the collection. Startup is requested once the initial value has been
+            // read, so the collector still sees the state from before startup processing.
+            override suspend fun collect(collector: FlowCollector<S>): Nothing {
+                var startupRequested = false
+                _state.collect { value ->
+                    if (!startupRequested) {
+                        startupRequested = true
+                        if (autoStartPolicy == AutoStartPolicy.OnDispatchOrStateCollection) {
+                            launchStartup()
+                        }
+                    }
+                    collector.emit(value)
                 }
-                if (autoStartPolicy == AutoStartPolicy.OnDispatchOrStateCollection) {
-                    launchStartup()
-                }
-                awaitCancellation()
             }
         }
     }
@@ -287,21 +292,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun onActionDispatched(state: S, action: A) {
         try {
             val nextState = processActionDispatch(state, action)
-
-            if (state::class != nextState::class) {
-                processStateExit(state)
-            }
-
-            if (state != nextState) {
-                processStateChange(state, nextState)
-                if (state::class != nextState::class) {
-                    clearPendingActionsOnStateExitIfNeeded()
-                }
-            }
-
-            if (state::class != nextState::class) {
-                onStateEntered(nextState)
-            }
+            commitTransition(state, nextState, inErrorHandling = false)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             onErrorOccurred(currentState, t as Exception)
@@ -310,44 +301,40 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun onStateChanged(state: S, nextState: S) {
         try {
-            if (state::class != nextState::class) {
-                processStateExit(state)
-            }
-
-            if (state != nextState) {
-                processStateChange(state, nextState)
-                if (state::class != nextState::class) {
-                    clearPendingActionsOnStateExitIfNeeded()
-                }
-            }
-
-            if (state::class != nextState::class) {
-                onStateEntered(nextState)
-            }
+            commitTransition(state, nextState, inErrorHandling = false)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             onErrorOccurred(currentState, t as Exception)
         }
     }
 
+    /**
+     * Applies [nextState] after a handler finished in [state].
+     *
+     * When the state variant changes, the old state exits first and pending actions are cleared
+     * (per [pendingActionPolicy]) before the new state is committed, so actions dispatched in
+     * reaction to the new state, for example by plugins or state collectors, are kept.
+     */
+    private suspend fun commitTransition(state: S, nextState: S, inErrorHandling: Boolean) {
+        val variantChanged = state::class != nextState::class
+        if (variantChanged) {
+            processStateExit(state)
+            clearPendingActionsOnStateExitIfNeeded()
+        }
+
+        if (state != nextState) {
+            processStateChange(state, nextState)
+        }
+
+        if (variantChanged) {
+            onStateEntered(nextState, inErrorHandling = inErrorHandling)
+        }
+    }
+
     private suspend fun onStateEntered(state: S, inErrorHandling: Boolean = false) {
         try {
             val nextState = processStateEnter(state)
-
-            if (state::class != nextState::class) {
-                processStateExit(state)
-            }
-
-            if (state != nextState) {
-                processStateChange(state, nextState)
-                if (state::class != nextState::class) {
-                    clearPendingActionsOnStateExitIfNeeded()
-                }
-            }
-
-            if (state::class != nextState::class) {
-                onStateEntered(nextState, inErrorHandling = inErrorHandling)
-            }
+            commitTransition(state, nextState, inErrorHandling = inErrorHandling)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             if (inErrorHandling) {
@@ -360,21 +347,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun onErrorOccurred(state: S, exception: Exception) {
         try {
             val nextState = processError(state, exception)
-
-            if (state::class != nextState::class) {
-                processStateExit(state)
-            }
-
-            if (state != nextState) {
-                processStateChange(state, nextState)
-                if (state::class != nextState::class) {
-                    clearPendingActionsOnStateExitIfNeeded()
-                }
-            }
-
-            if (state::class != nextState::class) {
-                onStateEntered(nextState, inErrorHandling = true)
-            }
+            commitTransition(state, nextState, inErrorHandling = true)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             throw InternalError(t)
@@ -647,25 +620,23 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
+    // If the exit handler throws, the transition is aborted and the Store stays in [state], so its
+    // runtime (state-scoped launches and tracked lanes) is kept.
     private suspend fun processStateExit(state: S) {
-        try {
-            onExit.invoke(
-                object : ExitScope<S, E, S> {
-                    override val state = state
+        onExit.invoke(
+            object : ExitScope<S, E, S> {
+                override val state = state
 
-                    override fun clearPendingActions() {
-                        clearPendingDispatchJobs()
-                    }
+                override fun clearPendingActions() {
+                    clearPendingDispatchJobs()
+                }
 
-                    override suspend fun event(event: E) {
-                        emit(event)
-                    }
-                },
-            )
-        } finally {
-            stateRuntimes[state::class]?.scope?.cancel()
-            stateRuntimes.remove(state::class)
-        }
+                override suspend fun event(event: E) {
+                    emit(event)
+                }
+            },
+        )
+        stateRuntimes.remove(state::class)?.scope?.cancel()
     }
 
     private suspend fun processStateChange(state: S, nextState: S) {

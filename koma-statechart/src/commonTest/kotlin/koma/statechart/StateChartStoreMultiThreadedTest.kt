@@ -5,7 +5,7 @@ import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -84,10 +84,9 @@ class StateChartStoreMultiThreadedTest {
                     launch { repeat(perSender) { store.dispatch(UiAction.Toggle) } }
                 }
             }
-            // Polls instead of `state.first {}`, which never returns on a Koma Store today.
             val expected = Counts(synced = updates, toggles = senders * perSender)
             withTimeout(10_000) {
-                while (store.currentState.context != expected) delay(10)
+                store.state.first { it.context == expected }
             }
         }
 
