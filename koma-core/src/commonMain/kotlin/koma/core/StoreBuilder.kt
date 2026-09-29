@@ -23,6 +23,9 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.ClearOnStateExit
     private var storePluginExecutionPolicy: PluginExecutionPolicy = PluginExecutionPolicy.Concurrent
     private val storePlugins: MutableList<Plugin<S, A, E>> = mutableListOf()
+
+    @OptIn(InternalKomaApi::class)
+    private val storeProbes: MutableList<StoreProbe<S, A, E>> = mutableListOf()
     private val recoveryValidators = mutableListOf<(S, S) -> Unit>()
 
     /**
@@ -116,6 +119,21 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     fun plugin(first: Plugin<S, A, E>, vararg rest: Plugin<S, A, E>) {
         storePlugins.add(first)
         storePlugins.addAll(rest)
+    }
+
+    /**
+     * Appends one or more [StoreProbe]s that observe the processing boundaries of the Store:
+     * accepted and discarded inputs, each processing and its outcome, commits, events and reported
+     * failures. Probes are an internal observation API for journals and inspectors, not an
+     * extension point; use [plugin] to react to the Store.
+     *
+     * @param first The first probe to add
+     * @param rest Additional probes to add
+     */
+    @InternalKomaApi
+    fun probe(first: StoreProbe<S, A, E>, vararg rest: StoreProbe<S, A, E>) {
+        storeProbes.add(first)
+        storeProbes.addAll(rest)
     }
 
     @PublishedApi
@@ -349,6 +367,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
         }
     }
 
+    @OptIn(InternalKomaApi::class)
     internal fun build(): Store<S, A, E> {
         val state = requireNotNull(storeInitialState) { "[Koma] InitialState must be set in Store{} DSL" }
         return object : StoreImpl<S, A, E>() {
@@ -360,6 +379,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override var pendingActionPolicy: PendingActionPolicy = storePendingActionPolicy
             override var pluginExecutionPolicy: PluginExecutionPolicy = storePluginExecutionPolicy
             override val plugins: MutableList<Plugin<S, A, E>> = storePlugins
+            override val probes: MutableList<StoreProbe<S, A, E>> = storeProbes
             override val onEnter: suspend EnterScope<S, E, S>.() -> Unit = this@StoreBuilder.onEnter
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
