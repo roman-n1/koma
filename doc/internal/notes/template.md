@@ -1,15 +1,15 @@
-# タイトル
+# Title
 
-- 更新日: YYYY-MM-DD
+- Updated: YYYY-MM-DD
 
-## 背景
+## Background
 
-[なぜこのメモが必要か]
+[Why this note is needed]
 
-## 現在の考え
+## Current thinking
 
-[現時点での整理、またはもっとも有力な方向]
+[The current summary, or the most promising direction]
 
-## 未解決事項
+## Open questions
 
-- [未解決事項があれば]
+- [Any open questions]

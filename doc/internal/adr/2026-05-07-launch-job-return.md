@@ -1,31 +1,31 @@
-# `launch` から `Job` は返さない
+# `launch` does not return a `Job`
 
-- 更新日: 2026-05-07
+- Updated: 2026-05-07
 
-## 背景
+## Background
 
-Koma の `enter { launch { ... } }`、`action { launch { ... } }`、`PluginScope.launch { ... }` は、いずれも内部では coroutine の child `Job` を作っている。
+Koma's `enter { launch { ... } }`, `action { launch { ... } }` and `PluginScope.launch { ... }` all create a coroutine child `Job` internally.
 
-このとき、公開 API でも `launch()` からその `Job` を返し、呼び出し側が `cancel()` や `join()` を直接行えるようにするべきかを検討した。
+We considered whether the public API should also return that `Job` from `launch()`, so callers can `cancel()` or `join()` it directly.
 
-`Job` を返せば coroutine primitive としては自然に見える一方で、Koma の `launch` は単なる汎用 coroutine 起動ではなく、state scope や store root scope に所有される仕事の開始点として意味づけられている。
-ここで判断したいのは、公開 DSL でもそのまま `Job` を露出するべきかどうかである。
+Returning a `Job` looks natural as a coroutine primitive, but Koma's `launch` is not a mere general-purpose coroutine launch; it is meant as the starting point of work owned by the state scope or the store root scope.
+What needs to be decided here is whether the public DSL should expose the `Job` as is.
 
-## 決定
+## Decision
 
-公開 DSL の `launch()` からは `Job` を返さない。
+The public DSL's `launch()` does not return a `Job`.
 
-- `EnterScope.launch` と `ActionScope.launch` は、引き続き state-owned な background work の開始 API として扱う。
-- `PluginScope.launch` も、引き続き store-owned な background work の開始 API として扱う。
-- launched work の coordination や cancellation は、`ActionScope.cancelLaunch(lane)` や state exit / store close のような高水準の lifecycle に寄せる。
-- `Job.cancel()` / `Job.join()` のような低水準操作を、公開 DSL の標準操作にはしない。
-- 将来、個別ハンドルが必要なユースケースがたまった場合でも、まずは `Job` そのものではなく、用途を限定した専用 handle を検討する。
+- `EnterScope.launch` and `ActionScope.launch` continue to be treated as APIs for starting state-owned background work.
+- `PluginScope.launch` also continues to be treated as an API for starting store-owned background work.
+- Coordination and cancellation of launched work are handled by higher-level lifecycles such as `ActionScope.cancelLaunch(lane)`, state exit and store close.
+- Low-level operations such as `Job.cancel()` / `Job.join()` are not made standard operations of the public DSL.
+- Even if use cases requiring individual handles accumulate in the future, a purpose-limited dedicated handle is considered first, rather than the `Job` itself.
 
-## 補足
+## Notes
 
-- Koma では「action は処理開始のきっかけであり、継続中の仕事の所有者は state」という整理を取っている。`ActionScope.launch` が返した `Job` を呼び出し側で保持させると、その仕事を action caller が所有しているように見え、ownership の読み取りがぶれやすい。
-- `ActionScope.launch` にはすでに `LaunchControl.CancelPrevious(...)`、`LaunchControl.DropIfRunning(...)`、`cancelLaunch(lane)` があり、tracked launch の coordination は lane 単位の高水準 API として表現している。ここに生の `Job` を追加すると、「lane で止めるべきか」「保持していた job を直接止めるべきか」が二重化する。
-- 特に `LaunchControl.DropIfRunning(...)` は、新しい launch 要求が無視される場合がある。このとき `launch()` の戻り値を `Job` にすると、「今回の呼び出しで何が返るのか」を別途決める必要があり、API 意味論が余計に重くなる。
-- `EnterScope.launch` の仕事は state exit で自動停止し、`PluginScope.launch` の仕事は store root scope の終了で自動停止する。これらは Koma 側が lifecycle を所有しているため、公開 surface でもその ownership を保った方が自然である。
-- launched work 内の recoverable な `Exception` は `recover {}` の回復経路に流す設計であり、利用者に見せたい境界は job failure そのものより state machine の recovery path である。`Job` を前面に出すと、失敗モデルも coroutine primitive 寄りに読まれやすくなる。
-- ただし、「Store は生かしたまま特定の background work だけを owner が明示停止したい」といった要件が将来増える可能性までは否定しない。その場合は `Job` をそのまま返すより、「何を止めるための handle なのか」が分かる専用型の方が Koma の API surface と整合しやすい。
+- Koma takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". Letting the caller hold the `Job` returned by `ActionScope.launch` makes it look as if the action caller owns that work, and the reading of ownership tends to waver.
+- `ActionScope.launch` already has `LaunchControl.CancelPrevious(...)`, `LaunchControl.DropIfRunning(...)` and `cancelLaunch(lane)`, and coordination of tracked launches is expressed as a lane-based high-level API. Adding a raw `Job` here duplicates "should it be stopped by lane" and "should the held job be stopped directly".
+- In particular, with `LaunchControl.DropIfRunning(...)`, a new launch request may be ignored. If the return value of `launch()` were a `Job`, "what is returned by this call" would need to be decided separately, making the API semantics unnecessarily heavy.
+- Work from `EnterScope.launch` stops automatically on state exit, and work from `PluginScope.launch` stops automatically when the store root scope ends. Since Koma owns these lifecycles, it is more natural to preserve that ownership on the public surface as well.
+- The design passes recoverable `Exception`s inside launched work to the `recover {}` recovery path, and the boundary we want users to see is the state machine's recovery path rather than job failure itself. Putting `Job` in the foreground makes the failure model more likely to be read as coroutine-primitive oriented.
+- However, the possibility is not denied that requirements such as "the owner wants to explicitly stop only a specific background work while keeping the Store alive" may increase in the future. In that case, a dedicated type that makes clear "what this handle is for stopping" is more consistent with Koma's API surface than returning the `Job` as is.

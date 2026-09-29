@@ -212,7 +212,7 @@ class StateChartStorePropertyTest {
         }
     }
 
-    // ПОЧЕМУ: a TestScope extension, not a function that calls runTest itself. On JS runTest returns
+    // WHY: a TestScope extension, not a function that calls runTest itself. On JS runTest returns
     // a Promise that the @Test function must return, or the assertions after it run before the walk.
     private suspend fun TestScope.storeAgreesWithTheRuntime(cancelTimers: Boolean): Int {
         var stale = 0

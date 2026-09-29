@@ -31,6 +31,9 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.startAndAwait() {
  * This waits for startup when needed, the matching action handler, and any resulting synchronous
  * state transition work triggered by that dispatch.
  * It does not wait for additional work launched from `enter {}` or `action {}` handlers.
+ * It also returns normally when the action was discarded before it ran, by
+ * [koma.core.PendingActionPolicy.ClearOnStateExit] or `clearPendingActions()`; check the state
+ * or a [StoreRecorder] rather than relying on the return alone.
  *
  * This extension is available for Store instances created by the Koma DSL.
  *

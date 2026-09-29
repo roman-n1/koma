@@ -10,7 +10,7 @@ open class PublishConventionExtension {
     internal fun applyToProject(project: Project) {
         project.mavenPublishing {
             coordinates(
-                // ПОЧЕМУ: the fork publishes under its own group so its artifacts never shadow
+                // WHY: the fork publishes under its own group so its artifacts never shadow
                 // official Koma; the modules keep io.github.koma-kt to stay close to upstream.
                 groupId = project.findProperty("koma.fork.group")?.toString() ?: project.group.toString(),
                 artifactId = artifactId

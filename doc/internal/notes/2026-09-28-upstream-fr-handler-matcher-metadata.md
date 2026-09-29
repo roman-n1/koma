@@ -1,6 +1,6 @@
 # Draft feature request: keep matcher metadata in the handler registry
 
-- 更新日: 2026-09-28 (thank-you opening, links to the working change in the fork)
+- Updated: 2026-09-28 (thank-you opening, links to the working change in the fork)
 - Status: draft, not filed. Target: koma-kt/koma. Roman posts it himself.
 
 ---

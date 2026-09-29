@@ -15,6 +15,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
@@ -365,12 +366,11 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         val entered = linkedMapOf<StateId, Job>()
         val launches = mutableListOf<Task>()
         var failure: Exception? = null
+        // Every active node gets its activation before any hook runs: a failing hook of an outer
+        // node must not leave the nodes after it without one.
+        for (id in active) entered[id] = Job()
         try {
-            for (id in active) {
-                val activation = Job()
-                entered[id] = activation
-                if (fresh) context = enter(id, activation, context, null, launches) { event(it) }
-            }
+            if (fresh) for (id in active) context = enter(id, entered.getValue(id), context, null, launches) { event(it) }
         } catch (e: CancellationException) {
             entered.values.forEach { it.cancel() }
             throw e
@@ -442,7 +442,11 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         var current = context
         for (hook in config.enterHooks[id].orEmpty()) {
             val scope = EnterHookScope(id, action, current, emit, activation, launches)
-            scope.hook()
+            try {
+                scope.hook()
+            } finally {
+                scope.open = false
+            }
             current = scope.context
         }
         return current
@@ -470,9 +474,8 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
                 transactor.transaction {
                     try {
                         fire(this, index, token)
-                    } catch (e: CancellationException) {
-                        throw e
                     } catch (e: Exception) {
+                        if (e is CancellationException && !currentCoroutineContext().isActive) throw e
                         // The step failed, so the chart stays where it is and the timer is spent:
                         // drop it, or `timers.running` would list a timer that never fires again.
                         failure = e
@@ -515,9 +518,10 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         val handle = task.activation.invokeOnCompletion { job.cancel() }
         try {
             task.block()
-        } catch (e: CancellationException) {
-            throw e
         } catch (e: Exception) {
+            // The task's own cancellation (its node exited, the Store closed) ends it; any other
+            // exception, including an expired withTimeout, is a failure of the task.
+            if (e is CancellationException && !currentCoroutineContext().isActive) throw e
             // Rethrown inside a transaction, the error reaches the Store's recover {} handlers.
             transactor.transaction { throw e }
         } finally {
@@ -542,15 +546,19 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         private val activation: Job,
         private val launches: MutableList<Task>,
     ) : ChartEnterScope<C, A, E> {
+        var open = true
+
         override suspend fun event(event: E) = emit(event)
 
         override fun launch(block: suspend ChartLaunchScope<C, A, E>.() -> Unit) {
+            check(open) { "[Koma] launch {} was called after the onEnter hook of $node returned; call it from the hook itself" }
             launches += taskFor(node, activation, block)
         }
     }
 
     private inner class LaunchScope(override val node: StateId, private val activation: Job) : ChartLaunchScope<C, A, E> {
-        override val isActive: Boolean get() = activation.isActive
+        // The activation is a plain Job that close() does not cancel; the transactor's scope is.
+        override val isActive: Boolean get() = activation.isActive && transactor.isActive
 
         override suspend fun event(event: E) = transactor.event(event)
 
@@ -559,8 +567,11 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
             val activation = activation
             transactor.transaction {
                 if (activation.isActive) {
+                    // Computed before `applied` is set: a throwing transform reaches recover {}
+                    // and the caller learns that nothing was applied.
+                    val updated = transform(state.context)
                     applied = true
-                    nextState { state.copy(context = transform(state.context)) }
+                    nextState { state.copy(context = updated) }
                 }
             }
             return applied

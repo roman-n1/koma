@@ -1,15 +1,15 @@
-# タイトル
+# Title
 
-- 更新日: YYYY-MM-DD
+- Updated: YYYY-MM-DD
 
-## 背景
+## Background
 
-[なぜこの指針が必要か]
+[Why this guideline is needed]
 
-## 方針
+## Policy
 
-- [設計上の基本方針]
+- [Basic design policy]
 
-## 補足
+## Notes
 
-- [必要なら]
+- [If needed]

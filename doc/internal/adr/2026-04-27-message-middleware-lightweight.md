@@ -1,46 +1,46 @@
-# MessageMiddleware は簡易な built-in に留める
+# MessageMiddleware stays a simple built-in
 
-- 更新日: 2026-04-30
+- Updated: 2026-04-30
 
-## 背景
+## Background
 
-`koma-message` の `MessageMiddleware` は、Store 間で簡易な message をやり取りするための built-in である。
-現在の実装は、process 内で共有される `MessageHub` と、`replay = 0` の `MutableSharedFlow` を前提にしている。
+`MessageMiddleware` in `koma-message` is a built-in for exchanging simple messages between Stores.
+The current implementation is based on a `MessageHub` shared within the process and a `MutableSharedFlow` with `replay = 0`.
 
-このため、少なくとも次の 2 点は性質として残る。
+Because of this, at least the following two characteristics remain.
 
-- `MessageHub` は global なので、複数 Store や複数 feature が同じ bus を共有する
-- receiver Store が start する前に送られた message は保持されず、後から再配送されない
+- `MessageHub` is global, so multiple Stores and multiple features share the same bus
+- A message sent before the receiver Store has started is not retained and is not redelivered later
 
-ここで検討したのは、これらの課題を `MessageMiddleware` 自体で吸収するべきかどうかである。
-たとえば scope 付き channel、receiver 単位の分離、message retention、購読開始同期、明示的な配送 policy の追加などを導入すれば、上記の課題をいくらか緩和できる。
+What was considered here was whether these issues should be absorbed by `MessageMiddleware` itself.
+For example, introducing scoped channels, per-receiver isolation, message retention, subscription-start synchronization, or explicit delivery policies could mitigate the above issues to some extent.
 
-しかし、その方向に進むと `MessageMiddleware` は「簡単な built-in message bridge」ではなく、Store 間連携のための汎用メッセージ基盤に近づく。
-それは API 表面積と責務を大きくし、用途ごとの前提差を framework 側に背負い込みやすい。
+However, going in that direction moves `MessageMiddleware` away from "a simple built-in message bridge" and closer to a general-purpose messaging infrastructure for inter-Store coordination.
+That enlarges the API surface and responsibilities, and tends to load the framework side with assumptions that differ per use case.
 
-## 決定
+## Decision
 
-`MessageMiddleware` は簡易な built-in に留める。
+`MessageMiddleware` stays a simple built-in.
 
-そのため、次の課題は `MessageMiddleware` 自体ではケアしない。
+Therefore, the following issues are not taken care of by `MessageMiddleware` itself.
 
-- global bus であることによる Store 間の分離不足
-- receiver Store の start 前に送られた message が保持されないこと
+- Insufficient isolation between Stores due to being a global bus
+- Messages sent before the receiver Store starts not being retained
 
-これらの性質が困るユースケースでは、`MessageMiddleware` を拡張して吸収するのではなく、利用側で別の Store 間連携手段を設計する。
-候補は次のようなものを想定する。
+For use cases where these characteristics are a problem, rather than extending `MessageMiddleware` to absorb them, the user designs a separate means of inter-Store coordination.
+The candidates envisioned are as follows.
 
-- `Middleware` を使って外部 stream や callback bridge を購読し、各 Store に必要な action を `dispatch()` する
-- 複数 Store が共有する repository や data source を用意し、message ではなく共有状態や stream を介して連携する
-- domain ごとに scope、lifecycle、replay、buffering を明示した専用の連携機構を別途用意する
+- Use `Middleware` to subscribe to an external stream or callback bridge and `dispatch()` the required actions to each Store
+- Provide a repository or data source shared by multiple Stores, and coordinate through shared state or streams instead of messages
+- Provide a separate, dedicated coordination mechanism per domain with explicit scope, lifecycle, replay and buffering
 
-## 補足
+## Notes
 
-- `MessageMiddleware` は「軽量で、すぐ使える built-in」であることを優先する。強い配送保証や分離保証まで標準搭載する対象とはみなさない。
-- Store 間連携の要求は、feature 間通知、shared session、background sync、cross-screen coordination などで意味合いが大きく異なる。これらを 1 つの built-in message bus で汎用的に解決しようとすると、かえって前提が曖昧になりやすい。
-- 強い保証が必要な場合は、利用側が「誰と誰を、どの寿命で、どの再送 policy でつなぐか」を明示した専用設計を持つほうが自然である。
-- 今後 `koma-message` の説明を補う場合も、方向性は「制約の明文化」を優先し、汎用メッセージ基盤への拡張は前提にしない。
+- `MessageMiddleware` prioritizes being "a lightweight, ready-to-use built-in". It is not regarded as something that should ship with strong delivery guarantees or isolation guarantees as standard.
+- Requirements for inter-Store coordination differ greatly in meaning across cases such as inter-feature notifications, shared sessions, background sync and cross-screen coordination. Trying to solve all of these generically with a single built-in message bus tends to make the assumptions vaguer instead.
+- When strong guarantees are needed, it is more natural for the user to have a dedicated design that makes explicit "who is connected to whom, with what lifetime, and with what redelivery policy".
+- When supplementing the description of `koma-message` in the future, the direction also prioritizes "making the constraints explicit", and does not assume extension into a general-purpose messaging infrastructure.
 
-## 関連
+## Related
 
-- [Event 用 MutableSharedFlow の設定方針](./2026-04-23-event-sharedflow-policy.md)
+- [Configuration policy for the MutableSharedFlow used for events](./2026-04-23-event-sharedflow-policy.md)

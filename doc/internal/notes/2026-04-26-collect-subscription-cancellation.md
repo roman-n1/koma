@@ -1,33 +1,33 @@
-# collectState / collectEvent の個別購読解除案
+# Proposal for individual unsubscription of collectState / collectEvent
 
-- 更新日: 2026-04-29
+- Updated: 2026-04-29
 
-## 背景
+## Background
 
-現状の `collectState()` / `collectEvent()` は、Store 内部の coroutine scope で collect を開始し、個別の解除手段を返さない。
-そのため、callback ベースの購読期間は実質的に Store の寿命と同一になっている。
-購読を止める手段は `Store.close()` のみであり、その場合は Store 全体が停止する。
+Currently `collectState()` / `collectEvent()` start collecting in the Store's internal coroutine scope and do not return any means of individual cancellation.
+As a result, the lifetime of a callback-based subscription is effectively the same as the lifetime of the Store.
+The only way to stop a subscription is `Store.close()`, which stops the whole Store.
 
-この前提は、次のような使い方では自然である。
+This premise is natural for usages such as the following.
 
-- 1 つの Store を 1 つの owner が持つ
-- owner が不要になったら Store ごと `close()` する
-- observer の寿命は常に Store と同じ
+- One Store is held by one owner
+- When the owner is no longer needed, the whole Store is `close()`d
+- The lifetime of an observer is always the same as the Store's
 
-一方で、次のような使い方では弱い。
+On the other hand, it is weak for usages such as the following.
 
-- Store は生かしたまま observer だけ付け外ししたい
-- 同じ Store を複数箇所が別々に監視する
-- `collectState()` や `collectEvent()` を重ねて呼ぶ可能性がある
-- `state` と `event` を別々の寿命で扱いたい
+- Attaching and detaching only observers while keeping the Store alive
+- Multiple places observing the same Store independently
+- `collectState()` or `collectEvent()` possibly being called more than once
+- Handling `state` and `event` with different lifetimes
 
-また、`Flow` を直接扱いにくいプラットフォーム向け API という前提では、呼び出し側に `CoroutineScope` を要求する案は採りづらい。
-検討対象は、callback ベース API のまま個別の購読解除を表現するかどうかである。
+Also, given the premise that this is an API for platforms where `Flow` is hard to use directly, requiring a `CoroutineScope` from the caller is hard to adopt.
+The subject of discussion is whether to express individual unsubscription while keeping the API callback-based.
 
-## 現在の考え
+## Current thinking
 
-個別解除を入れるなら、もっとも単純なのは `collectState()` / `collectEvent()` 自体が購読ハンドルを返す形にすること。
-既存 API と同名で戻り値を変えるため、これは破壊的変更になる。
+If individual cancellation is added, the simplest form is for `collectState()` / `collectEvent()` themselves to return a subscription handle.
+Since this changes the return type of an API with the same name, it is a breaking change.
 
 ```kt
 fun collectState(state: (S) -> Unit): Subscription
@@ -35,12 +35,12 @@ fun collectState(state: (S) -> Unit): Subscription
 fun collectEvent(event: (E) -> Unit): Subscription
 ```
 
-ハンドル型は技術的には `AutoCloseable` でも表現できるが、この文脈で欲しいのは「resource を閉じる」より「購読を解除する」意味である。
-そのため、意図の明確さでは専用の `Subscription` 型の方がよい。
-加えて、`collectState()` / `collectEvent()` は `Flow` を直接扱いにくいプラットフォーム向け callback API でもある。
-Kotlin から見れば `AutoCloseable` 自体は使えるし、実際に `Store` も `AutoCloseable` を実装している。
-しかし Swift / Obj-C などの非 Kotlin 呼び出し側まで考えると、`AutoCloseable` をそのまま返す形は API の意図が伝わりにくい。
-この文脈では JVM/Android 寄りの既存慣習よりも、「これは購読解除ハンドルである」と分かる専用型を返す方が cross-platform API surface として自然である。
+Technically the handle type could be expressed as `AutoCloseable`, but what we want in this context is the meaning "unsubscribe" rather than "close a resource".
+For clarity of intent, a dedicated `Subscription` type is therefore better.
+In addition, `collectState()` / `collectEvent()` are callback APIs for platforms where `Flow` is hard to use directly.
+From Kotlin, `AutoCloseable` itself is usable, and `Store` does in fact implement `AutoCloseable`.
+However, once non-Kotlin callers such as Swift / Obj-C are considered, returning `AutoCloseable` as-is makes the intent of the API hard to convey.
+In this context, returning a dedicated type that clearly says "this is an unsubscription handle" is more natural as a cross-platform API surface than following existing JVM/Android conventions.
 
 ```kt
 interface Subscription {
@@ -48,7 +48,7 @@ interface Subscription {
 }
 ```
 
-あるいは `Store.close()` と語彙を揃えたいなら、次のような形でもよい。
+Alternatively, if we want to align the vocabulary with `Store.close()`, the following form would also work.
 
 ```kt
 interface ObservationHandle {
@@ -56,35 +56,35 @@ interface ObservationHandle {
 }
 ```
 
-どちらにせよ、重要なのは `AutoCloseable` そのものを返すことではなく、
-callback ベース API に対応した Koma 独自の薄いハンドル型として意味を固定することである。
+Either way, what matters is not returning `AutoCloseable` itself but
+fixing the meaning as a thin Koma-specific handle type that corresponds to the callback-based API.
 
-実装方針は単純で、Store 内部 scope に購読ごとの child job を作り、その job を止めるハンドルを返すだけでよい。
+The implementation approach is simple: create a child job per subscription in the Store's internal scope and return a handle that stops that job.
 
-- `collectState()` は `state.collect` を開始する child job を作る
-- `collectEvent()` は `event.collect` を開始する child job を作る
-- `Subscription.cancel()` は対応する child job だけを cancel する
-- `Store.close()` は従来どおり Store scope ごと cancel するため、既存の購読もすべて止まる
+- `collectState()` creates a child job that starts `state.collect`
+- `collectEvent()` creates a child job that starts `event.collect`
+- `Subscription.cancel()` cancels only the corresponding child job
+- `Store.close()` cancels the whole Store scope as before, so all existing subscriptions stop as well
 
-この変更は「個別解除できるようにする」だけであり、Store の start semantics 自体は変えない。
-そのため、現状のままなら次が維持される。
+This change only "makes individual cancellation possible" and does not change the Store's start semantics themselves.
+So, as things stand, the following is preserved.
 
-- `collectState()` は Store start の trigger になる
-- `collectEvent()` は Store start の trigger にならない
+- `collectState()` is a trigger for Store start
+- `collectEvent()` is not a trigger for Store start
 
-したがって、この変更を入れても start semantics の非対称性は別途残る。
+Therefore, even with this change, the asymmetry in start semantics remains as a separate issue.
 
-また、個別解除が本当に必要かは利用前提次第である。
-Store の寿命と observer の寿命が常に一致する設計を前提にするなら、個別解除機能は不要であり、現状の contract を README と API comment に明示するだけでも十分である。
-逆に、Store を長寿命に保ちつつ observer を付け外しするユースケースを public API として支えるなら、個別解除は自然な機能になる。
+Also, whether individual cancellation is really needed depends on the usage assumptions.
+If the design assumes that the lifetime of the Store and the lifetime of observers always match, individual cancellation is unnecessary, and it is enough to state the current contract explicitly in the README and API comments.
+Conversely, if we want to support, as a public API, the use case of keeping a Store long-lived while attaching and detaching observers, individual cancellation becomes a natural feature.
 
-## 未解決事項
+## Open questions
 
-- 戻り値ハンドルの名前とメソッドを `Subscription.cancel()` / `ObservationHandle.close()` のどちらに寄せるか
-- `collectState()` / `collectEvent()` に個別解除を入れる release で、start semantics の非対称性も合わせて見直すか
-- callback ベース API に個別解除を入れる前提として、Store を複数 observer が監視するユースケースをどこまで正式に支えるか
-- README 上で、購読ハンドルの保持と解除タイミングをどのように説明するか
+- Whether to lean the name and method of the returned handle toward `Subscription.cancel()` or `ObservationHandle.close()`
+- Whether to also revisit the asymmetry in start semantics in the release that adds individual cancellation to `collectState()` / `collectEvent()`
+- As a premise for adding individual cancellation to the callback-based API, how far to officially support the use case of multiple observers observing a Store
+- How to explain, in the README, holding the subscription handle and the timing of cancellation
 
-## 関連
+## Related
 
-- [Store の開始タイミング policy 案](./2026-04-23-store-start-policy.md)
+- [Proposal for a Store start timing policy](./2026-04-23-store-start-policy.md)

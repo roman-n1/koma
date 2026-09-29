@@ -8,14 +8,19 @@ package koma.core
  * [PluginExecutionPolicy] before it continues processing. Long-running work in a hook can delay
  * Store processing. When work should continue in the background, start it from a hook using
  * [PluginScope.launch].
+ *
+ * Hook rounds never overlap: while the hooks for one action, state or event run, no hook for
+ * another one runs, even for events emitted concurrently from launched coroutines. A plugin may
+ * therefore keep plain state in its hooks. Within one round, [PluginExecutionPolicy.Concurrent]
+ * runs the hooks of different plugins concurrently.
  */
 interface Plugin<S : State, A : Action, E : Event> {
     /**
      * Called once when Store startup begins, before the initial `enter {}` processing starts.
      *
-     * When the initial `enter {}` fails, startup is retried on the next dispatch or [Store.start],
-     * but the plugins are not started again. Only when a plugin's own `onStart` throws is startup
-     * aborted before the plugins are marked as started, so every `onStart` runs again on the retry.
+     * When a plugin's `onStart` throws, startup is aborted and retried on the next dispatch or
+     * [Store.start], and every `onStart` runs again then. A failing initial `enter {}` does not
+     * retry startup: it is reported, and the Store counts as started.
      */
     suspend fun onStart(scope: PluginScope<S, A>, state: S) {}
 

@@ -1,32 +1,32 @@
-# State 遷移指定 API は `nextState {}` を正規系にする
+# The state transition API makes `nextState {}` the canonical form
 
-- 更新日: 2026-05-24
+- Updated: 2026-05-24
 
-## 背景
+## Background
 
-2026-04-30 時点では、State 遷移指定 API として `nextState(state)` と `nextStateBy { ... }` の 2 本を維持する判断をしていた。
+As of 2026-04-30, the decision was to keep both `nextState(state)` and `nextStateBy { ... }` as the state transition API.
 
-その後の利用と実装整理を踏まえると、両者はどちらも「handler の結果として採用する next state を 1 つ登録する」という同じ契約を表している。
-一方で、public surface が 2 本ある事で、README、KDoc、test、レビュー、会話のどれでも表記が混ざりやすい。
+Based on subsequent use and implementation cleanup, both express the same contract: "register one next state adopted as the result of the handler".
+On the other hand, having two forms on the public surface makes notations easy to mix in the README, KDoc, tests, reviews and conversations alike.
 
-また、Store 実装の本質は「最終的に採用する next state を 1 つ保持する」事であり、実装上の primitive も 1 つで十分である。
-このため、public API も 1 つの形に寄せ、その上で既存利用者向けには source compatibility を残す方が自然である。
+Also, the essence of the Store implementation is "hold one next state to finally adopt", and a single primitive is sufficient in the implementation.
+For this reason, it is more natural to converge the public API into one form as well, while retaining source compatibility for existing users.
 
-現在の意味論は次の通りである。
+The current semantics are as follows.
 
-- `nextState { ... }` を呼んでも、その場で `state` が更新されるわけではない
-- block の最後の式の値が next state として使われる
-- 同一 handler 内で複数回 next state を登録した場合は、最後に登録された値が採用される
+- Calling `nextState { ... }` does not update `state` on the spot
+- The value of the block's last expression is used as the next state
+- When a next state is registered multiple times within the same handler, the last registered value is adopted
 
-## 決定
+## Decision
 
-State 遷移指定 API の正規系は `nextState { ... }` とする。
+The canonical form of the state transition API is `nextState { ... }`.
 
-- README / KDoc / test では `nextState { ... }` を primary form として扱う
-- `nextState(state)` と `nextStateBy { ... }` は互換性のため残すが、deprecated alias とする
-- core の実装は `nextState(block)` だけを primitive とし、legacy API の委譲は `StoreScope` の default 実装で持つ
+- The README / KDoc / tests treat `nextState { ... }` as the primary form
+- `nextState(state)` and `nextStateBy { ... }` are kept for compatibility but are deprecated aliases
+- The core implementation has only `nextState(block)` as the primitive, and delegation from the legacy APIs is held in the default implementation of `StoreScope`
 
-block の基本形は次の通りとする。
+The basic form of the block is as follows.
 
 ```kt
 nextState { AppState.Loading }
@@ -39,16 +39,16 @@ nextState {
 }
 ```
 
-block に state receiver や `it` のような引数は渡さない。
-現在の state を参照したい場合は、scope が持つ `state` をそのまま使う。
+No state receiver or argument such as `it` is passed to the block.
+To refer to the current state, use the `state` held by the scope as is.
 
-## 補足
+## Notes
 
-- 単純な遷移も複雑な遷移も `nextState { ... }` の 1 形に寄せる事で、public surface を絞れる
-- `nextState(state)` は 1 行で素直に読める利点があったが、single-expression block でも同じ内容を十分自然に書ける
-- deprecated alias には `ReplaceWith` を付け、既存 call site を段階的に移行しやすくする
-- `setState(...)` や `updateState { ... }` のような別名は引き続き採用しない。意味論は「state を即時更新する」のではなく、「handler の結果として next state を 1 つ選ぶ」である
+- Converging both simple and complex transitions into the single form `nextState { ... }` narrows the public surface
+- `nextState(state)` had the advantage of reading plainly in one line, but the same content can be written naturally enough as a single-expression block
+- Deprecated aliases carry `ReplaceWith`, making it easier to migrate existing call sites gradually
+- Alternative names such as `setState(...)` or `updateState { ... }` continue not to be adopted. The semantics is not "update the state immediately" but "choose one next state as the result of the handler"
 
-## 関連
+## Related
 
-- [State 遷移指定 API は `nextState()` と `nextStateBy {}` の 2 本を維持する](./2026-04-30-next-state-dual-api.md)
+- [The state transition API keeps both `nextState()` and `nextStateBy {}`](./2026-04-30-next-state-dual-api.md)

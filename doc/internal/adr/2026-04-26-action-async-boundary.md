@@ -1,37 +1,37 @@
-# `action` の async 境界は明示のまま維持する
+# The async boundary of `action` stays explicit
 
-- 更新日: 2026-04-30
+- Updated: 2026-04-30
 
-## 背景
+## Background
 
-`action {}` は現状、Store の直列 pipeline 上で実行される handler であり、必要に応じて `action { launch { ... } }` により state scope にぶら下がる非同期処理を開始できる。
+`action {}` is currently a handler executed on the Store's serial pipeline, and when needed, `action { launch { ... } }` can start asynchronous work that hangs off the state scope.
 
-このとき、次の 2 案を検討した。
+The following two proposals were considered.
 
-- `action {}` を default で `action { launch { ... } }` 相当にし、利用者の `dispatch()` を常に並行に処理しやすくする案
-- `action {}` と `action { launch { ... } }` の二段構えは維持しつつ、`action {}` 直下では外部 I/O や長い suspend を書かせない方向へ寄せる案
+- Make `action {}` equivalent to `action { launch { ... } }` by default, so that users' `dispatch()` calls are always easy to process concurrently
+- Keep the two-tier structure of `action {}` and `action { launch { ... } }`, while steering users away from writing external I/O or long suspends directly inside `action {}`
 
-前者は Store を塞ぎにくくするが、後者は async 境界を明示したまま保ちやすい。
-一方で、後者を型で強制するには既存 API の breaking change が必要になる可能性がある。
+The former makes it harder to block the Store, while the latter makes it easier to keep the async boundary explicit.
+On the other hand, enforcing the latter through types might require a breaking change to the existing API.
 
-## 決定
+## Decision
 
-`action` の async 境界は、当面、明示の `launch {}` によって表す形を維持する。
+For the time being, the async boundary of `action` continues to be expressed through an explicit `launch {}`.
 
-- `action {}` を default で async / parallel handler にはしない
-- `action {}` と `action { launch { ... } }` の二段構えは維持する
-- 通常の `action {}` は、短く終わる直列・原子的な store work として扱う
-- 外部 I/O、長い待ち時間、cancellation が必要な仕事、state に所有させたい継続処理は `launch {}` に出す前提で整理する
-- ただし現時点では、`action {}` を non-suspend に変える breaking change は入れず、まずは設計指針とドキュメントでこの運用を明確にする
+- `action {}` does not become an async / parallel handler by default
+- The two-tier structure of `action {}` and `action { launch { ... } }` is kept
+- An ordinary `action {}` is treated as short-lived, serial and atomic store work
+- External I/O, long waits, work that requires cancellation, and continuing work that should be owned by the state are assumed to be moved out to `launch {}`
+- However, at this point no breaking change that makes `action {}` non-suspend is introduced; this practice is first made clear through design guidelines and documentation
 
-## 補足
+## Notes
 
-- `action {}` を default async にすると、state transition の順序、`dispatchAndWait()` の完了単位、middleware の前後関係、`PendingActionPolicy` の意味が読みづらくなる。
-- Koma では「action は処理開始のきっかけであり、継続中の仕事の所有者は state」という整理を取っている。そのため、継続する仕事の入口を `launch {}` として明示する方が設計全体と整合する。
-- 一方で、`action {}` 直下で長い suspend や外部 I/O を許すと、Store 全体を塞ぎやすい。この問題は実際に起こりうるが、解決策として default async 化を採るのは副作用が大きい。
-- `action {}` を non-suspend にする案は思想としては筋がよいが、現状の `event()` を含む DSL 形状と衝突しやすく、導入コストに対して runtime 上の利益は限定的である。
-- `launch {}` を安易に増やすと、複数 async job 間の整合性、古い結果の採用防止、event 発火順の読みやすさなどを利用者が管理する負担が増える。したがって、`launch {}` は必要な箇所でだけ明示的に使う escape hatch として残す。
+- Making `action {}` async by default makes the order of state transitions, the completion unit of `dispatchAndWait()`, the before/after relationship of middleware, and the meaning of `PendingActionPolicy` harder to read.
+- Koma takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". Therefore, marking the entry point of continuing work explicitly as `launch {}` is more consistent with the overall design.
+- On the other hand, allowing long suspends or external I/O directly inside `action {}` makes it easy to block the whole Store. This problem can actually occur, but adopting default async as the solution has large side effects.
+- The proposal to make `action {}` non-suspend is sound as a philosophy, but it tends to conflict with the current DSL shape, including `event()`, and the runtime benefit is limited relative to the cost of introduction.
+- Adding `launch {}` carelessly increases the burden on users of managing consistency between multiple async jobs, preventing stale results from being adopted, and keeping event firing order readable. Therefore, `launch {}` remains an escape hatch that is used explicitly only where needed.
 
-## 関連
+## Related
 
-- [非 `launch` 処理には cancellation API を入れない](./2026-04-26-non-launch-cancellation.md)
+- [No cancellation API for non-`launch` work](./2026-04-26-non-launch-cancellation.md)

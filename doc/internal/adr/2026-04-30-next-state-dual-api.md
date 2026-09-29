@@ -1,46 +1,46 @@
-# State 遷移指定 API は `nextState()` と `nextStateBy {}` の 2 本を維持する
+# The state transition API keeps both `nextState()` and `nextStateBy {}`
 
-- 更新日: 2026-05-24
+- Updated: 2026-05-24
 
 > [!NOTE]
-> この ADR の決定は、[State 遷移指定 API は `nextState {}` を正規系にする](./2026-05-24-nextstate-block-api.md) で supersede された。
-> 現在の public API では `nextState { ... }` が正規系であり、`nextState(state)` と `nextStateBy { ... }` は deprecated alias として互換性のために残している。
+> The decision in this ADR has been superseded by [The state transition API makes `nextState {}` the canonical form](./2026-05-24-nextstate-block-api.md).
+> In the current public API, `nextState { ... }` is the canonical form, and `nextState(state)` and `nextStateBy { ... }` are kept as deprecated aliases for compatibility.
 
-## 背景
+## Background
 
-Store DSL では、handler の結果として採用する次の state を指定する API をどう表現するかを整理したい。
+In the Store DSL, we want to sort out how to express the API that specifies the next state adopted as the result of a handler.
 
-検討対象は主に次の点である。
+The main points under consideration are the following.
 
-- `nextState(state)` と `nextStateBy { ... }` の 2 本を維持するか、1 本に寄せるか
-- `nextStateBy {}` の block に state receiver を渡すか
-- `nextStateBy {}` の block に `it` などの引数を渡すか
-- `nextState` 系ではなく `setState` / `updateState` のような名前へ寄せるか
-- `newState = ...` や `state.update { ... }` のような書き方へ寄せるか
+- Whether to keep both `nextState(state)` and `nextStateBy { ... }`, or consolidate into one
+- Whether to pass a state receiver to the `nextStateBy {}` block
+- Whether to pass an argument such as `it` to the `nextStateBy {}` block
+- Whether to move to names like `setState` / `updateState` instead of the `nextState` family
+- Whether to move to notations like `newState = ...` or `state.update { ... }`
 
-この判断では、呼び出し側の読みやすさだけでなく、実際の意味論との整合も重要になる。
+In this decision, not only readability at the call site but also consistency with the actual semantics matters.
 
-現在の Store 実装は、handler の途中で state を逐次更新しているわけではない。
-各 handler は内部で「最終的に採用する next state」を 1 つ保持し、handler 終了時にその値を採用する。
-そのため、`nextState(...)` や `nextStateBy { ... }` を同じ handler 内で複数回呼んだ場合も、途中の state が順に反映されるのではなく、最後に指定された値が採用される。
+The current Store implementation does not update the state incrementally during a handler.
+Each handler internally holds a single "next state to finally adopt", and that value is adopted when the handler finishes.
+Therefore, even when `nextState(...)` or `nextStateBy { ... }` is called multiple times within the same handler, the intermediate states are not applied in turn; the last specified value is adopted.
 
-この意味論を踏まえると、即時反映や累積更新を強く連想させる名前や block 形は避けた方がよい。
+Given these semantics, names and block forms that strongly suggest immediate application or cumulative updates should be avoided.
 
-## 決定
+## Decision
 
-State 遷移指定 API は、引き続き次の 2 本を維持する。
+The state transition API continues to keep the following two.
 
 - `nextState(state)`
 - `nextStateBy { ... }`
 
-それぞれの役割は次のとおりとする。
+Their respective roles are as follows.
 
-- `nextState(state)` は、すでに次の state 値が手元にある場合や、1 行で素直に書ける遷移に使う。
-- `nextStateBy { ... }` は、中間変数や分岐を書きながら次の state を組み立てる場合に使う。
+- `nextState(state)` is used when the next state value is already at hand, or for transitions that can be written plainly in one line.
+- `nextStateBy { ... }` is used when building the next state while writing intermediate variables or branches.
 
-`nextStateBy {}` の block には state receiver を渡さない。
-また、`it` のような引数も基本形にはしない。
-block 内で現在の state を参照したい場合は、scope が持つ `state` をそのまま使う。
+No state receiver is passed to the `nextStateBy {}` block.
+Also, an argument such as `it` is not part of the basic form.
+To refer to the current state inside the block, use the `state` held by the scope as is.
 
 ```kt
 nextState(AppState.Loading)
@@ -53,21 +53,21 @@ nextStateBy {
 }
 ```
 
-`nextState { ... }` のような block 版への統一は行わない。
-また、`setState(...)` や `updateState { ... }` への改名も行わない。
-`newState = ...` や `state.update { ... }` のような別表現も採用しない。
+No unification into a block version such as `nextState { ... }` is done.
+Also, no renaming to `setState(...)` or `updateState { ... }` is done.
+Alternative notations such as `newState = ...` or `state.update { ... }` are not adopted either.
 
-複数回の state 指定が起きた場合の挙動は、現状どおり後勝ちとする。
-つまり、同一 handler 内で複数回 `nextState(...)` / `nextStateBy { ... }` を呼んだ場合は、最後に指定された値だけが採用される。
+The behavior when the state is specified multiple times remains last-wins, as it is now.
+That is, when `nextState(...)` / `nextStateBy { ... }` is called multiple times within the same handler, only the last specified value is adopted.
 
-## 補足
+## Notes
 
-- `nextStateBy {}` の `by` は、「ここは別の DSL scope ではなく、その場で次の state を Kotlin のコードで組み立てる場所」という意図を表す。`nextState {}` だと `state {}` や `action {}` と同じ見た目になり、設定用 DSL block のように見えやすい。
-- state receiver を渡す案は、`copy(...)` を短く書ける利点はあるが、`action`、`error`、`event()`、`clearPendingActions()` など外側 scope のメンバとの境界が曖昧になりやすい。Koma のように scope が多い DSL では、暗黙の `this` を増やさない方が読みやすい。
-- `it` や明示引数を使う案もあるが、`state.copy(...)` の方が「何を元に次の state を作っているか」が直接読み取りやすい。block の役割は計算であり、引数経由の短縮を優先しない。
-- `setState(...)` は即時反映に、`updateState { ... }` は逐次的または累積的な更新に読まれやすい。しかし実際の意味論は「handler の結果として採用する next state を 1 つ選ぶ」であり、これらの名前は実態より強い期待を生みやすい。
-- `newState = ...` は「普通の Kotlin の代入」に見える利点はあるが、公開 DSL としては mutable な結果 slot をそのまま見せることになる。`newState` を途中で読めるのか、複数回代入した場合はどうなるのか、未代入は何を意味するのかといった契約が API ににじみやすいため採用しない。
-- `state.update { ... }` は、現在の `state` をその場で mutate する、あるいは `MutableStateFlow.update` のように現在値へ順次更新を積む API に見えやすい。しかし Koma の `state` は scope が持つ現在 state の snapshot 値であり、意味論は「state 自体を更新する」のではなく「handler の結果として next state を選ぶ」である。このため `state.update { ... }` は実際の挙動よりも可変オブジェクト操作に近く読まれやすく、採用しない。
-- 後勝ちは積極的に活用させたい機能ではないが、分岐や早期 return を含む handler で最終結果を自然に決められる fallback semantics としては妥当である。必要なら README / KDoc / test でこの挙動を明記する。
-- `先勝ち` も採用しない。通常の Kotlin コードでは、上から順に読んで後ろの代入や指定が最終結果になると受け取られやすい。`nextState(A)` の後に `nextState(B)` が書かれていても `A` が採用される設計は、後ろの記述が見えているのに効かないため、`後勝ち` よりも驚きが大きい。もし複数指定をより厳しく扱いたいなら、無言の `先勝ち` にするより、重複指定をエラーとして検知する方向の方が自然である。
-- `state<S2>` / `action<A2>` の handler 解決は registration order による先勝ちである一方、選ばれた handler の中での `nextState(...)` / `nextStateBy { ... }` は後勝ちになる。この組み合わせは初見では少し引っかかりうるが、両者は別レイヤーの挙動である。前者は「どの rule を採用するか」という routing であり、後者は「採用された rule の結果を何にするか」という result selection である。同じ勝ち方に無理に揃えるより、routing は先勝ち、結果指定は後勝ちとして、それぞれの層で自然な振る舞いを採る方が分かりやすい。
+- The `by` in `nextStateBy {}` expresses the intent that "this is not a separate DSL scope but a place where the next state is built on the spot in Kotlin code". With `nextState {}`, it would look the same as `state {}` or `action {}`, and tend to look like a configuration DSL block.
+- Passing a state receiver has the advantage of writing `copy(...)` concisely, but it tends to blur the boundary with members of the outer scope such as `action`, `error`, `event()` and `clearPendingActions()`. In a DSL with many scopes like Koma's, not adding implicit `this` is more readable.
+- Using `it` or an explicit argument is also an option, but `state.copy(...)` makes it more directly readable "what the next state is built from". The block's role is computation, and shortening via a parameter is not prioritized.
+- `setState(...)` tends to be read as immediate application, and `updateState { ... }` as sequential or cumulative updates. However, the actual semantics is "choose one next state adopted as the result of the handler", and these names tend to create stronger expectations than the reality.
+- `newState = ...` has the advantage of looking like "ordinary Kotlin assignment", but as a public DSL it would expose a mutable result slot as is. Contracts such as whether `newState` can be read midway, what happens when it is assigned multiple times, and what an unassigned value means tend to leak into the API, so it is not adopted.
+- `state.update { ... }` tends to look like an API that mutates the current `state` in place, or accumulates sequential updates onto the current value like `MutableStateFlow.update`. However, Koma's `state` is a snapshot value of the current state held by the scope, and the semantics is not "update the state itself" but "choose the next state as the result of the handler". For this reason `state.update { ... }` tends to be read as closer to mutable object manipulation than the actual behavior, and is not adopted.
+- Last-wins is not a feature we want to actively encourage, but as fallback semantics that naturally determines the final result in handlers with branches or early returns, it is reasonable. If needed, this behavior is stated explicitly in the README / KDoc / tests.
+- `first-wins` is not adopted either. In ordinary Kotlin code, reading top to bottom, a later assignment or specification is naturally taken as the final result. A design where `A` is adopted even though `nextState(B)` is written after `nextState(A)` is more surprising than `last-wins`, because the later statement is visible yet has no effect. If multiple specifications should be treated more strictly, detecting duplicate specification as an error is more natural than silent `first-wins`.
+- While handler resolution for `state<S2>` / `action<A2>` is first-wins by registration order, `nextState(...)` / `nextStateBy { ... }` inside the selected handler is last-wins. This combination may feel slightly odd at first, but the two are behaviors at different layers. The former is routing, "which rule to adopt", while the latter is result selection, "what the result of the adopted rule should be". Rather than forcing them into the same winning rule, it is clearer to adopt what is natural at each layer: first-wins for routing and last-wins for result specification.

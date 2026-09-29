@@ -191,19 +191,19 @@ class StoreRecorderTest {
     }
 
     /**
-     * A startup whose initial `enter {}` fails is retried on the next dispatch; the start state is
-     * recorded once, not once per attempt.
+     * The start state is recorded once even when the initial `enter {}` fails: the Store counts as
+     * started, and later dispatches do not start it again.
      */
     @Test
-    fun recorder_recordsTheStartStateOnceWhenStartupIsRetried() = runTest(testDispatcher) {
+    fun recorder_recordsTheStartStateOnceWhenTheInitialEnterFails() = runTest(testDispatcher) {
         var enterCalls = 0
         val store: Store<AppState, AppAction, AppEvent> = Store(AppState.Loading) {
             coroutineContext(Dispatchers.Unconfined)
             exceptionHandler(koma.core.ExceptionHandler.Ignore)
             state<AppState.Loading> {
                 enter {
-                    if (++enterCalls == 1) throw IllegalStateException("transient")
-                    nextState { AppState.Main(count = 0) }
+                    enterCalls++
+                    throw IllegalStateException("boot failed")
                 }
             }
             state<AppState.Main> {
@@ -212,10 +212,11 @@ class StoreRecorderTest {
         }
         val recorder = store.createRecorder()
 
-        store.dispatchAndAwait(AppAction.Increment) // dropped: startup fails
+        store.dispatchAndAwait(AppAction.Increment)
         store.dispatchAndAwait(AppAction.Increment)
 
-        assertEquals(listOf(AppState.Loading, AppState.Main(0), AppState.Main(1)), recorder.states)
+        assertEquals(1, enterCalls)
+        assertEquals(listOf(AppState.Loading), recorder.states)
         store.close()
     }
 }

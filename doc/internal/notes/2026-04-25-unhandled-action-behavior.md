@@ -1,84 +1,84 @@
-# Unhandled action behavior の整理
+# Summary of unhandled action behavior
 
-- 更新日: 2026-04-25
+- Updated: 2026-04-25
 
-## 背景
+## Background
 
-現状の Store は、dispatch された action に対して現在の `state` と `action` の両方にマッチする handler を 1 件だけ選んで実行する。
+Currently, for a dispatched action, the Store selects and executes exactly one handler that matches both the current `state` and the `action`.
 
-action handler は登録順に評価され、最初にマッチしたものだけが採用される。
-マッチする handler が 1 件もなければ、action はそのまま何もせず終わり、state も変わらない。
+Action handlers are evaluated in registration order, and only the first match is adopted.
+If no handler matches at all, the action simply ends without doing anything, and the state does not change.
 
-この挙動自体は、state machine としては不自然ではない。
-UI の都合や非同期処理のタイミングにより、「今の state では無効な action」が届くことは普通に起こりうる。
+This behavior itself is not unnatural for a state machine.
+Because of UI circumstances or the timing of asynchronous processing, it is quite normal for "an action that is invalid in the current state" to arrive.
 
-一方で、今の挙動だと次の 2 つが外から見分けにくい。
+On the other hand, with the current behavior the following two cases are hard to tell apart from the outside.
 
-- その state では本当に ignore されてよい action
-- Store DSL の書き漏れや、複数マッチ時の順序違い、想定違いにより accidental に ignore されている action
+- An action that may genuinely be ignored in that state
+- An action that is accidentally ignored because of an omission in the Store DSL, a wrong order when multiple handlers match, or a mistaken assumption
 
-## 問題整理
+## Problem summary
 
-`Unhandled action behavior` で主に問題になるのは、runtime policy が足りないことではなく、次の診断ギャップである。
+The main issue with `Unhandled action behavior` is not a missing runtime policy but the following diagnostic gaps.
 
-### 1. `unhandled` と `handled だが state unchanged` が外から区別しにくい
+### 1. `unhandled` and `handled but state unchanged` are hard to distinguish from the outside
 
-現状では、未処理 action は単に state unchanged として観測される。
-しかし state unchanged は unhandled のときだけでなく、次のような場面でも普通に起こる。
+Currently, an unhandled action is simply observed as state unchanged.
+But state unchanged occurs not only when unhandled, but also in ordinary situations such as the following.
 
-- handler はマッチしたが `nextState { ... }` を呼ばない
-- handler は event だけを emit する
-- handler は `clearPendingActions()` などの副作用だけを行う
+- A handler matched but does not call `nextState { ... }`
+- A handler only emits an event
+- A handler only performs side effects such as `clearPendingActions()`
 
-このため、利用者からは「未処理だった」のか「処理されたが state は変わらなかった」のかが分かりにくい。
+Because of this, it is hard for the user to tell whether the action "was unhandled" or "was handled but the state did not change".
 
-### 2. DSL surface が first-match-wins を強く伝えない
+### 2. The DSL surface does not strongly convey first-match-wins
 
-現在の `state<S2>` / `action<A2>` / `anyState` / `anyAction` は見た目が宣言的であり、条件に合う handler 群を追加しているように読みやすい。
-しかし実際の解決は registration order に従う first match wins であり、意味論としては ordered rule chain に近い。
+The current `state<S2>` / `action<A2>` / `anyState` / `anyAction` look declarative, and are easy to read as adding a set of handlers that match the conditions.
+However, the actual resolution is first match wins according to registration order, and semantically it is closer to an ordered rule chain.
 
-特に `anyAction` や `anyState` は、「広い条件の handler を追加している」ように見えやすい。
-その一方で、実際には置き方によって後続 handler を覆いうる。
+`anyAction` and `anyState` in particular easily look like "adding a handler with a broad condition".
+In reality, however, depending on where they are placed, they can cover the handlers that follow.
 
-このため、利用者は additive なつもりで DSL を書いたのに、実際には先勝ちの順序依存が効いている、というズレが起きやすい。
+As a result, it is easy for a mismatch to occur where the user wrote the DSL with additive intent, while in reality first-wins order dependence is in effect.
 
-### 3. 複数マッチの意味づけはライブラリ側では決められない
+### 3. The meaning of multiple matches cannot be decided on the library side
 
-複数の handler が同時にマッチする場合も、それがミスなのか利用者が意図した overlap なのかはライブラリ側だけでは判定できない。
-ライブラリが分かるのは、「0 件だった」「1 件だった」「2 件以上だった」「実際に選ばれたのはどれか」という事実までである。
+When multiple handlers match at the same time, whether that is a mistake or an overlap the user intended cannot be determined by the library alone.
+What the library can know is only the facts: "there were 0", "there was 1", "there were 2 or more", and "which one was actually selected".
 
-したがって、主眼は runtime semantics の変更ではなく diagnostics/debug の不足にある。
-また、action の dispatch は非同期であり、production runtime の一般機能として `IGNORE / LOG / THROW` のような policy を増やすと、次の問題がある。
+Therefore, the main focus is not a change in runtime semantics but the lack of diagnostics/debug support.
+Also, dispatching an action is asynchronous, and adding a policy such as `IGNORE / LOG / THROW` as a general feature of the production runtime has the following problems.
 
-- `THROW` はどの call site にどう失敗を返すかが分かりにくい
-- `LOG` は正常な ignore まで大量に拾ってノイズになりやすい
-- state machine として自然な ignore を runtime policy で過度に意味づけしやすい
+- With `THROW`, it is unclear how and to which call site the failure is returned
+- `LOG` easily becomes noise, picking up even normal ignores in large quantities
+- It is easy to over-assign meaning through a runtime policy to an ignore that is natural for a state machine
 
-## 現在の考え
+## Current thinking
 
-`UnhandledActionPolicy` のような一般 runtime policy は入れず、default behavior は現状の ignore のまま維持するのがよい。
+It is better not to add a general runtime policy such as `UnhandledActionPolicy`, and to keep the default behavior as the current ignore.
 
-代わりに、必要なチームだけが test/debug 時に action routing を見える化できる opt-in diagnostics を用意する。
-さらに、低コストな改善として DSL の意味論を README / KDoc で今より明示した方がよい。
+Instead, provide opt-in diagnostics so that only the teams that need it can make action routing visible at test/debug time.
+Furthermore, as a low-cost improvement, the semantics of the DSL should be stated more explicitly than now in the README / KDoc.
 
-優先順としては、次の並びが自然である。
+In terms of priority, the following order is natural.
 
-### 1. README / KDoc で first-match-wins を明示する
+### 1. State first-match-wins explicitly in the README / KDoc
 
-最小の改善として、少なくとも次は明記した方がよい。
+As the minimum improvement, at least the following should be stated explicitly.
 
-- action handler の解決は registration order に従う
-- 複数マッチした場合は先頭 1 件だけが採用される
-- `anyAction` / `anyState` は additive な意味ではなく、置き方によって後続 handler を覆いうる
-- fallback として使う場合は末尾に置く方が分かりやすい
+- Action handler resolution follows registration order
+- When multiple handlers match, only the first one is adopted
+- `anyAction` / `anyState` do not have additive meaning, and depending on their placement can cover the handlers that follow
+- When used as a fallback, placing them at the end is clearer
 
-これだけでも、「宣言的に見える DSL」と「実際は先勝ちの ordered rules」というズレを多少は埋められる。
+This alone somewhat closes the gap between "a DSL that looks declarative" and "actually first-wins ordered rules".
 
-### 2. `:koma-test` の routing diagnostics
+### 2. Routing diagnostics in `:koma-test`
 
-dispatch せずに、「この `state` と `action` で何件 handler がマッチするか」を確認する API を用意する。
+Provide an API that checks "how many handlers match for this `state` and `action`" without dispatching.
 
-例:
+Example:
 
 ```kt
 fun <S : State, A : Action, E : Event> Store<S, A, E>.diagnoseActionMatches(
@@ -91,23 +91,23 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.diagnoseActionMatc
 ): ActionMatchDiagnostics<S, A>
 ```
 
-`matchedHandlerCount`、`matchedHandlerIndices`、`selectedHandlerIndex` を返せば、次の区別ができる。
+Returning `matchedHandlerCount`, `matchedHandlerIndices` and `selectedHandlerIndex` allows the following distinctions.
 
-- `0 件`: unhandled
-- `1 件`: 一意に handled
-- `2 件以上`: 複数マッチがある
+- `0`: unhandled
+- `1`: uniquely handled
+- `2 or more`: there are multiple matches
 
-ここで重要なのは、`2 件以上` をライブラリが直ちに異常と断定しないことである。
-複数マッチは accidental な overlap かもしれないし、利用者が意図した fallback 構成かもしれない。
-この API は判定ではなく観測結果を返すものとして扱うのがよい。
+What matters here is that the library does not immediately declare `2 or more` to be abnormal.
+Multiple matches may be an accidental overlap, or may be a fallback configuration the user intended.
+This API should be treated as returning an observation, not a verdict.
 
-これは runtime behavior を変えず、routing 定義の意図を直接テストできる。
+This does not change runtime behavior and allows the intent of the routing definition to be tested directly.
 
-### 3. `:koma-test` の dispatch 時 assert
+### 3. Assert at dispatch time in `:koma-test`
 
-dispatch と同時に、想定したマッチ件数を assert する API を用意する。
+Provide an API that asserts the expected number of matches at the same time as dispatching.
 
-例:
+Example:
 
 ```kt
 suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndWait(
@@ -116,7 +116,7 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndWait(
 )
 ```
 
-または名前を分けて、
+Or, with a separate name,
 
 ```kt
 suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndRequireMatchCount(
@@ -125,21 +125,21 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndRequire
 ): ActionDispatchDiagnostics<S, A>
 ```
 
-のようにしてもよい。
+would also work.
 
-これは dispatch 前に現在の `state` と `action` に対する match count を確認し、期待と違えば `AssertionError` で落とす。
-その後に通常の `dispatchAndWait()` を実行する。
+This checks the match count for the current `state` and `action` before dispatching, and fails with an `AssertionError` if it differs from the expectation.
+After that, it runs the normal `dispatchAndWait()`.
 
-これは routing diagnostics の convenience として位置づけるのが自然であり、まず純粋な観測 API を持ったうえで載せる方が整理しやすい。
+It is natural to position this as a convenience on top of the routing diagnostics, and it is easier to organize if it is layered on top of a pure observation API that exists first.
 
-test では `expectedMatchCount = 1` が最もよく使われる想定である。
-`0` を指定すれば「この action は今の state では未処理のはず」を確認できる。
+In tests, `expectedMatchCount = 1` is expected to be the most commonly used.
+Specifying `0` allows checking that "this action should be unhandled in the current state".
 
-### 4. core の opt-in reporter
+### 4. Opt-in reporter in core
 
-test 専用 API とは別に、debug build や検証環境でだけ未処理 action を報告したい場合に備えて、core に opt-in reporter を用意する案はある。
+Separately from the test-only API, there is a proposal to provide an opt-in reporter in core, for cases where unhandled actions should be reported only in debug builds or verification environments.
 
-例:
+Example:
 
 ```kt
 fun <S : State, A : Action, E : Event> StoreBuilder<S, A, E>.unhandledActionReporter(
@@ -151,64 +151,64 @@ fun <S : State, A : Action, E : Event> StoreOverridesBuilder<S, A, E>.unhandledA
 )
 ```
 
-用途は logging、debug fail-fast、telemetry などである。
-ただしこれは `unhandled` だけを扱うものであり、複数マッチや shadowing の診断までは扱えない。
-そのため優先度は `:koma-test` の match diagnostics より下でよい。
+Use cases are logging, debug fail-fast, telemetry and so on.
+However, this handles only `unhandled`, and cannot cover diagnostics of multiple matches or shadowing.
+Its priority can therefore be lower than the match diagnostics in `:koma-test`.
 
-## 補足
+## Notes
 
-- `StoreObserver` に action diagnostics を足す案は、public surface を広げるわりに責務が重くなりやすい。
-- middleware で unhandled を後付け検知する案は、handled だが state unchanged のケースと区別しにくい。
-- `unhandled` と `複数マッチ` はどちらもライブラリが意味づけまで決めるべきではなく、まず事実を観測可能にする方がよい。
+- The proposal to add action diagnostics to `StoreObserver` easily makes the responsibility heavy relative to how much it widens the public surface.
+- The proposal to detect unhandled after the fact in middleware is hard to distinguish from the case of handled but state unchanged.
+- For both `unhandled` and `multiple matches`, the library should not go as far as deciding the meaning; it is better to first make the facts observable.
 
-## 関連する別方向の案
+## Related proposals in other directions
 
-以下は同じ曖昧さを別の層で扱う案だが、#175 の主対象である runtime/test diagnostics からは少し外れる。
+The following are proposals that handle the same ambiguity at a different layer, but they fall somewhat outside the main subject of #175, which is runtime/test diagnostics.
 
-### 型でのコンパイル時解決
+### Compile-time resolution through types
 
-完全な compile-time 解決は難しい。
+Complete compile-time resolution is difficult.
 
-理由は、action handler の解決が `Action` の型だけではなく、「dispatch 時点の current state」に依存するためである。
-同じ `Action` でも、どの state にいるかによって `0 件 / 1 件 / 2 件以上` が変わりうる。
+The reason is that action handler resolution depends not only on the type of the `Action` but also on "the current state at the time of dispatch".
+For the same `Action`, the result can be `0 / 1 / 2 or more` depending on which state we are in.
 
-このため、通常の `Store.dispatch(action)` を前提にしたまま compiler に一意解決を求めるのは難しい。
-もし compile-time で厳密に扱いたいなら、state-scoped な dispatch API に作り替えるか、KSP / compiler plugin により別の型付き API を生成する方向が必要になりやすい。
+For this reason, it is hard to ask the compiler for unique resolution while keeping the ordinary `Store.dispatch(action)` as the premise.
+If we wanted to handle this strictly at compile time, it would likely require rebuilding into a state-scoped dispatch API, or generating a separate typed API via KSP / a compiler plugin.
 
-これは現在の Store DSL の延長というより、別の設計に近い。
+This is closer to a different design than an extension of the current Store DSL.
 
-### Store の `build()` 時の検証
+### Validation at Store `build()` time
 
-`build()` 時の検証は、型による compile-time 解決よりは現実的である。
+Validation at `build()` time is more realistic than compile-time resolution through types.
 
-現在の DSL は `state<S2>` / `anyState` と `action<A2>` / `anyAction` を最終的に predicate として登録している。
-ただし現状の実装では、build 時に残っているのは主に predicate ラムダであり、「どの matcher から来たか」の高水準情報は保持していない。
+The current DSL ultimately registers `state<S2>` / `anyState` and `action<A2>` / `anyAction` as predicates.
+However, in the current implementation, what remains at build time is mainly the predicate lambdas, and the higher-level information about "which matcher it came from" is not retained.
 
-そのため、`build()` 時に検証するなら、predicate だけでなく次のような matcher metadata を保持する必要がある。
+Therefore, to validate at `build()` time, matcher metadata such as the following needs to be retained in addition to the predicates.
 
 - `AnyState`
 - `StateType(S2)`
 - `AnyAction`
 - `ActionType(A2)`
 
-これを持てば、`build()` 時に次のような検査はしやすくなる。
+With this, checks such as the following become easier at `build()` time.
 
-- 複数マッチが起きうる組み合わせがあるか
-- 先行 handler によって後続 handler が覆われうるか
-- 選択順が registration order に依存している箇所があるか
+- Whether there are combinations in which multiple matches can occur
+- Whether a subsequent handler can be covered by a preceding handler
+- Whether there are places where the selection order depends on registration order
 
-ただし、ここでもライブラリが分かるのは構造上の事実までである。
-それが accidental な overlap なのか、利用者が意図した fallback 構成なのかまでは決められない。
+However, here too what the library can know is only the structural facts.
+It cannot decide whether that is an accidental overlap or a fallback configuration the user intended.
 
-したがって、`build()` 時の検証を入れる場合でも、最初は hard error より warning や debug assertion に寄せる方が自然である。
+Therefore, even if validation at `build()` time is added, it is more natural to lean toward warnings or debug assertions rather than hard errors at first.
 
-## 未解決事項
+## Open questions
 
-- `ActionMatchDiagnostics` / `ActionDispatchDiagnostics` にどこまで情報を載せるかは未決定。少なくとも `matchedHandlerCount` と `selectedHandlerIndex` は必要になりやすい。
-- `dispatchAndWait(expectedMatchCount)` のような assert API を最初から同時に入れるか、routing diagnostics の上に後から載せるかは未決定。
-- README / KDoc では `first match wins` をそのまま用語として出すか、`registration order` 中心に説明するかは未決定。
-- core reporter を入れる場合、reporter が例外を投げたときに `recover{}` ではなく `ExceptionHandler` 側へ流す整理でよいかは確認が必要。
+- How much information to put in `ActionMatchDiagnostics` / `ActionDispatchDiagnostics` is undecided. At least `matchedHandlerCount` and `selectedHandlerIndex` are likely to be needed.
+- Whether to add an assert API such as `dispatchAndWait(expectedMatchCount)` at the same time from the start, or to layer it on top of the routing diagnostics later, is undecided.
+- Whether to present `first match wins` as a term as-is in the README / KDoc, or to explain it centered on `registration order`, is undecided.
+- If the core reporter is added, it needs to be confirmed whether it is acceptable to route an exception thrown by the reporter to the `ExceptionHandler` side rather than `recover{}`.
 
-## 関連
+## Related
 
 - [#175](https://github.com/koma-kt/koma/issues/175)

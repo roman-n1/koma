@@ -1,37 +1,37 @@
-# `cancelLaunch()` の公開範囲は `ActionScope` に留める
+# The exposure of `cancelLaunch()` stays limited to `ActionScope`
 
-- 更新日: 2026-04-30
+- Updated: 2026-04-30
 
-## 背景
+## Background
 
-`cancelLaunch(lane)` は、現状は `ActionScope` からのみ呼べる。
-これは、`action { launch { ... } }` で開始した tracked launch を、現在 active な state runtime の中で lane 単位に止める API として導入しているためである。
+`cancelLaunch(lane)` can currently be called only from `ActionScope`.
+This is because it was introduced as an API that stops, per lane, a tracked launch started with `action { launch { ... } }`, within the currently active state runtime.
 
-一方で、設計上は次の 2 箇所へ広げる候補もある。
+On the other hand, design-wise there are candidates for extending it to the following two places.
 
-- `RecoverScope`: recovery の中で、関連する launched job も明示的に止めたい場合がある
-- `ActionScope.LaunchScope.TransactionScope`: launched coroutine の結果を transaction で採用するタイミングで、別の tracked launch を止めたい場合がある
+- `RecoverScope`: during recovery, one may want to explicitly stop related launched jobs as well
+- `ActionScope.LaunchScope.TransactionScope`: when adopting the result of a launched coroutine in a transaction, one may want to stop another tracked launch
 
-ここで判断したいのは、これらの候補に `cancelLaunch()` をそのまま広げるべきかどうかである。
+What needs to be decided here is whether `cancelLaunch()` should be extended as is to these candidates.
 
-## 決定
+## Decision
 
-現時点では、`cancelLaunch()` の公開範囲は `ActionScope` のまま維持し、`RecoverScope` と `ActionScope.LaunchScope.TransactionScope` への公開は見送る。
+At this point, the exposure of `cancelLaunch()` stays as `ActionScope`, and exposure to `RecoverScope` and `ActionScope.LaunchScope.TransactionScope` is deferred.
 
-- `cancelLaunch()` は、引き続き「action をきっかけに始めた tracked launch を止める API」として扱う
-- error recovery や launched coroutine 内 transaction からの lane cancellation は、現段階では標準公開しない
-- 具体的なユースケースが将来たまった場合のみ、別 API を含めて再検討する
+- `cancelLaunch()` continues to be treated as "an API that stops a tracked launch started in response to an action"
+- Lane cancellation from error recovery or from a transaction inside a launched coroutine is not exposed as standard at this stage
+- It will be reconsidered, including as a separate API, only when concrete use cases accumulate in the future
 
-## 補足
+## Notes
 
-- `RecoverScope` は store work ではあるが、役割の中心は recovery である。ここに lane cancellation を足すと、「例外処理として何を回復しているのか」と「state-owned な非同期仕事をどの時点で止めるのか」が同じ場所に混ざりやすい。
-- launched job を止めたい理由が「この error 以後は古い仕事を採用したくない」なのであれば、state transition による runtime の入れ替えや、明示 action による cancellation の方が追いやすい。
-- `ActionScope.LaunchScope.TransactionScope` は一見すると有力だが、そのまま `cancelLaunch()` を公開すると self-cancel の問題がある。transaction は launched job 本体の中で直に実行されるのではなく、別 job で実行して外側が `join()` しているため、同じ explicit lane を共有している場合に自分自身の tracked launch を止められてしまう。
-- この場合、transaction 側は state 更新まで進める一方で、外側の launched job だけが cancel される形になりうるため、挙動が直感的でない。
-- さらに、`ActionScope.LaunchScope.TransactionScope` から見て「別 lane を止めたい」のか「自分が属する lane も止めてよい」のかを、現在の `cancelLaunch(lane)` 署名だけでは表現できない。
-- Koma では「action は処理開始のきっかけであり、継続中の仕事の所有者は state」という整理を取っている。そのうえで、lane cancellation の入口はまず `ActionScope` に閉じていた方が、どの action 判断で停止したのかを読み取りやすい。
-- したがって今回は、候補があることは認めつつも、具体的なユースケースが判明するまでは現在の `cancelLaunch()` を他 scope に広げる判断は採らない。
+- `RecoverScope` is store work, but its central role is recovery. Adding lane cancellation here tends to mix "what is being recovered as exception handling" and "at which point state-owned asynchronous work is stopped" in the same place.
+- If the reason for wanting to stop a launched job is "after this error, old work should no longer be adopted", then replacing the runtime through a state transition, or cancellation through an explicit action, is easier to follow.
+- `ActionScope.LaunchScope.TransactionScope` looks promising at first glance, but exposing `cancelLaunch()` there as is has a self-cancel problem. The transaction is not executed directly inside the launched job itself; it runs in a separate job that the outer side `join()`s, so when the same explicit lane is shared, it could stop its own tracked launch.
+- In that case, the transaction side may proceed all the way to the state update while only the outer launched job is cancelled, which is unintuitive behavior.
+- Furthermore, from the viewpoint of `ActionScope.LaunchScope.TransactionScope`, whether "another lane should be stopped" or "the lane it belongs to may also be stopped" cannot be expressed with the current `cancelLaunch(lane)` signature alone.
+- Koma takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". On top of that, keeping the entry point for lane cancellation confined to `ActionScope` first makes it easier to read which action decision caused the stop.
+- Therefore, this time, while acknowledging that there are candidates, the decision to extend the current `cancelLaunch()` to other scopes is not taken until concrete use cases become clear.
 
-## 関連
+## Related
 
 - [#190](https://github.com/koma-kt/koma/issues/190)

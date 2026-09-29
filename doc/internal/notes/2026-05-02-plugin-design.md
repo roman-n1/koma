@@ -1,35 +1,35 @@
-# Plugin 設計メモ
+# Plugin design notes
 
-- 更新日: 2026-05-09
+- Updated: 2026-05-09
 
-## 背景
+## Background
 
-Koma にはすでに `Middleware` があるが、hook 数が多く、`before/after` の internal lifecycle がそのまま public API に出ている。
+Koma already has `Middleware`, but it has many hooks, and the internal `before/after` lifecycle is exposed directly in the public API.
 
-一方で、logging、analytics、message bridge、autosave、sync のような用途では、必ずしも `Middleware` と同じ粒度や性質の hook は要らない。
-そのため、`Middleware` とは別に、より小さい surface を持つ `Plugin` を追加する方向で整理したい。
+On the other hand, for uses such as logging, analytics, message bridges, autosave and sync, hooks of the same granularity and nature as `Middleware` are not necessarily needed.
+We therefore want to move toward adding a `Plugin` with a smaller surface, separate from `Middleware`.
 
-今回の論点は次のとおり。
+The points at issue this time are as follows.
 
-- `Plugin` は何のための拡張点か
-- どの hook を公開するか
+- What kind of extension point `Plugin` is for
+- Which hooks to expose
 
-## 現在の考え
+## Current thinking
 
-### `Plugin` の役割
+### The role of `Plugin`
 
-`Plugin` は Store の本体 pipeline を横取りするためのものではなく、**観測と外部連携のための拡張点**として扱う。
+`Plugin` is not for hijacking the Store's main pipeline; it is treated as **an extension point for observation and external integration**.
 
-- logging や analytics の記録
-- message bus / websocket / push などの購読開始
-- state 更新後の保存や同期
-- 補助的な action dispatch
+- Recording logs and analytics
+- Starting subscriptions to a message bus / websocket / push, etc.
+- Saving or syncing after a state update
+- Auxiliary action dispatch
 
-逆に、現在処理中の action を差し替える、握りつぶす、`nextState` を横から書き換える、といった interception は `Plugin` の責務にしない。
+Conversely, interception such as replacing the action currently being processed, swallowing it, or rewriting `nextState` from the side is not a responsibility of `Plugin`.
 
-### surface
+### Surface
 
-現時点の `Plugin` surface は次を基本にする。
+The current `Plugin` surface is based on the following.
 
 ```kt
 interface Plugin<S : State, A : Action, E : Event> {
@@ -54,62 +54,62 @@ interface PluginScope<S : State, A : Action> {
 }
 ```
 
-hook の位相は、単に `before` / `after` を機械的に揃えるのではなく、**Store 境界のどちら側を観測するか**で揃える。
+The phase of each hook is aligned not by mechanically pairing `before` / `after`, but by **which side of the Store boundary is observed**.
 
 - `onStart`
-  - Store start 時
-  - 初回 `enter {}` の前
+  - At Store start
+  - Before the first `enter {}`
 - `onAction`
-  - action handler 開始前
-  - dispatch 試行を確実に拾う
+  - Before the action handler starts
+  - Reliably captures dispatch attempts
 - `onState`
-  - state commit / save / observer 通知の後
+  - After state commit / save / observer notification
 - `onEvent`
-  - event emit / observer 通知の後
+  - After event emit / observer notification
 
-この整理では、
+Under this arrangement,
 
 - `onAction`
-  - Store への **入力** を観測する hook なので事前
+  - Is a hook that observes **input** to the Store, so it runs before
 - `onState`
-  - Store から確定した state という **出力** を観測する hook なので事後
+  - Is a hook that observes **output**, the committed state from the Store, so it runs after
 - `onEvent`
-  - Store から emit された event という **出力** を観測する hook なので事後
+  - Is a hook that observes **output**, the event emitted from the Store, so it runs after
 
-となる。
+is how the hooks line up.
 
-`onStart` は input/output のどちらにも属さないため、別種の lifecycle hook として扱う。
-state type change を見たい場合は、`onState` の中で `prevState::class != state::class` を見れば足りるので、専用 hook は持たない。
+`onStart` belongs to neither input nor output, so it is treated as a different kind of lifecycle hook.
+If you want to see a state type change, checking `prevState::class != state::class` inside `onState` is enough, so there is no dedicated hook.
 
 ### `PluginScope`
 
-`PluginScope` 自体は全 hook で使えるようにする。
-即時に return する fire-and-forget な操作は hook 本体からも呼べるようにし、長時間処理や継続的な購読、最新 state の参照といった「launch を必要とする操作」は `launch {}` の中に閉じ込める。
+`PluginScope` itself is made usable from all hooks.
+Fire-and-forget operations that return immediately can be called from the hook body as well, and "operations that require launch", such as long-running processing, ongoing subscriptions and referencing the latest state, are confined to `launch {}`.
 
-scope に入れるのは次の最小セットで十分である。
+The following minimal set is enough for the scope.
 
 - `dispatch(action)`
-  - hook 本体から補助的な action を enqueue する
-  - `Store.dispatch` は元々 fire-and-forget なので、これだけのために `launch {}` を生やすのは余分な coroutine を作るだけになる
+  - Enqueue an auxiliary action from the hook body
+  - `Store.dispatch` is fire-and-forget to begin with, so growing a `launch {}` just for this would only create an extra coroutine
 - `launch { ... }`
-  - Store-scoped な background work を開始する
-- `launch {}` 内の `LaunchScope.currentState`
-  - 遅れて動く処理が最新の committed state snapshot を読む
-- `launch {}` 内の `LaunchScope.dispatch(action)`
-  - background work から補助的な action を enqueue する
+  - Start Store-scoped background work
+- `LaunchScope.currentState` inside `launch {}`
+  - Processing that runs later reads the latest committed state snapshot
+- `LaunchScope.dispatch(action)` inside `launch {}`
+  - Enqueue an auxiliary action from background work
 
-`transaction`、`nextState`、`emit`、`cancelLaunch` のような権限は持たせない。
-そこまで入れると plugin が hidden handler や interceptor に寄り、責務が重くなりすぎる。
+Permissions such as `transaction`, `nextState`, `emit` and `cancelLaunch` are not granted.
+Going that far pushes the plugin toward a hidden handler or interceptor, and its responsibility becomes too heavy.
 
-### cleanup は `launch { try/finally }` に寄せる
+### Cleanup leans on `launch { try/finally }`
 
-`Plugin` に `onClose` を入れる案も考えられるが、現状では採らない。
+A proposal to add `onClose` to `Plugin` is conceivable, but is not adopted at present.
 
-理由は、`Store.close()` だけが Store の終了経路ではないためである。
-Store の root scope は親 `Job` にぶら下がっているため、親 scope 側の cancellation でも終了しうる。
-`onClose` を `Store.close()` からだけ呼ぶと、「明示 close」は拾えても、「Store の lifetime が終わった」ことまでは拾えない。
+The reason is that `Store.close()` is not the only termination path of a Store.
+The Store's root scope hangs off a parent `Job`, so it can also terminate through cancellation on the parent scope side.
+If `onClose` were called only from `Store.close()`, it would capture "explicit close" but not "the Store's lifetime has ended".
 
-そのため plugin 側の cleanup は、明示的な close hook ではなく、`PluginScope.launch` で開始した coroutine の `finally` に寄せる方が自然である。
+Therefore, it is more natural for plugin-side cleanup to lean on the `finally` of a coroutine started with `PluginScope.launch`, rather than an explicit close hook.
 
 ```kt
 override suspend fun onStart(scope: PluginScope<S, A>, state: S) {
@@ -127,61 +127,61 @@ override suspend fun onStart(scope: PluginScope<S, A>, state: S) {
 }
 ```
 
-この形なら、`Store.close()` でも親 scope cancel でも同じ cleanup が走る。
-cleanup の所有者が、その仕事自身の lifetime にぶら下がる点も分かりやすい。
+In this form, the same cleanup runs on both `Store.close()` and a parent scope cancel.
+It is also clear that the owner of the cleanup hangs off the lifetime of the work itself.
 
-そもそも `Flow.collect` のような継続処理は、本体 Store の coroutine cancellation だけで停止するため、明示的な cleanup を書く機会自体が少ない。
-plugin の用途として代表的なものほど cleanup hook の出番がない、という意味でも、明示 close hook を導入する利得は薄い。
+In the first place, ongoing processing such as `Flow.collect` stops through the coroutine cancellation of the main Store alone, so there are few occasions to write explicit cleanup at all.
+In the sense that the most representative plugin use cases have no need for a cleanup hook, the gain from introducing an explicit close hook is small.
 
-### onError は持たない
+### No onError
 
-`Plugin` に例外通知用の `onError` hook を入れる案も考えられるが、現状では採らない。
+A proposal to add an `onError` hook to `Plugin` for exception notification is conceivable, but is not adopted at present.
 
-理由としては、`Plugin` の責務が観測と外部連携に寄っていることと整合しない為である。
-`onAction` / `onState` / `onEvent` はいずれも Store の **境界** を観測する hook であり、Store の入力（action）か出力（state / event）を見ている。
-一方で例外は Store 内部の error pipeline 上で起きる事象であり、これを hook として公開すると、plugin が Store 内部のロジックを覗き込む形になりやすい。
+The reason is that it does not fit with the responsibility of `Plugin` leaning toward observation and external integration.
+`onAction` / `onState` / `onEvent` are all hooks that observe the **boundary** of the Store, looking at the Store's input (action) or output (state / event).
+Exceptions, on the other hand, are events that occur on the error pipeline inside the Store, and exposing them as a hook easily turns into the plugin peeking into the Store's internal logic.
 
-ただし、将来的に Crashlytics 系プラグインへエラーをレポートするような要件が出てきた際には、再検討を行う価値はある。
-その際 `Store.exceptionHandler` で受けている、Store DSL 上の業務ロジック以外で起きたエラーは `onError` を plugin に足しても拾えない為、何を対象にレポートするかは合わせて検討する必要がある。
+However, if a requirement arises in the future to report errors to a Crashlytics-style plugin, it is worth reconsidering.
+In that case, errors that occur outside the business logic on the Store DSL, which are received by `Store.exceptionHandler`, cannot be captured even if `onError` is added to the plugin, so what to target for reporting needs to be considered together.
 
-### execution policy は持つ
+### It does have an execution policy
 
-`Plugin` には `PluginExecutionPolicy` を持たせる。
-default は `Concurrent` とし、必要なときだけ `InRegistrationOrder` を選べるようにする。
+`Plugin` is given a `PluginExecutionPolicy`.
+The default is `Concurrent`, and `InRegistrationOrder` can be selected only when needed.
 
-この方針の理由は、`Plugin` も `Middleware` と同じく、複数登録されても互いに独立した外側の拡張として作られることが多いためである。
-特に現在の `Plugin` は観測ベースであり、
+The reason for this approach is that `Plugin`, like `Middleware`, is usually written as an outer extension that is independent of the others even when several are registered.
+In particular, the current `Plugin` is observation-based, and
 
-- `onAction` は入力 hook
-- `onState` / `onEvent` は出力 hook
+- `onAction` is an input hook
+- `onState` / `onEvent` are output hooks
 
-という整理になっている。
-この性質なら、plugin は原則として順序非依存で書けるはずであり、default を `Concurrent` にする考え方と相性がよい。
+is how it is organized.
+Given this nature, plugins should in principle be writable without depending on order, which fits well with the idea of making `Concurrent` the default.
 
-一方で、移行期の互換性や、特定の setup で順序を意識したいケースまで完全に否定する必要もない。
-そのため、escape hatch として `InRegistrationOrder` を残す。
+On the other hand, there is no need to completely rule out compatibility during a migration period, or cases where order matters in a particular setup.
+`InRegistrationOrder` is therefore kept as an escape hatch.
 
-ただし、`InRegistrationOrder` は通常系ではなく例外的な選択肢として扱う。
-reusable な plugin は、基本的に `Concurrent` 前提でも安全に動くことを目指す。
+However, `InRegistrationOrder` is treated as an exceptional option, not the normal path.
+Reusable plugins should basically aim to work safely under the assumption of `Concurrent`.
 
-また、plugin 内の重い仕事や long-running work は、hook 自体の execution policy に頼るより `scope.launch { ... }` に逃がす方が素直である。
-そのため execution policy が制御するのは、あくまで **hook 呼び出し自体の順序** に限られる。
-background work の完了順や、そこで起こした `dispatch()` の interleave までは保証しない。
+Also, for heavy or long-running work inside a plugin, it is more straightforward to offload it to `scope.launch { ... }` than to rely on the execution policy of the hook itself.
+So what the execution policy controls is limited strictly to **the order of the hook calls themselves**.
+It does not guarantee the completion order of background work, or the interleaving of `dispatch()` calls made from it.
 
-`Middleware` の default を並行実行にする考え方は、「middleware 同士の順序依存を前提にしない」ためのものである（[Middleware 実行ポリシーは並行を標準にする](../adr/2026-04-23-middleware-execution-policy.md)）。
-`Plugin` でも同じく、「plugin はまず順序非依存であるべき」と考えて `Concurrent` を標準にする。
+The idea of making the `Middleware` default concurrent execution is to "not assume order dependence between middlewares" ([Middleware execution policy defaults to concurrent](../adr/2026-04-23-middleware-execution-policy.md)).
+For `Plugin` too, `Concurrent` is made the standard on the basis that "plugins should be order-independent first".
 
-もし将来、利用者が本当に欲しいのが「この plugin を先に走らせたい」「この plugin 群は後段で見たい」という制御であるなら、`Concurrent` / `InRegistrationOrder` の二択より、priority や phase のような明示的な概念の方が本質に近い。
-そのため execution policy を導入しても、将来の順序制御までこれで十分だとはみなさない。
+If in the future what users really want is control such as "run this plugin first" or "see this group of plugins at a later stage", an explicit concept such as priority or phase is closer to the essence than the binary choice of `Concurrent` / `InRegistrationOrder`.
+So even with an execution policy introduced, it is not regarded as sufficient for future order control.
 
-## 未解決事項
+## Open questions
 
-- `Plugin` を今後 `Middleware` の代替へ寄せていくか、並行して残し続けるかは未決定。
-- README やサンプルで、plugin の long-running work と cleanup を `launch { try/finally }` ベースでどこまで明示するかは未決定。
-- plugin の execution policy を将来も `Concurrent` / `InRegistrationOrder` の二択に留めるか、priority / phase のような別概念を追加するかは未決定。
-- 将来、Store lifetime の終了理由そのものを観測したい要件が出た場合、`onClose` ではなく root `Job` completion ベースの別 hook を検討する余地はある。
+- Whether to move `Plugin` toward a replacement for `Middleware` in the future, or to keep both in parallel, is undecided.
+- How far to make plugin long-running work and cleanup explicit on a `launch { try/finally }` basis in the README and samples is undecided.
+- Whether to keep the plugin execution policy as the binary choice `Concurrent` / `InRegistrationOrder` in the future, or to add a separate concept such as priority / phase, is undecided.
+- If a requirement arises in the future to observe the reason the Store lifetime ended, there is room to consider a separate hook based on root `Job` completion rather than `onClose`.
 
-## 関連
+## Related
 
-- [Middleware 実行ポリシーは並行を標準にする](../adr/2026-04-23-middleware-execution-policy.md)
-- [`recover {}` に流さない framework boundary の例外処理は当面現状維持とする](../adr/2026-05-07-framework-boundary-exception-handling.md)
+- [Middleware execution policy defaults to concurrent](../adr/2026-04-23-middleware-execution-policy.md)
+- [Framework boundary exception handling that is not routed to `recover {}` stays as-is for now](../adr/2026-05-07-framework-boundary-exception-handling.md)

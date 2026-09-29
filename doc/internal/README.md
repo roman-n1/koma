@@ -1,57 +1,57 @@
-# 内部ドキュメント
+# Internal documentation
 
-コードの背景にある考えや仕様を残すためのドキュメントの置き場です。
-利用者向けのドキュメントではありません。
+This is the place for documents that record the thinking and specifications behind the code.
+It is not documentation for users.
 
-方針として、形式は軽く保ちます。続けられることを優先します。
-分類や棚卸しを厳密に回すことより、まず残せることを優先します。
+As a policy, the format is kept light. Being able to keep it up takes priority.
+Being able to record things in the first place takes priority over strict classification or inventory.
 
-## 何を置くか
+## What goes here
 
-- そのコードの背景にある考え、仕様認識、判断理由
-- 現行の設計指針や、複数の判断にまたがる設計上の考え方
-- 調査したことや考えたことのメモ、検討中の案
+- The thinking, understanding of the specification, and reasons for decisions behind the code
+- Current design guidelines and design-level thinking that spans multiple decisions
+- Notes on things investigated or thought through, and proposals under consideration
 
-そのほか、現状の仕様や設計、実装内容に関する整理メモや覚書など、基本的には内容に関する制約はありません。
+Beyond that, there are basically no constraints on content: organizing notes or memos about the current specification, design or implementation are all fine.
 
-## adr と design と notes の違い
+## Difference between adr, design and notes
 
 - `adr/`
-  - 採用した判断と、採用しないと決めた判断を置きます。
-  - 後から「なぜそうしたのか」を参照するための記録です。
+  - Holds decisions that were adopted and decisions that were deliberately rejected.
+  - A record for looking up "why it was done that way" later.
 - `design/`
-  - 現行の設計指針や、複数の判断にまたがる設計上の考え方を置きます。
+  - Holds current design guidelines and design-level thinking that spans multiple decisions.
 - `notes/`
-  - 調査したこと、考えたこと、仕様の整理、検討中の案などを置きます。
-  - 未解決事項が残っていても構いません。
+  - Holds things investigated, things thought through, organized specifications, proposals under consideration, and so on.
+  - Open questions may remain.
 
-判断や指針として残すべきものでも、まだ固まっていない段階では `notes/` へ置きます。
-分類に迷ったときも、まずは `notes/` へ置けば十分です。
-正式に残したくなった時点で `adr/` または `design/` を別に作ります。
-すべての `notes/` を後から必ず整理し直す必要はありません。
+Even something that should eventually be recorded as a decision or guideline goes into `notes/` while it is not yet settled.
+When unsure how to classify something, putting it in `notes/` first is enough.
+Once you want to record it formally, create a separate file in `adr/` or `design/`.
+Not every `notes/` file has to be reorganized later.
 
-## 運用
+## Operation
 
-- 1 トピック 1 ファイルを基本にします。
-- `adr/`、`design/`、`notes/` すべて、ファイル名は `YYYY-MM-DD-short-title.md` とします。
-  - ファイル名の `YYYY-MM-DD` は作成日です。更新しても変えません。
-- 必要ならテンプレートをコピーして使います。
-  - `adr/` 用: [`adr/template.md`](./adr/template.md)
-  - `design/` 用: [`design/template.md`](./design/template.md)
-  - `notes/` 用: [`notes/template.md`](./notes/template.md)
+- One topic per file as the basic rule.
+- For `adr/`, `design/` and `notes/` alike, file names are `YYYY-MM-DD-short-title.md`.
+  - The `YYYY-MM-DD` in the file name is the creation date. It is not changed on update.
+- Copy a template if needed.
+  - For `adr/`: [`adr/template.md`](./adr/template.md)
+  - For `design/`: [`design/template.md`](./design/template.md)
+  - For `notes/`: [`notes/template.md`](./notes/template.md)
 
-## 書き方
+## Writing
 
-- 先頭メタデータは必要最小限に保ちます。
-  - `adr/`、`design/`、`notes/` すべて、`更新日` を記載。
-    - 更新した場合は、必要に応じて更新内容が分かるようにするのが望ましい。
+- Keep the leading metadata to the minimum necessary.
+  - For `adr/`, `design/` and `notes/` alike, include `Updated`.
+    - When updating, it is desirable to make the changes identifiable as needed.
 
-見出しは固定しませんが、迷ったら次を使います。
+Headings are not fixed, but when in doubt use the following.
 
-- `adr/`: `背景`、`決定`、`補足`
-- `design/`: `背景`、`方針`、`補足`
-- `notes/`: `背景`、`現在の考え`、`未解決事項`
-- 必要なら文末に `関連` を置いて、Issue や PR、別の `adr/` / `design/` / `notes/` への参照をまとめます。
+- `adr/`: `Background`, `Decision`, `Notes`
+- `design/`: `Background`, `Policy`, `Notes`
+- `notes/`: `Background`, `Current thinking`, `Open questions`
+- If needed, put `Related` at the end to collect references to Issues, PRs, or other `adr/` / `design/` / `notes/` files.
 
-実運用では `adr/` は `背景` と `決定`、`design/` は `背景` と `方針` が埋まっていれば十分です。
-`notes/` は必要な項目だけ使えば足ります。
+In practice it is enough for `adr/` to have `Background` and `Decision` filled in, and for `design/` to have `Background` and `Policy`.
+`notes/` only needs whichever items are necessary.

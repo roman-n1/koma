@@ -1,35 +1,35 @@
-# Koma の設計原則
+# Koma design principles
 
-- 更新日: 2026-04-23
+- Updated: 2026-04-23
 
-## 背景
+## Background
 
-`PendingActionPolicy` や `MiddlewareExecutionPolicy` のような個別 policy の検討メモは増えてきたが、それだけだと「なぜその方向の仕様になるのか」が後から読み取りにくい。
+Notes on individual policies such as `PendingActionPolicy` and `MiddlewareExecutionPolicy` have been accumulating, but on their own they make it hard to read back later "why the specification goes in that direction".
 
-ここでは、Koma の個別仕様の背景にある設計上の軸を整理する。
-この文書は、個別の policy や API の判断理由を、上位の設計原則として明文化するためのものである。
+Here we organize the design axes behind Koma's individual specifications.
+This document exists to spell out the reasoning behind individual policy and API decisions as higher-level design principles.
 
-## 方針
+## Policy
 
-Koma の設計上の基本方針は次のとおり。
+Koma's basic design policy is as follows.
 
-- Koma は「この action が来たらどうするか」より、「今どの状態で、その状態では何が起こるか」を中心に組み立てる state machine である。
-- action は状態遷移や処理開始のきっかけであり、長く生きる仕事の寿命は state が持つ。
-- Store の生成と副作用の開始は分ける。Store はまず宣言として作られ、start 後に副作用が走る。
-- middleware は Store 本体の pipeline ではなく、外側にある独立した拡張点として扱う。
-- overrides で変えてよいのは環境設定であり、状態遷移構造そのものではない。
-- 業務上の失敗は state machine の中で扱えるが、fatal な失敗や system failure は外に逃がす。
+- Koma is a state machine built around "what state are we in now, and what happens in that state" rather than "what do we do when this action arrives".
+- An action is a trigger for a state transition or for starting processing; the lifetime of long-lived work belongs to the state.
+- Store creation and the start of side effects are separated. A Store is first created as a declaration, and side effects run after start.
+- Middleware is treated as an independent extension point on the outside, not as part of the Store's own pipeline.
+- What may be changed through overrides is environment configuration, not the state transition structure itself.
+- Business failures can be handled inside the state machine, but fatal failures and system failures are let out.
 
-## 補足
+## Notes
 
-- `state::class` が変わったときに enter/exit、state scope の切り替え、pending action の扱いが効くのは、「値の差分」より「状態相の切り替わり」を重く扱うためである。
-- `action { launch { ... } }` が action 単位ではなく state scope にぶら下がるのは、「action はトリガーであり、継続中の仕事の所有者は state である」という整理による。
-- Store が lazy start で、start 前でも `currentState` や restore 済み state snapshot を読めるのは、「宣言としての Store」と「副作用が走り始めた Store」を分けるためである。
-- middleware の default が並行実行なのは、middleware 同士の順序依存を強い設計前提にしないためである。
-- `overrides` が state/action handler を触れず、設定だけを上書きできるのは、「その Store がどんな state machine か」は identity に近く、テストや debug 用に変える対象ではないという線引きによる。
-- `recover{}` と `exceptionHandler` が分かれていて、`Error` や cancellation を state 遷移の材料にしないのは、業務エラーと実行系の失敗を分けるためである。
+- enter/exit, state scope switching and pending action handling take effect when `state::class` changes because a "change of state phase" is weighted more heavily than a "difference in values".
+- `action { launch { ... } }` hangs off the state scope rather than the individual action because of the framing "the action is the trigger, and the state owns the work in progress".
+- The Store starts lazily, and `currentState` and a restored state snapshot can be read before start, in order to separate "the Store as a declaration" from "the Store whose side effects have started running".
+- Middleware defaults to concurrent execution so that ordering dependencies between middleware are not made a strong design assumption.
+- `overrides` cannot touch state/action handlers and can only override configuration, following the line that "what state machine this Store is" is close to its identity and is not something to change for tests or debugging.
+- `recover{}` and `exceptionHandler` are separate, and `Error` and cancellation are not used as material for state transitions, in order to separate business errors from failures of the execution system.
 
-## 関連
+## Related
 
-- [PendingActionPolicy 拡張案の却下](../adr/2026-04-22-pending-action-policy.md)
-- [Middleware 実行ポリシーは並行を標準にする](../adr/2026-04-23-middleware-execution-policy.md)
+- [Rejection of the PendingActionPolicy extension proposal](../adr/2026-04-22-pending-action-policy.md)
+- [Middleware execution policy defaults to concurrent](../adr/2026-04-23-middleware-execution-policy.md)
