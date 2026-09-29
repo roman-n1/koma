@@ -5,21 +5,35 @@ import androidx.compose.runtime.BroadcastFrameClock
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Composition
 import androidx.compose.runtime.ComposeNode
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.withRunningRecomposer
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import koma.core.Action
 import koma.core.Event
+import koma.core.ExperimentalKomaApi
 import koma.core.State
+import koma.core.StateSaver
 import koma.core.Store
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.withContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -32,6 +46,65 @@ import kotlin.test.assertTrue
 class ViewStoreJvmTest {
 
     private val testDispatcher = UnconfinedTestDispatcher()
+
+    @OptIn(ExperimentalKomaApi::class)
+    @Test
+    fun keyedTabsForTheSameChatKeepIndependentStoresAndSavers() = runTest(testDispatcher) {
+        val tabs = mutableStateOf(listOf("left", "right"))
+        val stores = mutableMapOf<String, TestStore>()
+        val views = mutableMapOf<String, ViewStore<UiState, UiAction, UiEvent>>()
+        val savers = mutableMapOf<String, StateSaver<UiState>>()
+        val owner = object : ViewModelStoreOwner, LifecycleOwner {
+            override val viewModelStore = ViewModelStore()
+            override val lifecycle = LifecycleRegistry.createUnsafe(this).apply { currentState = Lifecycle.State.RESUMED }
+        }
+        Dispatchers.setMain(testDispatcher)
+        try {
+            withNodeComposition(TestNode(), content = {
+                CompositionLocalProvider(LocalViewModelStoreOwner provides owner, LocalLifecycleOwner provides owner) {
+                    for (tab in tabs.value) key(tab) {
+                        savers[tab] = rememberStateSaver()
+                        views[tab] = rememberViewStore(key = "same-chat", autoClose = true) {
+                            TestStore(UiState.Ready(0)).also { stores[tab] = it }
+                        }
+                    }
+                }
+            }, afterSetContent = { pumpFrame ->
+                val left = views.getValue("left")
+                val right = views.getValue("right")
+                val leftSaver = savers.getValue("left")
+                val rightSaver = savers.getValue("right")
+                assertNotSame(left, right)
+                assertNotSame(leftSaver, rightSaver)
+                leftSaver.save(UiState.Ready(10))
+                rightSaver.save(UiState.Ready(20))
+                stores.getValue("left").state.value = UiState.Ready(1)
+                stores.getValue("right").state.value = UiState.Ready(2)
+                tabs.value = listOf("right", "left")
+                repeat(2) { pumpFrame() }
+                assertSame(left, views.getValue("left"))
+                assertSame(right, views.getValue("right"))
+                assertEquals(UiState.Ready(1), left.state)
+                assertEquals(UiState.Ready(2), right.state)
+                assertSame(leftSaver, savers.getValue("left"))
+                assertSame(rightSaver, savers.getValue("right"))
+                assertEquals(UiState.Ready(10), leftSaver.restore())
+                assertEquals(UiState.Ready(20), rightSaver.restore())
+                tabs.value = listOf("right")
+                repeat(2) { pumpFrame() }
+                assertEquals(1, stores.getValue("left").closeCount)
+                assertEquals(0, stores.getValue("right").closeCount)
+                right.dispatch(UiAction.Increment)
+                assertEquals(emptyList(), stores.getValue("left").dispatchedActions)
+                assertEquals(listOf<UiAction>(UiAction.Increment), stores.getValue("right").dispatchedActions)
+            })
+            assertEquals(1, stores.getValue("right").closeCount)
+        } finally {
+            owner.lifecycle.currentState = Lifecycle.State.DESTROYED
+            owner.viewModelStore.clear()
+            Dispatchers.resetMain()
+        }
+    }
 
     @Test
     fun stateContent_callsBlockOnlyForMatchingState() = runTest(testDispatcher) {

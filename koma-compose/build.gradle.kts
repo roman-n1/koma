@@ -57,6 +57,10 @@ kotlin {
             implementation(libs.kotlin.test)
             implementation(libs.coroutines.test)
         }
+        jvmTest.dependencies {
+            implementation(libs.lifecycle.viewmodel.compose)
+            implementation(libs.lifecycle.runtime.compose)
+        }
     }
 }
 
