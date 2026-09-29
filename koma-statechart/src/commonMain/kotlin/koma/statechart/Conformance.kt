@@ -63,19 +63,24 @@ sealed interface ConformanceViolation {
  * compound state matches a change to any leaf it enters. In a flat chart this is simply a
  * transition from `from` to `to`.
  *
- * Parallel states: a change is explained region by region. Each leaf of `from` that is not in
- * `to`, in declaration order, needs a transition that exits it, leads to `to` as above and does
- * not exit what an earlier chosen transition exits; the chosen transitions together are the step.
- * Transitions from the leaf and its ancestors come first, in priority order, then those of the
- * other leaves of `from` in declaration order, for a transition from another region that exits
- * and re-enters the parallel state. A leaf already exited by a chosen transition needs nothing more, so a
- * transition of the parallel state itself explains all its regions at once. A leaf without such a
- * transition is reported, with the leaf of `to` closest to it (sharing its innermost ancestor;
- * the first one in declaration order among equals) as the new state, and the part of the chart a
- * transition between the two would exit counts as explained by that report. A new leaf of `to`
- * that no chosen transition entered and no report covers is reported too, from the closest leaf of
- * `from`. Regions whose leaf stays the same are not checked: re-entering a region leaves nothing
- * to observe.
+ * Explaining a change: the plugin first asks the runtime. With the transitions matching the
+ * trigger from the active leaves and their ancestors as candidates (priority order, see
+ * [StateChartRuntime]), it takes the runtime's own selection with every candidate enabled (so
+ * the transitions of several regions taken together, or one transition that exits a whole
+ * parallel state, explain the change as one step); then the first candidate that leads to `to`
+ * alone; then the selection under the other guard assignments (guards are unknown to the
+ * plugin; at most the first eight candidates are enumerated); then a timer of an active source
+ * fired alone. The transitions of the explanation are covered.
+ *
+ * Only when nothing explains the change is it attributed region by region, to report it: each
+ * leaf of `from` that is not in `to`, in declaration order, needs a transition that exits it,
+ * leads to `to` as above and does not exit what an earlier chosen transition exits. A leaf
+ * without such a transition is reported, with the leaf of `to` closest to it (sharing its
+ * innermost ancestor; the first one in declaration order among equals) as the new state, and the
+ * part of the chart a transition between the two would exit counts as explained by that report.
+ * A new leaf of `to` that no chosen transition entered and no report covers is reported too,
+ * from the closest leaf of `from`. Regions whose leaf stays the same are not checked: re-entering
+ * a region leaves nothing to observe.
  *
  * History: the plugin remembers what the chart's [HistoryState]s would record as the Store moves
  * (the same rules as [StateChartRuntime], applied to the configuration of the old leaves; after a
@@ -110,9 +115,10 @@ sealed interface ConformanceViolation {
  *   the first transition that leads there, in priority order, is covered, whatever its trigger.
  *
  * Timers: plugin hooks do not show timers either, so a change is credited to a timer only as
- * above, when no action explains it. A change that both an action transition matching the trigger
- * and a timer explain is credited to the action. A timer self-loop keeps the same leaves, so Koma
- * does not report it and it is never covered.
+ * above, when no action transition explains it; without a trigger, a timer and an action
+ * transition compete in priority order. A change that both an action transition matching the
+ * trigger and a timer explain is credited to the action. A timer self-loop keeps the same
+ * leaves, so Koma does not report it and it is never covered.
  *
  * Self-transitions: Koma does not notify plugins when a handler keeps the state, so a self-loop
  * is credited by action. When an action arrives, the transitions the runtime would take for it
@@ -285,11 +291,11 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
      * The transitions the runtime takes from [tracked] to end in the leaves [to], with the
      * configuration they were evaluated in (which may carry an inferred history record, see
      * [withInferredHistory]), or `null`. Candidates are the transitions of the active leaves and
-     * their ancestors in priority order. For an action: the first matching transition that ends
-     * in [to] alone; else the runtime's selection under every guard assignment over the matching
-     * transitions (so several regions of a parallel state may move together, or one transition
-     * may exit the whole parallel state). Then a timer of an active source fired alone, and,
-     * without an action, any single transition.
+     * their ancestors in priority order. For an action: the runtime's selection with every
+     * matching transition enabled (several regions of a parallel state moving together, or one
+     * transition exiting the whole parallel state), then the first matching transition that ends
+     * in [to] alone, then the other guard assignments, then a timer of an active source fired
+     * alone. Without an action: the first transition that ends in [to] alone, whatever its trigger.
      */
     private fun explain(tracked: StateConfiguration, action: A?, to: Set<StateId>): Pair<List<Transition>, StateConfiguration>? {
         fun endsIn(configuration: StateConfiguration, transitions: List<Transition>): Boolean =
@@ -299,19 +305,26 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
             return if (endsIn(configuration, listOf(transition))) listOf(transition) to configuration else null
         }
         val candidates = definition.activeLeaves(tracked).flatMap { definition.candidatesFor(it) }.distinct()
-        if (action != null) {
-            val matching = candidates.filter { it.on?.matches(action) == true }
-            matching.firstNotNullOfOrNull(::alone)?.let { return it }
-            val enumerated = matching.take(MAX_GUARD_ENUMERATION)
-            for (mask in (1 shl enumerated.size) - 1 downTo 1) {
-                val enabled = enumerated.filterIndexed { i, _ -> mask and (1 shl i) != 0 }.toSet()
-                val taken = definition.selectTransitions(tracked) { it in enabled }
-                if (endsIn(tracked, taken)) return taken to tracked
-            }
+        if (action == null) {
+            // No trigger: the first transition that leads there, whatever its trigger.
+            return candidates.firstNotNullOfOrNull(::alone)
         }
-        candidates.filter { it.isTimer }.firstNotNullOfOrNull(::alone)?.let { return it }
-        if (action == null) candidates.firstNotNullOfOrNull(::alone)?.let { return it }
-        return null
+        val matching = candidates.filter { it.on?.matches(action) == true }
+        val enumerated = matching.take(MAX_GUARD_ENUMERATION)
+        // The runtime's own choice with every guard true: what a Store following the chart does,
+        // including the transitions of several regions taken together.
+        val allEnabled = enumerated.toSet()
+        definition.selectTransitions(tracked) { it in allEnabled }.let { if (endsIn(tracked, it)) return it to tracked }
+        // One matching transition alone, in priority order (with a history record inferred).
+        matching.firstNotNullOfOrNull(::alone)?.let { return it }
+        // The other guard assignments.
+        for (mask in (1 shl enumerated.size) - 2 downTo 1) {
+            val enabled = enumerated.filterIndexed { i, _ -> mask and (1 shl i) != 0 }.toSet()
+            val taken = definition.selectTransitions(tracked) { it in enabled }
+            if (endsIn(tracked, taken)) return taken to tracked
+        }
+        // No action transition explains it: a timer of an active source fired alone.
+        return candidates.filter { it.isTimer }.firstNotNullOfOrNull(::alone)
     }
 
     /**

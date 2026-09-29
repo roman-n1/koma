@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -174,6 +175,46 @@ class MessageDeliveryTest {
         assertEquals(1, enterCalls)
         assertEquals(listOf("hello"), seen)
         assertEquals(listOf("hello"), receiver.currentState.received)
+        sender.close()
+        receiver.close()
+    }
+
+    /**
+     * An expired `withTimeout {}` inside a `receiveMessages {}` block is a failure of that block,
+     * reported to the exception handler; the subscription keeps receiving.
+     */
+    @Test
+    fun expiredWithTimeoutInAReceiveBlock_isReportedAndTheSubscriptionContinues() = runTest {
+        val dispatcher = kotlinx.coroutines.test.StandardTestDispatcher(testScheduler)
+        val handled = mutableListOf<Throwable>()
+        val seen = mutableListOf<String>()
+        val receiver: Store<ChatState, ChatAction, Nothing> = Store(ChatState()) {
+            coroutineContext(dispatcher)
+            exceptionHandler(ExceptionHandler { handled += it })
+            plugin(
+                receiveMessages { message ->
+                    if (message is ChatMessage) {
+                        seen += message.text
+                        if (seen.size == 1) kotlinx.coroutines.withTimeout(10) { kotlinx.coroutines.delay(1_000) }
+                    }
+                },
+            )
+            state<ChatState> { action<ChatAction.Received> { } }
+        }
+        val sender: Store<ChatState, ChatAction, Nothing> = Store(ChatState()) {
+            coroutineContext(dispatcher)
+            state<ChatState> { action<ChatAction.Send> { message(ChatMessage(action.text)) } }
+        }
+        receiver.start()
+        advanceUntilIdle()
+
+        sender.dispatch(ChatAction.Send("first"))
+        advanceUntilIdle()
+        sender.dispatch(ChatAction.Send("second"))
+        advanceUntilIdle()
+
+        assertEquals(listOf("first", "second"), seen)
+        assertEquals(listOf("TimeoutCancellationException"), handled.map { it.cause!!::class.simpleName })
         sender.close()
         receiver.close()
     }

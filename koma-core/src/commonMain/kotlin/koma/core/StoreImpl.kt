@@ -25,6 +25,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.AbstractCoroutineContextElement
 import kotlin.coroutines.CoroutineContext
@@ -151,11 +152,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private var activeDispatchJob: Job? = null
 
-    // The most recently dispatched job. Each dispatch waits for its predecessor before it competes
-    // for `mutex`, so actions are processed in dispatch order even on a multi-threaded dispatcher,
-    // where freshly launched coroutines would otherwise reach the lock in arbitrary order.
-    // MutableStateFlow is used as a thread-safe atomic reference (Job equality is identity).
-    private val lastDispatchJob = MutableStateFlow<Job?>(null)
+    // The completion signal of the most recent dispatch. Each dispatch waits for its predecessor
+    // before it competes for `mutex`, so actions are processed in dispatch order even on a
+    // multi-threaded dispatcher, where freshly launched coroutines would otherwise reach the lock
+    // in arbitrary order. MutableStateFlow is used as a thread-safe atomic reference (Job equality
+    // is identity).
+    private val lastDispatchDone = MutableStateFlow<Job?>(null)
 
     @Volatile
     private var isStateRestored: Boolean = false
@@ -259,11 +261,15 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun launchDispatch(action: A): Job {
-        val previousDispatchJob = CompletableDeferred<Job?>()
+        val previousDone = CompletableDeferred<Job?>()
+        // Completed when this dispatch's work under the lock is over (or the dispatch never ran),
+        // not when its coroutine ends: a handler that leaves a child coroutine behind in its own
+        // Job must not hold up every later dispatch.
+        val done = Job()
         val job = dispatchScope.launch(insideStore) {
             // Keeps dispatch order: a cancelled or failed predecessor completes too, so this never
             // waits forever. Waiting here costs nothing extra, as the lock serializes dispatches anyway.
-            previousDispatchJob.await()?.join()
+            previousDone.await()?.join()
             mutex.withLock {
                 val dispatchJob = coroutineContext[Job]
                 activeDispatchJob = dispatchJob
@@ -274,10 +280,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     if (activeDispatchJob == dispatchJob) {
                         activeDispatchJob = null
                     }
+                    done.complete()
                 }
             }
         }
-        previousDispatchJob.complete(lastDispatchJob.getAndUpdate { job })
+        job.invokeOnCompletion { done.complete() }
+        previousDone.complete(lastDispatchDone.getAndUpdate { done })
         return job
     }
 
@@ -376,6 +384,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         currentCoroutineContext().ensureActive()
         val variantChanged = state::class != nextState::class
         if (variantChanged) {
+            // Refused before anything is exited, so the state entered last keeps its runtime.
+            check(enterChainDepth < MAX_ENTER_CHAIN) {
+                "[Koma] More than $MAX_ENTER_CHAIN states were entered in one transition; enter {} handlers moving to each other in a loop?"
+            }
             processStateExit(state)
             clearPendingActionsOnStateExitIfNeeded()
         }
@@ -391,9 +403,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun onStateEntered(state: S, inErrorHandling: Boolean = false) {
         try {
-            check(++enterChainDepth <= MAX_ENTER_CHAIN) {
-                "[Koma] More than $MAX_ENTER_CHAIN states were entered in one transition; enter {} handlers moving to each other in a loop?"
-            }
+            enterChainDepth++
             val nextState = processStateEnter(state)
             commitTransition(state, nextState, inErrorHandling = inErrorHandling)
         } catch (t: Throwable) {
@@ -417,9 +427,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             val nextState = processError(state, exception)
             commitTransition(state, nextState, inErrorHandling = true)
         } catch (t: Throwable) {
+            // A failing recover {}, or a failing enter {} of the state it moved to, must not hide
+            // the error that was being handled.
+            val failure = if (t is InternalError) t.original else t
+            if (failure !== exception && failure !is CancellationException) failure.addSuppressed(exception)
             rethrowIfNonRecoverable(t)
-            // A failing recover {} must not hide the error it was handling.
-            if (t !== exception) t.addSuppressed(exception)
             throw InternalError(t)
         }
     }
@@ -763,10 +775,15 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     // of aborting the handler that emitted it.
     private suspend fun processEventEmit(state: S, event: E) {
         _event.emit(event)
-        try {
-            processPlugins { onEvent(pluginScope, state, event) }
-        } catch (t: InternalError) {
-            reportWithoutAborting(t)
+        // Emitted from a launched coroutine, this round runs outside the handler coroutines that
+        // carry the marker; it holds the plugin lock, so awaiting the Store from the hook would
+        // deadlock just the same.
+        withContext(insideStore) {
+            try {
+                processPlugins { onEvent(pluginScope, state, event) }
+            } catch (t: InternalError) {
+                reportWithoutAborting(t)
+            }
         }
     }
 
@@ -800,8 +817,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                             plugins.map { plugin -> async { hookFailure { plugin.block() } } }.awaitAll().filterNotNull()
                         }
                     }
-                failures.firstOrNull()?.let { first ->
-                    failures.drop(1).forEach { first.addSuppressed(it) }
+                // A fatal error (a non-Exception throwable) from any plugin stays fatal.
+                (failures.firstOrNull { it !is Exception } ?: failures.firstOrNull())?.let { first ->
+                    failures.forEach { if (it !== first) first.addSuppressed(it) }
                     throw first
                 }
             }
@@ -835,11 +853,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             exceptionHandler.handle(original)
         } catch (handlerError: Throwable) {
-            throw InternalError(handlerError)
+            throw InternalError(handlerError, reported = true)
         }
     }
 
     private fun handleException(t: Throwable) {
+        // The handler already saw this one and threw: it is not asked again, the error escapes.
+        if (t is InternalError && t.reported) throw t.original
         val handled = if (t is InternalError) t.original else t
         exceptionHandler.handle(handled)
     }
@@ -856,7 +876,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         if (t is CancellationException && !currentCoroutineContext().isActive) throw t
     }
 
-    private class InternalError(val original: Throwable) : Throwable(original)
+    private class InternalError(val original: Throwable, val reported: Boolean = false) : Throwable(original)
 
     private class InsideStore(val store: Any) : AbstractCoroutineContextElement(InsideStore) {
         companion object Key : CoroutineContext.Key<InsideStore>

@@ -2,7 +2,11 @@ package koma.core
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
@@ -14,6 +18,7 @@ import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -545,5 +550,153 @@ class StoreRegressionTest {
             val reported = assertIs<IllegalStateException>(handled.single(), "$policy")
             assertEquals(listOf("second"), reported.suppressedExceptions.map { it.message }, "$policy")
         }
+    }
+
+    data object EmitFromLaunch : Action
+
+    data object Beep : Event
+
+    /**
+     * An event emitted from a launched coroutine runs its plugin round outside the handler
+     * coroutines, so `dispatchAndAwait` from that round escaped the fail-fast check and deadlocked
+     * (the round holds the plugin lock the dispatch needs). The round now carries the marker.
+     */
+    @Test
+    fun awaitingTheStoreFromAnOnEventRoundOfALaunchedEvent_failsFast() = runTest {
+        val outcome = CompletableDeferred<String>()
+        lateinit var store: Store<Booting, Action, Beep>
+        store = Store(Booting()) {
+            coroutineContext(Dispatchers.Default)
+            exceptionHandler(ExceptionHandler.Ignore)
+            plugin(
+                Plugin(
+                    onEvent = { _, _ ->
+                        outcome.complete(
+                            withTimeoutOrNull(5_000) {
+                                try {
+                                    store.dispatchAndAwaitForTest(Poke)
+                                    "completed"
+                                } catch (e: IllegalStateException) {
+                                    "rejected"
+                                }
+                            } ?: "hung",
+                        )
+                    },
+                ),
+            )
+            state<Booting> {
+                action<EmitFromLaunch> { launch { event(Beep) } }
+                action<Poke> { }
+            }
+        }
+
+        withContext(Dispatchers.Default) {
+            store.dispatch(EmitFromLaunch)
+            assertEquals("rejected", withTimeout(10_000) { outcome.await() })
+            // The Store is not stuck.
+            withTimeout(5_000) { store.dispatchAndAwaitForTest(Poke) }
+        }
+        store.close()
+    }
+
+    data object Linger : Action
+
+    /**
+     * The dispatch-ordering gate waited for the predecessor's whole coroutine; a handler that left
+     * a child coroutine behind in its own Job stalled every later dispatch. The gate now waits for
+     * the predecessor's work under the lock only.
+     */
+    @Test
+    fun aHandlerLeavingAChildCoroutineBehind_doesNotStallLaterDispatches() = runTest {
+        var pokes = 0
+        val store: Store<Booting, Action, Nothing> = Store(Booting()) {
+            coroutineContext(Dispatchers.Default)
+            state<Booting> {
+                action<Linger> { CoroutineScope(currentCoroutineContext()).launch { delay(60_000) } }
+                action<Poke> { pokes++ }
+            }
+        }
+
+        withContext(Dispatchers.Default) {
+            // Awaiting Linger itself would wait for its child; the next dispatch must not.
+            store.dispatch(Linger)
+            withTimeout(5_000) { store.dispatchAndAwaitForTest(Poke) }
+        }
+
+        assertEquals(1, pokes)
+        store.close()
+    }
+
+    /**
+     * A fatal error from any plugin of a round stays fatal, wherever the plugin is registered.
+     */
+    @Test
+    fun aFatalErrorFromASecondPlugin_staysFatal() = runTest(testDispatcher) {
+        val handled = mutableListOf<Throwable>()
+        val store: Store<Booting, Poke, Nothing> = Store(Booting()) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(ExceptionHandler { handled += it })
+            plugin(Plugin(onState = { _, _ -> throw IllegalStateException("first") }))
+            plugin(Plugin(onState = { _, _ -> throw AssertionError("fatal") }))
+            state<Booting> { action<Poke> { nextState { state.copy(ready = true) } } }
+        }
+
+        store.dispatchAndAwaitForTest(Poke)
+
+        val reported = assertIs<AssertionError>(handled.single())
+        assertEquals(listOf("first"), reported.suppressedExceptions.map { it.message })
+    }
+
+    data object LaunchInLoopState : Action
+
+    /**
+     * The enter-loop guard used to fire before the last entered state got its runtime, leaving the
+     * Store in a state where every `launch {}` failed. The guard now refuses the next transition
+     * instead, so the state the Store stays in is fully entered.
+     */
+    @Test
+    fun enterLoopGuard_leavesTheStoreInAUsableState() = runTest(testDispatcher) {
+        val handled = mutableListOf<Throwable>()
+        var launched = 0
+        val store: Store<Loop, Action, Nothing> = Store(Loop.Start) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(ExceptionHandler { handled += it })
+            state<Loop.Start> { action<Enter> { nextState { Loop.Left(0) } } }
+            state<Loop.Left> { enter { nextState { Loop.Right(state.hop + 1) } } }
+            state<Loop.Right> { enter { nextState { Loop.Left(state.hop + 1) } } }
+            state<Loop> {
+                action<LaunchInLoopState> { launch { transaction { launched++ } } }
+                recover<IllegalStateException> { }
+            }
+        }
+
+        store.dispatchAndAwaitForTest(Enter)
+        store.dispatchAndAwaitForTest(LaunchInLoopState)
+
+        assertEquals(emptyList(), handled.map { it.message })
+        assertEquals(1, launched)
+    }
+
+    /**
+     * When `recover {}` moves to a state whose `enter {}` fails, the error that was being handled
+     * is kept as a suppressed exception of the reported one.
+     */
+    @Test
+    fun aFailingEnterOfTheRecoveredToState_keepsTheOriginalErrorAsSuppressed() = runTest(testDispatcher) {
+        val handled = mutableListOf<Throwable>()
+        val store: Store<Net, NetAction, Nothing> = Store(Net.Idle) {
+            coroutineContext(Dispatchers.Unconfined)
+            exceptionHandler(ExceptionHandler { handled += it })
+            state<Net.Idle> {
+                action<NetAction.Ping> { throw IllegalStateException("original") }
+                recover<IllegalStateException> { nextState { Net.Failed("moved") } }
+            }
+            state<Net.Failed> { enter { throw IllegalArgumentException("enter failed") } }
+        }
+
+        store.dispatchAndAwaitForTest(NetAction.Ping)
+
+        val reported = assertIs<IllegalArgumentException>(handled.single())
+        assertEquals(listOf("original"), reported.suppressedExceptions.map { it.message })
     }
 }

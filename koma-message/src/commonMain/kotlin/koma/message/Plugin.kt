@@ -8,6 +8,8 @@ import koma.core.PluginScope
 import koma.core.State
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.onSubscription
 
 /**
@@ -17,7 +19,8 @@ import kotlinx.coroutines.flow.onSubscription
  * Store's own initial `enter {}` or right after startup are received.
  * It stays active until the Store closes and invokes [block] for each received [Message], one
  * message at a time.
- * An exception thrown by [block] is reported to the Store's exception handler; the subscription
+ * An exception thrown by [block] is reported to the Store's exception handler (an expired
+ * `withTimeout {}` wrapped in an [IllegalStateException] with it as the cause); the subscription
  * keeps receiving later messages.
  * The underlying bus is process-wide and shared across all Stores using this plugin.
  * Messages are delivered only to active subscribers and are not replayed to Stores that start
@@ -36,11 +39,14 @@ fun <S : State, A : Action, E : Event> receiveMessages(block: suspend PluginLaun
                     .collect { message ->
                         try {
                             block(message)
-                        } catch (e: CancellationException) {
-                            throw e
                         } catch (e: Exception) {
-                            // Report through the Store's exception handler without ending the subscription.
-                            scope.launch { throw e }
+                            // The subscription's own cancellation (the Store closing) ends it; any
+                            // other exception, including an expired withTimeout, is reported through
+                            // the Store's exception handler and the subscription continues.
+                            if (e is CancellationException && !currentCoroutineContext().isActive) throw e
+                            // A CancellationException thrown in a launch would only cancel it, so an
+                            // expired withTimeout is reported wrapped, with the original as its cause.
+                            scope.launch { throw if (e is CancellationException) IllegalStateException("[Koma] receiveMessages {} block was cancelled: ${e.message}", e) else e }
                         }
                     }
             }
