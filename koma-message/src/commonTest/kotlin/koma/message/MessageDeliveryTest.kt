@@ -5,9 +5,10 @@ import koma.core.ExceptionHandler
 import koma.core.State
 import koma.core.Store
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -33,10 +34,11 @@ class MessageDeliveryTest {
     }
 
     private fun receiverStore(
+        exceptionHandler: ExceptionHandler = ExceptionHandler.Ignore,
         onMessage: (ChatMessage) -> Unit = {},
     ): Store<ChatState, ChatAction, Nothing> = Store(ChatState()) {
         coroutineContext(Dispatchers.Unconfined)
-        exceptionHandler(ExceptionHandler.Ignore)
+        exceptionHandler(exceptionHandler)
         plugin(
             receiveMessages { message ->
                 if (message is ChatMessage) {
@@ -92,16 +94,13 @@ class MessageDeliveryTest {
         sender.close()
     }
 
-    /**
-     * Known issue: an exception thrown by the `receiveMessages {}` block ends that Store's
-     * subscription for good, so later messages are silently lost.
-     */
-    @Ignore
     @Test
     fun message_receiverKeepsItsSubscriptionAfterItsBlockThrows() = runTest(testDispatcher) {
         val sender = senderStore()
         val seen = mutableListOf<String>()
+        val handled = mutableListOf<Throwable>()
         val receiver = receiverStore(
+            exceptionHandler = ExceptionHandler { handled += it },
             onMessage = {
                 seen += it.text
                 if (it.text == "bad") throw IllegalStateException("bad message")
@@ -113,7 +112,28 @@ class MessageDeliveryTest {
         sender.dispatch(ChatAction.Send("good"))
 
         assertEquals(listOf("bad", "good"), seen)
+        assertEquals(listOf("bad message"), handled.map { it.message })
         sender.close()
         receiver.close()
+    }
+
+    @Test
+    fun message_sentFromTheReceiversOwnStartup_isReceivedOnAMultiThreadedDispatcher() = runTest {
+        withContext(Dispatchers.Default) {
+            repeat(50) { attempt ->
+                val received = CompletableDeferred<Message>()
+                val store: Store<ChatState, ChatAction, Nothing> = Store(ChatState()) {
+                    coroutineContext(Dispatchers.Default)
+                    plugin(receiveMessages { if (it == ChatMessage("startup $attempt")) received.complete(it) })
+                    state<ChatState> {
+                        enter { message(ChatMessage("startup $attempt")) }
+                    }
+                }
+                store.start()
+
+                assertEquals(ChatMessage("startup $attempt"), kotlinx.coroutines.withTimeoutOrNull(5_000) { received.await() }, "attempt $attempt")
+                store.close()
+            }
+        }
     }
 }

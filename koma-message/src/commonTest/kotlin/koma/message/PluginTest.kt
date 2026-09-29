@@ -30,6 +30,7 @@ class MessagePluginTest {
         store.collectState { } // start Store
 
         assertEquals(sendMessage, receivedMessage)
+        store.close()
     }
 }
 
