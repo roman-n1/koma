@@ -156,6 +156,24 @@ Core (`koma-core`)
 - `enter {}` handlers moving to each other forever overflowed the stack, or spun while holding
   the lock when they suspended. A chain of more than 500 entered states in one transition now
   fails with an error naming the loop, and the Store keeps working.
+- Events emitted from launched coroutines are processed outside the Store lock, so their plugin
+  `onEvent` rounds ran concurrently with each other and with the hooks of handlers: a recorder
+  with plain lists lost about 1% of 20 000 events from four activities. Plugin hook rounds are
+  now serialized by their own lock; a plugin may keep plain state in its hooks.
+
+Statecharts (`koma-statechart`)
+
+- On a fresh start, a failing enter hook of an outer node stopped the loop that created the
+  activations, so the inner nodes had none: `startActivities` then failed with a
+  `NoSuchElementException` that reached `recover {}` instead of the hook's error, the inner
+  activities never ran and their timers stayed listed but never fired. Every active node now gets
+  its activation before any hook runs.
+- An expired `withTimeout {}` in the step a timer fired left the timer listed as running (the
+  round-2 removal only covered other exceptions), and one in an activity or launch ended the
+  work silently. Both now follow the core rule: only the task's own cancellation ends it.
+- `updateContext` returned `true` when its transform threw; `ChartLaunchScope.isActive` stayed
+  `true` after `close()`; `launch {}` called after the enter hook returned was dropped silently.
+  Fixed: `false`, `false`, and an error naming the hook.
 
 ## Open questions
 

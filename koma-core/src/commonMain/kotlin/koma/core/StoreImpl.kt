@@ -140,6 +140,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private val mutex = Mutex()
 
+    // Serializes plugin hook rounds. Handlers run under `mutex`, but events emitted from launched
+    // coroutines are processed outside it, so without this lock two `onEvent` rounds could run at
+    // once and a plugin keeping plain state (a recorder) would race with itself.
+    private val pluginMutex = Mutex()
+
     private val stateRuntimes = mutableMapOf<KClass<out S>, StateRuntime>()
 
     private var activeDispatchJob: Job? = null
@@ -761,15 +766,17 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun processPlugins(block: suspend Plugin<S, A, E>.() -> Unit) {
         try {
-            when (pluginExecutionPolicy) {
-                // async + awaitAll, not launch: a hook failing with a CancellationException (an
-                // expired withTimeout) would otherwise end its own coroutine silently.
-                PluginExecutionPolicy.Concurrent -> coroutineScope {
-                    plugins.map { plugin -> async { plugin.block() } }.awaitAll()
-                }
+            pluginMutex.withLock {
+                when (pluginExecutionPolicy) {
+                    // async + awaitAll, not launch: a hook failing with a CancellationException (an
+                    // expired withTimeout) would otherwise end its own coroutine silently.
+                    PluginExecutionPolicy.Concurrent -> coroutineScope {
+                        plugins.map { plugin -> async { plugin.block() } }.awaitAll()
+                    }
 
-                PluginExecutionPolicy.InRegistrationOrder -> plugins.forEach { plugin ->
-                    plugin.block()
+                    PluginExecutionPolicy.InRegistrationOrder -> plugins.forEach { plugin ->
+                        plugin.block()
+                    }
                 }
             }
         } catch (t: Throwable) {

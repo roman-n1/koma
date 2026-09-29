@@ -94,4 +94,57 @@ class StoreMultiThreadedTest {
             assertEquals((0 until perRound).toList(), seen, "round $round")
         }
     }
+
+    data class Quiet(val n: Int = 0) : State
+
+    data object Emit : Action
+
+    data class Note(val n: Int) : Event
+
+    /**
+     * Events emitted from launched coroutines are processed outside the Store lock, so the plugin
+     * hook rounds for them ran concurrently and a plugin keeping plain state (a recorder) raced
+     * with itself and lost entries. Hook rounds are now serialized.
+     */
+    @Test
+    fun pluginHookRounds_neverOverlap_evenForEventsEmittedFromLaunches() = runTest {
+        val launches = 4
+        val perLaunch = 2000
+        val seen = mutableListOf<Int>() // deliberately not thread-safe
+        var inRound = false
+        var overlaps = 0
+        val store: Store<Quiet, Emit, Note> = Store(Quiet()) {
+            coroutineContext(Dispatchers.Default)
+            plugin(
+                Plugin(
+                    onEvent = { _, event ->
+                        if (inRound) overlaps++
+                        inRound = true
+                        seen += event.n
+                        kotlinx.coroutines.yield()
+                        inRound = false
+                    },
+                ),
+            )
+            state<Quiet> {
+                action<Emit> {
+                    repeat(launches) { l ->
+                        launch { repeat(perLaunch) { i -> event(Note(l * perLaunch + i)) } }
+                    }
+                }
+            }
+        }
+
+        withContext(Dispatchers.Default) {
+            store.dispatch(Emit)
+            withTimeout(30_000) {
+                while (seen.size < launches * perLaunch) kotlinx.coroutines.delay(20)
+            }
+        }
+        kotlinx.coroutines.delay(100)
+
+        assertEquals(0, overlaps)
+        assertEquals((0 until launches * perLaunch).toSet(), seen.toSet())
+        store.close()
+    }
 }

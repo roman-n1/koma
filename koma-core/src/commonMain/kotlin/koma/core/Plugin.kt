@@ -8,6 +8,11 @@ package koma.core
  * [PluginExecutionPolicy] before it continues processing. Long-running work in a hook can delay
  * Store processing. When work should continue in the background, start it from a hook using
  * [PluginScope.launch].
+ *
+ * Hook rounds never overlap: while the hooks for one action, state or event run, no hook for
+ * another one runs, even for events emitted concurrently from launched coroutines. A plugin may
+ * therefore keep plain state in its hooks. Within one round, [PluginExecutionPolicy.Concurrent]
+ * runs the hooks of different plugins concurrently.
  */
 interface Plugin<S : State, A : Action, E : Event> {
     /**

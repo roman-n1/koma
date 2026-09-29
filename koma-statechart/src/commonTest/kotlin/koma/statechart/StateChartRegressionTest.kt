@@ -8,6 +8,7 @@ import koma.test.dispatchAndAwait
 import koma.test.startAndAwait
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -342,5 +343,113 @@ class StateChartRegressionTest {
         runCurrent()
         assertEquals(listOf(other), store.currentState.activeLeaves(chart))
         store.close()
+    }
+
+    /**
+     * A failing enter hook of an OUTER node on a fresh start must not leave the inner nodes
+     * without activation: their activities run and their timers fire, and the hook's own error
+     * (not a bookkeeping error) reaches `recover {}`.
+     *
+     * ```
+     * Root (enter throws) { [*] --> Leaf }   Leaf --after 5s--> Other
+     * ```
+     */
+    @Test
+    fun aFailedOuterEnterHookOnAFreshStart_keepsTheInnerNodesRunning() = runTest {
+        val root = StateId("Root")
+        val leaf = StateId("Leaf")
+        val other = StateId("Other")
+        val chart = StateChartDefinition(
+            initial = root,
+            states = listOf(CompoundState(root, initial = leaf), AtomicState(leaf, root), AtomicState(other)),
+            transitions = listOf(Transition(leaf, other, Trigger.After(5.seconds))),
+        )
+        var leafActivityRuns = 0
+        val recovered = mutableListOf<String>()
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(chart, Unit, backgroundScope.coroutineContext) {
+            onEnter(root) { error("boom") }
+            activity(leaf) { leafActivityRuns++ }
+            store { state<ChartState<Unit>> { recover<Exception> { recovered += error.message.orEmpty() } } }
+        }
+
+        store.startAndAwait()
+        runCurrent()
+        assertEquals(listOf("boom"), recovered)
+        assertEquals(1, leafActivityRuns)
+
+        advanceTimeBy(6.seconds)
+        runCurrent()
+        assertEquals(listOf(other), store.currentState.activeLeaves(chart))
+        assertEquals(emptyMap(), store.currentState.timers.running)
+        store.close()
+    }
+
+    /**
+     * An expired `withTimeout {}` in a hook run by a timer firing is a failed step like any other
+     * exception: the timer is spent and removed, the error reaches `recover {}`. In an activity it
+     * is reported too, instead of ending the activity silently.
+     */
+    @Test
+    fun anExpiredWithTimeout_inATimerStepOrAnActivity_isAFailure() = runTest {
+        val timed = chart.copy(transitions = chart.transitions + Transition(a, b, Trigger.After(1.seconds)))
+        val recovered = mutableListOf<String>()
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(timed, Unit, backgroundScope.coroutineContext) {
+            onEnter(b) { withTimeout(1.milliseconds) { delay(1.seconds) } }
+            activity(a) { withTimeout(1.milliseconds) { delay(1.seconds) } }
+            store { state<ChartState<Unit>> { recover<Exception> { recovered += error::class.simpleName.orEmpty() } } }
+        }
+
+        store.startAndAwait()
+        advanceTimeBy(1.5.seconds)
+        runCurrent()
+
+        assertEquals(listOf(a), store.currentState.activeLeaves(timed))
+        assertEquals(emptyMap(), store.currentState.timers.running)
+        assertEquals(listOf("TimeoutCancellationException", "TimeoutCancellationException"), recovered)
+        store.close()
+    }
+
+    /**
+     * `updateContext` returns `false` when its transform throws (the error reaches `recover {}`),
+     * `isActive` turns `false` once the Store is closed, and `launch {}` called after the enter
+     * hook returned is an error rather than silently dropped work.
+     */
+    @Test
+    fun launchScope_reportsWhatReallyHappened() = runTest {
+        val results = mutableListOf<Boolean>()
+        val recovered = mutableListOf<String>()
+        var activeAfterClose: Boolean? = null
+        lateinit var leakedScope: ChartEnterScope<Int, ChartAction, ChartEvent>
+        val closed = kotlinx.coroutines.CompletableDeferred<Unit>()
+        val store = StateChartStore<Int, ChartAction, ChartEvent>(chart, 0, backgroundScope.coroutineContext) {
+            onEnter(a) { leakedScope = this }
+            activity(a) {
+                results += updateContext { throw IllegalStateException("transform failed") }
+                results += updateContext { it + 1 }
+                try {
+                    leakedScope.launch { }
+                } catch (e: IllegalStateException) {
+                    recovered += "late launch: " + (e.message?.contains("after the onEnter hook") ?: false)
+                }
+                // close() cancels the activity; a non-suspending loop would keep reading isActive.
+                try {
+                    closed.await()
+                } finally {
+                    activeAfterClose = isActive
+                }
+            }
+            store { state<ChartState<Int>> { recover<IllegalStateException> { recovered += error.message.orEmpty() } } }
+        }
+
+        store.startAndAwait()
+        runCurrent()
+        assertEquals(listOf(false, true), results)
+        assertEquals(1, store.currentState.context)
+        assertEquals(listOf("transform failed", "late launch: true"), recovered)
+
+        store.close()
+        closed.complete(Unit)
+        runCurrent()
+        assertEquals(false, activeAfterClose)
     }
 }
