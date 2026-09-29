@@ -23,6 +23,17 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     private var storePendingActionPolicy: PendingActionPolicy = PendingActionPolicy.ClearOnStateExit
     private var storePluginExecutionPolicy: PluginExecutionPolicy = PluginExecutionPolicy.Concurrent
     private val storePlugins: MutableList<Plugin<S, A, E>> = mutableListOf()
+    private val recoveryValidators = mutableListOf<(S, S) -> Unit>()
+
+    /**
+     * Lets an adapter reject recovery updates that would bypass its runtime bookkeeping.
+     * Validators run under the Store lock before a recovered state is committed. A failure is
+     * reported to the exception handler with the original error suppressed; the old state stays.
+     */
+    @InternalKomaApi
+    fun validateRecovery(validator: (state: S, recoveredState: S) -> Unit) {
+        recoveryValidators += validator
+    }
 
     /**
      * Sets the declared initial state.
@@ -353,6 +364,9 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             override val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = this@StoreBuilder.onAction
             override val onExit: suspend ExitScope<S, E, S>.() -> Unit = this@StoreBuilder.onExit
             override val onError: suspend RecoverScope<S, E, S, Exception>.() -> Unit = this@StoreBuilder.onError
+            override val validateRecoveredState: (S, S) -> Unit = { previous, recovered ->
+                recoveryValidators.forEach { it(previous, recovered) }
+            }
             override val handlerRegistry: HandlerRegistry<S, A> = HandlerRegistry(
                 enter = registeredEnterHandlers.map { it.matcher },
                 action = registeredActionHandlers.map { it.matcher },

@@ -1,6 +1,8 @@
 package koma.core
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -134,26 +136,40 @@ class StoreSoakTest {
     fun soak_closeMidWork_stopsEverything() = runTest {
         val handled = mutableListOf<Throwable>()
         val store = soakStore(handled, PendingActionPolicy.ClearOnStateExit)
-        withContext(Dispatchers.Default) {
-            withTimeout(30_000) {
-                val storm = launch {
-                    var i = 0
-                    while (isActive) {
-                        store.dispatch(if (i % 50 == 0) A.Go else if (i % 50 == 25) A.Finish else A.Inc)
-                        i++
-                        if (i % 100 == 0) delay(1)
+        try {
+            withContext(Dispatchers.Default) {
+                withTimeout(30_000) {
+                    // Start the state-owned ticker before racing close against queued actions.
+                    store.dispatchAndAwaitForTest(A.Go)
+                    val queued = CompletableDeferred<Unit>()
+                    coroutineScope {
+                        val storm = launch {
+                            var i = 0
+                            while (isActive) {
+                                store.dispatch(if (i % 50 == 0) A.Go else if (i % 50 == 25) A.Finish else A.Inc)
+                                i++
+                                if (i % 100 == 0) {
+                                    queued.complete(Unit)
+                                    delay(1)
+                                }
+                            }
+                        }
+                        // ClearOnStateExit may discard every increment in a batch on a
+                        // single-threaded dispatcher, so a count threshold is not a barrier.
+                        queued.await()
+                        store.close()
+                        storm.cancelAndJoin()
                     }
+                    val frozen = store.currentState
+                    delay(100)
+                    assertEquals(frozen, store.currentState)
+                    store.dispatch(A.Inc)
+                    delay(50)
+                    assertEquals(frozen, store.currentState)
                 }
-                store.state.first { it.count > 200 }
-                store.close()
-                storm.cancel()
-                val frozen = store.currentState
-                delay(100)
-                assertEquals(frozen, store.currentState)
-                store.dispatch(A.Inc)
-                delay(50)
-                assertEquals(frozen, store.currentState)
             }
+        } finally {
+            store.close()
         }
         assertEquals(emptyList(), handled.map { it.toString() })
     }

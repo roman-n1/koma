@@ -331,15 +331,36 @@ internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
  * Whether [configuration] could have been produced by this chart: every active node is declared,
  * is not a history state and comes with its parent, exactly one top-level node is active, an
  * active compound state has exactly one active child and an active parallel state has all its
- * regions active; history records name declared history states and declared, non-history nodes.
+ * regions active; history records must describe a valid shallow or deep configuration of their
+ * current parent, including after the chart's hierarchy changes between versions.
  */
 @OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.isConsistent(configuration: StateConfiguration): Boolean {
-    val active = configuration.active
+    if (!hasConsistentActiveNodes(configuration.active)) return false
+    return configuration.history.all { (id, remembered) ->
+        val history = node(id) as? HistoryState ?: return@all false
+        if (remembered.isEmpty() || remembered.any { node(it) is HistoryState || !isDescendant(it, history.parent) }) return@all false
+        if (!history.deep) {
+            when (val parent = node(history.parent)) {
+                is CompoundState -> remembered.size == 1 && node(remembered.single())?.parent == parent.id
+                is ParallelState -> remembered == hierarchy.regions.getValue(parent.id).toSet()
+                else -> false
+            }
+        } else {
+            val restored = configurationOf(remembered).active.filterTo(linkedSetOf()) { it == history.parent || isDescendant(it, history.parent) }
+            hasConsistentActiveNodes(restored, history.parent) && activeLeaves(StateConfiguration(restored)).toSet() == remembered
+        }
+    }
+}
+
+/** Checks a whole configuration, or just the subtree belonging to one history parent. */
+@OptIn(ExperimentalKomaApi::class)
+private fun StateChartDefinition.hasConsistentActiveNodes(active: Set<StateId>, root: StateId? = null): Boolean {
+    if (root != null && root !in active) return false
     for (id in active) {
         val node = node(id) ?: return false
         val parent = node.parent
-        if (parent != null && parent !in active) return false
+        if (id != root && parent != null && parent !in active) return false
         val consistent = when (node) {
             is AtomicState -> true
             is CompoundState -> childrenOf(id).count { it.id in active } == 1
@@ -348,10 +369,7 @@ internal fun StateChartDefinition.isConsistent(configuration: StateConfiguration
         }
         if (!consistent) return false
     }
-    if (childrenOf(null).count { it.id in active } != 1) return false
-    return configuration.history.all { (history, remembered) ->
-        node(history) is HistoryState && remembered.all { id -> node(id).let { it != null && it !is HistoryState } }
-    }
+    return root != null || childrenOf(null).count { it.id in active } == 1
 }
 
 /**

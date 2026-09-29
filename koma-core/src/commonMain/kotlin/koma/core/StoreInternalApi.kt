@@ -10,6 +10,13 @@ package koma.core
 interface StoreInternalApi<S : State, A : Action, E : Event> {
     suspend fun startAndAwait()
     suspend fun dispatchAndAwait(action: A)
+
+    /**
+     * Enqueues an adapter action whose lifetime may end before it is processed. [isValid] is
+     * checked under the Store lock before action hooks or handlers run; false discards it.
+     * The predicate must be fast, non-suspending and side-effect free.
+     */
+    fun dispatchIf(action: A, isValid: () -> Boolean)
     fun patch(patch: StorePatch<S, A, E>): Store<S, A, E>
 
     /**

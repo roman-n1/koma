@@ -45,7 +45,8 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      *
      * This method returns immediately after requesting startup processing.
      * It does not wait for startup to finish.
-     * Calling this method more than once has no additional effect after the first startup begins.
+     * Calling this method more than once has no additional effect after startup succeeds.
+     * If a plugin's startup hook fails, a later call retries the unsuccessful hooks.
      */
     fun start()
 

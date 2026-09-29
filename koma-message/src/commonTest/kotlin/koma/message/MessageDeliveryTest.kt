@@ -2,6 +2,8 @@ package koma.message
 
 import koma.core.Action
 import koma.core.ExceptionHandler
+import koma.core.Plugin
+import koma.core.PluginExecutionPolicy
 import koma.core.State
 import koma.core.Store
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +28,32 @@ class MessageDeliveryTest {
     }
 
     private data class ChatMessage(val text: String) : Message
+
+    @Test
+    fun anotherPluginsStartupFailureDoesNotDuplicateMessageSubscriptions() = runTest(testDispatcher) {
+        for (policy in PluginExecutionPolicy.entries) {
+            var attempts = 0
+            val seen = mutableListOf<String>()
+            val receiver = Store<ChatState, ChatAction, Nothing>(ChatState(), Dispatchers.Unconfined) {
+                exceptionHandler(ExceptionHandler.Ignore)
+                pluginExecutionPolicy(policy)
+                plugin(receiveMessages { if (it is ChatMessage) seen += it.text })
+                plugin(Plugin(onStart = { if (++attempts == 1) error("transient startup failure") }))
+            }
+            val sender = senderStore()
+            try {
+                receiver.start()
+                receiver.start()
+                sender.dispatch(ChatAction.Send("once"))
+
+                assertEquals(2, attempts)
+                assertEquals(listOf("once"), seen, "policy=$policy")
+            } finally {
+                receiver.close()
+                sender.close()
+            }
+        }
+    }
 
     private fun senderStore(): Store<ChatState, ChatAction, Nothing> = Store(ChatState()) {
         coroutineContext(Dispatchers.Unconfined)

@@ -277,6 +277,47 @@ Core and companions
   another region's transition was not covered. The runtime's selection with every guard true
   is tried first now, and the class documentation describes the runtime-first explanation.
 
+## Fixed in the sixth round
+
+The full-library review included inherited code as well as the fork. All 529 original JVM tests
+passed before the changes. Additional deterministic regressions reproduced these failures:
+
+- A successful plugin's `onStart` ran again when another plugin failed startup. A message
+  subscription therefore delivered each message twice. Only unsuccessful plugin registrations
+  now retry, under both execution policies.
+- An exit hook completing `NonCancellable` cleanup after `close()` could still commit and save
+  the next state. Cancellation is checked again after exit processing.
+- Completed tracked launches retained their explicit `LaunchLane` keys until a state variant
+  change. Completion now removes its own entry under the Store lock, without removing a newer
+  replacement in that lane.
+- Restoration checked the names in history records but not their structure. A snapshot from a
+  parallel chart restored after its parent became compound could activate two exclusive children
+  at once. Shallow and deep records now have to describe valid configurations of their current
+  parents; otherwise startup uses the initial configuration and preserves context.
+- A chart's raw `recover { nextState { ... } }` could replace configuration or timer tokens
+  without running the chart lifecycle. Recovery now permits context updates only; a declared
+  action must drive a node change. Invalid recovery is rejected before commit and the original
+  error remains attached to the reported failure.
+- An activity could enqueue a result while its node was exiting, and that result would run in a
+  later activation. Activity dispatch now checks its activation under the Store lock, before
+  plugin hooks and handlers, and discards expired actions.
+- When the exception handler itself threw while an initial enter event was reported, startup
+  called it again. Already-reported failures now propagate without another report.
+- A patch could slip in after `start()` or dispatch but before their coroutine ran, or after
+  partially successful plugin startup. Patching now closes as soon as startup is requested.
+
+The regression tests live in `StoreShutdownRegressionTest`, `StoreLaunchRetentionJvmTest`,
+`StoreStartupRegressionTest`, `StoreStartupExceptionJvmTest`, `MessageDeliveryTest`,
+`StateChartRecoveryRegressionTest` and `StateChartActivityDispatchTest`. The final JVM suite has
+543 passing tests, including all existing property and multithreaded soak tests.
+
+Cross-platform checks also cover core, message and statechart on Android host, iOS Simulator
+Arm64, JavaScript/Node and Wasm/Node (468 tests per target). Node's Mocha timeout now matches the
+existing browser limits for core and statechart property tests. The common close-during-load
+test uses an explicit producer barrier: with `ClearOnStateExit`, waiting for a count threshold
+could hang on single-threaded dispatchers because the counted actions may all be discarded.
+Its producer and Store are now cleaned up even when an assertion or timeout fails.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing
@@ -301,21 +342,18 @@ messenger features.
   builds for messenger data.
 - A plugin's `onAction` or `onStart` that throws still aborts the action or the startup (nothing
   is committed yet at that point); `onState` and `onEvent` failures are only reported. A plugin
-  whose `onStart` can throw must make its own `onStart` idempotent, since a failed startup runs
-  every plugin's `onStart` again.
+  whose `onStart` can throw after launching work must clean that work up or make its own retry
+  idempotent. Successful plugin registrations are not restarted.
 - Dispatches are processed in dispatch order, but a `transaction {}` from a launched coroutine
   is not ordered against them: it takes the lock whenever it gets its turn.
 - The fail-fast check for `dispatchAndAwait` and `startAndAwait` is carried by the coroutine
   context, so a coroutine created from a handler with `CoroutineScope(currentCoroutineContext()
   + Job())` is rejected too although it would not deadlock; use `launch {}` for work started
   from a handler.
-- An `exit {}` that suspends under `NonCancellable` can still commit after `close()`; the
-  cancellation check runs once, when the transition starts.
 - `rememberStateSaver()` (rin's `rememberRetained`) needs a `ViewModelStoreOwner` in the
   composition; a plain `Composition` in tests or some desktop hosts has none.
-- `Store.patch {}` and `createRecorder()` are for tests and must be called before `start()` or
-  the first dispatch: on a multi-threaded dispatcher a patch right after `start()` can still slip
-  in before the startup coroutine takes the lock and mutate the plugin list while it is read.
+- `Store.patch {}` and `createRecorder()` are for tests and must be called before startup is
+  requested by `start()`, the first dispatch or state collection.
 - The message bus is process-wide: a receiver that falls 64 messages behind stalls every sender
   in every Store, not only the ones that talk to it. A `receiveMessages {}` block must never
   wait for its own Store's state (for example `state.first { }` after a `dispatch`): a handler
@@ -347,10 +385,6 @@ messenger features.
   report then lists the other timer as uncovered although it fired. A snapshot of an older chart
   restored by `start()` is reported as `UndeclaredState` plus an `UndeclaredTransition` from the
   vanished state to the initial configuration; the second is noise.
-- A chart activity's `dispatch` carries no activation token: an activity cancelled between a
-  suspending call returning and its `dispatch` can, on a multi-threaded dispatcher, inject its
-  action into a later activation of the same node (a window of microseconds). Timers do carry
-  tokens. Check the context or a generation counter in the handler when that matters.
 - A self-loop timer exits and re-enters its source, as SCXML requires, so an `activity` of that
   node restarts on every firing: keep a heartbeat timer in its own region, apart from a socket
   reader.
