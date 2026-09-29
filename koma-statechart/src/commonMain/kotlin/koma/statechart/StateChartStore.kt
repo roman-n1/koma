@@ -6,10 +6,12 @@ import koma.core.EnterScope
 import koma.core.EnterTransactionScope
 import koma.core.Event
 import koma.core.ExperimentalKomaApi
+import koma.core.InternalKomaApi
 import koma.core.KomaStoreDsl
 import koma.core.State
 import koma.core.Store
 import koma.core.StoreBuilder
+import koma.core.StoreInternalApi
 import koma.core.StoreScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -148,7 +150,8 @@ interface ChartLaunchScope<C, A : Action, E : Event> : StoreScope {
     suspend fun updateContext(transform: (C) -> C): Boolean
 
     /**
-     * Dispatches [action] to the Store, as [Store.dispatch] does.
+     * Enqueues [action] while this activation is active. If the node is exited before the action
+     * is processed, the action is discarded, including when the same node has been entered again.
      */
     fun dispatch(action: A)
 }
@@ -221,6 +224,9 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * handler, policies and `recover {}` handlers. Blocks run in the order added, after the chart's
      * own handlers are registered, so `enter {}` and `action {}` handlers registered here never run.
      * The initial state is the chart's: an `initialState` set here is ignored.
+     * A `recover {}` handler may update [ChartState.context], but may not change configuration or
+     * timer bookkeeping. Dispatch a declared chart action to change nodes, so hooks, activities,
+     * history and timers participate in the transition.
      */
     fun store(block: StoreBuilder<ChartState<C>, A, E>.() -> Unit) {
         storeBlocks += block
@@ -280,7 +286,7 @@ fun <C, A : Action, E : Event> StateChartStore(
  * inside Koma handlers and transactions, which the Store runs one at a time, except [tasks], which
  * is a channel.
  */
-@OptIn(ExperimentalKomaApi::class)
+@OptIn(ExperimentalKomaApi::class, InternalKomaApi::class)
 internal class ChartStoreHost<C, A : Action, E : Event>(
     private val definition: StateChartDefinition,
     context: C,
@@ -342,6 +348,11 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
                 }
             }
             config.storeBlocks.forEach { it() }
+            validateRecovery { previous, recovered ->
+                require(previous.configuration == recovered.configuration && previous.timers == recovered.timers) {
+                    "[Koma] StateChartStore recover {} may update context only; dispatch a declared chart action to change configuration or timers"
+                }
+            }
             initialState(declaredInitial)
         }
         return store
@@ -583,6 +594,9 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
             return applied
         }
 
-        override fun dispatch(action: A) = store.dispatch(action)
+        override fun dispatch(action: A) {
+            @Suppress("UNCHECKED_CAST")
+            (store as StoreInternalApi<ChartState<C>, A, E>).dispatchIf(action) { activation.isActive }
+        }
     }
 }

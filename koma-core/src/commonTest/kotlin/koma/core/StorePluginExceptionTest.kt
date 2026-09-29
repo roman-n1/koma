@@ -150,7 +150,7 @@ class StorePluginExceptionTest {
 
         assertEquals(AppState.Loading, store.currentState)
         assertEquals(2, onStartCalls)
-        assertEquals(listOf("first", "second", "first", "second"), pluginRecords)
+        assertEquals(listOf("first", "second", "first"), pluginRecords)
         val secondError = assertIs<IllegalStateException>(handled[1])
         assertEquals("start failed", secondError.message)
     }

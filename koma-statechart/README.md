@@ -13,8 +13,8 @@ draw it, generate test paths from it, and run it as an ordinary Koma `Store`.
   step function underneath, if you want to hold the configuration yourself.
 
 The semantics follow SCXML (Harel statecharts): external transitions, exit innermost first, enter
-outermost first, inner transitions take priority over outer ones. The module uses only the public
-`koma-core` API.
+outermost first, inner transitions take priority over outer ones. The module uses `koma-core` and
+its companion-module bridge for lifecycle checks.
 
 Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
 fork [roman-n1/koma](https://github.com/roman-n1/koma), not in upstream Koma.
@@ -149,6 +149,16 @@ exited states is cancelled and activities and timers of entered states start. Th
 state. Building the Store fails fast when a guard or effect label has no implementation, or a hook
 names an undeclared state.
 
+Actions dispatched from an activity or `onEnter { launch { } }` are tied to that activation of
+the node. If the node exits before the queued action is handled, the action is discarded, even
+if the same node has already been entered again. This prevents an old load or connection attempt
+from completing a newer one.
+
+In `store { state<ChartState<C>> { recover<Exception> { ... } } }`, recovery may update `context`.
+It cannot replace `configuration` or `timers`, since that would bypass exit/entry hooks and leave
+the old activities running. To recover into another node, dispatch an action declared in the
+chart; in-place recovery can use `nextState { state.copy(context = ...) }`.
+
 ## Hierarchy, history, parallel regions, timers
 
 The full example is the messenger in
@@ -267,8 +277,9 @@ provided the chart does not rely on them either:
   hand-written Store, write the state-to-leaf mapping as a `when` over your sealed type.
 - **Saved state is data.** `ChartState` holds `StateId` strings, the history and timer tokens keyed
   by transition index, so a `StateSaver` can persist it without reflection. Treat a change to the
-  chart as a change to the saved format: a restored configuration is not checked against the new
-  chart.
+  chart as a change to the saved format. The active nodes and history records are checked against
+  the new hierarchy; an inconsistent snapshot falls back to the initial configuration while
+  retaining its context. Context schema migrations remain the application's responsibility.
 
 ## Limitations
 

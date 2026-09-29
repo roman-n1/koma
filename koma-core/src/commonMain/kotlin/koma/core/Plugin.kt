@@ -19,7 +19,9 @@ interface Plugin<S : State, A : Action, E : Event> {
      * Called once when Store startup begins, before the initial `enter {}` processing starts.
      *
      * When a plugin's `onStart` throws, startup is aborted and retried on the next dispatch or
-     * [Store.start], and every `onStart` runs again then. A failing initial `enter {}` does not
+     * [Store.start]. Only hooks that failed run again; successful registrations are kept, along
+     * with any work they launched. A hook that can fail after launching work must clean up that
+     * work or make its own retry idempotent. A failing initial `enter {}` does not
      * retry startup: it is reported, and the Store counts as started.
      */
     suspend fun onStart(scope: PluginScope<S, A>, state: S) {}

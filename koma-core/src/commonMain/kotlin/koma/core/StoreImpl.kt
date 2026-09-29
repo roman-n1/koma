@@ -102,6 +102,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val onError: suspend RecoverScope<S, E, S, Exception>.() -> Unit
 
+    protected abstract val validateRecoveredState: (S, S) -> Unit
+
     internal abstract val handlerRegistry: HandlerRegistry<S, A>
 
     private val coroutineScope by lazy {
@@ -167,10 +169,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private var isInitialized: Boolean = false
 
-    // Plugins are started once. Only a plugin's own `onStart` failure retries startup (nothing has
-    // been entered yet); running `onStart` again after a failed `enter {}` would, for example,
-    // subscribe a message plugin twice.
+    @Volatile
+    private var isStartupRequested: Boolean = false
+
+    // Only unsuccessful plugin registrations retry startup. Successful hooks may have already
+    // subscribed or launched work, even when another plugin in the round failed.
     private var arePluginsStarted: Boolean = false
+    private val startedPluginIndices = mutableSetOf<Int>()
 
     private data class StateRuntime(
         val scope: CoroutineScope,
@@ -179,6 +184,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     final override fun dispatch(action: A) {
         launchDispatch(action)
+    }
+
+    final override fun dispatchIf(action: A, isValid: () -> Boolean) {
+        launchDispatch(action, isValid)
     }
 
     final override fun start() {
@@ -235,7 +244,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     final override fun patch(patch: StorePatch<S, A, E>): Store<S, A, E> {
         check(mutex.tryLock()) { "[Koma] Failed to configure the Store because it is starting or already started" }
         try {
-            check(!isInitialized) { "[Koma] Store configuration must be applied before the Store is started" }
+            check(!isStartupRequested) { "[Koma] Store configuration must be applied before startup is requested" }
             if (patch.initialState != null) {
                 check(!isStateRestored) { "[Koma] initialState cannot be patched after the state has been read" }
             }
@@ -253,6 +262,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun launchStartup(): Job {
+        isStartupRequested = true
         return coroutineScope.launch(insideStore) {
             mutex.withLock {
                 initializeIfNeeded()
@@ -260,7 +270,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    private fun launchDispatch(action: A): Job {
+    private fun launchDispatch(action: A, isValid: () -> Boolean = { true }): Job {
+        isStartupRequested = true
         val previousDone = CompletableDeferred<Job?>()
         // Completed when this dispatch's work under the lock is over (or the dispatch never ran),
         // not when its coroutine ends: a handler that leaves a child coroutine behind in its own
@@ -275,7 +286,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 activeDispatchJob = dispatchJob
                 try {
                     initializeIfNeeded()
-                    onActionDispatched(currentState, action)
+                    if (isValid()) onActionDispatched(currentState, action)
                 } finally {
                     if (activeDispatchJob == dispatchJob) {
                         activeDispatchJob = null
@@ -331,7 +342,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun initializeIfNeeded() {
         if (isInitialized) return
         if (!arePluginsStarted) {
-            processPlugins { onStart(pluginScope, currentState) }
+            processPlugins(starting = true) { onStart(pluginScope, currentState) }
             arePluginsStarted = true
         }
         // A failed initial `enter {}` (no recover {} handled it) is reported, and the Store counts
@@ -389,6 +400,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 "[Koma] More than $MAX_ENTER_CHAIN states were entered in one transition; enter {} handlers moving to each other in a loop?"
             }
             processStateExit(state)
+            // An exit hook may finish cleanup under NonCancellable after close() cancelled us.
+            currentCoroutineContext().ensureActive()
             clearPendingActionsOnStateExitIfNeeded()
         }
 
@@ -425,6 +438,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun onErrorOccurred(state: S, exception: Exception) {
         try {
             val nextState = processError(state, exception)
+            validateRecoveredState(state, nextState)
             commitTransition(state, nextState, inErrorHandling = true)
         } catch (t: Throwable) {
             // A failing recover {}, or a failing enter {} of the state it moved to, must not hide
@@ -552,23 +566,25 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             is LaunchControl.CancelPrevious -> {
                 val trackedKey = resolveTrackedActionLaunchKey(action = action, control = control)
                 cancelTrackedActionLaunch(stateRuntime, trackedKey)
-                stateRuntime.actionLaunchJobs[trackedKey] = launchInStateRuntime(
+                val job = launchInStateRuntime(
                     stateRuntime = stateRuntime,
                     dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
                 )
+                trackActionLaunch(stateRuntime, trackedKey, job)
             }
 
             is LaunchControl.DropIfRunning -> {
                 val trackedKey = resolveTrackedActionLaunchKey(action = action, control = control)
                 if (stateRuntime.actionLaunchJobs[trackedKey]?.isActive == true) return
-                stateRuntime.actionLaunchJobs[trackedKey] = launchInStateRuntime(
+                val job = launchInStateRuntime(
                     stateRuntime = stateRuntime,
                     dispatcher = dispatcher,
                     buildLaunchScope = buildLaunchScope,
                     block = block,
                 )
+                trackActionLaunch(stateRuntime, trackedKey, job)
             }
         }
     }
@@ -583,6 +599,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun cancelTrackedActionLaunch(stateRuntime: StateRuntime, trackedKey: Any) {
         stateRuntime.actionLaunchJobs.remove(trackedKey)?.cancel()
+    }
+
+    private fun trackActionLaunch(stateRuntime: StateRuntime, key: Any, job: Job) {
+        stateRuntime.actionLaunchJobs[key] = job
+        job.invokeOnCompletion {
+            // Completion may run on any thread. Keep every access to the lane map under mutex,
+            // and do not remove a newer launch that has already replaced this one.
+            coroutineScope.launch {
+                mutex.withLock {
+                    if (stateRuntime.actionLaunchJobs[key] === job) stateRuntime.actionLaunchJobs.remove(key)
+                }
+            }
+        }
     }
 
     private suspend fun <LS> executeLaunchInStateRuntime(
@@ -801,22 +830,25 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             .forEach { it.cancel() }
     }
 
-    private suspend fun processPlugins(block: suspend Plugin<S, A, E>.() -> Unit) {
+    private suspend fun processPlugins(starting: Boolean = false, block: suspend Plugin<S, A, E>.() -> Unit) {
         if (plugins.isEmpty()) return
         try {
             pluginMutex.withLock {
+                val round = plugins.withIndex().filter { !starting || it.index !in startedPluginIndices }
                 // Every plugin sees every round: one plugin's failure must not hide the state or
                 // event from the plugins after it (a recorder, a conformance checker). Failures are
                 // collected and the first is thrown with the others suppressed.
-                val failures: List<Throwable> =
+                val outcomes: List<Throwable?> =
                     // A single plugin needs no scope: its hooks are sequential under either policy.
-                    if (pluginExecutionPolicy == PluginExecutionPolicy.InRegistrationOrder || plugins.size == 1) {
-                        plugins.mapNotNull { plugin -> hookFailure { plugin.block() } }
+                    if (pluginExecutionPolicy == PluginExecutionPolicy.InRegistrationOrder || round.size == 1) {
+                        round.map { (_, plugin) -> hookFailure { plugin.block() } }
                     } else {
                         coroutineScope {
-                            plugins.map { plugin -> async { hookFailure { plugin.block() } } }.awaitAll().filterNotNull()
+                            round.map { (_, plugin) -> async { hookFailure { plugin.block() } } }.awaitAll()
                         }
                     }
+                if (starting) round.forEachIndexed { i, plugin -> if (outcomes[i] == null) startedPluginIndices += plugin.index }
+                val failures = outcomes.filterNotNull()
                 // A fatal error (a non-Exception throwable) from any plugin stays fatal.
                 (failures.firstOrNull { it !is Exception } ?: failures.firstOrNull())?.let { first ->
                     failures.forEach { if (it !== first) first.addSuppressed(it) }
@@ -848,6 +880,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
      * coroutine exception handler as before.
      */
     private suspend fun reportWithoutAborting(t: Throwable) {
+        if (t is InternalError && t.reported) throw t
         val original = if (t is InternalError) t.original else t
         rethrowIfNonRecoverable(original)
         try {

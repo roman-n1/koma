@@ -55,7 +55,8 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.dispatchAndAwait(a
  *
  * This is intended for tests that need to swap persistence, policies, exception handling,
  * plugins, or the declared initial state without rewriting the Store definition itself.
- * The patch must happen before startup processing begins. Some values must also be patched before
+ * The patch must happen before startup is requested by `start()`, dispatch or state collection,
+ * including while startup is queued or awaiting a retry. Some values must also be patched before
  * they are consumed: `initialState` and `stateSaver` before state is read, and `coroutineContext`
  * before the Store launches any coroutine.
  *
