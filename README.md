@@ -328,7 +328,8 @@ fun CounterStore(
     state<CounterState> {
 
         action<CounterAction.Load> {
-            nextState { state.copy(count = loadCount()) } // call the function
+            val count = loadCount() // call the function; nextState {} itself is not suspending
+            nextState { state.copy(count = count) }
         }
 
         // ...
@@ -504,7 +505,7 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 Exceptions can be caught not only in the `enter{}` block but also in the `action{}` and `exit{}` blocks.
 In other words, your business logic exceptions can be handled in the `recover{}` block.
 
-On the other hand, fatal errors and other uncaught non-`Exception` throwables in the entire Store can be handled with the `exceptionHandler()` specification:
+Exceptions that no `recover{}` handles, and failures of plugins and of the `StateSaver`, are reported to the handler set with `exceptionHandler()` (`ExceptionHandler.Rethrow` by default). Non-`Exception` throwables such as `Error`s are fatal: they abort the transition and are only reported.
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
@@ -518,7 +519,7 @@ You can also create an `ExceptionHandler` instance with the `ExceptionHandler()`
 
 ### Asynchronous Work
 
-Handlers run one at a time: the *Store* processes dispatched actions in dispatch order, and a `transaction{}` from a launched coroutine waits for its turn in the same queue.
+Handlers run one at a time: the *Store* processes dispatched actions in dispatch order. A `transaction{}` from a launched coroutine also runs exclusively with the handlers, but it is not ordered against queued actions: it takes the lock whenever it gets its turn.
 You can use `launch{}` in both `enter{}` and `action{}` blocks to run asynchronous work and update *State* (or emit *Event*s).
 This is useful for integrating long-running tasks such as flow collection, network calls, and background processing:
 
@@ -561,7 +562,7 @@ state<MyState.Active> {
 ```
 
 This pattern lets your *Store* react to external data changes automatically, such as database updates, user preference changes, or network events.
-Coroutines started by `launch{}` are automatically cancelled when the *State* changes to a different *State*, making it easy to manage resources and subscriptions.
+Coroutines started by `launch{}` are automatically cancelled when the *State* changes to a different *State* variant (a different class, such as `Main` to `Loading`; an update from `Main(0)` to `Main(1)` keeps them running), making it easy to manage resources and subscriptions.
 In `action{}`, `launch{}` is tied to the *State* active at action start.
 
 If you want lightweight coordination and explicit cancellation for coroutines launched from an action handler, set the control directly on `launch(...)`:
@@ -610,7 +611,7 @@ val store = Store(MyState.Active()) {
 
 `LaunchControl.CancelPrevious(lane)` cancels the previous tracked launch in the same lane before starting the next one.
 `LaunchControl.DropIfRunning(lane)` ignores a new launch while tracked work in the same lane is still active.
-When the lane is omitted, `LaunchControl.CancelPrevious()` and `LaunchControl.DropIfRunning()` use the same internal default lane for that `action {}` block.
+When the lane is omitted, `LaunchControl.CancelPrevious()` and `LaunchControl.DropIfRunning()` use a default lane derived from the dispatched action's type, so launches coordinate across dispatches of that action type within the current state (in a broad `action<MyAction> {}` block, two different action types get two lanes).
 `LaunchControl.Untracked` keeps the default behavior and runs launches independently.
 A `transaction {}` requested by a launch that was cancelled (by `CancelPrevious`, `cancelLaunch(lane)` or a state exit) before the transaction got its turn is skipped, so a cancelled search never commits a stale result; once a transaction has started it runs to completion.
 `cancelLaunch(lane)` only affects coroutines started from `action { launch { ... } }` in the current active state's runtime that use tracked controls such as `LaunchControl.CancelPrevious(...)` and `LaunchControl.DropIfRunning(...)`. Use an explicit `LaunchLane()` when you need to share a lane across multiple launches or cancel it later. It does not cancel `LaunchControl.Untracked` launches or `enter { launch { ... } }`.
@@ -650,21 +651,18 @@ enter(Dispatchers.Default) {
 }
 ```
 
-Alternatively, you can use Coroutines' `withContext()`.
+Alternatively, you can use Coroutines' `withContext()` for work the handler itself must finish before it returns; the *Store* keeps waiting for the handler.
+Do not call `launch{}` inside `withContext()`: there it resolves to `CoroutineScope.launch`, so the handler would wait for that coroutine and never return. Pass the dispatcher to the *Store*'s `launch{}` instead.
 
 ```kt
 enter {
     withContext(Dispatchers.Default) {
-        // work on CPU thread..
-
-        withContext(Dispatchers.IO) {
-            // This code runs on IO thread
-            launch {
-                val updates = dataRepository.observeUpdates()
-                updates.collect { newData ->
-                    // ...
-                }
-            }
+        // CPU work that must complete before this state counts as entered
+    }
+    launch(Dispatchers.IO) {
+        // This coroutine runs on the IO thread and lives as long as this state is active
+        dataRepository.observeUpdates().collect { newData ->
+            transaction { nextState { state.copy(data = newData) } }
         }
     }
 }

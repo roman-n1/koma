@@ -16,6 +16,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -217,6 +218,40 @@ class StoreRecorderTest {
 
         assertEquals(1, enterCalls)
         assertEquals(listOf(AppState.Loading), recorder.states)
+        store.close()
+    }
+
+    /**
+     * One recorder serves one Store: its lists are plain, and hook rounds are serialized per
+     * Store only, so a recorder shared by two Stores would race with itself and lose entries.
+     */
+    @Test
+    fun recorder_registeredOnASecondStore_isRejected() = runTest(testDispatcher) {
+        val first = createTestStore()
+        val recorder = first.createRecorder()
+        val handled = mutableListOf<Throwable>()
+        val second = createTestStore().patch {
+            exceptionHandler(koma.core.ExceptionHandler { handled += it })
+            plugin(recorder)
+        }
+
+        first.startAndAwait()
+        second.startAndAwait()
+
+        assertEquals(listOf(AppState.Loading, AppState.Main(0)), recorder.states)
+        val error = assertIs<IllegalStateException>(handled.single())
+        assertTrue("one Store" in error.message.orEmpty(), error.message)
+        first.close()
+        second.close()
+    }
+
+    @Test
+    fun createRecorder_afterStart_failsWithARecorderSpecificMessage() = runTest(testDispatcher) {
+        val store = createTestStore()
+        store.startAndAwait()
+
+        val error = assertFailsWith<IllegalStateException> { store.createRecorder() }
+        assertTrue("createRecorder() must be called before" in error.message.orEmpty(), error.message)
         store.close()
     }
 }

@@ -175,6 +175,76 @@ Statecharts (`koma-statechart`)
   `true` after `close()`; `launch {}` called after the enter hook returned was dropped silently.
   Fixed: `false`, `false`, and an error naming the hook.
 
+## Fixed in the fourth round
+
+The fourth round audited the documentation against the behaviour, the test helpers under
+misuse, the throughput of the round-3 locks, and ran an end-to-end messenger scenario and
+property-based fuzzing of the statechart tooling against the runtime.
+
+Core and helpers
+
+- `dispatchAndAwait`, `startAndAwait` and the suspending `diagnoseActionMatches` called from a
+  handler, plugin hook or transaction of the same Store deadlocked it silently and for good: the
+  call waits for the lock its caller holds. Such calls now fail with an error naming the
+  problem; from a `launch {}` they still work.
+- One `StoreRecorder` registered on two Stores lost events (hook rounds are serialized per
+  Store, the lists are plain). A recorder now rejects a second Store. `createRecorder()` after
+  startup names itself in its error.
+- The round-3 plugin lock cost about 80% of the event throughput from launched coroutines
+  under contention (four launches streaming events into one plugin: 800k to 140k events/s).
+  Hook rounds with no plugins now skip the lock, and a single plugin runs without the
+  `coroutineScope`/`async` round. The lock itself stays: correctness first, and 140k events/s
+  is far above what a UI consumes. Dispatch throughput (55-60k/s) is unchanged since round 2.
+
+End-to-end messenger scenario (core + statechart + message + logging + test)
+
+- A plugin hook that threw in one round hid that round from the plugins registered after it
+  (`coroutineScope` cancelled the sibling hooks; registration order stopped at the failure): a
+  recorder or a conformance checker behind a failing analytics plugin missed the state. Every
+  plugin now sees every round; the first failure is reported with the others suppressed. As a
+  consequence, when a plugin's `onStart` fails, the other plugins' `onStart` still ran, and runs
+  again on the retried startup.
+- A handler or transaction past its last suspension point when `close()` was called still
+  committed: state updated, saver called, plugins run after close. A screen closed and reopened
+  at once could restore a snapshot and then have it overwritten by the old Store. Nothing
+  commits after close now: the commit checks the handler's own cancellation first.
+- In `StateChartStore`, an expired `withTimeout {}` in an initial enter hook was treated as the
+  Store's own cancellation, so the initial configuration lost its activities and timers (the
+  round-3 fix covered other exceptions only). It now follows the core rule everywhere.
+- `koma-message`'s `message()` could not be called from statechart hooks and activities:
+  `StoreScope` was sealed, so `ChartHookScope` and `ChartLaunchScope` could not implement it.
+  `StoreScope` is now an open marker interface (binary compatible for callers) and the chart
+  scopes implement it.
+
+Statechart tooling (property-based fuzzing, 1200 random charts per property)
+
+- The runtime, `validate()`, `instantTimerCycles()`, the path builders and the Mermaid output
+  held every property tried (exit and entry order, consistent configurations, history records,
+  timers to start and cancel, path replay, Mermaid 11 parsing); no finding there.
+- `StateChartConformance` reported false violations in parallel charts: it explained a change
+  leaf by leaf, so when one transition of a region exited the whole parallel state it picked a
+  region-local transition for the first changed leaf and had nothing left for the others (5 of
+  700 random walks). It now asks the runtime first: every guard assignment over the transitions
+  matching the action is tried through the runtime's own selection, and the change is explained
+  when one ends in the observed leaves.
+- It also rejected a transition into a history state that restored what a self-loop had
+  recorded, because Koma does not show a self-loop that keeps the leaves. The history such a
+  self-loop may have recorded is now kept as a possibility next to the previous one.
+- `StateConfiguration`'s hash was the plain sum of its ids' hashes, so states named by a pattern
+  (`R1_S2`) collapsed onto a few hash codes and the configuration graph degenerated to
+  quadratic time (an 8 x 4 parallel chart took minutes). The hash now mixes each id first.
+
+Documentation
+
+- Two README samples were wrong: `nextState { state.copy(count = loadCount()) }` does not
+  compile (`nextState {}` is not suspending), and `launch {}` inside `withContext {}` resolves
+  to `CoroutineScope.launch`, so the handler waited for the collection and the Store never
+  started. Corrected, with the rule spelled out.
+- Corrected README claims: a transaction is not ordered against queued dispatches; launches are
+  cancelled on a state *variant* change only; the default launch lane is the action type, not
+  the `action {}` block; non-`Exception` throwables are fatal, not "handled" by the exception
+  handler. Documented that a launch failing after its state exited is not reported.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing
@@ -224,3 +294,27 @@ messenger features.
 - `rememberViewStore` starts the Store from `collectAsState()` before `eventEffect` subscribes,
   so events from the startup `enter {}` race the subscription on `Dispatchers.Default` and are
   lost: another reason to model navigation and errors as state.
+- `toMermaid()` leaves out a top-level state that no transition, initial or history default
+  mentions (`validate()` reports it as unreachable). Declaring it would break the diagram's
+  stability property (appending a transition only appends a line), so it stays out.
+- The configuration graph behind `validate()`, the path builders, `reachableStates()` and the
+  zero-delay timer check enumerates every reachable configuration, which grows exponentially
+  with the number of parallel regions (8 regions of 4 states: 65 536 configurations). Keep
+  charts that go through these tools to a handful of regions.
+- `instantTimerCycles()` ignores guards, so a guarded zero-delay retry loop
+  (`Retry --after 0--> Retry [attempts < 3]`) is rejected at Store construction; use a small
+  positive delay for immediate retries.
+- `StateChartConformance` credits a timer firing to the first declared timer of the source when
+  several timers with different guards share it (documented as "first such timer"); the coverage
+  report then lists the other timer as uncovered although it fired. A snapshot of an older chart
+  restored by `start()` is reported as `UndeclaredState` plus an `UndeclaredTransition` from the
+  vanished state to the initial configuration; the second is noise.
+- A chart activity's `dispatch` carries no activation token: an activity cancelled between a
+  suspending call returning and its `dispatch` can, on a multi-threaded dispatcher, inject its
+  action into a later activation of the same node (a window of microseconds). Timers do carry
+  tokens. Check the context or a generation counter in the handler when that matters.
+- A self-loop timer exits and re-enters its source, as SCXML requires, so an `activity` of that
+  node restarts on every firing: keep a heartbeat timer in its own region, apart from a socket
+  reader.
+- Collectors and `currentState` see a new state before `StateSaver.save` runs; a process death
+  in that window persists the previous state after the UI reacted to the new one.

@@ -439,6 +439,10 @@ class StateChartHistoryPropertyTest {
             if (from == to) {
                 val first = reference.tree.priority(from).firstOrNull { HierarchyReference.matches(it.on, action) }
                 if (first != null && reference.leaf(reference.fire(configuration, first).after) == from && first !in covered) covered += first
+                // The runtime records history on a self-loop it takes (the first matching transition
+                // whose guard holds); the plugin keeps that as a possibility, so the report follows it.
+                val fired = reference.step(configuration, action, ::guardHolds)
+                if (fired != null && reference.leaf(fired.after) == from) history = fired.after.history
                 continue
             }
             val candidates = reference.tree.priority(from).filter { to in couldEnter(reference, from, it, history) }

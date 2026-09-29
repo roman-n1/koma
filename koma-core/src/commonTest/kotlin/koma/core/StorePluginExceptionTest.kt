@@ -140,7 +140,8 @@ class StorePluginExceptionTest {
 
         assertEquals(AppState.Loading, store.currentState)
         assertEquals(1, onStartCalls)
-        assertEquals(listOf("first"), pluginRecords)
+        // Every plugin sees every round, so the second plugin's onStart still ran.
+        assertEquals(listOf("first", "second"), pluginRecords)
         val firstError = assertIs<IllegalStateException>(handled.single())
         assertEquals("start failed", firstError.message)
 
@@ -149,7 +150,7 @@ class StorePluginExceptionTest {
 
         assertEquals(AppState.Loading, store.currentState)
         assertEquals(2, onStartCalls)
-        assertEquals(listOf("first", "first"), pluginRecords)
+        assertEquals(listOf("first", "second", "first", "second"), pluginRecords)
         val secondError = assertIs<IllegalStateException>(handled[1])
         assertEquals("start failed", secondError.message)
     }

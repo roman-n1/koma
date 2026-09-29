@@ -21,7 +21,25 @@ import koma.core.ExperimentalKomaApi
 data class StateConfiguration(
     val active: Set<StateId>,
     val history: Map<StateId, Set<StateId>> = emptyMap(),
-)
+) {
+    // A Set's hash is the plain sum of its elements' hashes, so ids named by a pattern such as
+    // "R1_S2" give the same sum for many different configurations and the configuration graph's
+    // seen-set degenerates to quadratic time. Mixing each element's hash first keeps the sums apart.
+    override fun hashCode(): Int = mixedHash(active) * 31 + history.entries.sumOf { (id, ids) -> mix(id.hashCode()) xor mixedHash(ids) }
+
+    override fun equals(other: Any?): Boolean = other is StateConfiguration && active == other.active && history == other.history
+
+    private companion object {
+        fun mixedHash(ids: Set<StateId>): Int = ids.sumOf { mix(it.hashCode()) }
+
+        fun mix(h: Int): Int {
+            var x = h * -0x61c88647 // golden-ratio multiplier
+            x = x xor (x ushr 15)
+            x *= -0x7a143595
+            return x xor (x ushr 13)
+        }
+    }
+}
 
 /**
  * Returns the active nodes of [configuration] that have no active child, in declaration order
