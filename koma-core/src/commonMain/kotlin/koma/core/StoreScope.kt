@@ -98,8 +98,9 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
          * Runs a mutually exclusive transaction against the current Store state and suspends until it
          * completes.
          *
-         * If the state has already exited by the time the transaction would run, the transaction is
-         * skipped.
+         * If the state has already exited, or the coroutine that called this function was cancelled
+         * (for example by [LaunchControl.CancelPrevious] or `cancelLaunch()`), by the time the
+         * transaction would run, the transaction is skipped. Once started, it runs to completion.
          *
          * @param dispatcher Optional CoroutineDispatcher override for this operation.
          * When null, the transaction inherits the Store's current execution context.
@@ -320,8 +321,9 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
          * Runs a mutually exclusive transaction against the current Store state and suspends until it
          * completes.
          *
-         * If the state has already exited by the time the transaction would run, the transaction is
-         * skipped.
+         * If the state has already exited, or the coroutine that called this function was cancelled
+         * (for example by [LaunchControl.CancelPrevious] or `cancelLaunch()`), by the time the
+         * transaction would run, the transaction is skipped. Once started, it runs to completion.
          *
          * @param dispatcher Optional CoroutineDispatcher override for this operation.
          * When null, the transaction inherits the Store's current execution context.

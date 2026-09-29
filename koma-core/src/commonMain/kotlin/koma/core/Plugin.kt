@@ -22,11 +22,17 @@ interface Plugin<S : State, A : Action, E : Event> {
 
     /**
      * Called after a new state snapshot is committed, persisted, and reported to observers.
+     *
+     * An exception thrown here is reported to the Store's [ExceptionHandler]; the transition
+     * continues, since the state is already committed.
      */
     suspend fun onState(scope: PluginScope<S, A>, prevState: S, state: S) {}
 
     /**
      * Called after an event is emitted to collectors and observers.
+     *
+     * An exception thrown here is reported to the Store's [ExceptionHandler]; the handler that
+     * emitted the event continues.
      */
     suspend fun onEvent(scope: PluginScope<S, A>, state: S, event: E) {}
 }

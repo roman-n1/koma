@@ -1,6 +1,7 @@
 package koma.core
 
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -9,11 +10,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -139,6 +142,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private var activeDispatchJob: Job? = null
 
+    // The most recently dispatched job. Each dispatch waits for its predecessor before it competes
+    // for `mutex`, so actions are processed in dispatch order even on a multi-threaded dispatcher,
+    // where freshly launched coroutines would otherwise reach the lock in arbitrary order.
+    // MutableStateFlow is used as a thread-safe atomic reference (Job equality is identity).
+    private val lastDispatchJob = MutableStateFlow<Job?>(null)
+
     @Volatile
     private var isStateRestored: Boolean = false
 
@@ -223,7 +232,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun launchDispatch(action: A): Job {
-        return dispatchScope.launch {
+        val previousDispatchJob = CompletableDeferred<Job?>()
+        val job = dispatchScope.launch {
+            // Keeps dispatch order: a cancelled or failed predecessor completes too, so this never
+            // waits forever. Waiting here costs nothing extra, as the lock serializes dispatches anyway.
+            previousDispatchJob.await()?.join()
             mutex.withLock {
                 val dispatchJob = coroutineContext[Job]
                 activeDispatchJob = dispatchJob
@@ -237,6 +250,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
             }
         }
+        previousDispatchJob.complete(lastDispatchJob.getAndUpdate { job })
+        return job
     }
 
     final override fun collectState(state: (S) -> Unit) {
@@ -524,6 +539,14 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
+    // A transaction runs in the Store's root scope so that it is atomic once started, but it is
+    // skipped if, by the time it gets the lock, its state has exited or the coroutine that
+    // requested it was cancelled (for example by [LaunchControl.CancelPrevious] or
+    // `cancelLaunch()`); otherwise a cancelled launch could still commit a stale result.
+    private fun canRunTransaction(stateScope: CoroutineScope, caller: Job?): Boolean {
+        return stateScope.isActive && caller?.isActive != false
+    }
+
     private fun buildEnterLaunchScope(stateScope: CoroutineScope): EnterLaunchScope<S, E, S> {
         return object : EnterLaunchScope<S, E, S> {
             override val isActive: Boolean get() = stateScope.isActive
@@ -533,9 +556,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             }
 
             override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend EnterTransactionScope<S, E, S>.() -> Unit) {
+                val caller = currentCoroutineContext()[Job]
                 val job = coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                     mutex.withLock {
-                        if (stateScope.isActive) {
+                        if (canRunTransaction(stateScope, caller)) {
                             var newState: S? = null
                             val transactionScope = object : EnterTransactionScope<S, E, S> {
                                 override val state: S = currentState
@@ -581,9 +605,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             }
 
             override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend ActionTransactionScope<S, A, E, S>.() -> Unit) {
+                val caller = currentCoroutineContext()[Job]
                 val job = coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
                     mutex.withLock {
-                        if (stateScope.isActive) {
+                        if (canRunTransaction(stateScope, caller)) {
                             var newState: S? = null
                             val transactionScope = object : ActionTransactionScope<S, A, E, S> {
                                 override val state: S = currentState
@@ -639,15 +664,22 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         stateRuntimes.remove(state::class)?.scope?.cancel()
     }
 
+    // Once the new state is committed it is visible to collectors, so a failing saver or plugin
+    // hook is reported instead of aborting the rest of the transition; otherwise the new state's
+    // `enter {}` would never run and its runtime would be missing, so every later `launch {}` in
+    // that state would fail.
     private suspend fun processStateChange(state: S, nextState: S) {
         _state.update { nextState }
         try {
             stateSaver.save(nextState)
         } catch (t: Throwable) {
-            rethrowIfNonRecoverable(t)
-            throw InternalError(t)
+            reportWithoutAborting(t)
         }
-        processPlugins { onState(pluginScope, state, nextState) }
+        try {
+            processPlugins { onState(pluginScope, state, nextState) }
+        } catch (t: InternalError) {
+            reportWithoutAborting(t)
+        }
     }
 
     private suspend fun processError(state: S, throwable: Exception): S {
@@ -672,9 +704,15 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         return newState ?: state
     }
 
+    // The event has already reached its collectors, so a failing plugin hook is reported instead
+    // of aborting the handler that emitted it.
     private suspend fun processEventEmit(state: S, event: E) {
         _event.emit(event)
-        processPlugins { onEvent(pluginScope, state, event) }
+        try {
+            processPlugins { onEvent(pluginScope, state, event) }
+        } catch (t: InternalError) {
+            reportWithoutAborting(t)
+        }
     }
 
     private fun clearPendingActionsOnStateExitIfNeeded() {
@@ -707,6 +745,22 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             throw InternalError(t)
+        }
+    }
+
+    /**
+     * Reports a recoverable [t] to the exception handler without aborting the current transition.
+     * Cancellation and fatal errors are rethrown. If the handler itself throws, as
+     * [ExceptionHandler.Rethrow] does, the transition is aborted and the error reaches the
+     * coroutine exception handler as before.
+     */
+    private fun reportWithoutAborting(t: Throwable) {
+        val original = if (t is InternalError) t.original else t
+        rethrowIfNonRecoverable(original)
+        try {
+            exceptionHandler.handle(original)
+        } catch (handlerError: Throwable) {
+            throw InternalError(handlerError)
         }
     }
 

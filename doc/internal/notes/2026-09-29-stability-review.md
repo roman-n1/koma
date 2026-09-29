@@ -66,6 +66,29 @@ Build
 - `koma-compose`, `koma-logging`, `koma-message` and `koma-test` expose core types in their public
   API but declared `koma-core` (and `compose.runtime`) as `implementation`; they are now `api`.
 
+## Fixed in the second round
+
+Core (`koma-core`)
+
+- Actions were not processed in dispatch order on a multi-threaded dispatcher (the default,
+  `Dispatchers.Default`): every `dispatch()` launched its own coroutine, and coroutines scheduled
+  on different worker threads reached the Store's lock in arbitrary order. Two hundred sequential
+  dispatches from one thread came out with several pairs swapped. Each dispatch now waits for
+  its predecessor before it competes for the lock; the lock already serialized them, so nothing
+  gets slower.
+- A `transaction {}` queued by a launch that `LaunchControl.CancelPrevious` or `cancelLaunch()`
+  then cancelled still committed. The transaction runs in the Store's root scope so that it is
+  atomic once started, but it only checked that the state was still active, not that its caller
+  was. In the README's search example this commits the result of the previous query after the
+  new one was requested. A transaction is now skipped when its caller was cancelled before it
+  got the lock.
+- When `StateSaver.save` or a plugin's `onState` threw while a new state variant was committed,
+  the rest of the transition was aborted: the state was already visible, but its `enter {}`
+  never ran and its runtime was never created, so every later `launch {}` in that state failed
+  with "State scope is not found". Such errors are now reported to the exception handler and the
+  transition finishes. The same applies to `onEvent`: the handler that emitted the event
+  continues. `onAction` and `onStart` failures still abort as before (nothing is committed yet).
+
 ## 未解決事項
 
 Known behavior that is by design or needs a decision; take it into account when writing

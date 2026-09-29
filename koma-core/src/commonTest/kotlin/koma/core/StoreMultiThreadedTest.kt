@@ -62,4 +62,36 @@ class StoreMultiThreadedTest {
         assertEquals(total, committed)
         store.close()
     }
+
+    data class Seen(val values: List<Int> = emptyList()) : State
+
+    data class Add(val value: Int) : Action
+
+    /**
+     * Actions dispatched one after another from a single thread are processed in dispatch order.
+     * Each dispatch is a coroutine on the Store's dispatcher; without ordering, two coroutines
+     * scheduled on different worker threads reach the Store's lock in arbitrary order.
+     */
+    @Test
+    fun dispatches_areProcessedInDispatchOrder() = runTest {
+        val rounds = 20
+        val perRound = 200
+        repeat(rounds) { round ->
+            val store: Store<Seen, Add, Nothing> = Store(Seen()) {
+                coroutineContext(Dispatchers.Default)
+                state<Seen> {
+                    action<Add> { nextState { state.copy(values = state.values + action.value) } }
+                }
+            }
+            withContext(Dispatchers.Default) {
+                repeat(perRound) { store.dispatch(Add(it)) }
+                withTimeout(10_000) {
+                    store.state.first { it.values.size == perRound }
+                }
+            }
+            val seen = store.currentState.values
+            store.close()
+            assertEquals((0 until perRound).toList(), seen, "round $round")
+        }
+    }
 }

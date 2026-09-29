@@ -56,6 +56,7 @@ interface Store<S : State, A : Action, E : Event> : AutoCloseable {
      * It does not wait for action handling to complete.
      * If the Store has not started yet, this also triggers startup processing before the action
      * runs.
+     * Actions are processed one at a time, in the order they were dispatched, on every dispatcher.
      *
      * @param action The action to dispatch
      */
