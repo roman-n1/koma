@@ -49,6 +49,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":koma-core"))
+            api(project(":koma-observability"))
         }
         commonTest.dependencies {
             implementation(project(":koma-test"))
