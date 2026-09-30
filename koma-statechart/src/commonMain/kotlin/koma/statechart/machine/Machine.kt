@@ -261,6 +261,11 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
                     input.command !in snapshot.commands -> ignored(snapshot, IgnoreReason.StaleCommand)
                     else -> step(snapshot.copy(commands = snapshot.commands - input.command), input, CommandFailure(input.command, input.failure), changed = true)
                 }
+                is MachineInput.CommandAbandoned -> when {
+                    !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
+                    input.command !in snapshot.commands -> ignored(snapshot, IgnoreReason.StaleCommand)
+                    else -> Decision(DecisionOutcome.Handled, snapshot.copy(revision = snapshot.revision + 1, commands = snapshot.commands - input.command))
+                }
             }
         } catch (e: Exception) {
             Decision(DecisionOutcome.Failed(FailureDescriptor.of(e), e), snapshot)

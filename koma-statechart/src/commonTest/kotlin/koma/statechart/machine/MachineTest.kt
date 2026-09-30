@@ -262,6 +262,19 @@ class MachineTest {
     }
 
     @Test
+    fun commandAbandoned_deregistersIt_andIsStaleAfterwards() {
+        val machine = machine()
+        val snapshot = started(machine)
+
+        val decision = machine.decide(snapshot, MachineInput.CommandAbandoned(CommandId(1), AbandonReason.Superseded, at(1))).handled()
+
+        assertTrue(decision.transitions.isEmpty())
+        assertTrue(decision.snapshot.commands.isEmpty())
+        assertEquals(snapshot.revision + 1, decision.snapshot.revision)
+        machine.decide(decision.snapshot, MachineInput.CommandAbandoned(CommandId(1), AbandonReason.Dropped, at(2))).ignored(IgnoreReason.StaleCommand)
+    }
+
+    @Test
     fun commandFailed_deregistersIt_andStepsWithCommandFailure() {
         val failure = FailureDescriptor(type = "IOException")
         val fetchFailed = ActionMatcher.of<CommandFailure>("CommandFailure")

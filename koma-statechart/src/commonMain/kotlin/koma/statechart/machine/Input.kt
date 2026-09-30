@@ -11,7 +11,7 @@ import koma.observability.FailureDescriptor
  * More kinds of input may be added, so code that matches on this type should expect more cases.
  */
 @ExperimentalKomaApi
-sealed interface MachineInput<out A : Action> {
+sealed interface MachineInput<out A : Action> : Action {
     /**
      * The machine's clock when the input was accepted.
      */
@@ -50,6 +50,14 @@ sealed interface MachineInput<out A : Action> {
      * action, so a chart may declare a transition for it.
      */
     data class CommandFailed(val command: CommandId, val failure: FailureDescriptor, override val now: MachineTime) : MachineInput<Nothing>
+
+    /**
+     * The command [command] never ran or was stopped by the executor for [reason]: superseded in
+     * its lane, dropped because the lane was busy. The machine only deregisters it. A command
+     * cancelled because its activation exited is not reported: the decision that exited the
+     * activation already removed it.
+     */
+    data class CommandAbandoned(val command: CommandId, val reason: AbandonReason, override val now: MachineTime) : MachineInput<Nothing>
 }
 
 /**
@@ -59,3 +67,15 @@ sealed interface MachineInput<out A : Action> {
  */
 @ExperimentalKomaApi
 data class CommandFailure(val command: CommandId, val failure: FailureDescriptor) : Action
+
+/**
+ * Why the executor abandoned a command; see [MachineInput.CommandAbandoned].
+ */
+@ExperimentalKomaApi
+enum class AbandonReason {
+    /** A newer command in the same lane under [ConcurrencyPolicy.Latest] cancelled it. */
+    Superseded,
+
+    /** The lane was busy under [ConcurrencyPolicy.DropIfRunning], so it never ran. */
+    Dropped,
+}
