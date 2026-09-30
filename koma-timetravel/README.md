@@ -36,9 +36,10 @@ Store, in memory.
   application's kotlinx-serialization serializers for its context, actions, commands and events,
   and reads it back. A newer format or an older one without a `FormatMigration` is
   `Unsupported`, never guessed; a payload the serializers reject or an inconsistent checkpoint
-  is `Invalid` at its position. Format 2 begins at the start checkpoint; the codec migrates
-  format 1 itself. Give the application's sealed types explicit `@SerialName`s: the wire must
-  not carry class names.
+  is `Invalid` at its position. Format 4 begins at the start checkpoint with the executor's
+  lanes and the mailbox's pending effects and carries bridge inputs; the codec migrates every
+  older format itself. Give the application's sealed types explicit `@SerialName`s: the wire
+  must not carry class names.
 
 - **Inspector.** `Inspector` (package `inspect`) is the read model of stage 4: the Stores of a
   group with their capabilities, the timeline of what happened in the group's order, each

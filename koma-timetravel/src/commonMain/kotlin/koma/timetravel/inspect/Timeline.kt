@@ -103,6 +103,9 @@ sealed interface TimelineItem {
     /** A bridge routed an effect of [store] to [to] as [message]; [delivered] is false when [to] was not attached. */
     data class Sent(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId, val input: InputId?, val message: MessageRef, val to: StoreInstanceId, val delivered: Boolean) : TimelineItem
 
+    /** What the mailbox did with the effect [effect]: [entry] is the journal's word for it. */
+    data class Effect(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId, val effect: Long, val entry: JournalEntry<*, *, *>) : TimelineItem
+
     /** An action refused at admission; it never became an input. */
     data class Rejected(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId, val action: Payload<*>, val reason: String) : TimelineItem
 

@@ -65,6 +65,36 @@ fun <C, A : Action, CMD, E : Event> RecordingSession.decisionsOf(
     action: (A) -> Payload<A> = { Payload.Omitted },
 ): DecisionObserver<C, A, CMD, E> = DecisionJournal(this, store, command, action)
 
+/**
+ * Journals what the mailbox of [store] does with its effects: [JournalEntry.EffectQueued] with
+ * what [describe] keeps of the effect (nothing by default), [JournalEntry.EffectHandlingStarted],
+ * [JournalEntry.EffectAcknowledged] and [JournalEntry.EffectDiscarded]. Pass the result to
+ * [MailboxConfig.listeners].
+ */
+@ExperimentalKomaApi
+fun <E : Event> RecordingSession.effectsOf(store: StoreInstanceId, describe: (E) -> Payload<E> = { Payload.Omitted }): EffectListener<E> = object : EffectListener<E> {
+    override fun onQueued(input: InputId?, effect: PendingEffect<E>) {
+        val payload = try {
+            describe(effect.event)
+        } catch (e: Exception) {
+            Payload.Unavailable
+        }
+        publish(store, JournalEntry.EffectQueued(input, effect.id.value, effect.policy.name, payload))
+    }
+
+    override fun onHandlingStarted(effect: PendingEffect<E>) {
+        publish(store, JournalEntry.EffectHandlingStarted(effect.id.value, effect.attempts))
+    }
+
+    override fun onAcknowledged(id: EffectId) {
+        publish(store, JournalEntry.EffectAcknowledged(id.value))
+    }
+
+    override fun onDiscarded(id: EffectId, reason: EffectDiscardReason) {
+        publish(store, JournalEntry.EffectDiscarded(id.value, reason.name))
+    }
+}
+
 @OptIn(ExperimentalKomaApi::class)
 private class DecisionJournal<C, A : Action, CMD, E : Event>(
     private val session: RecordingSession,

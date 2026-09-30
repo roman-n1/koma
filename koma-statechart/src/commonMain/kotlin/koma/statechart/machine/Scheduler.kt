@@ -3,6 +3,7 @@ package koma.statechart.machine
 import koma.core.Action
 import koma.core.Event
 import koma.core.ExperimentalKomaApi
+import koma.core.InputId
 import koma.observability.FailureDescriptor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -32,6 +33,7 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     initial: MachineSnapshot<C>,
     private val handler: CommandHandler<CMD, A>,
     private val clock: MachineClock,
+    private val mailbox: MailboxImpl<E>,
     private val feed: (MachineInput<A>) -> Unit,
     private val report: (Throwable) -> Unit,
 ) {
@@ -51,10 +53,11 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     }
 
     /**
-     * Enqueues [decision]'s intents; returns at once. Safe to call under the store's lock.
+     * Enqueues [decision]'s intents, made while processing [input]; returns at once. Safe to call
+     * under the store's lock.
      */
-    fun apply(decision: Decision<C, CMD, E>) {
-        messages.trySend(Message.Apply(decision))
+    fun apply(decision: Decision<C, CMD, E>, input: InputId?) {
+        messages.trySend(Message.Apply(decision, input))
     }
 
     /**
@@ -83,7 +86,7 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     }
 
     private sealed interface Message {
-        class Apply<C, CMD, E : Event>(val decision: Decision<C, CMD, E>) : Message
+        class Apply<C, CMD, E : Event>(val decision: Decision<C, CMD, E>, val input: InputId?) : Message
 
         class Finished(val command: CommandId) : Message
 
@@ -96,7 +99,7 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
         when (message) {
             is Message.Apply<*, *, *> -> {
                 @Suppress("UNCHECKED_CAST")
-                carryOut(message.decision as Decision<C, CMD, E>)
+                carryOut(message.decision as Decision<C, CMD, E>, message.input)
             }
             is Message.Finished -> finished(message.command)
             is Message.TimerDone -> timers.remove(message.timer)
@@ -113,8 +116,10 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
         }
     }
 
-    private fun carryOut(decision: Decision<C, CMD, E>) {
+    private fun carryOut(decision: Decision<C, CMD, E>, input: InputId?) {
         lastSnapshot = decision.snapshot
+        // Effects first: delivered after the commit, in decision order, before any command runs.
+        mailbox.enqueue(input, decision.effects)
         // What the machine deregistered is no longer ending here.
         ending.keys.retainAll(decision.snapshot.commands.keys)
         apply(lanes.exited(decision.cancelledScopes))
@@ -182,6 +187,6 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
         for (id in settled.running.keys.toList()) {
             if (id !in lastSnapshot.commands) settled = settled.finished(id).lanes
         }
-        return ExecutorCheckpoint(lastSnapshot, clock.now(), settled, ending.toMap())
+        return ExecutorCheckpoint(lastSnapshot, clock.now(), settled, ending.toMap(), mailbox.snapshot())
     }
 }

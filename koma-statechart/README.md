@@ -350,6 +350,13 @@ What holds:
 - `AdmissionPolicy.Bounded(n)` refuses a dispatched action while `n` accepted actions still wait;
   `store.admit(action)` says whether it was accepted, `dispatch` drops the answer. Inputs the
   machine's own commands and timers send are never refused.
+- Effects reach the UI through `store.event` (transient: delivered to whoever collects now, or
+  lost) or, when `MailboxConfig.policy` says `Retained` or `Latest(key)`, through
+  `store.mailbox`: they wait there, with their `EffectId`, until a subscriber of
+  `mailbox.subscribe()` acknowledges the `Delivery`; a subscriber that goes away hands what it
+  was handling to the next one, `Latest` keeps only the newest of its key, the mailbox is
+  bounded, and the pending effects are in the checkpoint. `session.effectsOf(id)` journals
+  what the mailbox does. See the [ADR](../doc/internal/adr/2026-09-30-effect-mailbox.md).
 - A `MachineGroup` joins stores that talk to each other: `route(from, to, map)` delivers a
   member's effects to another as `MachineInput.BridgeReceived` with a `MessageId` of the sender
   and the effect, decided like a dispatch and never refused; `group.checkpoint(timeout)` is a

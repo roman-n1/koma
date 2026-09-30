@@ -623,6 +623,25 @@ Found and settled by them:
 - A recording since a cut must carry the cut's messages in flight, or their deliveries look
   unsent. `GroupRecording.inFlight` seeds the causality check.
 
+## Fourteenth round: subscribers that die with effects in hand
+
+The retained mailbox ([ADR](../adr/2026-09-30-effect-mailbox.md)) promises that a retained
+effect reaches a subscriber and is acknowledged once, whatever the UI does between. The UI's
+worst behaviour is to be recreated mid-handling: the subscriber that took the effect is
+cancelled before it acknowledged, while the next subscriber is already collecting.
+
+- `EffectMailboxStormTest` (statechart): four hundred retained effects dispatched from four
+  threads on `Dispatchers.Default`, three subscribers that each live a few milliseconds,
+  acknowledge some of what they take and are cancelled with the rest in hand, until every
+  effect is acknowledged. Every effect acknowledged exactly once, none lost, none discarded,
+  one `EffectQueued` and one `EffectAcknowledged` per effect in the journal with its
+  `EffectHandlingStarted` attempts counting up, the mailbox empty at the end.
+
+Settled by it: the doorbell of the mailbox is read before the queue is checked, so a ring
+between the two is not missed and no subscriber waits for an effect that is already there; a
+subscriber's cancellation releases what it held under the lock and rings, so the next one
+takes it at once.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing

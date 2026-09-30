@@ -251,6 +251,60 @@ public final class koma/observability/JournalEntry$DecisionIgnored : koma/observ
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/observability/JournalEntry$EffectAcknowledged : koma/observability/JournalEntry {
+	public fun <init> (J)V
+	public final fun component1 ()J
+	public final fun copy (J)Lkoma/observability/JournalEntry$EffectAcknowledged;
+	public static synthetic fun copy$default (Lkoma/observability/JournalEntry$EffectAcknowledged;JILjava/lang/Object;)Lkoma/observability/JournalEntry$EffectAcknowledged;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffect ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/JournalEntry$EffectDiscarded : koma/observability/JournalEntry {
+	public fun <init> (JLjava/lang/String;)V
+	public final fun component1 ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (JLjava/lang/String;)Lkoma/observability/JournalEntry$EffectDiscarded;
+	public static synthetic fun copy$default (Lkoma/observability/JournalEntry$EffectDiscarded;JLjava/lang/String;ILjava/lang/Object;)Lkoma/observability/JournalEntry$EffectDiscarded;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffect ()J
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/JournalEntry$EffectHandlingStarted : koma/observability/JournalEntry {
+	public fun <init> (JI)V
+	public final fun component1 ()J
+	public final fun component2 ()I
+	public final fun copy (JI)Lkoma/observability/JournalEntry$EffectHandlingStarted;
+	public static synthetic fun copy$default (Lkoma/observability/JournalEntry$EffectHandlingStarted;JIILjava/lang/Object;)Lkoma/observability/JournalEntry$EffectHandlingStarted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAttempt ()I
+	public final fun getEffect ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/JournalEntry$EffectQueued : koma/observability/JournalEntry {
+	public synthetic fun <init> (Lkoma/core/InputId;JLjava/lang/String;Lkoma/observability/Payload;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-hFruGEc ()Lkoma/core/InputId;
+	public final fun component2 ()J
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Lkoma/observability/Payload;
+	public final fun copy-_NJra8Q (Lkoma/core/InputId;JLjava/lang/String;Lkoma/observability/Payload;)Lkoma/observability/JournalEntry$EffectQueued;
+	public static synthetic fun copy-_NJra8Q$default (Lkoma/observability/JournalEntry$EffectQueued;Lkoma/core/InputId;JLjava/lang/String;Lkoma/observability/Payload;ILjava/lang/Object;)Lkoma/observability/JournalEntry$EffectQueued;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffect ()J
+	public final fun getEvent ()Lkoma/observability/Payload;
+	public final fun getInput-hFruGEc ()Lkoma/core/InputId;
+	public final fun getPolicy ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/observability/JournalEntry$EventEmitted : koma/observability/JournalEntry {
 	public synthetic fun <init> (Lkoma/core/InputId;Lkoma/observability/Payload;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-hFruGEc ()Lkoma/core/InputId;

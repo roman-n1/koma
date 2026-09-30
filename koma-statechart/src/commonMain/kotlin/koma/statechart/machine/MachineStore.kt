@@ -17,9 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -44,6 +42,12 @@ interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>
      * [dispatch] is this with the answer dropped.
      */
     fun admit(action: A): Admission
+
+    /**
+     * The retained mailbox of the effects whose [EffectPolicy] keeps them; [Store.event] carries
+     * the transient ones. See [EffectMailbox].
+     */
+    val mailbox: EffectMailbox<E>
 
     /**
      * Delivers the bridge message [message] carrying [action]: it becomes a
@@ -104,6 +108,7 @@ interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>
  * @param clock The machine's clock
  * @param coroutineContext The Store's coroutine context, as in Koma's `Store(...)`
  * @param admission How many dispatched actions may wait; see [AdmissionPolicy]
+ * @param mailbox What the mailbox keeps of the effects and for whom; see [MailboxConfig]
  * @param observers See the decisions as they are committed, ignored or refused; for example
  * `session.decisionsOf(store)` to journal them
  * @param builder Store configuration: plugins, exception handler, state saver, journal
@@ -119,8 +124,9 @@ fun <C, A : Action, CMD, E : Event> MachineStore(
     coroutineContext: CoroutineContext? = null,
     admission: AdmissionPolicy = AdmissionPolicy.Unbounded,
     observers: List<DecisionObserver<C, A, CMD, E>> = emptyList(),
+    mailbox: MailboxConfig<E> = MailboxConfig(),
     builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit = {},
-): MachineStore<C, A, CMD, E> = MachineStoreImpl(machine, context, handler, scope, clock, coroutineContext, admission, observers, builder)
+): MachineStore<C, A, CMD, E> = MachineStoreImpl(machine, context, handler, scope, clock, coroutineContext, admission, observers, mailbox, builder)
 
 @OptIn(ExperimentalKomaApi::class, InternalKomaApi::class)
 internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
@@ -132,6 +138,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     coroutineContext: CoroutineContext?,
     private val admission: AdmissionPolicy,
     private val observers: List<DecisionObserver<C, A, CMD, E>>,
+    mailboxConfig: MailboxConfig<E>,
     builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit,
 ) : MachineStore<C, A, CMD, E> {
     init {
@@ -142,12 +149,8 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     private val executionScope = CoroutineScope(scope.coroutineContext + SupervisorJob(scope.coroutineContext[Job]))
 
-    // Events of committed decisions, delivered in decision order by one coroutine.
-    private val effects = Channel<E>(Channel.UNLIMITED)
-    private val _event = MutableSharedFlow<E>()
-    private val eventPump: Job = executionScope.launch {
-        for (event in effects) _event.emit(event)
-    }
+    // The effects of committed decisions: transient ones to the event flow, the others retained.
+    private val mailboxImpl = MailboxImpl(mailboxConfig, executionScope, ::report)
 
     // The decision whose snapshot the handler is committing, with the input it was decided for;
     // consumed by the plugin after the commit.
@@ -161,7 +164,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     private var pluginScope: PluginScope<MachineSnapshot<C>, MachineInput<A>>? = null
 
-    private val scheduler = CommandScheduler<C, A, CMD, E>(executionScope, machine.initialSnapshot(context), handler, clock, feed = ::enqueue, report = ::report)
+    private val scheduler = CommandScheduler<C, A, CMD, E>(executionScope, machine.initialSnapshot(context), handler, clock, mailboxImpl, feed = ::enqueue, report = ::report)
 
     // The controlled queue of a group cut: while frozen, every input (dispatched, delivered, fed
     // by the executor) waits here instead of entering the inner store, in arrival order.
@@ -257,15 +260,16 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
             val decision = committed.decision
             check(decision.snapshot === state) { "[Koma] MachineStore committed a snapshot that is not the pending decision's" }
             pending = null
-            for (effect in decision.effects) effects.trySend(effect.event)
-            scheduler.apply(decision)
+            scheduler.apply(decision, committed.input)
             observe { it.onCommitted(committed.input, committed.machineInput, decision) }
         }
     }
 
     override val state: StateFlow<MachineSnapshot<C>> get() = inner.state
 
-    override val event: Flow<E> get() = _event
+    override val event: Flow<E> get() = mailboxImpl.transient
+
+    override val mailbox: EffectMailbox<E> get() = mailboxImpl
 
     override val currentState: MachineSnapshot<C> get() = inner.currentState
 
@@ -361,13 +365,13 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     override fun collectState(state: (MachineSnapshot<C>) -> Unit) = inner.collectState(state)
 
     override fun collectEvent(event: (E) -> Unit) {
-        executionScope.launch { _event.collect { event(it) } }
+        executionScope.launch { this@MachineStoreImpl.event.collect { event(it) } }
     }
 
     override fun close() {
         inner.close()
         scheduler.close()
-        effects.close()
+        mailboxImpl.close()
         executionScope.cancel()
     }
 }

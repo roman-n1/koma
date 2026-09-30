@@ -19,6 +19,8 @@ import kotlin.time.Duration
  * @property lanes The commands running and waiting, with their registrations
  * @property ending The commands the executor has finished with (completed, failed, abandoned)
  * whose last input the machine had not decided yet, so the snapshot still holds them
+ * @property effects The effects waiting in the mailbox or being handled without an
+ * acknowledgement yet (handoff §8: unhandled UI effects and their delivery state)
  * @throws IllegalArgumentException if the lanes and [ending] are not a partition of the
  * snapshot's commands
  */
@@ -28,6 +30,7 @@ data class ExecutorCheckpoint<C, CMD>(
     val now: MachineTime,
     val lanes: Lanes<CMD> = Lanes(),
     val ending: Map<CommandId, CommandRegistration<CMD>> = emptyMap(),
+    val effects: List<PendingEffect<*>> = emptyList(),
 ) {
     init {
         val running = lanes.running.keys

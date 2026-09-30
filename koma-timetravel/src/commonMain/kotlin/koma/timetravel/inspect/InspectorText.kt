@@ -61,6 +61,7 @@ object InspectorText {
             is TimelineItem.Discarded -> append("Discarded ").append(item.input).append(' ').append(item.kind?.let { input(it) } ?: "?").append(" ").append(item.reason.kind).append(item.reason.failure?.let { " " + JournalFormat.failure(it) } ?: "")
             is TimelineItem.Pending -> append("Pending ").append(item.input).append(' ').append(input(item.kind)).append(" (no end in the journal)")
             is TimelineItem.Sent -> append("Sent ").append(item.message).append(" -> ").append(item.to).append(if (item.delivered) "" else " undelivered")
+            is TimelineItem.Effect -> append(JournalFormat.entry(item.entry))
             is TimelineItem.Rejected -> append("Rejected ").append(JournalFormat.payload(item.action)).append(' ').append(item.reason)
             is TimelineItem.Closed -> append("Closed")
             is TimelineItem.Gap -> append("Gap dropped=").append(item.dropped)

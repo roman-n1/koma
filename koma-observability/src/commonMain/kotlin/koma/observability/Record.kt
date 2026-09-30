@@ -15,9 +15,11 @@ import kotlin.time.Duration
  * that meets a higher version must not guess.
  *
  * History: 1 had the Store's own entries and the machine's decisions; 2 added the bridge entries
- * ([JournalEntry.BridgeSent], [JournalEntry.BridgeReceived]).
+ * ([JournalEntry.BridgeSent], [JournalEntry.BridgeReceived]); 3 added the effect mailbox entries
+ * ([JournalEntry.EffectQueued], [JournalEntry.EffectHandlingStarted], [JournalEntry.EffectAcknowledged],
+ * [JournalEntry.EffectDiscarded]).
  */
-const val JOURNAL_FORMAT_VERSION: Int = 2
+const val JOURNAL_FORMAT_VERSION: Int = 3
 
 /**
  * One record of the journal: the envelope every record shares, and the typed [entry].
@@ -147,6 +149,21 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
      * `BridgeReceived` input the message became was handled, ignored or failed.
      */
     data class BridgeReceived(val input: InputId?, val message: MessageRef) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /**
+     * The effect [effect] of a decision made while processing [input] entered the Store's
+     * mailbox under [policy] (the policy's name); [event] is what the describer kept of it.
+     */
+    data class EffectQueued<out E : Event>(val input: InputId?, val effect: Long, val policy: String, val event: Payload<E>) : JournalEntry<Nothing, Nothing, E>
+
+    /** A subscriber took the effect [effect] from the mailbox, for the [attempt]th time. */
+    data class EffectHandlingStarted(val effect: Long, val attempt: Int) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /** The effect [effect] was acknowledged: the UI did what it asked. */
+    data class EffectAcknowledged(val effect: Long) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /** The mailbox gave up the effect [effect] for [reason] (the reason's name) without an acknowledgement. */
+    data class EffectDiscarded(val effect: Long, val reason: String) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * [dropped] published records before this one never reached the sinks: the writer's queue was
