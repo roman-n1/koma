@@ -219,7 +219,8 @@ sealed interface StoreTrace<out S : State, out A : Action, out E : Event> {
     /**
      * The Store's root coroutine scope completed: [Store.close] was called or a parent scope was
      * cancelled, and every coroutine of the Store has ended. Queued inputs were discarded with
-     * [DiscardReason.StoreClosed] before this trace.
+     * [DiscardReason.StoreClosed] before this trace. A dispatch that arrives after the close is
+     * accepted and discarded from its own cancelled coroutine, so its traces may follow this one.
      */
     data object StoreClosed : StoreTrace<Nothing, Nothing, Nothing>
 }
