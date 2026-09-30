@@ -17,6 +17,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.test.Test
@@ -763,19 +764,26 @@ class StoreProbeTest {
                     }
                 }
             }
-            // The queued dispatch coroutines end asynchronously after close(); StoreClosed comes
-            // once every coroutine of the Store has ended, so wait for it before judging.
+            // Every dispatch() call has returned, so every InputAccepted is already in the channel.
+            // The ends come later: a queued dispatch ends before StoreClosed, but a dispatch that
+            // arrived after the close is discarded when its cancelled coroutine gets a thread,
+            // which on a loaded machine is after StoreClosed. Wait until every accepted dispatch
+            // has its end, bounded so that a real gap fails the assertions below by name.
             val traces = mutableListOf<StoreTrace<StormState, StormAction, Nothing>>()
             withContext(Dispatchers.Default) {
-                withTimeout(10_000) {
+                withTimeoutOrNull(10_000) {
                     while (true) {
-                        val trace = recorded.receive()
-                        traces += trace
-                        if (trace === StoreTrace.StoreClosed) break
+                        traces += recorded.receive()
+                        generateSequence { recorded.tryReceive().getOrNull() }.forEach { traces += it }
+                        if (traces.none { it === StoreTrace.StoreClosed }) continue
+                        val waiting = traces.filterIsInstance<StoreTrace.InputAccepted<StormAction>>().map { it.input }.toSet() -
+                            traces.filterIsInstance<StoreTrace.ProcessingFinished>().map { it.input }.toSet() -
+                            traces.filterIsInstance<StoreTrace.InputDiscarded>().map { it.input }.toSet()
+                        if (waiting.isEmpty()) break
                     }
                 }
             }
-            generateSequence { recorded.tryReceive().getOrNull() }.forEach { traces += it }
+            assertTrue(traces.any { it === StoreTrace.StoreClosed }, "iteration $iteration: StoreClosed never came")
 
             val accepted = traces.filterIsInstance<StoreTrace.InputAccepted<StormAction>>().map { it.input }
             val finished = traces.filterIsInstance<StoreTrace.ProcessingFinished>().map { it.input }
