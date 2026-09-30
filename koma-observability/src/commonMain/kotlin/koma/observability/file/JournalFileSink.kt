@@ -1,6 +1,5 @@
 package koma.observability.file
 
-import koma.core.ExperimentalKomaApi
 import koma.observability.ExecutionMode
 import koma.observability.JournalRecord
 import koma.observability.JournalSink
@@ -18,7 +17,6 @@ import kotlinx.coroutines.sync.Mutex
  * @property flushEveryRecords How many records are written before the storage is asked to flush;
  * [JournalFileSink.flush] flushes on demand, for a background or crash path
  */
-@ExperimentalKomaApi
 data class JournalFileConfig(
     val maxSegmentBytes: Int = 512 * 1024,
     val maxSegments: Int = 8,
@@ -43,7 +41,6 @@ data class JournalFileConfig(
  * session's writer; [flush] and [close] may be called from anywhere, for example from a
  * lifecycle or crash hook, and never wait for a Store.
  */
-@ExperimentalKomaApi
 class JournalFileSink(
     private val storage: SegmentStorage,
     private val config: JournalFileConfig = JournalFileConfig(),

@@ -2,14 +2,12 @@ package koma.observability
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.core.State
 
 /**
  * What the journal keeps of a state, action or event, as decided by the [PayloadPolicy] before
  * the record is retained anywhere.
  */
-@ExperimentalKomaApi
 sealed interface Payload<out T> {
     /**
      * The live object, kept as is. For debug recordings the policy explicitly allows; the object
@@ -51,7 +49,6 @@ sealed interface Payload<out T> {
  * @property cause The description of the cause, so causality survives sanitization
  * @property suppressed The descriptions of the suppressed exceptions
  */
-@ExperimentalKomaApi
 data class FailureDescriptor(
     val type: String?,
     val message: String? = null,
@@ -96,7 +93,6 @@ data class FailureDescriptor(
  * masking, truncation and allowlisting happen here or not at all: a policy that returns
  * [Payload.Retained] has decided that the object may sit in memory and reach the sinks as is.
  */
-@ExperimentalKomaApi
 interface PayloadPolicy<S : State, A : Action, E : Event> {
     fun state(state: S): Payload<S>
 
@@ -133,7 +129,6 @@ interface PayloadPolicy<S : State, A : Action, E : Event> {
 /**
  * Builds a [PayloadPolicy] from functions; each defaults to the [PayloadPolicy.metadataOnly] rule.
  */
-@ExperimentalKomaApi
 fun <S : State, A : Action, E : Event> PayloadPolicy(
     state: (S) -> Payload<S> = { Payload.Omitted },
     action: (A) -> Payload<A> = { Payload.Omitted },

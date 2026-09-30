@@ -4,7 +4,6 @@ package koma.observability
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.core.InternalKomaApi
 import koma.core.State
 import koma.core.StoreProbe
@@ -26,7 +25,6 @@ import kotlin.time.TimeSource
  * a Store. An exception thrown by [write] is counted and reported to the session's failure
  * handler; the record is skipped for that sink only, and nothing is written about the failure.
  */
-@ExperimentalKomaApi
 fun interface JournalSink {
     suspend fun write(record: JournalRecord<*, *, *>)
 }
@@ -36,7 +34,6 @@ fun interface JournalSink {
  * as a journal entry and never sent to a Store's exception handler, so a broken sink or policy
  * cannot feed on its own reports.
  */
-@ExperimentalKomaApi
 sealed interface JournalFailure {
     data class SinkFailed(val sink: JournalSink, val error: Throwable) : JournalFailure
 
@@ -62,7 +59,6 @@ sealed interface JournalFailure {
  * @property onFailure Called for every [JournalFailure]; must not throw (an exception it throws
  * is swallowed)
  */
-@ExperimentalKomaApi
 data class JournalConfig(
     val retainedRecords: Int = 4_000,
     val writerQueueCapacity: Int = 4_096,
@@ -86,7 +82,6 @@ data class JournalConfig(
  * @property policyFailures Exceptions thrown by payload policies
  * @property publishedAfterStop Records offered after [RecordingSession.close]; they were not kept
  */
-@ExperimentalKomaApi
 data class JournalStats(
     val published: Long,
     val retained: Int,
@@ -120,7 +115,6 @@ data class JournalStats(
  * @param sinks Receive every record in [GroupSeq] order
  * @param timeSource Source of [JournalRecord.elapsed] and of processing durations
  */
-@ExperimentalKomaApi
 class RecordingSession(
     scope: CoroutineScope,
     val id: RuntimeSessionId = RuntimeSessionId.random(),

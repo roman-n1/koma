@@ -1,6 +1,5 @@
 package koma.observability.file
 
-import koma.core.ExperimentalKomaApi
 import kotlinx.coroutines.sync.Mutex
 
 /**
@@ -13,7 +12,6 @@ import kotlinx.coroutines.sync.Mutex
  * [FileSegmentStorage] is the file-system storage of the platform, [InMemorySegmentStorage] the
  * one for tests and for platforms without a file system.
  */
-@ExperimentalKomaApi
 interface SegmentStorage {
     /** Every segment present, in any order. */
     fun list(): List<SegmentInfo>
@@ -32,7 +30,6 @@ interface SegmentStorage {
  * An open segment being appended to. [flush] hands what was written to the platform (the OS, not
  * necessarily the disk); [close] flushes and releases the handle.
  */
-@ExperimentalKomaApi
 interface SegmentOutput : AutoCloseable {
     fun write(bytes: ByteArray)
 
@@ -49,7 +46,6 @@ interface SegmentOutput : AutoCloseable {
  * @property modified When it was last written, in milliseconds of the platform's clock: only
  * compared between segments of one storage, to prune the oldest sessions first
  */
-@ExperimentalKomaApi
 data class SegmentInfo(val name: String, val size: Long, val modified: Long)
 
 /**
@@ -57,7 +53,6 @@ data class SegmentInfo(val name: String, val size: Long, val modified: Long)
  * absent. JVM and Android use `java.io`, iOS the POSIX file API; JS and Wasm have no file system
  * and throw at construction.
  */
-@ExperimentalKomaApi
 expect class FileSegmentStorage(directory: String) : SegmentStorage {
     override fun list(): List<SegmentInfo>
 
@@ -72,7 +67,6 @@ expect class FileSegmentStorage(directory: String) : SegmentStorage {
  * Segments in memory: for tests, and for platforms without a file system. [truncate] and
  * [corrupt] damage a segment the way a crash or a bad disk would, so recovery can be tested.
  */
-@ExperimentalKomaApi
 class InMemorySegmentStorage : SegmentStorage {
     private val lock = Mutex()
     private val segments = linkedMapOf<String, ByteWriter>()

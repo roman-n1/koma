@@ -2,7 +2,6 @@
 
 package koma.observability.file
 
-import koma.core.ExperimentalKomaApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UnsafeNumber
 import kotlinx.cinterop.addressOf
@@ -32,7 +31,6 @@ import platform.posix.stat
 /**
  * Segments as files of [directory], created when absent, through the POSIX file API.
  */
-@ExperimentalKomaApi
 actual class FileSegmentStorage actual constructor(private val directory: String) : SegmentStorage {
     init {
         if (mkdir(directory, S_IRWXU.convert()) != 0) {

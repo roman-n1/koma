@@ -1,13 +1,11 @@
 package koma.observability
 
-import koma.core.ExperimentalKomaApi
 
 /**
  * One-line text rendering of records, for loggers and quick inspection. It prints only what the
  * records hold: a [Payload.Retained] payload prints its `toString()`, because the policy that
  * retained it decided the object may be shown; an omitted payload prints as `-`.
  */
-@ExperimentalKomaApi
 object JournalFormat {
     /**
      * `[session group store #groupSeq/storeSeq +elapsed] entry`; the store part is absent for
