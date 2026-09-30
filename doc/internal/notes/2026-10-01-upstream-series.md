@@ -1,8 +1,8 @@
 # Upstream series: what the fork sends to koma-kt/koma, in what order, and what it does if declined
 
 - Updated: 2026-10-01
-- Status: planned; nothing beyond issue koma-kt/koma#280 has been sent. Roman posts every issue
-  and PR himself. This note is the status board; the
+- Status: C1–C4, U1–U3 prepared as branches (below); nothing beyond issue koma-kt/koma#280 has
+  been sent. Roman posts every issue and PR himself. This note is the status board; the
   [divergence inventory](../design/2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400)
   names the rows each item would close.
 
@@ -36,6 +36,23 @@ way back is per row: each row is a small change the author can take on its own.
 - Optional CI on the exact upstream build: a fork branch `upstream-base` = `4.0.0` plus the
   `pull_request:` trigger of `d2c2555`, and draft PRs `upstream-pr/<topic> → upstream-base` in the
   fork.
+
+## Prepared (2026-10-01)
+
+Branches on tag `4.0.0`, pushed to roman-n1/koma, each with what its "before" run on 4.0.0
+showed (the conventions below ask for it):
+
+| Item | Branch @ commit | Before the port, on 4.0.0 | After | Note |
+|---|---|---|---|---|
+| C1 | `upstream-pr/compose-state-content-narrowing` @ bf047ec | both tests: `ClassCastException` `Loading` to `Ready` | 22 compose JVM tests, iOS | |
+| C2 | `upstream-pr/message-subscription-before-start` @ 26a5685 | `…KeepsItsSubscriptionAfterItsBlockThrows`: `[bad]`; the startup test passed 50/50 on the JVM (the race showed on a two-core CI runner), so it pins the ordering | JVM, iOS | `MessageHub.messages` typed `SharedFlow` for `onSubscription`; no buffer. The startup test keeps its stores open: a closed store's subscriber leaves the hub late and a send waits for it |
+| C3 | `upstream-pr/logging-inline-entries` @ 9d41c49 | order test: entries out of order; the throwing-logger test passed on 4.0.0 (the log was in a launch), so it pins the report | JVM, iOS | the test waits by polling `currentState`: `state.first {}` hangs on 4.0.0 (U1) |
+| C4 | `upstream-pr/companion-api-deps` @ e8d889c | — (build files) | the four modules compile | |
+| U1 | `upstream-pr/state-first-hang` @ 481ae37 | timeout: `first()` never returns | core JVM (24 suites), iOS | |
+| U2 | `upstream-pr/exit-failure-keeps-runtime` @ 7968e5c | `[Koma] State scope is not found`; `Done` instead of `Active(100)` | core JVM, iOS | introduces `commitTransition`; the diff removes more than it adds |
+| U3 | `upstream-pr/no-commit-after-close` @ ce615da | `Box(1)` committed after close; `Done` entered; `recover {}` run | core JVM, iOS | on top of U2 (needs `commitTransition`); rebased once U2 lands |
+
+Next: U4 `dispatch-order`, U5, U6, U6b, U7, then the `awaitIdle` and `StoreProbe` issue texts.
 
 ## The series, in sending order
 
