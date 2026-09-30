@@ -92,3 +92,31 @@ Not adopted:
 - [A replay-ready statechart is a pure decision function](./2026-09-30-replay-ready-decision-machine.md)
 - [MachineStore commit protocol](./2026-09-30-machine-store-commit-protocol.md)
 - [Time Travel handoff](../design/2026-09-29-time-travel-logging-handoff.md), §8, §9
+
+## Addendum (2026-09-30): codecs and golden fixtures
+
+`RecordingCodec` gives a recording a durable form: canonical JSON with an explicit
+`RECORDING_FORMAT_VERSION`, the structure (snapshots, inputs, decisions, ids, timers, failures)
+owned by the codec, and the context, actions, commands and events written by the application's
+kotlinx-serialization serializers as embedded JSON. Canonical means: fields in declaration order,
+maps sorted by key, no defaults, no nulls, durations in ISO-8601, so equal recordings encode to
+equal text. `decode` refuses a newer format, migrates an older one only through a registered
+`FormatMigration`, and reports a payload the serializers reject as `Invalid` with the step and
+field; nothing is ever filled in with defaults, as the handoff §8 asks.
+
+Golden fixtures pin the formats: `RecordingCodecGoldenTest` holds the JSON of a recording that
+exercises every input and outcome kind (format 1), decodes it back to an equal recording that
+replays, and checks the refusals and a migration from a pretend format 0; `JournalGoldenTest`
+holds the text lines of a scripted Store's journal, with the initial values the handoff §5 wants
+fixed by a golden test: the startup is input #1 and processing 1, the first commit is revision 1,
+a group's first record is #1 and a store's first record is 1.
+
+Two things the fixture made visible: kotlinx-serialization's default discriminator for sealed
+types is the fully qualified class name, which the handoff forbids on the wire, so the golden
+types carry explicit `@SerialName`s and the README says so; and a migration that touches
+embedded payloads by shape (the first draft added a context field to every object with a
+`query`, commands included) is caught by the strict serializers, which is the point of not
+ignoring unknown keys.
+
+Not adopted: a serialization-free wire model of koma's own (a second JSON, for no gain) and
+`ignoreUnknownKeys` (it would turn a format drift into silently dropped data).
