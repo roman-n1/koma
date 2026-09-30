@@ -1415,6 +1415,7 @@ final class koma.statechart.machine/MachineGroup { // koma.statechart.machine/Ma
         final val to // koma.statechart.machine/MachineGroup.Route.to|{}to[0]
             final fun <get-to>(): koma.observability/StoreInstanceId // koma.statechart.machine/MachineGroup.Route.to.<get-to>|<get-to>(){}[0]
 
+        final fun mapEvent(koma.core/Event): koma.core/Action? // koma.statechart.machine/MachineGroup.Route.mapEvent|mapEvent(koma.core.Event){}[0]
         final fun toString(): kotlin/String // koma.statechart.machine/MachineGroup.Route.toString|toString(){}[0]
     }
 

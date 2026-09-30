@@ -84,6 +84,9 @@ class MachineGroup(private val session: RecordingSession? = null) {
 
     /** A route of the bridge: effects of [from] that [map] turns into actions of [to]. */
     class Route internal constructor(val from: StoreInstanceId, val to: StoreInstanceId, internal val map: (Event) -> Action?) {
+        /** The action [event] becomes for [to], or `null` when the route does not carry it. */
+        fun mapEvent(event: Event): Action? = map(event)
+
         override fun toString(): String = "$from -> $to"
     }
 

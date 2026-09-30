@@ -837,6 +837,17 @@ final class koma.observability.file/FileSegmentStorage : koma.observability.file
     final fun read(kotlin/String): kotlin/ByteArray // koma.observability.file/FileSegmentStorage.read|read(kotlin.String){}[0]
 }
 
+final class koma.observability.file/FramesRead { // koma.observability.file/FramesRead|null[0]
+    constructor <init>(kotlin.collections/List<koma.observability.file/Framing.Frame>, koma.observability.file/SegmentMark?, kotlin/Boolean) // koma.observability.file/FramesRead.<init>|<init>(kotlin.collections.List<koma.observability.file.Framing.Frame>;koma.observability.file.SegmentMark?;kotlin.Boolean){}[0]
+
+    final val finished // koma.observability.file/FramesRead.finished|{}finished[0]
+        final fun <get-finished>(): kotlin/Boolean // koma.observability.file/FramesRead.finished.<get-finished>|<get-finished>(){}[0]
+    final val frames // koma.observability.file/FramesRead.frames|{}frames[0]
+        final fun <get-frames>(): kotlin.collections/List<koma.observability.file/Framing.Frame> // koma.observability.file/FramesRead.frames.<get-frames>|<get-frames>(){}[0]
+    final val mark // koma.observability.file/FramesRead.mark|{}mark[0]
+        final fun <get-mark>(): koma.observability.file/SegmentMark? // koma.observability.file/FramesRead.mark.<get-mark>|<get-mark>(){}[0]
+}
+
 final class koma.observability.file/InMemorySegmentStorage : koma.observability.file/SegmentStorage { // koma.observability.file/InMemorySegmentStorage|null[0]
     constructor <init>() // koma.observability.file/InMemorySegmentStorage.<init>|<init>(){}[0]
 
@@ -1225,6 +1236,26 @@ final value class koma.observability/StoreSeq { // koma.observability/StoreSeq|n
     final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/StoreSeq.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // koma.observability/StoreSeq.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // koma.observability/StoreSeq.toString|toString(){}[0]
+}
+
+final object koma.observability.file/Framing { // koma.observability.file/Framing|null[0]
+    final const val MAX_FRAME_BYTES // koma.observability.file/Framing.MAX_FRAME_BYTES|{}MAX_FRAME_BYTES[0]
+        final fun <get-MAX_FRAME_BYTES>(): kotlin/Int // koma.observability.file/Framing.MAX_FRAME_BYTES.<get-MAX_FRAME_BYTES>|<get-MAX_FRAME_BYTES>(){}[0]
+
+    final val END // koma.observability.file/Framing.END|{}END[0]
+        final fun <get-END>(): kotlin/ByteArray // koma.observability.file/Framing.END.<get-END>|<get-END>(){}[0]
+
+    final fun frame(kotlin/ByteArray): kotlin/ByteArray // koma.observability.file/Framing.frame|frame(kotlin.ByteArray){}[0]
+    final fun read(kotlin/String, kotlin/ByteArray, kotlin/ByteArray): koma.observability.file/FramesRead // koma.observability.file/Framing.read|read(kotlin.String;kotlin.ByteArray;kotlin.ByteArray){}[0]
+
+    final class Frame { // koma.observability.file/Framing.Frame|null[0]
+        constructor <init>(kotlin/Int, kotlin/ByteArray) // koma.observability.file/Framing.Frame.<init>|<init>(kotlin.Int;kotlin.ByteArray){}[0]
+
+        final val offset // koma.observability.file/Framing.Frame.offset|{}offset[0]
+            final fun <get-offset>(): kotlin/Int // koma.observability.file/Framing.Frame.offset.<get-offset>|<get-offset>(){}[0]
+        final val payload // koma.observability.file/Framing.Frame.payload|{}payload[0]
+            final fun <get-payload>(): kotlin/ByteArray // koma.observability.file/Framing.Frame.payload.<get-payload>|<get-payload>(){}[0]
+    }
 }
 
 final object koma.observability.file/JournalFileFormat { // koma.observability.file/JournalFileFormat|null[0]

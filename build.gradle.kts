@@ -1,3 +1,6 @@
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
 plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
@@ -16,5 +19,17 @@ plugins {
 apiValidation {
     klib {
         enabled = true
+    }
+}
+
+// A failed test's assertion message and stack trace reach the console (and so CI's log), not
+// only its class and line.
+subprojects {
+    tasks.withType<AbstractTestTask>().configureEach {
+        testLogging {
+            events(TestLogEvent.FAILED)
+            exceptionFormat = TestExceptionFormat.FULL
+            showStackTraces = true
+        }
     }
 }

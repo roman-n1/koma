@@ -209,6 +209,38 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         }
     }
 
+    // --- parts, for the segments of a recording file ---
+
+    /** The JSON of [checkpoint] alone. */
+    fun encodeCheckpoint(checkpoint: ExecutorCheckpoint<C, CMD>): String = json.encodeToString(CheckpointWire.serializer(), checkpoint.toWire())
+
+    /**
+     * The checkpoint [encodeCheckpoint] wrote, for a recording of [definition] and [version].
+     *
+     * @throws IllegalArgumentException if [text] is not one, with where it failed
+     */
+    fun decodeCheckpoint(text: String, definition: DefinitionId, version: DefinitionVersion): ExecutorCheckpoint<C, CMD> =
+        part("checkpoint") { json.decodeFromString(CheckpointWire.serializer(), text).toCheckpoint(definition, version, "checkpoint") }
+
+    /** The JSON of [step] alone. */
+    fun encodeStep(step: RecordedStep<C, A, CMD, E>): String = json.encodeToString(StepWire.serializer(), step.toWire())
+
+    /**
+     * The step [encodeStep] wrote, for a recording of [definition] and [version].
+     *
+     * @throws IllegalArgumentException if [text] is not one, with where it failed
+     */
+    fun decodeStep(text: String, definition: DefinitionId, version: DefinitionVersion): RecordedStep<C, A, CMD, E> =
+        part("step") { json.decodeFromString(StepWire.serializer(), text).toStep(definition, version, "step") }
+
+    private inline fun <T> part(what: String, block: () -> T): T = try {
+        block()
+    } catch (e: SerializationException) {
+        throw IllegalArgumentException("not a $what of format $RECORDING_FORMAT_VERSION: ${e.message}")
+    } catch (e: DecodeFailure) {
+        throw IllegalArgumentException("${e.message} (at ${e.at})")
+    }
+
     // --- encoding ---
 
     private fun MachineSnapshot<C>.toWire(): SnapshotWire = SnapshotWire(

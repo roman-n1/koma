@@ -659,6 +659,26 @@ Settled by it: the order of the cut. Sources pause first; then the members freez
 paused after the freeze could still have fed into a frozen gate, and its snapshot would count a
 page the member had not decided.
 
+## Sixteenth round: a recording written under a storm through a queue too small
+
+Recordings go to disk as they happen ([ADR](../adr/2026-09-30-recording-files.md)); the writer
+sits behind a bounded queue and the ring drops old segments. The promise: whatever was dropped
+or rotated away, the files hold a tail of the run that begins at a checkpoint and replays.
+
+- `RecordingFileStormTest` (timetravel): six threads storm a `MachineStore` recorded by both the
+  in-memory recorder and a file sink with a queue of thirty-two and a ring of four segments of
+  sixteen kilobytes. Read back, the files hold exactly the recorder's steps from some index on,
+  the range begins with the checkpoint the recorder carries at that index, and it replays.
+  Written plus dropped equals recorded.
+- `RecordingFileFormatTest` (timetravel): every cut of a segment is a prefix of its steps with
+  a mark, every flipped byte is caught.
+
+Settled by them: a dropped step must not leave a segment whose steps do not lead to the next
+one; the sink begins a new segment at the next step with the checkpoint that already includes
+the dropped one, so the reader sees a hole, not damage, and a range after it. And a range that
+ends in damage at the last segment is still the last range: a first draft of the reader
+forgot it when it stopped continuing.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing
