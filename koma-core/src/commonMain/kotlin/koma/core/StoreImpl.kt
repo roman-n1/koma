@@ -10,6 +10,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -282,9 +284,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     // the new state's enter {}. Clearing before the commit keeps an action a plugin dispatches from
     // onState in reaction to the new state.
     private suspend fun commitTransition(state: S, nextState: S, inErrorHandling: Boolean) {
+        // Nothing commits after close(): a handler past its last suspension point would otherwise
+        // still update the state, call the saver and the plugins after the Store was closed. The
+        // current coroutine is checked, not the Store scope, so the cancellation seen here is the
+        // handler's own and is never mistaken for a handler failure.
+        currentCoroutineContext().ensureActive()
         val variantChanged = state::class != nextState::class
         if (variantChanged) {
             processStateExit(state)
+            // An exit hook may finish cleanup under NonCancellable after close() cancelled us.
+            currentCoroutineContext().ensureActive()
             clearPendingActionsOnStateExitIfNeeded()
         }
 
@@ -312,6 +321,10 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private suspend fun onErrorOccurred(state: S, exception: Exception) {
+        // A handler that failed after the Store was closed (an exit {} in NonCancellable cleanup,
+        // for example) is not recovered: nothing may run in a closed Store, and the transition it
+        // would produce could not be committed anyway.
+        currentCoroutineContext().ensureActive()
         try {
             val nextState = processError(state, exception)
 
