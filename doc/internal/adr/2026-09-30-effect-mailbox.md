@@ -99,6 +99,7 @@ third; a `Latest` effect with a budget of one is discarded after one departure).
 
 ## Related
 
+- [`MailboxEffect` in `koma-statechart-compose`](./2026-10-01-statechart-compose-module.md)
 - [MachineStore commit protocol](./2026-09-30-machine-store-commit-protocol.md)
 - [Group replay](./2026-09-30-group-replay.md)
 - [Time Travel and structured logging handoff](../design/2026-09-29-time-travel-logging-handoff.md), §6, §8, §10
