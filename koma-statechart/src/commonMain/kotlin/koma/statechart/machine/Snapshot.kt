@@ -24,7 +24,6 @@ import koma.statechart.activeLeaves
  * @property timers The timers scheduled and not yet fired or cancelled
  * @property counters The last ids issued, so the next ids are a function of the snapshot
  */
-@ExperimentalKomaApi
 data class MachineSnapshot<C>(
     val definition: DefinitionId,
     val version: DefinitionVersion,
@@ -57,20 +56,17 @@ data class MachineSnapshot<C>(
  * lane it runs in. The command itself and its policy live in the [Decision] that registered it
  * and in the executor.
  */
-@ExperimentalKomaApi
 data class CommandRecord(val scope: ActivationId, val lane: LaneId?)
 
 /**
  * A scheduled timer: the transition it fires, the activation of the source it was scheduled for,
  * and when it is due on the machine's clock.
  */
-@ExperimentalKomaApi
 data class TimerRecord(val transition: TransitionId, val activation: ActivationId, val deadline: MachineTime)
 
 /**
  * The last ids the machine issued. Part of the snapshot so a replay issues the same ids.
  */
-@ExperimentalKomaApi
 data class MachineCounters(
     val activations: Long = 0,
     val commands: Long = 0,
@@ -81,5 +77,4 @@ data class MachineCounters(
 /**
  * A node with the activation the machine is in it with.
  */
-@ExperimentalKomaApi
 data class Activation(val node: StateId, val id: ActivationId)

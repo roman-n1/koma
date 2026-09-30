@@ -18,7 +18,6 @@ import koma.core.ExperimentalKomaApi
  * @property queued The commands waiting in their lanes, in registration order; a lane with
  * nothing waiting is absent
  */
-@ExperimentalKomaApi
 data class Lanes<CMD>(
     val running: Map<CommandId, CommandRegistration<CMD>> = emptyMap(),
     val queued: Map<LaneId, List<CommandRegistration<CMD>>> = emptyMap(),
@@ -116,7 +115,6 @@ data class Lanes<CMD>(
  * @property abandoned The commands the executor gives up on, to cancel if they run and to
  * report to the machine as [MachineInput.CommandAbandoned]; they are out of the lanes
  */
-@ExperimentalKomaApi
 data class LaneChange<CMD>(
     val lanes: Lanes<CMD>,
     val started: List<CommandRegistration<CMD>> = emptyList(),

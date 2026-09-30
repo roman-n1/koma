@@ -18,7 +18,6 @@ import kotlinx.coroutines.sync.Mutex
  * How a Store's mailbox treats one effect (handoff §10): what happens when no subscriber is
  * there, when the one handling it goes away, and when a newer effect of the same kind arrives.
  */
-@ExperimentalKomaApi
 sealed interface EffectPolicy {
     /**
      * Delivered to whoever collects `Store.event` at that moment, or lost: a toast. Never kept,
@@ -75,7 +74,6 @@ private val EffectPolicy.maxAttempts: Int?
 /**
  * Why the mailbox gave up an effect without an acknowledgement.
  */
-@ExperimentalKomaApi
 enum class EffectDiscardReason {
     /** A newer effect with the same [EffectPolicy.Latest] key arrived while this one waited. */
     Superseded,
@@ -100,7 +98,6 @@ enum class EffectDiscardReason {
  * @property attempts How many times a subscriber took it
  * @property handling Whether a subscriber has it now
  */
-@ExperimentalKomaApi
 data class PendingEffect<out E : Event>(val id: EffectId, val event: E, val policy: EffectPolicy, val attempts: Int, val handling: Boolean)
 
 /**
@@ -109,7 +106,6 @@ data class PendingEffect<out E : Event>(val id: EffectId, val event: E, val poli
  * it to the next one. An acknowledgement does not prove the external effect happened once
  * across a process death; it says the UI took responsibility for it.
  */
-@ExperimentalKomaApi
 class Delivery<out E : Event> internal constructor(
     val id: EffectId,
     val event: E,
@@ -127,7 +123,6 @@ class Delivery<out E : Event> internal constructor(
  * the executor's or a subscriber's coroutine; a throwing listener is reported and the mailbox
  * continues.
  */
-@ExperimentalKomaApi
 interface EffectListener<in E : Event> {
     fun onQueued(input: InputId?, effect: PendingEffect<E>) {}
 
@@ -145,7 +140,6 @@ interface EffectListener<in E : Event> {
  * [subscribe] after a recreation gets what the previous one never acknowledged. The effects
  * still pending are part of the Store's checkpoint.
  */
-@ExperimentalKomaApi
 interface EffectMailbox<E : Event> {
     /** The effects waiting or being handled, oldest first. */
     val pending: List<PendingEffect<E>>
@@ -170,7 +164,6 @@ interface EffectMailbox<E : Event> {
  * is discarded as [EffectDiscardReason.Overflow], or the new one when every one is being handled
  * @property listeners See what the mailbox does; `session.effectsOf(store)` journals it
  */
-@ExperimentalKomaApi
 class MailboxConfig<E : Event>(
     val policy: (E) -> EffectPolicy = { EffectPolicy.Transient },
     val maxRetained: Int = 64,
@@ -185,7 +178,6 @@ class MailboxConfig<E : Event>(
  * The mailbox: a queue under a short lock, a doorbell for subscribers, and the transient effects
  * pumped to the Store's event flow by one coroutine.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal class MailboxImpl<E : Event>(
     private val config: MailboxConfig<E>,
     scope: CoroutineScope,

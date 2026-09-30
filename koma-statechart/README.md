@@ -21,8 +21,11 @@ outermost first, inner transitions take priority over outer ones. The module use
 [divergence inventory](../doc/internal/design/2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400)),
 so it is built and published together with it and is not meant to run against another version.
 
-Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
-fork [roman-n1/koma](https://github.com/roman-n1/koma), not in upstream Koma.
+Status: **stable in the fork** since 5.0-3 (2026-10-01): the chart model and the machine package
+are not `@ExperimentalKomaApi` any more and `apiCheck` holds their API; only `ExternalSource`, the
+contract an adapter of an external source implements, and the two operations that take one
+(`MachineStore.feed`, `MachineGroup.source`) keep the marker. The module lives in the fork
+[roman-n1/koma](https://github.com/roman-n1/koma), not in upstream Koma.
 
 ## Dependency
 

@@ -7,7 +7,6 @@ import kotlin.time.Duration
 /**
  * A structural problem found by [validate].
  */
-@ExperimentalKomaApi
 sealed interface ValidationIssue {
     /**
      * Two or more states use the same [id].
@@ -182,7 +181,6 @@ sealed interface ValidationIssue {
  * @param sampleActions Actions to probe transitions with, typically one instance of every action
  * type the chart uses; duplicates are ignored
  */
-@ExperimentalKomaApi
 fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): List<ValidationIssue> {
     val issues = mutableListOf<ValidationIssue>()
     val ids = states.map { it.id }
@@ -252,7 +250,6 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
  * Problems that make a step leave the declared chart, in the order [validate] reports them:
  * duplicate ids, an undeclared initial state and transitions from or to undeclared states.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.endpointIssues(): List<ValidationIssue> {
     val issues = mutableListOf<ValidationIssue>()
     val ids = states.map { it.id }
@@ -279,7 +276,6 @@ internal fun StateChartDefinition.endpointIssues(): List<ValidationIssue> {
  * descendants, the other regions of a parallel state that is entered again, and what a history
  * state restores. Guards are ignored, so a cycle is reported even if a guard would end it.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
     val instant = transitions.withIndex().filter { (_, t) -> t.after?.isPositive() == false }
     if (instant.isEmpty()) return emptyList()
@@ -334,7 +330,6 @@ internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
  * regions active; history records must describe a valid shallow or deep configuration of their
  * current parent, including after the chart's hierarchy changes between versions.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.isConsistent(configuration: StateConfiguration): Boolean =
     hasConsistentActiveNodes(configuration.active) &&
         configuration.history.all { (id, remembered) -> isConsistentHistoryRecord(id, remembered) }
@@ -346,14 +341,12 @@ internal fun StateChartDefinition.isConsistent(configuration: StateConfiguration
  * only affects the next transition into its history state, which then takes the default target,
  * so it does not justify discarding a snapshot whose active nodes are valid.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.consistentPart(configuration: StateConfiguration): StateConfiguration? {
     if (!hasConsistentActiveNodes(configuration.active)) return null
     val history = configuration.history.filter { (id, remembered) -> isConsistentHistoryRecord(id, remembered) }
     return if (history.size == configuration.history.size) configuration else StateConfiguration(configuration.active, history)
 }
 
-@OptIn(ExperimentalKomaApi::class)
 private fun StateChartDefinition.isConsistentHistoryRecord(id: StateId, remembered: Set<StateId>): Boolean {
     val history = node(id) as? HistoryState ?: return false
     if (remembered.isEmpty() || remembered.any { node(it) is HistoryState || !isDescendant(it, history.parent) }) return false
@@ -370,7 +363,6 @@ private fun StateChartDefinition.isConsistentHistoryRecord(id: StateId, remember
 }
 
 /** Checks a whole configuration, or just the subtree belonging to one history parent. */
-@OptIn(ExperimentalKomaApi::class)
 private fun StateChartDefinition.hasConsistentActiveNodes(active: Set<StateId>, root: StateId? = null): Boolean {
     if (root != null && root !in active) return false
     for (id in active) {
@@ -391,7 +383,6 @@ private fun StateChartDefinition.hasConsistentActiveNodes(active: Set<StateId>, 
 /**
  * Problems that leave the tree of states undefined, in the order [validate] reports them.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
     val issues = mutableListOf<ValidationIssue>()
     for (node in hierarchy.nodes.values) {
@@ -432,7 +423,6 @@ internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
  * Problems with history states that leave their entry undefined, in the order [validate] reports
  * them.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.historyIssues(): List<ValidationIssue> {
     val issues = mutableListOf<ValidationIssue>()
     if (node(initial) is HistoryState) issues += ValidationIssue.HistoryAsInitial(null, initial)
@@ -468,5 +458,4 @@ internal fun StateChartDefinition.historyIssues(): List<ValidationIssue> {
  *
  * States come in breadth-first order of the configurations that first make them active.
  */
-@ExperimentalKomaApi
 fun StateChartDefinition.reachableStates(): Set<StateId> = configurationGraph.firstReaching.keys

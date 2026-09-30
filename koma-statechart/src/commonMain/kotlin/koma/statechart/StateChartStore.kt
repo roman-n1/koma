@@ -37,7 +37,6 @@ import kotlin.coroutines.CoroutineContext
  * counter that a guard reads)
  * @property timers The running timers; bookkeeping of the Store (see [ChartTimers])
  */
-@ExperimentalKomaApi
 data class ChartState<C>(
     val configuration: StateConfiguration,
     val context: C,
@@ -68,7 +67,6 @@ data class ChartState<C>(
  * [StateChartDefinition.transitions]
  * @property issued The last token issued; the next start gets `issued + 1`
  */
-@ExperimentalKomaApi
 data class ChartTimers(
     val running: Map<Int, Long> = emptyMap(),
     val issued: Long = 0,
@@ -78,7 +76,6 @@ data class ChartTimers(
  * Scope of an [StateChartStoreBuilder.onExit] hook, and the base of the scope of an
  * [StateChartStoreBuilder.onEnter] hook.
  */
-@ExperimentalKomaApi
 @KomaStoreDsl
 interface ChartHookScope<C, E : Event> : StoreScope {
     /**
@@ -107,7 +104,6 @@ interface ChartHookScope<C, E : Event> : StoreScope {
 /**
  * Scope of an [StateChartStoreBuilder.onEnter] hook.
  */
-@ExperimentalKomaApi
 @KomaStoreDsl
 interface ChartEnterScope<C, A : Action, E : Event> : ChartHookScope<C, E> {
     /**
@@ -125,7 +121,6 @@ interface ChartEnterScope<C, A : Action, E : Event> : ChartHookScope<C, E> {
  * An exception other than a cancellation is handled like one from a Koma handler: by the Store's
  * `recover {}` handlers, otherwise by its exception handler.
  */
-@ExperimentalKomaApi
 @KomaStoreDsl
 interface ChartLaunchScope<C, A : Action, E : Event> : StoreScope {
     /**
@@ -162,7 +157,6 @@ interface ChartLaunchScope<C, A : Action, E : Event> : StoreScope {
  * Builder of a [StateChartStore]: implementations of the chart's guard and effect labels, hooks
  * for entering and exiting nodes, and the Koma Store configuration.
  */
-@ExperimentalKomaApi
 @KomaStoreDsl
 class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
     internal val guards = mutableMapOf<String, (ChartState<C>, Action) -> Boolean>()
@@ -275,7 +269,6 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
  * a guard or effect label is implemented twice, if the hierarchy of [definition] is malformed or
  * refers to undeclared states, or if timers without a positive delay restart each other in a loop
  */
-@ExperimentalKomaApi
 fun <C, A : Action, E : Event> StateChartStore(
     definition: StateChartDefinition,
     context: C,
@@ -288,7 +281,7 @@ fun <C, A : Action, E : Event> StateChartStore(
  * inside Koma handlers and transactions, which the Store runs one at a time, except [tasks], which
  * is a channel.
  */
-@OptIn(ExperimentalKomaApi::class, InternalKomaApi::class)
+@OptIn(InternalKomaApi::class)
 internal class ChartStoreHost<C, A : Action, E : Event>(
     private val definition: StateChartDefinition,
     context: C,

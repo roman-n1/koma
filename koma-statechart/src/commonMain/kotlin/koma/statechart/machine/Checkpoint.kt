@@ -24,7 +24,6 @@ import kotlin.time.Duration
  * @throws IllegalArgumentException if the lanes and [ending] are not a partition of the
  * snapshot's commands
  */
-@ExperimentalKomaApi
 data class ExecutorCheckpoint<C, CMD>(
     val snapshot: MachineSnapshot<C>,
     val now: MachineTime,

@@ -19,7 +19,6 @@ import kotlin.time.TimeSource
 /**
  * A bridge message on its way: sent to [to] and not yet decided by it.
  */
-@ExperimentalKomaApi
 data class BridgeMessage(val id: MessageId, val to: StoreInstanceId)
 
 /**
@@ -36,7 +35,6 @@ data class BridgeMessage(val id: MessageId, val to: StoreInstanceId)
  * @property sources The state of every attached [ExternalSource] at the cut, as the members had
  * decided it
  */
-@ExperimentalKomaApi
 data class GroupCheckpoint(
     val members: Map<StoreInstanceId, ExecutorCheckpoint<*, *>>,
     val inFlight: List<BridgeMessage>,
@@ -46,15 +44,12 @@ data class GroupCheckpoint(
 )
 
 /** The role of a route in a request/reply pair; see [MachineGroup.requestReply]. */
-@ExperimentalKomaApi
 enum class PairRole { Request, Reply }
 
 /** A route's place in the request/reply pair named [name]; see [MachineGroup.requestReply]. */
-@ExperimentalKomaApi
 data class RoutePair(val name: String, val role: PairRole)
 
 /** The two routes of a request/reply pair named [name]; see [MachineGroup.requestReply]. */
-@ExperimentalKomaApi
 class RequestReply(val name: String, val request: MachineGroup.Route, val reply: MachineGroup.Route)
 
 /**
@@ -64,7 +59,6 @@ class RequestReply(val name: String, val request: MachineGroup.Route, val reply:
  * in what it records. A listener that throws fails the cut for its caller; the members are
  * thawed and the sources resumed all the same.
  */
-@ExperimentalKomaApi
 fun interface CutListener {
     fun onCut(checkpoint: GroupCheckpoint)
 }
@@ -107,7 +101,9 @@ fun interface CutListener {
  * @param session The journal that gets [JournalEntry.BridgeSent], [JournalEntry.BridgeReceived],
  * [JournalEntry.BridgeDropped] and [JournalEntry.CheckpointCreated]
  */
-@ExperimentalKomaApi
+// The sources are the experimental part of the group (their contract and [source]); the group
+// itself is stable and opts in without propagating.
+@OptIn(ExperimentalKomaApi::class)
 class MachineGroup(private val session: RecordingSession? = null) {
     private val lock = Mutex()
     private val coordinating = Mutex()
@@ -157,6 +153,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
      *
      * @throws IllegalArgumentException if a source with the same id is attached
      */
+    @ExperimentalKomaApi
     fun source(source: ExternalSource) {
         locked {
             require(sourceList.none { it.id == source.id }) { "[Koma] ${source.id} is already attached to this group" }

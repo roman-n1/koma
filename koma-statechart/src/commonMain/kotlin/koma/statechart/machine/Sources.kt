@@ -8,7 +8,6 @@ import koma.core.ExperimentalKomaApi
  * (a pagination engine: generation, the window, load states, placeholders, the pending focus;
  * never its caches), already safe to keep.
  */
-@ExperimentalKomaApi
 data class SourceSnapshot(val source: SourceId, val kind: String, val version: Int, val fields: Map<String, String>)
 
 /**

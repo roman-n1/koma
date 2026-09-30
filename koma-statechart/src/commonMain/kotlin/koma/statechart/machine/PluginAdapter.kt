@@ -17,7 +17,6 @@ import kotlinx.coroutines.CoroutineDispatcher
  * calls [deliver] with every effect of a committed decision, transient and retained alike, in
  * decision order.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal class AdaptedPlugin<C, A : Action, E : Event>(
     val plugin: Plugin<MachineSnapshot<C>, A, E>,
     private val store: MachineStore<C, A, *, E>,
@@ -38,7 +37,6 @@ internal class AdaptedPlugin<C, A : Action, E : Event>(
 }
 
 /** The action of the store an input carries, or `null` for the executor's own inputs. */
-@OptIn(ExperimentalKomaApi::class)
 internal fun <A : Action> MachineInput<A>.carriedAction(): A? = when (this) {
     is MachineInput.Dispatch -> action
     is MachineInput.External -> action
@@ -47,7 +45,6 @@ internal fun <A : Action> MachineInput<A>.carriedAction(): A? = when (this) {
 }
 
 /** The [MachineStore]'s side of the inner store's plugin scope: a dispatch goes through admission. */
-@OptIn(ExperimentalKomaApi::class)
 private class AdaptedPluginScope<C, A : Action>(
     private val inner: PluginScope<MachineSnapshot<C>, MachineInput<A>>,
     private val store: MachineStore<C, A, *, *>,
@@ -60,7 +57,6 @@ private class AdaptedPluginScope<C, A : Action>(
     }
 }
 
-@OptIn(ExperimentalKomaApi::class)
 private class AdaptedLaunchScope<C, A : Action>(
     private val inner: PluginScope.LaunchScope<MachineSnapshot<C>, MachineInput<A>>,
     private val store: MachineStore<C, A, *, *>,

@@ -17,7 +17,6 @@ import koma.core.ExperimentalKomaApi
  * parent was last exited. A history state that has not recorded anything yet
  * has no entry. Never contains nodes of [active] that are history states: those are never active.
  */
-@ExperimentalKomaApi
 data class StateConfiguration(
     val active: Set<StateId>,
     val history: Map<StateId, Set<StateId>> = emptyMap(),
@@ -46,7 +45,6 @@ data class StateConfiguration(
  * (undeclared ids last). For a configuration produced by this chart's runtime it is exactly one
  * node, the active leaf, unless a [ParallelState] is active: then there is one per active region.
  */
-@ExperimentalKomaApi
 fun StateChartDefinition.activeLeaves(configuration: StateConfiguration): List<StateId> =
     configuration.active
         .filter { id -> childrenOf(id).none { it.id in configuration.active } }
@@ -55,7 +53,6 @@ fun StateChartDefinition.activeLeaves(configuration: StateConfiguration): List<S
 /**
  * Exit and entry caused by a set of transitions; see [microstep].
  */
-@OptIn(ExperimentalKomaApi::class)
 internal class Microstep(
     val exited: List<StateId>,
     val entered: List<StateId>,
@@ -66,25 +63,20 @@ internal class Microstep(
         definition.activeLeaves(configuration).ifEmpty { listOf(entered.last()) }
 }
 
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.declarationOrder(id: StateId): Int = hierarchy.order[id] ?: Int.MAX_VALUE
 
-@OptIn(ExperimentalKomaApi::class)
 private fun StateChartDefinition.depth(id: StateId): Int = ancestorsOf(id).size
 
 /**
  * The configuration after entering [StateChartDefinition.initial] from the root.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.initialConfiguration(): StateConfiguration =
     StateConfiguration(active = inEntryOrder(entrySet(listOf(null to initial), history = emptyMap())).toSet())
 
 /** [ids] outermost first, ties in declaration order. */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.inEntryOrder(ids: Collection<StateId>): List<StateId> = ids.sortedWith(entryOrder())
 
 /** The timers ([Trigger.After] transitions) of [states], in the order of [states], each state's in declaration order. */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.timersOf(states: List<StateId>): List<Transition> =
     states.flatMap { hierarchy.timersBySource[it].orEmpty() }
 
@@ -92,7 +84,6 @@ internal fun StateChartDefinition.timersOf(states: List<StateId>): List<Transiti
  * Transitions that may fire from [leaf], in priority order: the leaf's own, then each ancestor's,
  * from the innermost outwards, each group in declaration order.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.candidatesFor(leaf: StateId): Sequence<Transition> =
     (sequenceOf(leaf) + ancestorsOf(leaf).asSequence()).flatMap { transitionsFrom(it).asSequence() }
 
@@ -105,7 +96,6 @@ internal fun StateChartDefinition.candidatesFor(leaf: StateId): Sequence<Transit
  * So a transition shared by several leaves fires once, and transitions in different regions of a
  * parallel state fire together.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.selectTransitions(
     configuration: StateConfiguration,
     enabled: (Transition) -> Boolean,
@@ -131,7 +121,6 @@ internal fun StateChartDefinition.selectTransitions(
  * that would conflict with it are left out; without parallel states this is [trigger] alone. A
  * timer fires alone, as in [StateChartRuntime.fire].
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.graphStep(configuration: StateConfiguration, trigger: Transition): Microstep {
     if (trigger.isTimer) return microstep(configuration, listOf(trigger))
     val triggerExit = exitSet(configuration, trigger).toSet()
@@ -150,17 +139,14 @@ internal fun StateChartDefinition.graphStep(configuration: StateConfiguration, t
  * self-loop, a transition from a state to its own descendant and one from a state to its own
  * ancestor all exit and re-enter the state.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.domainOf(transition: Transition): StateId? = domainOf(transition.source, transition.target)
 
 /** The domain of a transition from [source] to [target]; see the other overload. */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.domainOf(source: StateId, target: StateId): StateId? {
     val targetAncestors = ancestorsOf(target)
     return ancestorsOf(source).firstOrNull { node(it) is CompoundState && it in targetAncestors }
 }
 
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.exitSet(configuration: StateConfiguration, transition: Transition): List<StateId> {
     val domain = domainOf(transition)
     return configuration.active.filter { domain == null || isDescendant(it, domain) }
@@ -181,7 +167,6 @@ internal fun StateChartDefinition.exitSet(configuration: StateConfiguration, tra
  * Every node is entered at most once, so this ends even for a malformed hierarchy. The result is
  * in no particular order.
  */
-@OptIn(ExperimentalKomaApi::class)
 private fun StateChartDefinition.entrySet(targets: List<Pair<StateId?, StateId>>, history: Map<StateId, Set<StateId>>): Set<StateId> {
     val entered = linkedSetOf<StateId>()
     fun hasEnteredDescendant(id: StateId) = entered.any { isDescendant(it, id) }
@@ -223,7 +208,6 @@ private fun StateChartDefinition.entrySet(targets: List<Pair<StateId?, StateId>>
  * descendants of the parent that are not history states count; `null` when there is nothing to
  * restore (the parent is neither compound nor parallel, or the fallback is not such a descendant).
  */
-@OptIn(ExperimentalKomaApi::class)
 private fun StateChartDefinition.restoredBy(history: HistoryState, remembered: Map<StateId, Set<StateId>>): List<StateId>? {
     val parent = node(history.parent)
     if (parent !is CompoundState && parent !is ParallelState) return null
@@ -244,7 +228,6 @@ private fun StateChartDefinition.restoredBy(history: HistoryState, remembered: M
  * states remembers the node's active children (shallow) or its active atomic descendants (deep), as
  * they are in [configuration]. Other entries are kept.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.recordHistory(configuration: StateConfiguration, exited: Collection<StateId>): Map<StateId, Set<StateId>> {
     val history = configuration.history.toMutableMap()
     for (id in exited) {
@@ -261,12 +244,10 @@ internal fun StateChartDefinition.recordHistory(configuration: StateConfiguratio
 }
 
 /** Exit order: innermost first, ties in reverse declaration order. */
-@OptIn(ExperimentalKomaApi::class)
 private fun StateChartDefinition.exitOrder(): Comparator<StateId> =
     compareByDescending<StateId> { depth(it) }.thenByDescending { declarationOrder(it) }
 
 /** Entry order: outermost first, ties in declaration order. */
-@OptIn(ExperimentalKomaApi::class)
 private fun StateChartDefinition.entryOrder(): Comparator<StateId> =
     compareBy<StateId> { depth(it) }.thenBy { declarationOrder(it) }
 
@@ -277,7 +258,6 @@ private fun StateChartDefinition.entryOrder(): Comparator<StateId> =
  * (ties in declaration order). A transition into a history state enters what the history
  * remembers after this step's recording.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.microstep(configuration: StateConfiguration, transitions: List<Transition>): Microstep {
     val exitSet = linkedSetOf<StateId>()
     for (transition in transitions) exitSet += exitSet(configuration, transition)

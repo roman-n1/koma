@@ -9,7 +9,6 @@ import kotlin.time.Duration
 /**
  * The logical machine a [Machine] implements, stable across versions of its behaviour.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class DefinitionId(val value: String) {
     init {
@@ -24,7 +23,6 @@ value class DefinitionId(val value: String) {
  * to any of them needs a new version even when the chart's graph is unchanged; a snapshot is
  * only decided by the version that produced it.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class DefinitionVersion(val value: String) {
     init {
@@ -38,7 +36,6 @@ value class DefinitionVersion(val value: String) {
  * One entry into a node. Every entry, including a re-entry through a self-loop, gets a new id, so
  * work and timers belong to a particular stay in the node and not to the node itself.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class ActivationId(val value: Long) {
     override fun toString(): String = "a$value"
@@ -47,7 +44,6 @@ value class ActivationId(val value: Long) {
 /**
  * One registered command.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class CommandId(val value: Long) {
     override fun toString(): String = "c$value"
@@ -57,7 +53,6 @@ value class CommandId(val value: Long) {
  * One scheduled timer: a start of a [koma.statechart.Trigger.After] transition for one activation
  * of its source.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class TimerId(val value: Long) {
     override fun toString(): String = "t$value"
@@ -66,7 +61,6 @@ value class TimerId(val value: Long) {
 /**
  * One event the machine asked to deliver (the handoff's UI effect).
  */
-@ExperimentalKomaApi
 @JvmInline
 value class EffectId(val value: Long) {
     override fun toString(): String = "e$value"
@@ -76,7 +70,6 @@ value class EffectId(val value: Long) {
  * A transition of the chart by its position in [koma.statechart.StateChartDefinition.transitions],
  * stable within a [DefinitionVersion].
  */
-@ExperimentalKomaApi
 @JvmInline
 value class TransitionId(val index: Int) {
     override fun toString(): String = "T$index"
@@ -86,7 +79,6 @@ value class TransitionId(val index: Int) {
  * A lane groups commands that must not run freely next to each other; see [ConcurrencyPolicy].
  * Lanes are local to one Store instance.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class LaneId(val value: String) {
     init {
@@ -101,7 +93,6 @@ value class LaneId(val value: String) {
  * time; in a replay, a virtual clock. It always arrives in the input, never from a clock read by
  * the machine, so deciding is a pure function.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class MachineTime(val sinceStart: Duration) : Comparable<MachineTime> {
     operator fun plus(duration: Duration): MachineTime = MachineTime(sinceStart + duration)
@@ -122,7 +113,6 @@ value class MachineTime(val sinceStart: Duration) : Comparable<MachineTime> {
  * was routed from. The same effect gives the same message in a replay, so the id is a correlation
  * reference that a replay checks against, never a second live delivery.
  */
-@ExperimentalKomaApi
 data class MessageId(val from: StoreInstanceId, val effect: EffectId) {
     /** The journal's form of this id. */
     fun toRef(): MessageRef = MessageRef(from, effect.value)
@@ -135,7 +125,6 @@ data class MessageId(val from: StoreInstanceId, val effect: EffectId) {
  * subscription to a repository. What it feeds is identified by it, and its state is data in a
  * cut ([ExternalSource]).
  */
-@ExperimentalKomaApi
 @JvmInline
 value class SourceId(val value: String) {
     init {

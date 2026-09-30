@@ -53,6 +53,9 @@ Not adopted:
   dumps do not carry it, so the surface was already held; what changes is that consumers no
   longer opt in), all JVM tests with `apiCheck` and `checkDebugGraph`, the module on Android
   host, JS Node and iOS Simulator.
+- 5.0-3b (2026-10-01): 94 markers off `koma-statechart`; the four that stay are on
+  `ExternalSource`, both `feed`s and `MachineGroup.source`, and `MachineGroup` opts in without
+  propagating for the sources it holds. The dumps did not change.
 - After 5.0-3c, criterion (1) is met and `5.0.0` waits only for Roman's tag (5.0-4).
 
 ## Related
