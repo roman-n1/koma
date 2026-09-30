@@ -11,6 +11,8 @@ draw it, generate test paths from it, and run it as an ordinary Koma `Store`.
 - **Runtime.** `StateChartStore` runs a definition as a `Store<ChartState<C>, A, E>`, so Compose,
   `koma-test`, plugins and state savers work as with any Store. `StateChartRuntime` is the pure
   step function underneath, if you want to hold the configuration yourself.
+- **Machine.** `koma.statechart.machine` decides a chart as a pure function over snapshots, with
+  commands, timers and events as data: the replay-ready path of the time-travel work (see below).
 
 The semantics follow SCXML (Harel statecharts): external transitions, exit innermost first, enter
 outermost first, inner transitions take priority over outer ones. The module uses `koma-core`
@@ -222,6 +224,63 @@ val transitions = listOf(
   lists one leaf per active region.
 - **Timers.** `StateChartStore` runs timers as coroutines in the Store, so `runTest` virtual time
   drives them in tests. A timer's guard is asked when it fires, with `TimerFired` as the action.
+
+## Replay-ready machine
+
+`koma.statechart.machine` runs a chart as a pure decision function instead of a Store with
+suspending hooks. It is the foundation of the time-travel work
+([handoff](../doc/internal/design/2026-09-29-time-travel-logging-handoff.md), stage 2), and the
+first half of it: deciding. Executing decisions (a Store, a command scheduler, timers) follows in
+a later release; until then a `Machine` is something to test and to drive from your own code.
+
+```kotlin
+sealed interface ListCommand {
+    data class Fetch(val query: String) : ListCommand
+}
+
+val listMachine = Machine<ListContext, ListAction, ListCommand, ListEvent>(DefinitionId("list"), DefinitionVersion("3"), listChart) {
+    guard("canRetry") { snapshot, _ -> snapshot.context.attempts < 3 }
+    effect("storeItems") { context, action -> context.copy(items = (action as ListAction.Loaded).items) }
+    effect("countAttempt") { context, _ -> context.copy(attempts = context.attempts + 1) }
+    effect("resetAttempts") { context, _ -> context.copy(attempts = 0) }
+
+    // A rule is a pure function: it reads the context and the input, assigns the context,
+    // registers commands as data and emits events as data. Nothing runs here.
+    onEnter(loading) { command(ListCommand.Fetch(context.query), LaneId("load"), ConcurrencyPolicy.Latest) }
+    onEnter(error) { event(ListEvent.GaveUp) }
+}
+
+var snapshot = listMachine.initialSnapshot(ListContext())
+val started = listMachine.decide(snapshot, MachineInput.Start(now = MachineTime.Zero))
+snapshot = started.snapshot
+
+val decision = listMachine.decide(snapshot, MachineInput.Dispatch(ListAction.Load, now = MachineTime(1.seconds)))
+decision.outcome        // Handled
+decision.transitions    // [T0]: Idle -> Loading
+decision.commands       // [CommandRegistration(c1, Fetch(query), scope = a3, lane = load, policy = Latest)]
+decision.timersScheduled // the timers of Loading, due at now + delay
+decision.snapshot.revision // 2
+```
+
+What a decision holds and what the machine guarantees:
+
+| Piece | Meaning |
+|---|---|
+| `MachineSnapshot` | Configuration, context, the activation of every active node, registered commands, scheduled timers, id counters. Plain data, a Koma `State`; the machine's part of a checkpoint. |
+| `MachineInput` | `Start`, `Dispatch`, `TimerFired`, `CommandResult`, `CommandCompleted`, `CommandFailed`; each carries the clock (`MachineTime`), so the machine never reads one. |
+| `Decision` | `Handled` (revision + 1, also when the business data is equal), `Ignored(reason)` (the same snapshot object) or `Failed` (a rule threw; nothing registered). Plus the transitions, exited and entered activations, commands to register, scopes to cancel, timers to schedule and cancel, events to deliver. |
+| Activations | Every entry into a node, a self-loop included, is a new `ActivationId`. Commands of an enter rule belong to it and are cancelled with it; a late `CommandResult` of a cancelled command is `Ignored(StaleCommand)`. |
+| Timers | Data with a `TimerId` and a deadline of `now + delay`; a fired timer is spent whether or not its guard holds, a self-loop timer restarts with a new id. |
+| Determinism | The same snapshot and input give an equal decision; ids come from the snapshot's counters, so a replay issues the same ids. |
+
+An unexpected command failure arrives as `CommandFailed` and steps with a `CommandFailure`
+action: declare `ActionMatcher.of<CommandFailure>("CommandFailure")` on a transition to react to
+it. An expected failure of a service (a 404, an offline error) is not this; the handler turns it
+into a typed `CommandResult`.
+
+A chart is either a legacy `StateChartStore` or a `Machine`; the two are not mixed. Building a
+`Machine` fails fast for the same reasons `StateChartStore` does: a missing guard or effect
+implementation, a rule for an undeclared node, undeclared endpoints, an instant timer loop.
 
 ## Validation, Mermaid, paths and conformance
 

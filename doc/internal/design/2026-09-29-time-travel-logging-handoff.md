@@ -45,6 +45,7 @@ Decompose, domain/repository, Room, транспорт сообщений, Pagin
 | `Plugin.onAction/onState/onEvent` | Наблюдение границ Store | Нет полного результата каждого входа, причинности транзакций, команд и таймеров |
 | `StoreProbe` / `StoreTrace` — реализовано 2026-09-29 | Границы обработки: приём и discard входов с причиной, начало и исход каждой обработки, commits с revision, события и отчёты об ошибках с привязкой к входу; startup, dispatch, transaction и recovery как четыре вида входов | Сам по себе не журнал; журнал поверх него — `koma-observability`; см. [ADR](../adr/2026-09-29-store-probe-processing-observation.md) |
 | `RecordingSession` / `JournalRecord` (`koma-observability`) — реализовано 2026-09-29 | Envelope записей с `RuntimeSessionId`/`MachineGroupId`/`StoreInstanceId`, `GroupSeq`/`StoreSeq` под одним lock при публикации, `PayloadPolicy` до retention, `FailureDescriptor`, bounded ring, один writer, sinks, `JournalGap`, счётчики потерь; `LoggerJournalSink` в `koma-logging` | Только in-memory: нет файлового формата, сегментов, checksums, ротации, экспорта и group cut; capability всегда `InspectOnly`; бюджеты — плейсхолдеры; см. [ADR](../adr/2026-09-29-journal-identity-ordering-and-payload-policy.md) |
+| `Machine` / `Decision` (`koma.statechart.machine`) — реализовано 2026-09-30 | Чистый `decide(snapshot, input)` поверх `StateChartRuntime`: outcome Handled/Ignored/Failed, revision на каждый принятый decision, activations, команды со scope и lane-политикой, таймеры с deadline, эффекты как данные; stale результаты команд и таймеров отбрасываются по снимку | Только решение: исполнителя, scheduler, commit-протокола и виртуальных часов пока нет (этап 2b); см. [ADR](../adr/2026-09-30-replay-ready-decision-machine.md) |
 | `StoreRecorder` | Список состояний и событий одного Store для тестов | Не журнал replay, не общий потокобезопасный recorder нескольких Store |
 | `simpleLogging` | Текстовые записи через `Logger` | Использует `toString()` payload; при dispatcher порядок вывода может измениться |
 | `StateSaver` / `rememberStateSaver` | Восстановление состояния; Compose saver хранится в памяти | Не точное восстановление runtime и не готовая поддержка process death |
@@ -480,7 +481,9 @@ CI также должен проверять API/ABI и отсутствие de
 | Адаптер структурированных записей к `Logger` в `koma-logging` | Реализовано: `LoggerJournalSink` + `JournalFormat`; `simpleLogging` остаётся для локальной отладки одного Store | `koma-logging`, `LoggerJournalSinkTest` |
 | Файловый формат журнала: сегменты, framing/checksum, ротация, экспорт, crash tail | Не начато | — |
 | Этап 0 (ADR по identity/ordering) | Частично: два ADR фиксируют identity ядра, порядок публикации, политику payload и словарь wire-имён (`JOURNAL_FORMAT_VERSION` = 1); budgets заданы как плейсхолдеры до замеров; правила публикации модулей не описаны | [ADR probe](../adr/2026-09-29-store-probe-processing-observation.md), [ADR journal](../adr/2026-09-29-journal-identity-ordering-and-payload-policy.md) |
-| Этапы 2–7 | Не начато | — |
+| Этап 2a: чистая машина решений `koma.statechart.machine` (`Machine`, `MachineSnapshot`, `MachineInput`, `Decision`; activations, команды и таймеры как данные, детерминированные id из счётчиков снимка) | Реализовано 2026-09-30 | `koma-statechart`, [ADR](../adr/2026-09-30-replay-ready-decision-machine.md), `MachineTest`, `MachinePropertyTest` |
+| Этап 2b: исполнитель — Store со снимком машины, commit-протокол (§4.2), `CommandScheduler` с lane-политиками, `CommandHandler`, таймеры через подменяемые часы, линеаризация commit/close | Не начато | — |
+| Этапы 3–7 | Не начато | — |
 
 Предпочтительный пилот — поиск address-book-picker: быстрые смены query, старые ответы,
 закрытие во время запроса, две вкладки и разделение root/Main уже обсуждались. Первый этап
@@ -517,6 +520,7 @@ dispatch и таймеров добавлять воспроизводящий �
 - [StoreProbe и StoreTrace: границы обработки для журнала](../../../koma-core/src/commonMain/kotlin/koma/core/StoreProbe.kt) и [тесты границ](../../../koma-core/src/commonTest/kotlin/koma/core/StoreProbeTest.kt)
 - [RecordingSession: журнал группы, GroupSeq при публикации, writer и sinks](../../../koma-observability/src/commonMain/kotlin/koma/observability/RecordingSession.kt), [JournalProbe и PayloadPolicy](../../../koma-observability/src/commonMain/kotlin/koma/observability/JournalProbe.kt), [LoggerJournalSink](../../../koma-logging/src/commonMain/kotlin/koma/logging/JournalSink.kt)
 - [StateChartRuntime и StepResult](../../../koma-statechart/src/commonMain/kotlin/koma/statechart/Runtime.kt)
+- [Machine: чистая машина решений этапа 2](../../../koma-statechart/src/commonMain/kotlin/koma/statechart/machine/Machine.kt), [Decision](../../../koma-statechart/src/commonMain/kotlin/koma/statechart/machine/Decision.kt), [MachineSnapshot](../../../koma-statechart/src/commonMain/kotlin/koma/statechart/machine/Snapshot.kt)
 - [StateChartStore, ChartState, ChartTimers и activities](../../../koma-statechart/src/commonMain/kotlin/koma/statechart/StateChartStore.kt)
 - [simpleLogging](../../../koma-logging/src/commonMain/kotlin/koma/logging/Plugin.kt) и [Logger](../../../koma-logging/src/commonMain/kotlin/koma/logging/Logger.kt)
 - [StoreRecorder](../../../koma-test/src/commonMain/kotlin/koma/test/StoreRecorder.kt)
