@@ -50,6 +50,8 @@ object JournalFormat {
             if (entry.effects > 0) append(" effects=").append(entry.effects)
         }
         is JournalEntry.DecisionIgnored -> "DecisionIgnored ${entry.input ?: "?"} ${entry.reason}"
+        is JournalEntry.BridgeSent -> "BridgeSent ${entry.input ?: "?"} ${entry.message} -> ${entry.to}${if (entry.delivered) "" else " undelivered"}"
+        is JournalEntry.BridgeReceived -> "BridgeReceived ${entry.input ?: "?"} ${entry.message}"
         is JournalEntry.JournalGap -> "JournalGap dropped=${entry.dropped}"
         JournalEntry.RecordingStopped -> "RecordingStopped"
     }

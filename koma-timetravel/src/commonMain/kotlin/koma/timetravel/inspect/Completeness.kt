@@ -43,6 +43,9 @@ sealed interface Incompleteness {
 
     /** The recording attached for [store] is not the run the journal shows. */
     data class RecordingMismatch(val store: StoreInstanceId, val reason: String) : Incompleteness
+
+    /** [count] bridge messages of [store] went to members that were not attached: part of the group is not here. */
+    data class MessagesUndelivered(val store: StoreInstanceId, val count: Int) : Incompleteness
 }
 
 /**

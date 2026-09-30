@@ -9,6 +9,8 @@ import koma.core.Plugin
 import koma.core.PluginScope
 import koma.core.Store
 import koma.core.StoreBuilder
+import koma.core.StoreProbe
+import koma.core.StoreTrace
 import koma.core.currentInputId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,11 +22,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
+import kotlin.time.Duration
 
 /**
  * A [Machine] running as a Koma Store: the state is the [MachineSnapshot], actions are decided
@@ -38,6 +44,14 @@ interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>
      * [dispatch] is this with the answer dropped.
      */
     fun admit(action: A): Admission
+
+    /**
+     * Delivers the bridge message [message] carrying [action]: it becomes a
+     * [MachineInput.BridgeReceived] input, decided like a dispatch and never refused by the
+     * [AdmissionPolicy], as refusing it would lose a message another Store already sent.
+     * [MachineGroup] calls this for its routes; a replay checks the ids it produced.
+     */
+    fun deliver(message: MessageId, action: A)
 
     /**
      * The executor's state as data, taken at a message boundary of its scheduler: the snapshot
@@ -147,11 +161,29 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     private var pluginScope: PluginScope<MachineSnapshot<C>, MachineInput<A>>? = null
 
-    private val scheduler = CommandScheduler<C, A, CMD, E>(executionScope, machine.initialSnapshot(context), handler, clock, feed = { inner.dispatch(it) }, report = ::report)
+    private val scheduler = CommandScheduler<C, A, CMD, E>(executionScope, machine.initialSnapshot(context), handler, clock, feed = ::enqueue, report = ::report)
+
+    // The controlled queue of a group cut: while frozen, every input (dispatched, delivered, fed
+    // by the executor) waits here instead of entering the inner store, in arrival order.
+    private val gate = Mutex()
+    private var frozen = false
+    private val held = ArrayDeque<MachineInput<A>>()
+
+    // Inputs the inner store accepted and has not finished or discarded: zero means idle.
+    private val pendingInputs = MutableStateFlow(0)
 
     /** The underlying Koma Store; tests await it. */
     internal val inner: Store<MachineSnapshot<C>, MachineInput<A>, E> =
         Store(machine.initialSnapshot(context), coroutineContext) {
+            probe(
+                StoreProbe { trace ->
+                    when (trace) {
+                        is StoreTrace.InputAccepted<*> -> pendingInputs.update { it + 1 }
+                        is StoreTrace.ProcessingFinished, is StoreTrace.InputDiscarded -> pendingInputs.update { it - 1 }
+                        else -> Unit
+                    }
+                },
+            )
             // Registered before the configuration, so first-match selection never lets a
             // configured enter {} or action {} run in the machine's place; recover {} handlers
             // configured below still apply.
@@ -258,11 +290,73 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
         } else {
             waiting.update { it + 1 }
         }
-        inner.dispatch(MachineInput.Dispatch(action, clock.now()))
+        enqueue(MachineInput.Dispatch(action, clock.now()))
         return Admission.Accepted
     }
 
+    override fun deliver(message: MessageId, action: A) {
+        enqueue(MachineInput.BridgeReceived(message, action, clock.now()))
+    }
+
+    // For a group's routes, whose actions lost their type on the way.
+    internal fun deliverUnchecked(message: MessageId, action: Action) {
+        @Suppress("UNCHECKED_CAST")
+        deliver(message, action as A)
+    }
+
     override suspend fun checkpoint(): ExecutorCheckpoint<C, CMD> = scheduler.checkpoint()
+
+    private fun enqueue(input: MachineInput<A>) {
+        gated {
+            if (frozen) {
+                held += input
+                return
+            }
+        }
+        inner.dispatch(input)
+    }
+
+    /**
+     * Holds every new input in the controlled queue until [thaw]; the inputs already inside the
+     * inner store are still processed. For a group cut.
+     */
+    internal fun freeze() {
+        gated { frozen = true }
+    }
+
+    /**
+     * Lets the held inputs into the inner store, in arrival order, ahead of any new one, and
+     * stops holding.
+     */
+    internal fun thaw() {
+        gated {
+            frozen = false
+            // Under the gate, so an input arriving now cannot overtake the held ones.
+            while (held.isNotEmpty()) inner.dispatch(held.removeFirst())
+        }
+    }
+
+    /** How many inputs the controlled queue holds now. */
+    internal val heldInputs: Int
+        get() = gated { held.size }
+
+    /**
+     * Waits until the inner store has finished or discarded every input it accepted, at most
+     * [timeout]; `false` on timeout. Meaningful while frozen, when no new input can enter.
+     */
+    internal suspend fun awaitIdle(timeout: Duration): Boolean =
+        withTimeoutOrNull(timeout) { pendingInputs.first { it <= 0 } } != null
+
+    private inline fun <T> gated(block: () -> T): T {
+        while (!gate.tryLock()) {
+            // Spin: the holder appends one input, or drains the held ones.
+        }
+        try {
+            return block()
+        } finally {
+            gate.unlock()
+        }
+    }
 
     override fun collectState(state: (MachineSnapshot<C>) -> Unit) = inner.collectState(state)
 

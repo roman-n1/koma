@@ -130,6 +130,8 @@ class Inspector(
         if (pending > 0) reasons += Incompleteness.InputsPending(store, pending)
         val unattributed = items.count { it is TimelineItem.Unattributed }
         if (unattributed > 0) reasons += Incompleteness.Unattributed(store, unattributed)
+        val undelivered = items.count { it is TimelineItem.Sent && !it.delivered }
+        if (undelivered > 0) reasons += Incompleteness.MessagesUndelivered(store, undelivered)
         if (status is RecordingStatus.Mismatch) reasons += Incompleteness.RecordingMismatch(store, status.reason)
         return StoreView(
             id = store,
@@ -217,6 +219,7 @@ class Inspector(
         val failures = mutableListOf<koma.observability.FailureDescriptor>()
         var decision: JournalEntry.DecisionCommitted? = null
         var ignored: String? = null
+        var message: koma.observability.MessageRef? = null
 
         fun build(): TimelineItem.Processing = TimelineItem.Processing(
             groupSeq, elapsed, store, input, kind,
@@ -226,7 +229,7 @@ class Inspector(
                 else -> null
             },
             ordinal = ordinal, outcome = outcome, duration = duration, commits = commits.toList(), events = events.toList(), failures = failures.toList(),
-            decision = decision, ignored = ignored, recorded = null, before = null, after = null, diff = null,
+            decision = decision, ignored = ignored, recorded = null, before = null, after = null, diff = null, message = message,
         )
     }
 
@@ -329,6 +332,8 @@ class Inspector(
                     attach(store, entry.input, record) { decision = entry }
                 }
                 is JournalEntry.DecisionIgnored -> attach(store, entry.input, record) { ignored = entry.reason }
+                is JournalEntry.BridgeSent -> slots += TimelineItem.Sent(seq, elapsed, checkNotNull(store), entry.input, entry.message, entry.to, entry.delivered)
+                is JournalEntry.BridgeReceived -> attach(store, entry.input, record) { message = entry.message }
                 is JournalEntry.JournalGap -> slots += TimelineItem.Gap(seq, elapsed, entry.dropped)
                 JournalEntry.RecordingStopped -> slots += TimelineItem.Stopped(seq, elapsed)
             }

@@ -18,6 +18,7 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MachineTime
+import koma.statechart.machine.MessageId
 import kotlin.time.Duration
 
 /**
@@ -82,6 +83,9 @@ class Branch<C, A : Action, CMD, E : Event>(
 
     /** Decides [action] as a dispatch at [now]. */
     fun dispatch(action: A): Decision<C, CMD, E> = apply(MachineInput.Dispatch(action, now))
+
+    /** Decides [action] as the bridge message [message] at [now], as a group's local bridge delivers it. */
+    fun deliver(message: MessageId, action: A): Decision<C, CMD, E> = apply(MachineInput.BridgeReceived(message, action, now))
 
     /**
      * Answers the awaiting [command] with [result]; the command keeps awaiting, as a live one
