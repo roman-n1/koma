@@ -5,10 +5,15 @@ import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import koma.core.InputId
 import koma.core.InternalKomaApi
+import koma.core.ActionHandlerMatch
 import koma.core.Plugin
+import koma.core.PluginPatch
 import koma.core.PluginScope
 import koma.core.Store
 import koma.core.StoreBuilder
+import koma.core.StoreHandlerMetadata
+import koma.core.StoreInternalApi
+import koma.core.StorePatch
 import koma.core.StoreProbe
 import koma.core.StoreTrace
 import koma.core.currentInputId
@@ -147,7 +152,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     private val observers: List<DecisionObserver<C, A, CMD, E>>,
     mailboxConfig: MailboxConfig<E>,
     builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit,
-) : MachineStore<C, A, CMD, E> {
+) : MachineStore<C, A, CMD, E>, StoreInternalApi<MachineSnapshot<C>, A, E> {
     init {
         require(scope.coroutineContext[ContinuationInterceptor] !== Dispatchers.Unconfined) {
             "[Koma] MachineStore needs an execution scope with a real dispatcher: with Dispatchers.Unconfined, command handlers would run under the store's lock"
@@ -179,8 +184,12 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     // The controlled queue of a group cut: while frozen, every input (dispatched, delivered, fed
     // by the executor) waits here instead of entering the inner store, in arrival order.
     private val gate = Mutex()
-    private var frozen = false
+    private val frozen = MutableStateFlow(false)
     private val held = ArrayDeque<MachineInput<A>>()
+
+    // Plugins given to the store through `patch {}` (koma-test), adapted to the inner store; the
+    // executor hands them every effect, since the inner store never sees the effects.
+    private val adaptedPlugins = mutableListOf<AdaptedPlugin<C, A, E>>()
 
     // Inputs the inner store accepted and has not finished or discarded: zero means idle.
     private val pendingInputs = MutableStateFlow(0)
@@ -230,6 +239,11 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
             }
         }
 
+    // The inner store is Koma's own, so it is also the bridge koma-test speaks.
+    @Suppress("UNCHECKED_CAST")
+    private val innerApi: StoreInternalApi<MachineSnapshot<C>, MachineInput<A>, E>
+        get() = inner as StoreInternalApi<MachineSnapshot<C>, MachineInput<A>, E>
+
     private inline fun decide(snapshot: MachineSnapshot<C>, input: MachineInput<A>, inputId: InputId?, commit: (MachineSnapshot<C>) -> Unit) {
         val decision = machine.decide(snapshot, input)
         when (val outcome = decision.outcome) {
@@ -272,6 +286,17 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
             pending = null
             scheduler.apply(decision, committed.input)
             observe { it.onCommitted(committed.input, committed.machineInput, decision) }
+            if (adaptedPlugins.isNotEmpty()) {
+                for (effect in decision.effects) {
+                    for (plugin in adaptedPlugins) {
+                        try {
+                            plugin.deliver(scope, state, effect.event)
+                        } catch (e: Exception) {
+                            report(e)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -294,6 +319,13 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     override fun feed(source: SourceId, action: A): Admission = admitting(action) { MachineInput.External(source, action, clock.now()) }
 
     private inline fun admitting(action: A, input: () -> MachineInput<A>): Admission {
+        reserve(action)?.let { return it }
+        enqueue(input())
+        return Admission.Accepted
+    }
+
+    // Books the action with the admission policy: `null` when it may enter, the rejection otherwise.
+    private fun reserve(action: A): Admission.Rejected? {
         val limit = (admission as? AdmissionPolicy.Bounded)?.maxPending
         if (limit != null) {
             while (true) {
@@ -303,14 +335,79 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
                     observe { it.onRejected(action, rejection) }
                     return rejection
                 }
-                if (waiting.compareAndSet(current, current + 1)) break
+                if (waiting.compareAndSet(current, current + 1)) return null
             }
-        } else {
-            waiting.update { it + 1 }
         }
-        enqueue(input())
-        return Admission.Accepted
+        waiting.update { it + 1 }
+        return null
     }
+
+    // --- StoreInternalApi: what koma-test's extensions speak ---
+
+    override suspend fun startAndAwait() = innerApi.startAndAwait()
+
+    /**
+     * Admits [action] like [dispatch] and waits until the machine decided it: the commit and the
+     * observers, not the commands the decision started. A rejected action throws, since it never
+     * became an input. During a group cut the input waits in the controlled queue; the call then
+     * returns after the thaw, once the inner store finished what it held.
+     */
+    override suspend fun dispatchAndAwait(action: A) {
+        reserve(action)?.let { throw IllegalStateException("[Koma] dispatchAndAwait: the action was rejected by the admission policy (pending=${it.pending}, limit=${it.limit})") }
+        val input = MachineInput.Dispatch(action, clock.now())
+        val heldByCut = gated {
+            if (frozen.value) {
+                held += input
+                true
+            } else {
+                false
+            }
+        }
+        if (!heldByCut) {
+            innerApi.dispatchAndAwait(input)
+            return
+        }
+        frozen.first { !it }
+        pendingInputs.first { it <= 0 }
+    }
+
+    override fun dispatchIf(action: A, isValid: () -> Boolean) {
+        throw UnsupportedOperationException("[Koma] dispatchIf is not supported on a MachineStore: an admitted action is booked by the admission policy and cannot be discarded by a predicate; a stale input is the machine's decision")
+    }
+
+    /**
+     * Applies the settings of [patch] to the inner store and appends its plugins, adapted; the
+     * plugins of a MachineStore can be appended but not replaced or cleared (its executor is one
+     * of them), and it cannot be probed through a patch (its inputs are machine inputs).
+     */
+    override fun patch(patch: StorePatch<MachineSnapshot<C>, A, E>): Store<MachineSnapshot<C>, A, E> {
+        require(patch.probes.isEmpty()) { "[Koma] A MachineStore cannot be patched with probes: journal it with recordTo() and decisionsOf() instead" }
+        val adapted = patch.pluginPatches.map { pluginPatch ->
+            when (pluginPatch) {
+                is PluginPatch.Append -> pluginPatch.plugins.map { AdaptedPlugin(it, this) }
+                is PluginPatch.Replace, is PluginPatch.Clear -> throw IllegalArgumentException("[Koma] A MachineStore's plugins can be appended, not replaced or cleared: its executor is one of them")
+            }
+        }
+        innerApi.patch(
+            StorePatch(
+                initialState = patch.initialState,
+                coroutineContext = patch.coroutineContext,
+                stateSaver = patch.stateSaver,
+                exceptionHandler = patch.exceptionHandler,
+                autoStartPolicy = patch.autoStartPolicy,
+                pendingActionPolicy = patch.pendingActionPolicy,
+                pluginExecutionPolicy = patch.pluginExecutionPolicy,
+                pluginPatches = adapted.map { PluginPatch.Append(it) },
+            ),
+        )
+        for (plugins in adapted) adaptedPlugins += plugins
+        return this
+    }
+
+    /** The inner store's single handler, matched for a dispatch of [action]; the chart's tools diagnose transitions. */
+    override fun matchActionHandlers(state: MachineSnapshot<C>, action: A): List<ActionHandlerMatch> = innerApi.matchActionHandlers(state, MachineInput.Dispatch(action, clock.now()))
+
+    override fun handlerMetadata(): StoreHandlerMetadata = innerApi.handlerMetadata()
 
     override fun deliver(message: MessageId, action: A) {
         enqueue(MachineInput.BridgeReceived(message, action, clock.now()))
@@ -326,7 +423,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     private fun enqueue(input: MachineInput<A>) {
         gated {
-            if (frozen) {
+            if (frozen.value) {
                 held += input
                 return
             }
@@ -339,7 +436,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
      * inner store are still processed. For a group cut.
      */
     internal fun freeze() {
-        gated { frozen = true }
+        gated { frozen.value = true }
     }
 
     /**
@@ -348,9 +445,10 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
      */
     internal fun thaw() {
         gated {
-            frozen = false
-            // Under the gate, so an input arriving now cannot overtake the held ones.
+            // Under the gate, so an input arriving now cannot overtake the held ones; the flag
+            // turns after the drain, so a waiter of `frozen` sees the held inputs already counted.
             while (held.isNotEmpty()) inner.dispatch(held.removeFirst())
+            frozen.value = false
         }
     }
 

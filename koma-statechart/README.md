@@ -379,6 +379,33 @@ What holds:
   themselves: transitions, activations, commands, timers, ignored inputs with their reason,
   refused actions. Commands and refused actions carry only what the describers you pass keep.
 
+### Testing a machine
+
+A `MachineStore` is a Store koma-test can drive: `startAndAwait()` starts it, `dispatchAndAwait(action)`
+admits the action like `dispatch` and returns once the machine decided it (the commit and the
+observers, not the commands the decision started; a rejected action throws, and during a group cut
+the call returns after the thaw), `patch {}` before the start sets the exception handler, the saver
+or the policies and appends plugins, and `createRecorder()` records the initial snapshot, every
+commit and every effect the decisions emitted, transient and retained alike. A plugin appended
+this way sees the callers' actions (dispatched, fed, delivered), not the executor's inputs; its
+`dispatch` goes through admission. Replacing or clearing the plugins and probing through a patch are
+refused; `dispatchIf` is not supported.
+
+```kotlin
+@Test
+fun aLoad_fetches_andShowsTheContent() = runTest {
+    val store = MachineStore(machine, Ctx(), handler, backgroundScope, clock, StandardTestDispatcher(testScheduler))
+    val recorder = store.createRecorder()
+    store.startAndAwait()
+
+    store.dispatchAndAwait(Act.Load)            // decided: Loading, the Fetch command registered
+    runCurrent()                                // the executor runs the command, its result is decided
+
+    assertTrue(store.currentState.isActive(content))
+    assertEquals(listOf(Ev.Started, Ev.Done), recorder.events)
+}
+```
+
 ## Validation, Mermaid, paths and conformance
 
 Check the chart in a unit test. Pass one sample of every action type so that overlapping matchers

@@ -101,7 +101,7 @@ class FaultInjectionTest {
 
     /** The scripted scenario: loads with latencies that let some time out and some answer. */
     private suspend fun TestScope.scenario(store: MachineStore<Ctx, Act, Fetch, Nothing>, snapshots: MutableList<MachineSnapshot<Ctx>>) {
-        (store as MachineStoreImpl<Ctx, Act, Fetch, Nothing>).inner.startAndAwait()
+        store.startAndAwait()
         runCurrent()
         val random = Random(99)
         repeat(40) { i ->

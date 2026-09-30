@@ -135,7 +135,7 @@ class MachineJournalTest {
         observer: DecisionObserver<Unit, Act, Fetch, Nothing>? = null,
     ): Harness {
         val h = Harness(this, machine, admission, describeCommand, observer)
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
         return h
     }
@@ -254,7 +254,7 @@ class MachineJournalTest {
             }
         }
         val h = Harness(this, twoInALane, AdmissionPolicy.Unbounded, { Payload.Omitted }, null)
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
         h.store.dispatch(Act.Load)
         runCurrent()

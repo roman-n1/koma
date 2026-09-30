@@ -136,7 +136,7 @@ class AddressBookSearchPilotTest {
 
     private suspend fun TestScope.tab(repository: FakeRepository = FakeRepository(), session: RecordingSession? = null, id: String = "picker-search-1"): Tab {
         val tab = Tab(this, repository, session, id)
-        (tab.store as koma.statechart.machine.MachineStoreImpl<*, *, *, *>).inner.startAndAwait()
+        tab.store.startAndAwait()
         runCurrent()
         return tab
     }
