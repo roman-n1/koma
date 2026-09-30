@@ -1,0 +1,227 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:koma-timetravel>
+sealed interface <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/RecordedStep { // koma.timetravel/RecordedStep|null[0]
+    abstract val input // koma.timetravel/RecordedStep.input|{}input[0]
+        abstract fun <get-input>(): koma.statechart.machine/MachineInput<#B> // koma.timetravel/RecordedStep.input.<get-input>|<get-input>(){}[0]
+
+    final class <#A1: kotlin/Any?, #B1: koma.core/Action, #C1: kotlin/Any?, #D1: koma.core/Event> Committed : koma.timetravel/RecordedStep<#A1, #B1, #C1, #D1> { // koma.timetravel/RecordedStep.Committed|null[0]
+        constructor <init>(koma.statechart.machine/MachineInput<#B1>, koma.statechart.machine/Decision<#A1, #C1, #D1>) // koma.timetravel/RecordedStep.Committed.<init>|<init>(koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
+
+        final val decision // koma.timetravel/RecordedStep.Committed.decision|{}decision[0]
+            final fun <get-decision>(): koma.statechart.machine/Decision<#A1, #C1, #D1> // koma.timetravel/RecordedStep.Committed.decision.<get-decision>|<get-decision>(){}[0]
+        final val input // koma.timetravel/RecordedStep.Committed.input|{}input[0]
+            final fun <get-input>(): koma.statechart.machine/MachineInput<#B1> // koma.timetravel/RecordedStep.Committed.input.<get-input>|<get-input>(){}[0]
+
+        final fun component1(): koma.statechart.machine/MachineInput<#B1> // koma.timetravel/RecordedStep.Committed.component1|component1(){}[0]
+        final fun component2(): koma.statechart.machine/Decision<#A1, #C1, #D1> // koma.timetravel/RecordedStep.Committed.component2|component2(){}[0]
+        final fun copy(koma.statechart.machine/MachineInput<#B1> = ..., koma.statechart.machine/Decision<#A1, #C1, #D1> = ...): koma.timetravel/RecordedStep.Committed<#A1, #B1, #C1, #D1> // koma.timetravel/RecordedStep.Committed.copy|copy(koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/RecordedStep.Committed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel/RecordedStep.Committed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel/RecordedStep.Committed.toString|toString(){}[0]
+    }
+
+    final class <#A1: kotlin/Any?, #B1: koma.core/Action, #C1: kotlin/Any?, #D1: koma.core/Event> Failed : koma.timetravel/RecordedStep<#A1, #B1, #C1, #D1> { // koma.timetravel/RecordedStep.Failed|null[0]
+        constructor <init>(koma.statechart.machine/MachineInput<#B1>, koma.observability/FailureDescriptor) // koma.timetravel/RecordedStep.Failed.<init>|<init>(koma.statechart.machine.MachineInput<1:1>;koma.observability.FailureDescriptor){}[0]
+
+        final val failure // koma.timetravel/RecordedStep.Failed.failure|{}failure[0]
+            final fun <get-failure>(): koma.observability/FailureDescriptor // koma.timetravel/RecordedStep.Failed.failure.<get-failure>|<get-failure>(){}[0]
+        final val input // koma.timetravel/RecordedStep.Failed.input|{}input[0]
+            final fun <get-input>(): koma.statechart.machine/MachineInput<#B1> // koma.timetravel/RecordedStep.Failed.input.<get-input>|<get-input>(){}[0]
+
+        final fun component1(): koma.statechart.machine/MachineInput<#B1> // koma.timetravel/RecordedStep.Failed.component1|component1(){}[0]
+        final fun component2(): koma.observability/FailureDescriptor // koma.timetravel/RecordedStep.Failed.component2|component2(){}[0]
+        final fun copy(koma.statechart.machine/MachineInput<#B1> = ..., koma.observability/FailureDescriptor = ...): koma.timetravel/RecordedStep.Failed<#A1, #B1, #C1, #D1> // koma.timetravel/RecordedStep.Failed.copy|copy(koma.statechart.machine.MachineInput<1:1>;koma.observability.FailureDescriptor){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/RecordedStep.Failed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel/RecordedStep.Failed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel/RecordedStep.Failed.toString|toString(){}[0]
+    }
+
+    final class <#A1: kotlin/Any?, #B1: koma.core/Action, #C1: kotlin/Any?, #D1: koma.core/Event> Ignored : koma.timetravel/RecordedStep<#A1, #B1, #C1, #D1> { // koma.timetravel/RecordedStep.Ignored|null[0]
+        constructor <init>(koma.statechart.machine/MachineInput<#B1>, koma.statechart.machine/IgnoreReason) // koma.timetravel/RecordedStep.Ignored.<init>|<init>(koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.IgnoreReason){}[0]
+
+        final val input // koma.timetravel/RecordedStep.Ignored.input|{}input[0]
+            final fun <get-input>(): koma.statechart.machine/MachineInput<#B1> // koma.timetravel/RecordedStep.Ignored.input.<get-input>|<get-input>(){}[0]
+        final val reason // koma.timetravel/RecordedStep.Ignored.reason|{}reason[0]
+            final fun <get-reason>(): koma.statechart.machine/IgnoreReason // koma.timetravel/RecordedStep.Ignored.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): koma.statechart.machine/MachineInput<#B1> // koma.timetravel/RecordedStep.Ignored.component1|component1(){}[0]
+        final fun component2(): koma.statechart.machine/IgnoreReason // koma.timetravel/RecordedStep.Ignored.component2|component2(){}[0]
+        final fun copy(koma.statechart.machine/MachineInput<#B1> = ..., koma.statechart.machine/IgnoreReason = ...): koma.timetravel/RecordedStep.Ignored<#A1, #B1, #C1, #D1> // koma.timetravel/RecordedStep.Ignored.copy|copy(koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.IgnoreReason){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/RecordedStep.Ignored.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel/RecordedStep.Ignored.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel/RecordedStep.Ignored.toString|toString(){}[0]
+    }
+}
+
+sealed interface <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/ReplayStep { // koma.timetravel/ReplayStep|null[0]
+    final class <#A1: kotlin/Any?, #B1: koma.core/Action, #C1: kotlin/Any?, #D1: koma.core/Event> Diverged : koma.timetravel/ReplayStep<#A1, #B1, #C1, #D1> { // koma.timetravel/ReplayStep.Diverged|null[0]
+        constructor <init>(koma.timetravel/ReplayMismatch<#A1, #B1, #C1, #D1>) // koma.timetravel/ReplayStep.Diverged.<init>|<init>(koma.timetravel.ReplayMismatch<1:0,1:1,1:2,1:3>){}[0]
+
+        final val mismatch // koma.timetravel/ReplayStep.Diverged.mismatch|{}mismatch[0]
+            final fun <get-mismatch>(): koma.timetravel/ReplayMismatch<#A1, #B1, #C1, #D1> // koma.timetravel/ReplayStep.Diverged.mismatch.<get-mismatch>|<get-mismatch>(){}[0]
+
+        final fun component1(): koma.timetravel/ReplayMismatch<#A1, #B1, #C1, #D1> // koma.timetravel/ReplayStep.Diverged.component1|component1(){}[0]
+        final fun copy(koma.timetravel/ReplayMismatch<#A1, #B1, #C1, #D1> = ...): koma.timetravel/ReplayStep.Diverged<#A1, #B1, #C1, #D1> // koma.timetravel/ReplayStep.Diverged.copy|copy(koma.timetravel.ReplayMismatch<1:0,1:1,1:2,1:3>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/ReplayStep.Diverged.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel/ReplayStep.Diverged.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel/ReplayStep.Diverged.toString|toString(){}[0]
+    }
+
+    final class <#A1: kotlin/Any?, #B1: koma.core/Action, #C1: kotlin/Any?, #D1: koma.core/Event> Matched : koma.timetravel/ReplayStep<#A1, #B1, #C1, #D1> { // koma.timetravel/ReplayStep.Matched|null[0]
+        constructor <init>(kotlin/Int, koma.statechart.machine/Decision<#A1, #C1, #D1>) // koma.timetravel/ReplayStep.Matched.<init>|<init>(kotlin.Int;koma.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
+
+        final val decision // koma.timetravel/ReplayStep.Matched.decision|{}decision[0]
+            final fun <get-decision>(): koma.statechart.machine/Decision<#A1, #C1, #D1> // koma.timetravel/ReplayStep.Matched.decision.<get-decision>|<get-decision>(){}[0]
+        final val position // koma.timetravel/ReplayStep.Matched.position|{}position[0]
+            final fun <get-position>(): kotlin/Int // koma.timetravel/ReplayStep.Matched.position.<get-position>|<get-position>(){}[0]
+
+        final fun component1(): kotlin/Int // koma.timetravel/ReplayStep.Matched.component1|component1(){}[0]
+        final fun component2(): koma.statechart.machine/Decision<#A1, #C1, #D1> // koma.timetravel/ReplayStep.Matched.component2|component2(){}[0]
+        final fun copy(kotlin/Int = ..., koma.statechart.machine/Decision<#A1, #C1, #D1> = ...): koma.timetravel/ReplayStep.Matched<#A1, #B1, #C1, #D1> // koma.timetravel/ReplayStep.Matched.copy|copy(kotlin.Int;koma.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/ReplayStep.Matched.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel/ReplayStep.Matched.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel/ReplayStep.Matched.toString|toString(){}[0]
+    }
+}
+
+sealed interface koma.timetravel/Compatibility { // koma.timetravel/Compatibility|null[0]
+    final class InspectableOnly : koma.timetravel/Compatibility { // koma.timetravel/Compatibility.InspectableOnly|null[0]
+        constructor <init>(kotlin/String) // koma.timetravel/Compatibility.InspectableOnly.<init>|<init>(kotlin.String){}[0]
+
+        final val reason // koma.timetravel/Compatibility.InspectableOnly.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.timetravel/Compatibility.InspectableOnly.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): kotlin/String // koma.timetravel/Compatibility.InspectableOnly.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): koma.timetravel/Compatibility.InspectableOnly // koma.timetravel/Compatibility.InspectableOnly.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/Compatibility.InspectableOnly.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel/Compatibility.InspectableOnly.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel/Compatibility.InspectableOnly.toString|toString(){}[0]
+    }
+
+    final class Unsupported : koma.timetravel/Compatibility { // koma.timetravel/Compatibility.Unsupported|null[0]
+        constructor <init>(kotlin/String) // koma.timetravel/Compatibility.Unsupported.<init>|<init>(kotlin.String){}[0]
+
+        final val reason // koma.timetravel/Compatibility.Unsupported.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.timetravel/Compatibility.Unsupported.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): kotlin/String // koma.timetravel/Compatibility.Unsupported.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): koma.timetravel/Compatibility.Unsupported // koma.timetravel/Compatibility.Unsupported.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/Compatibility.Unsupported.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel/Compatibility.Unsupported.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel/Compatibility.Unsupported.toString|toString(){}[0]
+    }
+
+    final object Replayable : koma.timetravel/Compatibility { // koma.timetravel/Compatibility.Replayable|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/Compatibility.Replayable.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel/Compatibility.Replayable.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel/Compatibility.Replayable.toString|toString(){}[0]
+    }
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/Branch { // koma.timetravel/Branch|null[0]
+    final val awaiting // koma.timetravel/Branch.awaiting|{}awaiting[0]
+        final fun <get-awaiting>(): kotlin.collections/List<koma.statechart.machine/CommandRegistration<#C>> // koma.timetravel/Branch.awaiting.<get-awaiting>|<get-awaiting>(){}[0]
+    final val effects // koma.timetravel/Branch.effects|{}effects[0]
+        final fun <get-effects>(): kotlin.collections/List<koma.statechart.machine/EffectEnvelope<#D>> // koma.timetravel/Branch.effects.<get-effects>|<get-effects>(){}[0]
+    final val history // koma.timetravel/Branch.history|{}history[0]
+        final fun <get-history>(): kotlin.collections/List<koma.statechart.machine/Decision<#A, #C, #D>> // koma.timetravel/Branch.history.<get-history>|<get-history>(){}[0]
+
+    final var now // koma.timetravel/Branch.now|{}now[0]
+        final fun <get-now>(): koma.statechart.machine/MachineTime // koma.timetravel/Branch.now.<get-now>|<get-now>(){}[0]
+    final var snapshot // koma.timetravel/Branch.snapshot|{}snapshot[0]
+        final fun <get-snapshot>(): koma.statechart.machine/MachineSnapshot<#A> // koma.timetravel/Branch.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
+
+    final fun advance(kotlin.time/Duration): kotlin.collections/List<koma.statechart.machine/Decision<#A, #C, #D>> // koma.timetravel/Branch.advance|advance(kotlin.time.Duration){}[0]
+    final fun answer(koma.statechart.machine/CommandId, #B): koma.statechart.machine/Decision<#A, #C, #D> // koma.timetravel/Branch.answer|answer(koma.statechart.machine.CommandId;1:1){}[0]
+    final fun complete(koma.statechart.machine/CommandId): koma.statechart.machine/Decision<#A, #C, #D> // koma.timetravel/Branch.complete|complete(koma.statechart.machine.CommandId){}[0]
+    final fun dispatch(#B): koma.statechart.machine/Decision<#A, #C, #D> // koma.timetravel/Branch.dispatch|dispatch(1:1){}[0]
+    final fun fail(koma.statechart.machine/CommandId, koma.observability/FailureDescriptor): koma.statechart.machine/Decision<#A, #C, #D> // koma.timetravel/Branch.fail|fail(koma.statechart.machine.CommandId;koma.observability.FailureDescriptor){}[0]
+    final fun reuseRecordedAnswers(koma.statechart.machine/CommandId): kotlin.collections/List<koma.statechart.machine/Decision<#A, #C, #D>>? // koma.timetravel/Branch.reuseRecordedAnswers|reuseRecordedAnswers(koma.statechart.machine.CommandId){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/MachineRecorder : koma.statechart.machine/DecisionObserver<#A, #B, #C, #D> { // koma.timetravel/MachineRecorder|null[0]
+    constructor <init>(koma.statechart.machine/Machine<#A, #B, #C, #D>, #A) // koma.timetravel/MachineRecorder.<init>|<init>(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>;1:0){}[0]
+
+    final var problem // koma.timetravel/MachineRecorder.problem|{}problem[0]
+        final fun <get-problem>(): kotlin/String? // koma.timetravel/MachineRecorder.problem.<get-problem>|<get-problem>(){}[0]
+
+    final fun onCommitted(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/Decision<#A, #C, #D>) // koma.timetravel/MachineRecorder.onCommitted|onCommitted(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
+    final fun onFailed(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.observability/FailureDescriptor) // koma.timetravel/MachineRecorder.onFailed|onFailed(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.observability.FailureDescriptor){}[0]
+    final fun onIgnored(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/IgnoreReason) // koma.timetravel/MachineRecorder.onIgnored|onIgnored(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.IgnoreReason){}[0]
+    final fun recording(): koma.timetravel/Recording<#A, #B, #C, #D> // koma.timetravel/MachineRecorder.recording|recording(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/Recording { // koma.timetravel/Recording|null[0]
+    constructor <init>(koma.statechart.machine/DefinitionId, koma.statechart.machine/DefinitionVersion, koma.statechart.machine/MachineSnapshot<#A>, kotlin.collections/List<koma.timetravel/RecordedStep<#A, #B, #C, #D>>) // koma.timetravel/Recording.<init>|<init>(koma.statechart.machine.DefinitionId;koma.statechart.machine.DefinitionVersion;koma.statechart.machine.MachineSnapshot<1:0>;kotlin.collections.List<koma.timetravel.RecordedStep<1:0,1:1,1:2,1:3>>){}[0]
+
+    final val definition // koma.timetravel/Recording.definition|{}definition[0]
+        final fun <get-definition>(): koma.statechart.machine/DefinitionId // koma.timetravel/Recording.definition.<get-definition>|<get-definition>(){}[0]
+    final val initial // koma.timetravel/Recording.initial|{}initial[0]
+        final fun <get-initial>(): koma.statechart.machine/MachineSnapshot<#A> // koma.timetravel/Recording.initial.<get-initial>|<get-initial>(){}[0]
+    final val length // koma.timetravel/Recording.length|{}length[0]
+        final fun <get-length>(): kotlin/Int // koma.timetravel/Recording.length.<get-length>|<get-length>(){}[0]
+    final val steps // koma.timetravel/Recording.steps|{}steps[0]
+        final fun <get-steps>(): kotlin.collections/List<koma.timetravel/RecordedStep<#A, #B, #C, #D>> // koma.timetravel/Recording.steps.<get-steps>|<get-steps>(){}[0]
+    final val version // koma.timetravel/Recording.version|{}version[0]
+        final fun <get-version>(): koma.statechart.machine/DefinitionVersion // koma.timetravel/Recording.version.<get-version>|<get-version>(){}[0]
+
+    final fun compatibilityWith(koma.statechart.machine/Machine<#A, #B, #C, #D>): koma.timetravel/Compatibility // koma.timetravel/Recording.compatibilityWith|compatibilityWith(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>){}[0]
+    final fun snapshotAt(kotlin/Int): koma.statechart.machine/MachineSnapshot<#A> // koma.timetravel/Recording.snapshotAt|snapshotAt(kotlin.Int){}[0]
+    final fun toString(): kotlin/String // koma.timetravel/Recording.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/ReplayMismatch { // koma.timetravel/ReplayMismatch|null[0]
+    constructor <init>(kotlin/Int, koma.statechart.machine/MachineInput<#B>, koma.timetravel/RecordedStep<#A, #B, #C, #D>, koma.statechart.machine/Decision<#A, #C, #D>, kotlin.collections/List<kotlin/String>) // koma.timetravel/ReplayMismatch.<init>|<init>(kotlin.Int;koma.statechart.machine.MachineInput<1:1>;koma.timetravel.RecordedStep<1:0,1:1,1:2,1:3>;koma.statechart.machine.Decision<1:0,1:2,1:3>;kotlin.collections.List<kotlin.String>){}[0]
+
+    final val actual // koma.timetravel/ReplayMismatch.actual|{}actual[0]
+        final fun <get-actual>(): koma.statechart.machine/Decision<#A, #C, #D> // koma.timetravel/ReplayMismatch.actual.<get-actual>|<get-actual>(){}[0]
+    final val differences // koma.timetravel/ReplayMismatch.differences|{}differences[0]
+        final fun <get-differences>(): kotlin.collections/List<kotlin/String> // koma.timetravel/ReplayMismatch.differences.<get-differences>|<get-differences>(){}[0]
+    final val expected // koma.timetravel/ReplayMismatch.expected|{}expected[0]
+        final fun <get-expected>(): koma.timetravel/RecordedStep<#A, #B, #C, #D> // koma.timetravel/ReplayMismatch.expected.<get-expected>|<get-expected>(){}[0]
+    final val input // koma.timetravel/ReplayMismatch.input|{}input[0]
+        final fun <get-input>(): koma.statechart.machine/MachineInput<#B> // koma.timetravel/ReplayMismatch.input.<get-input>|<get-input>(){}[0]
+    final val position // koma.timetravel/ReplayMismatch.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // koma.timetravel/ReplayMismatch.position.<get-position>|<get-position>(){}[0]
+
+    final fun component1(): kotlin/Int // koma.timetravel/ReplayMismatch.component1|component1(){}[0]
+    final fun component2(): koma.statechart.machine/MachineInput<#B> // koma.timetravel/ReplayMismatch.component2|component2(){}[0]
+    final fun component3(): koma.timetravel/RecordedStep<#A, #B, #C, #D> // koma.timetravel/ReplayMismatch.component3|component3(){}[0]
+    final fun component4(): koma.statechart.machine/Decision<#A, #C, #D> // koma.timetravel/ReplayMismatch.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/List<kotlin/String> // koma.timetravel/ReplayMismatch.component5|component5(){}[0]
+    final fun copy(kotlin/Int = ..., koma.statechart.machine/MachineInput<#B> = ..., koma.timetravel/RecordedStep<#A, #B, #C, #D> = ..., koma.statechart.machine/Decision<#A, #C, #D> = ..., kotlin.collections/List<kotlin/String> = ...): koma.timetravel/ReplayMismatch<#A, #B, #C, #D> // koma.timetravel/ReplayMismatch.copy|copy(kotlin.Int;koma.statechart.machine.MachineInput<1:1>;koma.timetravel.RecordedStep<1:0,1:1,1:2,1:3>;koma.statechart.machine.Decision<1:0,1:2,1:3>;kotlin.collections.List<kotlin.String>){}[0]
+    final fun describe(): kotlin/String // koma.timetravel/ReplayMismatch.describe|describe(){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/ReplayMismatch.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.timetravel/ReplayMismatch.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.timetravel/ReplayMismatch.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/ReplaySession { // koma.timetravel/ReplaySession|null[0]
+    constructor <init>(koma.statechart.machine/Machine<#A, #B, #C, #D>, koma.timetravel/Recording<#A, #B, #C, #D>) // koma.timetravel/ReplaySession.<init>|<init>(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>;koma.timetravel.Recording<1:0,1:1,1:2,1:3>){}[0]
+
+    final val length // koma.timetravel/ReplaySession.length|{}length[0]
+        final fun <get-length>(): kotlin/Int // koma.timetravel/ReplaySession.length.<get-length>|<get-length>(){}[0]
+    final val machine // koma.timetravel/ReplaySession.machine|{}machine[0]
+        final fun <get-machine>(): koma.statechart.machine/Machine<#A, #B, #C, #D> // koma.timetravel/ReplaySession.machine.<get-machine>|<get-machine>(){}[0]
+    final val next // koma.timetravel/ReplaySession.next|{}next[0]
+        final fun <get-next>(): koma.timetravel/RecordedStep<#A, #B, #C, #D>? // koma.timetravel/ReplaySession.next.<get-next>|<get-next>(){}[0]
+    final val recording // koma.timetravel/ReplaySession.recording|{}recording[0]
+        final fun <get-recording>(): koma.timetravel/Recording<#A, #B, #C, #D> // koma.timetravel/ReplaySession.recording.<get-recording>|<get-recording>(){}[0]
+    final val snapshot // koma.timetravel/ReplaySession.snapshot|{}snapshot[0]
+        final fun <get-snapshot>(): koma.statechart.machine/MachineSnapshot<#A> // koma.timetravel/ReplaySession.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
+
+    final var position // koma.timetravel/ReplaySession.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // koma.timetravel/ReplaySession.position.<get-position>|<get-position>(){}[0]
+
+    final fun branch(): koma.timetravel/Branch<#A, #B, #C, #D> // koma.timetravel/ReplaySession.branch|branch(){}[0]
+    final fun seek(kotlin/Int) // koma.timetravel/ReplaySession.seek|seek(kotlin.Int){}[0]
+    final fun stepBackward(): kotlin/Boolean // koma.timetravel/ReplaySession.stepBackward|stepBackward(){}[0]
+    final fun stepForward(): koma.timetravel/ReplayStep<#A, #B, #C, #D>? // koma.timetravel/ReplaySession.stepForward|stepForward(){}[0]
+    final fun verify(kotlin/Int = ..., kotlin/Int = ...): koma.timetravel/ReplayMismatch<#A, #B, #C, #D>? // koma.timetravel/ReplaySession.verify|verify(kotlin.Int;kotlin.Int){}[0]
+}

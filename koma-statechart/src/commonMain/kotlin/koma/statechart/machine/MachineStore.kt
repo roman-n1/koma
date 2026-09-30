@@ -176,7 +176,10 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
                 commit(decision.snapshot)
             }
             is DecisionOutcome.Ignored -> observe { it.onIgnored(inputId, input, outcome.reason) }
-            is DecisionOutcome.Failed -> throw outcome.cause
+            is DecisionOutcome.Failed -> {
+                observe { it.onFailed(inputId, input, outcome.failure) }
+                throw outcome.cause
+            }
         }
     }
 

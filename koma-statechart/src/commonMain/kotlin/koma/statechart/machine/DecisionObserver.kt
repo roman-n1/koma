@@ -9,6 +9,7 @@ import koma.core.InputId
 import koma.core.InternalKomaApi
 import koma.observability.ActivationRef
 import koma.observability.CommandRef
+import koma.observability.FailureDescriptor
 import koma.observability.JournalEntry
 import koma.observability.Payload
 import koma.observability.RecordingSession
@@ -40,6 +41,12 @@ interface DecisionObserver<C, A : Action, CMD, E : Event> {
      * [action] was refused at admission and never became an input.
      */
     fun onRejected(action: A, rejection: Admission.Rejected) {}
+
+    /**
+     * The machine failed to decide [machineInput] while processing [input]: a guard, reducer or
+     * rule threw [failure]. Nothing was committed; the cause reaches the store's exception handler.
+     */
+    fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) {}
 }
 
 /**
