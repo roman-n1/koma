@@ -74,7 +74,11 @@ Store, in memory.
   `GroupRecordingFileFormat.VERSION` bump only with a reader of the previous version, its test
   and a golden, per the [format freeze policy](../doc/internal/adr/2026-10-01-format-freeze-policy.md).
 
-Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
+Status: the **recording formats are stable in the fork** since 5.0-3 (2026-10-01): `Recording`,
+`RecordingCodec`, `GroupRecording`, `GroupRecorder`, the recording and order files and their sinks
+are not `@ExperimentalKomaApi` any more, `apiCheck` holds their API and the formats are frozen (above).
+Replay, branches and the inspector stay **experimental**, `@ExperimentalKomaApi`: debug tooling whose
+model still grows. The module lives in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
 Not yet: group-wide positions in the Compose inspector.
 
 ## Dependency

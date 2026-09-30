@@ -2,7 +2,6 @@ package koma.timetravel.file
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.core.InputId
 import koma.observability.FailureDescriptor
 import koma.observability.StoreInstanceId
@@ -37,7 +36,6 @@ import kotlinx.coroutines.sync.Mutex
  * @property flushEveryFrames How many frames are written before the storage is asked to flush
  * @property onFailure Called with a storage failure; the writer stops after one
  */
-@ExperimentalKomaApi
 data class RecordingFileConfig(
     val maxSegmentBytes: Int = 512 * 1024,
     val maxSegments: Int = 8,
@@ -51,7 +49,6 @@ data class RecordingFileConfig(
 }
 
 /** Counters of a [RecordingFileSink]. */
-@ExperimentalKomaApi
 data class RecordingFileStats(val recorded: Long, val written: Long, val dropped: Long, val segments: Int)
 
 /**
@@ -76,7 +73,6 @@ data class RecordingFileStats(val recorded: Long, val written: Long, val dropped
  * @param storage Where the segments go
  * @param scope Runs the writer; choose a dispatcher fit for the storage's I/O
  */
-@ExperimentalKomaApi
 class RecordingFileSink<C, A : Action, CMD, E : Event>(
     private val store: StoreInstanceId,
     private val machine: Machine<C, A, CMD, E>,

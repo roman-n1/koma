@@ -372,11 +372,12 @@ removed from the core of the machine and the journal (`Machine`, `MachineStore`,
 `ExecutorCheckpoint`, `MachineGroup`, `RecordingSession`, `JournalEntry`, `JournalFiles`,
 `RecordingCodec`, `RecordingFiles`), held by `apiCheck`; (2) the formats frozen under a migration
 policy: a version bump only with a migration or a reader of the old version and a golden of it.
-(2) is in place since 2026-10-01: the [format freeze policy](../adr/2026-10-01-format-freeze-policy.md)
-and `FormatVersionsTest`, which pins the five versions and names the checklist on a bump. (1) is
-under way per the [stable core ADR](../adr/2026-10-01-stable-core.md): `InputId`, every
-declaration of `koma-observability` and, but for the sources' contract, every declaration of
-`koma-statechart` since 2026-10-01; the recording formats of `koma-timetravel` follow.
+Both are in place since 2026-10-01: (2) the [format freeze policy](../adr/2026-10-01-format-freeze-policy.md)
+and `FormatVersionsTest`, which pins the five versions and names the checklist on a bump; (1) per
+the [stable core ADR](../adr/2026-10-01-stable-core.md): `InputId`, every declaration of
+`koma-observability`, every declaration of `koma-statechart` but the sources' contract, and the
+recording formats of `koma-timetravel` (replay, branches and the inspector stay experimental).
+What remains for `5.0.0` is the tag (5.0-4).
 The messenger pilot, device measurements and publishing remain work, not conditions of the number.
 
 ## Remaining work

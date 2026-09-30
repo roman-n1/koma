@@ -2,7 +2,6 @@ package koma.timetravel
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.observability.FailureDescriptor
 import koma.observability.StoreInstanceId
 import koma.statechart.StateConfiguration
@@ -62,7 +61,6 @@ const val RECORDING_FORMAT_VERSION: Int = 6
 /**
  * Turns the JSON of one format version into the next: an explicit, testable step.
  */
-@ExperimentalKomaApi
 class FormatMigration(val from: Int, val to: Int, val migrate: (JsonObject) -> JsonObject) {
     init {
         require(to > from) { "[Koma] A migration goes forward: $from -> $to" }
@@ -72,7 +70,6 @@ class FormatMigration(val from: Int, val to: Int, val migrate: (JsonObject) -> J
 /**
  * What [RecordingCodec.decode] found.
  */
-@ExperimentalKomaApi
 sealed interface DecodedRecording<C, A : Action, CMD, E : Event> {
     /** The recording, exactly as encoded. */
     data class Decoded<C, A : Action, CMD, E : Event>(val recording: Recording<C, A, CMD, E>) : DecodedRecording<C, A, CMD, E>
@@ -104,7 +101,6 @@ sealed interface DecodedRecording<C, A : Action, CMD, E : Event> {
  * @param event Serializer of the events
  * @param migrations Migrations from format versions the codec does not migrate itself
  */
-@ExperimentalKomaApi
 class RecordingCodec<C, A : Action, CMD, E : Event>(
     private val context: KSerializer<C>,
     private val action: KSerializer<A>,

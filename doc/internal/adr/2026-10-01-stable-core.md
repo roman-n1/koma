@@ -56,7 +56,9 @@ Not adopted:
 - 5.0-3b (2026-10-01): 94 markers off `koma-statechart`; the four that stay are on
   `ExternalSource`, both `feed`s and `MachineGroup.source`, and `MachineGroup` opts in without
   propagating for the sources it holds. The dumps did not change.
-- After 5.0-3c, criterion (1) is met and `5.0.0` waits only for Roman's tag (5.0-4).
+- 5.0-3c (2026-10-01): 29 markers off the seven format files of `koma-timetravel`; 17 stay on
+  replay, branches and the inspector. The dumps did not change.
+- Criterion (1) is met; `5.0.0` waits only for Roman's tag (5.0-4).
 
 ## Related
 
