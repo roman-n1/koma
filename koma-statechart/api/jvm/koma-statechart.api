@@ -169,6 +169,7 @@ public final class koma/statechart/HistoryState : koma/statechart/StateNode {
 
 public final class koma/statechart/MermaidKt {
 	public static final fun toMermaid (Lkoma/statechart/StateChartDefinition;)Ljava/lang/String;
+	public static final fun toMermaid (Lkoma/statechart/StateChartDefinition;Ljava/util/Set;)Ljava/lang/String;
 }
 
 public final class koma/statechart/ParallelState : koma/statechart/StateNode {

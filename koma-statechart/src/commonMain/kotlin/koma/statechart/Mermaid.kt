@@ -61,7 +61,16 @@ private fun mermaidText(value: String): String = value.replace(mermaidLineBreak,
  * The output is built from the model only; nothing runs and no reflection is used.
  */
 @ExperimentalKomaApi
-fun StateChartDefinition.toMermaid(): String = buildString {
+fun StateChartDefinition.toMermaid(): String = toMermaid(emptySet())
+
+/**
+ * Renders this definition as [toMermaid] does, with the states in [active] highlighted: a
+ * `classDef koma_active` and a `class` statement naming them (by their alias when they have
+ * one) close the diagram, so a snapshot's configuration can be drawn on the chart. Ids that
+ * are not in the chart are ignored; an empty [active] gives the plain diagram.
+ */
+@ExperimentalKomaApi
+fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
     val compoundInitials = hierarchy.nodes.values.filterIsInstance<CompoundState>().map { it.initial }
     val histories = hierarchy.nodes.values.filterIsInstance<HistoryState>()
     val historyDefaults = histories.mapNotNull { it.default }
@@ -150,6 +159,11 @@ fun StateChartDefinition.toMermaid(): String = buildString {
         if (isBlock(node) && containerOf(node.id) == null) appendBlock(node, "    ")
     }
     appendTransitions(null, "    ")
+    val highlighted = ids.filter { it in active }
+    if (highlighted.isNotEmpty()) {
+        appendLine("    classDef koma_active fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px")
+        appendLine("    class ${highlighted.joinToString(",") { refs.getValue(it) }} koma_active")
+    }
 }.trimEnd()
 
 /**

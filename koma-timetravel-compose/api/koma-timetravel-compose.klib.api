@@ -19,6 +19,73 @@ final enum class koma.timetravel.compose/InspectorMode : kotlin/Enum<koma.timetr
     final fun values(): kotlin/Array<koma.timetravel.compose/InspectorMode> // koma.timetravel.compose/InspectorMode.values|values#static(){}[0]
 }
 
+sealed interface koma.timetravel.compose/BranchInput { // koma.timetravel.compose/BranchInput|null[0]
+    abstract val label // koma.timetravel.compose/BranchInput.label|{}label[0]
+        abstract fun <get-label>(): kotlin/String // koma.timetravel.compose/BranchInput.label.<get-label>|<get-label>(){}[0]
+    abstract val store // koma.timetravel.compose/BranchInput.store|{}store[0]
+        abstract fun <get-store>(): koma.observability/StoreInstanceId // koma.timetravel.compose/BranchInput.store.<get-store>|<get-store>(){}[0]
+
+    final class Answer : koma.timetravel.compose/BranchInput { // koma.timetravel.compose/BranchInput.Answer|null[0]
+        constructor <init>(koma.observability/StoreInstanceId, kotlin/String, koma.core/Action) // koma.timetravel.compose/BranchInput.Answer.<init>|<init>(koma.observability.StoreInstanceId;kotlin.String;koma.core.Action){}[0]
+
+        final val label // koma.timetravel.compose/BranchInput.Answer.label|{}label[0]
+            final fun <get-label>(): kotlin/String // koma.timetravel.compose/BranchInput.Answer.label.<get-label>|<get-label>(){}[0]
+        final val result // koma.timetravel.compose/BranchInput.Answer.result|{}result[0]
+            final fun <get-result>(): koma.core/Action // koma.timetravel.compose/BranchInput.Answer.result.<get-result>|<get-result>(){}[0]
+        final val store // koma.timetravel.compose/BranchInput.Answer.store|{}store[0]
+            final fun <get-store>(): koma.observability/StoreInstanceId // koma.timetravel.compose/BranchInput.Answer.store.<get-store>|<get-store>(){}[0]
+
+        final fun component1(): koma.observability/StoreInstanceId // koma.timetravel.compose/BranchInput.Answer.component1|component1(){}[0]
+        final fun component2(): kotlin/String // koma.timetravel.compose/BranchInput.Answer.component2|component2(){}[0]
+        final fun component3(): koma.core/Action // koma.timetravel.compose/BranchInput.Answer.component3|component3(){}[0]
+        final fun copy(koma.observability/StoreInstanceId = ..., kotlin/String = ..., koma.core/Action = ...): koma.timetravel.compose/BranchInput.Answer // koma.timetravel.compose/BranchInput.Answer.copy|copy(koma.observability.StoreInstanceId;kotlin.String;koma.core.Action){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.compose/BranchInput.Answer.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel.compose/BranchInput.Answer.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel.compose/BranchInput.Answer.toString|toString(){}[0]
+    }
+
+    final class Dispatch : koma.timetravel.compose/BranchInput { // koma.timetravel.compose/BranchInput.Dispatch|null[0]
+        constructor <init>(koma.observability/StoreInstanceId, kotlin/String, koma.core/Action) // koma.timetravel.compose/BranchInput.Dispatch.<init>|<init>(koma.observability.StoreInstanceId;kotlin.String;koma.core.Action){}[0]
+
+        final val action // koma.timetravel.compose/BranchInput.Dispatch.action|{}action[0]
+            final fun <get-action>(): koma.core/Action // koma.timetravel.compose/BranchInput.Dispatch.action.<get-action>|<get-action>(){}[0]
+        final val label // koma.timetravel.compose/BranchInput.Dispatch.label|{}label[0]
+            final fun <get-label>(): kotlin/String // koma.timetravel.compose/BranchInput.Dispatch.label.<get-label>|<get-label>(){}[0]
+        final val store // koma.timetravel.compose/BranchInput.Dispatch.store|{}store[0]
+            final fun <get-store>(): koma.observability/StoreInstanceId // koma.timetravel.compose/BranchInput.Dispatch.store.<get-store>|<get-store>(){}[0]
+
+        final fun component1(): koma.observability/StoreInstanceId // koma.timetravel.compose/BranchInput.Dispatch.component1|component1(){}[0]
+        final fun component2(): kotlin/String // koma.timetravel.compose/BranchInput.Dispatch.component2|component2(){}[0]
+        final fun component3(): koma.core/Action // koma.timetravel.compose/BranchInput.Dispatch.component3|component3(){}[0]
+        final fun copy(koma.observability/StoreInstanceId = ..., kotlin/String = ..., koma.core/Action = ...): koma.timetravel.compose/BranchInput.Dispatch // koma.timetravel.compose/BranchInput.Dispatch.copy|copy(koma.observability.StoreInstanceId;kotlin.String;koma.core.Action){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.compose/BranchInput.Dispatch.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel.compose/BranchInput.Dispatch.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel.compose/BranchInput.Dispatch.toString|toString(){}[0]
+    }
+
+    final class Feed : koma.timetravel.compose/BranchInput { // koma.timetravel.compose/BranchInput.Feed|null[0]
+        constructor <init>(koma.observability/StoreInstanceId, kotlin/String, koma.statechart.machine/SourceId, koma.core/Action) // koma.timetravel.compose/BranchInput.Feed.<init>|<init>(koma.observability.StoreInstanceId;kotlin.String;koma.statechart.machine.SourceId;koma.core.Action){}[0]
+
+        final val action // koma.timetravel.compose/BranchInput.Feed.action|{}action[0]
+            final fun <get-action>(): koma.core/Action // koma.timetravel.compose/BranchInput.Feed.action.<get-action>|<get-action>(){}[0]
+        final val label // koma.timetravel.compose/BranchInput.Feed.label|{}label[0]
+            final fun <get-label>(): kotlin/String // koma.timetravel.compose/BranchInput.Feed.label.<get-label>|<get-label>(){}[0]
+        final val source // koma.timetravel.compose/BranchInput.Feed.source|{}source[0]
+            final fun <get-source>(): koma.statechart.machine/SourceId // koma.timetravel.compose/BranchInput.Feed.source.<get-source>|<get-source>(){}[0]
+        final val store // koma.timetravel.compose/BranchInput.Feed.store|{}store[0]
+            final fun <get-store>(): koma.observability/StoreInstanceId // koma.timetravel.compose/BranchInput.Feed.store.<get-store>|<get-store>(){}[0]
+
+        final fun component1(): koma.observability/StoreInstanceId // koma.timetravel.compose/BranchInput.Feed.component1|component1(){}[0]
+        final fun component2(): kotlin/String // koma.timetravel.compose/BranchInput.Feed.component2|component2(){}[0]
+        final fun component3(): koma.statechart.machine/SourceId // koma.timetravel.compose/BranchInput.Feed.component3|component3(){}[0]
+        final fun component4(): koma.core/Action // koma.timetravel.compose/BranchInput.Feed.component4|component4(){}[0]
+        final fun copy(koma.observability/StoreInstanceId = ..., kotlin/String = ..., koma.statechart.machine/SourceId = ..., koma.core/Action = ...): koma.timetravel.compose/BranchInput.Feed // koma.timetravel.compose/BranchInput.Feed.copy|copy(koma.observability.StoreInstanceId;kotlin.String;koma.statechart.machine.SourceId;koma.core.Action){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.compose/BranchInput.Feed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel.compose/BranchInput.Feed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel.compose/BranchInput.Feed.toString|toString(){}[0]
+    }
+}
+
 final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel.compose/ReplayControls { // koma.timetravel.compose/ReplayControls|null[0]
     constructor <init>(koma.observability/StoreInstanceId, koma.timetravel/ReplaySession<#A, #B, #C, #D>) // koma.timetravel.compose/ReplayControls.<init>|<init>(koma.observability.StoreInstanceId;koma.timetravel.ReplaySession<1:0,1:1,1:2,1:3>){}[0]
 
@@ -32,6 +99,8 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
         final fun <get-length>(): kotlin/Int // koma.timetravel.compose/ReplayControls.length.<get-length>|<get-length>(){}[0]
     final val session // koma.timetravel.compose/ReplayControls.session|{}session[0]
         final fun <get-session>(): koma.timetravel/ReplaySession<#A, #B, #C, #D> // koma.timetravel.compose/ReplayControls.session.<get-session>|<get-session>(){}[0]
+    final val snapshot // koma.timetravel.compose/ReplayControls.snapshot|{}snapshot[0]
+        final fun <get-snapshot>(): koma.statechart.machine/MachineSnapshot<#A> // koma.timetravel.compose/ReplayControls.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
     final val store // koma.timetravel.compose/ReplayControls.store|{}store[0]
         final fun <get-store>(): koma.observability/StoreInstanceId // koma.timetravel.compose/ReplayControls.store.<get-store>|<get-store>(){}[0]
 
@@ -42,10 +111,67 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
     final var verdict // koma.timetravel.compose/ReplayControls.verdict|{}verdict[0]
         final fun <get-verdict>(): kotlin/String? // koma.timetravel.compose/ReplayControls.verdict.<get-verdict>|<get-verdict>(){}[0]
 
+    final fun mermaid(): kotlin/String // koma.timetravel.compose/ReplayControls.mermaid|mermaid(){}[0]
     final fun seek(kotlin/Int) // koma.timetravel.compose/ReplayControls.seek|seek(kotlin.Int){}[0]
     final fun stepBackward() // koma.timetravel.compose/ReplayControls.stepBackward|stepBackward(){}[0]
     final fun stepForward() // koma.timetravel.compose/ReplayControls.stepForward|stepForward(){}[0]
     final fun verify() // koma.timetravel.compose/ReplayControls.verify|verify(){}[0]
+}
+
+final class koma.timetravel.compose/BranchControls { // koma.timetravel.compose/BranchControls|null[0]
+    constructor <init>(koma.timetravel/GroupBranch, kotlin.collections/Map<koma.observability/StoreInstanceId, koma.statechart.machine/Machine<*, *, *, *>>, kotlin.collections/List<koma.timetravel.compose/BranchInput> = ...) // koma.timetravel.compose/BranchControls.<init>|<init>(koma.timetravel.GroupBranch;kotlin.collections.Map<koma.observability.StoreInstanceId,koma.statechart.machine.Machine<*,*,*,*>>;kotlin.collections.List<koma.timetravel.compose.BranchInput>){}[0]
+
+    final val branch // koma.timetravel.compose/BranchControls.branch|{}branch[0]
+        final fun <get-branch>(): koma.timetravel/GroupBranch // koma.timetravel.compose/BranchControls.branch.<get-branch>|<get-branch>(){}[0]
+    final val inputs // koma.timetravel.compose/BranchControls.inputs|{}inputs[0]
+        final fun <get-inputs>(): kotlin.collections/List<koma.timetravel.compose/BranchInput> // koma.timetravel.compose/BranchControls.inputs.<get-inputs>|<get-inputs>(){}[0]
+    final val machines // koma.timetravel.compose/BranchControls.machines|{}machines[0]
+        final fun <get-machines>(): kotlin.collections/Map<koma.observability/StoreInstanceId, koma.statechart.machine/Machine<*, *, *, *>> // koma.timetravel.compose/BranchControls.machines.<get-machines>|<get-machines>(){}[0]
+    final val members // koma.timetravel.compose/BranchControls.members|{}members[0]
+        final fun <get-members>(): kotlin.collections/List<koma.observability/StoreInstanceId> // koma.timetravel.compose/BranchControls.members.<get-members>|<get-members>(){}[0]
+
+    final var decisions // koma.timetravel.compose/BranchControls.decisions|{}decisions[0]
+        final fun <get-decisions>(): kotlin.collections/List<koma.timetravel.compose/BranchDecision> // koma.timetravel.compose/BranchControls.decisions.<get-decisions>|<get-decisions>(){}[0]
+    final var problem // koma.timetravel.compose/BranchControls.problem|{}problem[0]
+        final fun <get-problem>(): kotlin/String? // koma.timetravel.compose/BranchControls.problem.<get-problem>|<get-problem>(){}[0]
+
+    final fun advance(kotlin.time/Duration) // koma.timetravel.compose/BranchControls.advance|advance(kotlin.time.Duration){}[0]
+    final fun answer(koma.timetravel.compose/BranchInput.Answer, koma.statechart.machine/CommandId) // koma.timetravel.compose/BranchControls.answer|answer(koma.timetravel.compose.BranchInput.Answer;koma.statechart.machine.CommandId){}[0]
+    final fun awaiting(koma.observability/StoreInstanceId): kotlin.collections/List<koma.statechart.machine/CommandRegistration<*>> // koma.timetravel.compose/BranchControls.awaiting|awaiting(koma.observability.StoreInstanceId){}[0]
+    final fun complete(koma.observability/StoreInstanceId, koma.statechart.machine/CommandId) // koma.timetravel.compose/BranchControls.complete|complete(koma.observability.StoreInstanceId;koma.statechart.machine.CommandId){}[0]
+    final fun dispatch(koma.timetravel.compose/BranchInput.Dispatch) // koma.timetravel.compose/BranchControls.dispatch|dispatch(koma.timetravel.compose.BranchInput.Dispatch){}[0]
+    final fun fail(koma.observability/StoreInstanceId, koma.statechart.machine/CommandId, kotlin/String = ...) // koma.timetravel.compose/BranchControls.fail|fail(koma.observability.StoreInstanceId;koma.statechart.machine.CommandId;kotlin.String){}[0]
+    final fun feed(koma.timetravel.compose/BranchInput.Feed) // koma.timetravel.compose/BranchControls.feed|feed(koma.timetravel.compose.BranchInput.Feed){}[0]
+    final fun inputsOf(koma.observability/StoreInstanceId): kotlin.collections/List<koma.timetravel.compose/BranchInput> // koma.timetravel.compose/BranchControls.inputsOf|inputsOf(koma.observability.StoreInstanceId){}[0]
+    final fun mermaid(koma.observability/StoreInstanceId): kotlin/String // koma.timetravel.compose/BranchControls.mermaid|mermaid(koma.observability.StoreInstanceId){}[0]
+    final fun now(koma.observability/StoreInstanceId): koma.statechart.machine/MachineTime // koma.timetravel.compose/BranchControls.now|now(koma.observability.StoreInstanceId){}[0]
+    final fun queued(koma.observability/StoreInstanceId): kotlin.collections/Map<koma.statechart.machine/LaneId, kotlin.collections/List<koma.statechart.machine/CommandRegistration<*>>> // koma.timetravel.compose/BranchControls.queued|queued(koma.observability.StoreInstanceId){}[0]
+    final fun snapshot(koma.observability/StoreInstanceId): koma.statechart.machine/MachineSnapshot<*> // koma.timetravel.compose/BranchControls.snapshot|snapshot(koma.observability.StoreInstanceId){}[0]
+}
+
+final class koma.timetravel.compose/BranchDecision { // koma.timetravel.compose/BranchDecision|null[0]
+    constructor <init>(kotlin/Int, koma.observability/StoreInstanceId, kotlin/String, koma.statechart.machine/Decision<*, *, *>, koma.timetravel.inspect/SnapshotDiff) // koma.timetravel.compose/BranchDecision.<init>|<init>(kotlin.Int;koma.observability.StoreInstanceId;kotlin.String;koma.statechart.machine.Decision<*,*,*>;koma.timetravel.inspect.SnapshotDiff){}[0]
+
+    final val cause // koma.timetravel.compose/BranchDecision.cause|{}cause[0]
+        final fun <get-cause>(): kotlin/String // koma.timetravel.compose/BranchDecision.cause.<get-cause>|<get-cause>(){}[0]
+    final val decision // koma.timetravel.compose/BranchDecision.decision|{}decision[0]
+        final fun <get-decision>(): koma.statechart.machine/Decision<*, *, *> // koma.timetravel.compose/BranchDecision.decision.<get-decision>|<get-decision>(){}[0]
+    final val diff // koma.timetravel.compose/BranchDecision.diff|{}diff[0]
+        final fun <get-diff>(): koma.timetravel.inspect/SnapshotDiff // koma.timetravel.compose/BranchDecision.diff.<get-diff>|<get-diff>(){}[0]
+    final val index // koma.timetravel.compose/BranchDecision.index|{}index[0]
+        final fun <get-index>(): kotlin/Int // koma.timetravel.compose/BranchDecision.index.<get-index>|<get-index>(){}[0]
+    final val store // koma.timetravel.compose/BranchDecision.store|{}store[0]
+        final fun <get-store>(): koma.observability/StoreInstanceId // koma.timetravel.compose/BranchDecision.store.<get-store>|<get-store>(){}[0]
+
+    final fun component1(): kotlin/Int // koma.timetravel.compose/BranchDecision.component1|component1(){}[0]
+    final fun component2(): koma.observability/StoreInstanceId // koma.timetravel.compose/BranchDecision.component2|component2(){}[0]
+    final fun component3(): kotlin/String // koma.timetravel.compose/BranchDecision.component3|component3(){}[0]
+    final fun component4(): koma.statechart.machine/Decision<*, *, *> // koma.timetravel.compose/BranchDecision.component4|component4(){}[0]
+    final fun component5(): koma.timetravel.inspect/SnapshotDiff // koma.timetravel.compose/BranchDecision.component5|component5(){}[0]
+    final fun copy(kotlin/Int = ..., koma.observability/StoreInstanceId = ..., kotlin/String = ..., koma.statechart.machine/Decision<*, *, *> = ..., koma.timetravel.inspect/SnapshotDiff = ...): koma.timetravel.compose/BranchDecision // koma.timetravel.compose/BranchDecision.copy|copy(kotlin.Int;koma.observability.StoreInstanceId;kotlin.String;koma.statechart.machine.Decision<*,*,*>;koma.timetravel.inspect.SnapshotDiff){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.compose/BranchDecision.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.timetravel.compose/BranchDecision.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.timetravel.compose/BranchDecision.toString|toString(){}[0]
 }
 
 final class koma.timetravel.compose/InspectorState { // koma.timetravel.compose/InspectorState|null[0]
@@ -73,16 +199,34 @@ final class koma.timetravel.compose/InspectorState { // koma.timetravel.compose/
     final fun toggleFilter(koma.observability/StoreInstanceId) // koma.timetravel.compose/InspectorState.toggleFilter|toggleFilter(koma.observability.StoreInstanceId){}[0]
 }
 
+final object koma.timetravel.compose/BranchText { // koma.timetravel.compose/BranchText|null[0]
+    final fun line(koma.timetravel.compose/BranchDecision): kotlin/String // koma.timetravel.compose/BranchText.line|line(koma.timetravel.compose.BranchDecision){}[0]
+}
+
+final val koma.timetravel.compose/koma_timetravel_compose_BranchControls$stableprop // koma.timetravel.compose/koma_timetravel_compose_BranchControls$stableprop|#static{}koma_timetravel_compose_BranchControls$stableprop[0]
+final val koma.timetravel.compose/koma_timetravel_compose_BranchDecision$stableprop // koma.timetravel.compose/koma_timetravel_compose_BranchDecision$stableprop|#static{}koma_timetravel_compose_BranchDecision$stableprop[0]
+final val koma.timetravel.compose/koma_timetravel_compose_BranchInput_Answer$stableprop // koma.timetravel.compose/koma_timetravel_compose_BranchInput_Answer$stableprop|#static{}koma_timetravel_compose_BranchInput_Answer$stableprop[0]
+final val koma.timetravel.compose/koma_timetravel_compose_BranchInput_Dispatch$stableprop // koma.timetravel.compose/koma_timetravel_compose_BranchInput_Dispatch$stableprop|#static{}koma_timetravel_compose_BranchInput_Dispatch$stableprop[0]
+final val koma.timetravel.compose/koma_timetravel_compose_BranchInput_Feed$stableprop // koma.timetravel.compose/koma_timetravel_compose_BranchInput_Feed$stableprop|#static{}koma_timetravel_compose_BranchInput_Feed$stableprop[0]
+final val koma.timetravel.compose/koma_timetravel_compose_BranchText$stableprop // koma.timetravel.compose/koma_timetravel_compose_BranchText$stableprop|#static{}koma_timetravel_compose_BranchText$stableprop[0]
 final val koma.timetravel.compose/koma_timetravel_compose_InspectorState$stableprop // koma.timetravel.compose/koma_timetravel_compose_InspectorState$stableprop|#static{}koma_timetravel_compose_InspectorState$stableprop[0]
 final val koma.timetravel.compose/koma_timetravel_compose_ReplayControls$stableprop // koma.timetravel.compose/koma_timetravel_compose_ReplayControls$stableprop|#static{}koma_timetravel_compose_ReplayControls$stableprop[0]
 
 final fun (koma.timetravel.inspect/Completeness).koma.timetravel.compose/label(): kotlin/String // koma.timetravel.compose/label|label@koma.timetravel.inspect.Completeness(){}[0]
-final fun koma.timetravel.compose/InspectorScreen(koma.timetravel.compose/InspectorState, koma.timetravel.compose/ReplayControls<*, *, *, *>?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/InspectorScreen|InspectorScreen(koma.timetravel.compose.InspectorState;koma.timetravel.compose.ReplayControls<*,*,*,*>?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun koma.timetravel.compose/BranchPanel(koma.timetravel.compose/BranchControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/BranchPanel|BranchPanel(koma.timetravel.compose.BranchControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun koma.timetravel.compose/DefinitionPanel(kotlin/String, kotlin/String, kotlin/String, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/DefinitionPanel|DefinitionPanel(kotlin.String;kotlin.String;kotlin.String;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun koma.timetravel.compose/InspectorScreen(koma.timetravel.compose/InspectorState, koma.timetravel.compose/ReplayControls<*, *, *, *>?, koma.timetravel.compose/BranchControls?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/InspectorScreen|InspectorScreen(koma.timetravel.compose.InspectorState;koma.timetravel.compose.ReplayControls<*,*,*,*>?;koma.timetravel.compose.BranchControls?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun koma.timetravel.compose/ModeBar(koma.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/ModeBar|ModeBar(koma.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun koma.timetravel.compose/PositionPanel(koma.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/PositionPanel|PositionPanel(koma.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun koma.timetravel.compose/PositionPanel(koma.timetravel.compose/InspectorState, koma.timetravel.compose/ReplayControls<*, *, *, *>?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/PositionPanel|PositionPanel(koma.timetravel.compose.InspectorState;koma.timetravel.compose.ReplayControls<*,*,*,*>?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun koma.timetravel.compose/ReplayBar(koma.timetravel.compose/ReplayControls<*, *, *, *>, koma.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/ReplayBar|ReplayBar(koma.timetravel.compose.ReplayControls<*,*,*,*>;koma.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun koma.timetravel.compose/StoresPanel(koma.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/StoresPanel|StoresPanel(koma.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun koma.timetravel.compose/TimelinePanel(koma.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/TimelinePanel|TimelinePanel(koma.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun koma.timetravel.compose/koma_timetravel_compose_BranchControls$stableprop_getter(): kotlin/Int // koma.timetravel.compose/koma_timetravel_compose_BranchControls$stableprop_getter|koma_timetravel_compose_BranchControls$stableprop_getter(){}[0]
+final fun koma.timetravel.compose/koma_timetravel_compose_BranchDecision$stableprop_getter(): kotlin/Int // koma.timetravel.compose/koma_timetravel_compose_BranchDecision$stableprop_getter|koma_timetravel_compose_BranchDecision$stableprop_getter(){}[0]
+final fun koma.timetravel.compose/koma_timetravel_compose_BranchInput_Answer$stableprop_getter(): kotlin/Int // koma.timetravel.compose/koma_timetravel_compose_BranchInput_Answer$stableprop_getter|koma_timetravel_compose_BranchInput_Answer$stableprop_getter(){}[0]
+final fun koma.timetravel.compose/koma_timetravel_compose_BranchInput_Dispatch$stableprop_getter(): kotlin/Int // koma.timetravel.compose/koma_timetravel_compose_BranchInput_Dispatch$stableprop_getter|koma_timetravel_compose_BranchInput_Dispatch$stableprop_getter(){}[0]
+final fun koma.timetravel.compose/koma_timetravel_compose_BranchInput_Feed$stableprop_getter(): kotlin/Int // koma.timetravel.compose/koma_timetravel_compose_BranchInput_Feed$stableprop_getter|koma_timetravel_compose_BranchInput_Feed$stableprop_getter(){}[0]
+final fun koma.timetravel.compose/koma_timetravel_compose_BranchText$stableprop_getter(): kotlin/Int // koma.timetravel.compose/koma_timetravel_compose_BranchText$stableprop_getter|koma_timetravel_compose_BranchText$stableprop_getter(){}[0]
 final fun koma.timetravel.compose/koma_timetravel_compose_InspectorState$stableprop_getter(): kotlin/Int // koma.timetravel.compose/koma_timetravel_compose_InspectorState$stableprop_getter|koma_timetravel_compose_InspectorState$stableprop_getter(){}[0]
 final fun koma.timetravel.compose/koma_timetravel_compose_ReplayControls$stableprop_getter(): kotlin/Int // koma.timetravel.compose/koma_timetravel_compose_ReplayControls$stableprop_getter|koma_timetravel_compose_ReplayControls$stableprop_getter(){}[0]
 final fun koma.timetravel.compose/rememberInspectorState(koma.timetravel.inspect/Inspector, koma.timetravel.compose/InspectorMode?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): koma.timetravel.compose/InspectorState // koma.timetravel.compose/rememberInspectorState|rememberInspectorState(koma.timetravel.inspect.Inspector;koma.timetravel.compose.InspectorMode?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]

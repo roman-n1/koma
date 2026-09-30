@@ -40,6 +40,7 @@ import koma.statechart.machine.DefinitionVersion
 import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineTime
+import koma.timetravel.GroupBranch
 import koma.timetravel.RecordedStep
 import koma.timetravel.Recording
 import koma.timetravel.ReplaySession
@@ -50,7 +51,8 @@ import kotlin.time.Duration.Companion.milliseconds
 /**
  * The inspector screen over a hand-made journal and a recording replayed by the pure machine:
  * the Stores with their completeness and reasons, the timeline, a selected position's detail,
- * the replay bar stepping and telling why forward is disabled.
+ * the replay bar stepping and telling why forward is disabled, the definition drawn with the
+ * replay's active states, and the branch panel deciding scripted inputs.
  */
 class InspectorScreenTest {
 
@@ -147,5 +149,28 @@ class InspectorScreenTest {
         onNodeWithTag("replay-verify").performClick()
         onNodeWithTag("replay-verdict").assertTextContains("no divergence in 3 steps", substring = true)
         onNode(hasTestTag("store-chat-7")).assertTextContains("mismatch", substring = true)
+        onNodeWithTag("definition").assertTextContains("stateDiagram-v2", substring = true)
+        onNodeWithTag("definition").assertTextContains("class Root,Idle koma_active", substring = true)
+    }
+
+    @Test
+    fun theBranchPanel_decidesAScriptedInput_andDrawsTheDefinition() = runComposeUiTest {
+        val recording = recording()
+        val session = ReplaySession(machine, recording).also { it.seek(1) }
+        val branch = BranchControls(GroupBranch(mapOf(store to session.branch()), emptyList()), mapOf(store to machine), listOf(BranchInput.Dispatch(store, "Inc", Act.Inc)))
+        val state = InspectorState(Inspector.of(journal(), recordings = mapOf(store to recording)), InspectorMode.Branch)
+        setContent { InspectorScreen(state, branch = branch) }
+
+        onNodeWithTag("mode-bar").assertTextContains("BRANCH", substring = true)
+        onNodeWithTag("branch-chat-7").assertTextContains("revision 1", substring = true)
+        onNodeWithTag("branch-definition-chat-7").assertTextContains("class Root,Idle koma_active", substring = true)
+
+        onNodeWithTag("branch-input-chat-7-Inc").performClick()
+
+        onNodeWithTag("branch-chat-7").assertTextContains("revision 2", substring = true)
+        onNodeWithTag("branch-chat-7").assertTextContains("Ctx(n=1)", substring = true)
+        onNodeWithTag("branch-decision-0").assertTextContains("#0 chat-7 Inc: handled revision=2; context", substring = true)
+        onNodeWithTag("branch-advance").performClick()
+        onNodeWithTag("branch-chat-7").assertTextContains("now 1s", substring = true)
     }
 }

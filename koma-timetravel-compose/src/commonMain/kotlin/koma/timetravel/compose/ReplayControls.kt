@@ -8,6 +8,8 @@ import koma.core.Action
 import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import koma.observability.StoreInstanceId
+import koma.statechart.machine.MachineSnapshot
+import koma.statechart.toMermaid
 import koma.timetravel.ReplaySession
 import koma.timetravel.ReplayStep
 
@@ -35,6 +37,16 @@ class ReplayControls<C, A : Action, CMD, E : Event>(val store: StoreInstanceId, 
         private set
 
     val length: Int get() = session.length
+
+    /** The snapshot the replay is at. */
+    val snapshot: MachineSnapshot<C>
+        get() {
+            position
+            return session.snapshot
+        }
+
+    /** The machine's definition as Mermaid, the states active at the replay's position highlighted. */
+    fun mermaid(): String = session.machine.chart.toMermaid(snapshot.configuration.active)
 
     val canStepBackward: Boolean get() = position > 0
 

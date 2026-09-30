@@ -70,7 +70,7 @@ Store, in memory.
   `RecordingFiles.prune` bounds what all the files take together.
 
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
-Not yet: a branch panel in the Compose inspector.
+Not yet: group-wide positions in the Compose inspector.
 
 ## Dependency
 

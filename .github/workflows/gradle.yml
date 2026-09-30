@@ -32,7 +32,7 @@ jobs:
             os: ubuntu-latest
           - target: wasmJsBrowserTest
             os: ubuntu-latest
-          - target: apiCheck
+          - target: apiCheck checkDebugGraph
             os: macos-26
     runs-on: ${{ matrix.os }}
 

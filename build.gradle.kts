@@ -22,6 +22,33 @@ apiValidation {
     }
 }
 
+// The time-travel modules are debug tooling (handoff §11, §12): no production module may depend
+// on them, so an app that keeps them in a debug source set keeps them out of its release graph.
+// `checkDebugGraph` fails on a dependency in the wrong direction; CI runs it next to `apiCheck`.
+val debugModules = setOf(":koma-timetravel", ":koma-timetravel-compose")
+// Collected once every project is evaluated, at configuration time, so the task's action holds
+// plain strings and the configuration cache can keep it.
+val debugGraphOffenders = mutableListOf<String>()
+gradle.projectsEvaluated {
+    for (project in subprojects.filter { it.path !in debugModules }) {
+        for (configuration in project.configurations) {
+            for (dependency in configuration.dependencies.withType<ProjectDependency>()) {
+                if (dependency.path in debugModules) debugGraphOffenders += "${project.path} -> ${dependency.path} (${configuration.name})"
+            }
+        }
+    }
+}
+val checkDebugGraph by tasks.registering {
+    group = "verification"
+    description = "Fails when a production module depends on the debug (time-travel) modules."
+    val offenders = debugGraphOffenders
+    val watched = debugModules.joinToString()
+    doLast {
+        check(offenders.isEmpty()) { "Debug modules in a production module's graph:\n" + offenders.joinToString("\n") }
+        logger.lifecycle("No production module depends on $watched")
+    }
+}
+
 // A failed test's assertion message and stack trace reach the console (and so CI's log), not
 // only its class and line.
 subprojects {

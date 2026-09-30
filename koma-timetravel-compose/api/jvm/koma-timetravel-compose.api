@@ -1,9 +1,118 @@
+public final class koma/timetravel/compose/BranchControls {
+	public static final field $stable I
+	public fun <init> (Lkoma/timetravel/GroupBranch;Ljava/util/Map;Ljava/util/List;)V
+	public synthetic fun <init> (Lkoma/timetravel/GroupBranch;Ljava/util/Map;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun advance-LRDsOJo (J)V
+	public final fun answer-YhhhREM (Lkoma/timetravel/compose/BranchInput$Answer;J)V
+	public final fun awaiting-QV6ywvQ (Ljava/lang/String;)Ljava/util/List;
+	public final fun complete-cOmnRZ8 (Ljava/lang/String;J)V
+	public final fun dispatch (Lkoma/timetravel/compose/BranchInput$Dispatch;)V
+	public final fun fail-R7LUhBI (Ljava/lang/String;JLjava/lang/String;)V
+	public static synthetic fun fail-R7LUhBI$default (Lkoma/timetravel/compose/BranchControls;Ljava/lang/String;JLjava/lang/String;ILjava/lang/Object;)V
+	public final fun feed (Lkoma/timetravel/compose/BranchInput$Feed;)V
+	public final fun getBranch ()Lkoma/timetravel/GroupBranch;
+	public final fun getDecisions ()Ljava/util/List;
+	public final fun getInputs ()Ljava/util/List;
+	public final fun getMachines ()Ljava/util/Map;
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getProblem ()Ljava/lang/String;
+	public final fun inputsOf-QV6ywvQ (Ljava/lang/String;)Ljava/util/List;
+	public final fun mermaid-QV6ywvQ (Ljava/lang/String;)Ljava/lang/String;
+	public final fun now-D0rsSMA (Ljava/lang/String;)J
+	public final fun queued-QV6ywvQ (Ljava/lang/String;)Ljava/util/Map;
+	public final fun snapshot-QV6ywvQ (Ljava/lang/String;)Lkoma/statechart/machine/MachineSnapshot;
+}
+
+public final class koma/timetravel/compose/BranchDecision {
+	public static final field $stable I
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/Decision;Lkoma/timetravel/inspect/SnapshotDiff;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2-G0_Fx5k ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Lkoma/statechart/machine/Decision;
+	public final fun component5 ()Lkoma/timetravel/inspect/SnapshotDiff;
+	public final fun copy-WpAQ9tY (ILjava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/Decision;Lkoma/timetravel/inspect/SnapshotDiff;)Lkoma/timetravel/compose/BranchDecision;
+	public static synthetic fun copy-WpAQ9tY$default (Lkoma/timetravel/compose/BranchDecision;ILjava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/Decision;Lkoma/timetravel/inspect/SnapshotDiff;ILjava/lang/Object;)Lkoma/timetravel/compose/BranchDecision;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Ljava/lang/String;
+	public final fun getDecision ()Lkoma/statechart/machine/Decision;
+	public final fun getDiff ()Lkoma/timetravel/inspect/SnapshotDiff;
+	public final fun getIndex ()I
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/timetravel/compose/BranchInput {
+	public abstract fun getLabel ()Ljava/lang/String;
+	public abstract fun getStore-G0_Fx5k ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/compose/BranchInput$Answer : koma/timetravel/compose/BranchInput {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkoma/core/Action;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lkoma/core/Action;
+	public final fun copy-zLaGOrk (Ljava/lang/String;Ljava/lang/String;Lkoma/core/Action;)Lkoma/timetravel/compose/BranchInput$Answer;
+	public static synthetic fun copy-zLaGOrk$default (Lkoma/timetravel/compose/BranchInput$Answer;Ljava/lang/String;Ljava/lang/String;Lkoma/core/Action;ILjava/lang/Object;)Lkoma/timetravel/compose/BranchInput$Answer;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getLabel ()Ljava/lang/String;
+	public final fun getResult ()Lkoma/core/Action;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/compose/BranchInput$Dispatch : koma/timetravel/compose/BranchInput {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkoma/core/Action;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lkoma/core/Action;
+	public final fun copy-zLaGOrk (Ljava/lang/String;Ljava/lang/String;Lkoma/core/Action;)Lkoma/timetravel/compose/BranchInput$Dispatch;
+	public static synthetic fun copy-zLaGOrk$default (Lkoma/timetravel/compose/BranchInput$Dispatch;Ljava/lang/String;Ljava/lang/String;Lkoma/core/Action;ILjava/lang/Object;)Lkoma/timetravel/compose/BranchInput$Dispatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lkoma/core/Action;
+	public fun getLabel ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/compose/BranchInput$Feed : koma/timetravel/compose/BranchInput {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkoma/core/Action;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3-5cWyoho ()Ljava/lang/String;
+	public final fun component4 ()Lkoma/core/Action;
+	public final fun copy-0Ko5PLc (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkoma/core/Action;)Lkoma/timetravel/compose/BranchInput$Feed;
+	public static synthetic fun copy-0Ko5PLc$default (Lkoma/timetravel/compose/BranchInput$Feed;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkoma/core/Action;ILjava/lang/Object;)Lkoma/timetravel/compose/BranchInput$Feed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lkoma/core/Action;
+	public fun getLabel ()Ljava/lang/String;
+	public final fun getSource-5cWyoho ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/compose/BranchText {
+	public static final field $stable I
+	public static final field INSTANCE Lkoma/timetravel/compose/BranchText;
+	public final fun line (Lkoma/timetravel/compose/BranchDecision;)Ljava/lang/String;
+}
+
 public final class koma/timetravel/compose/ComposableSingletons$InspectorScreenKt {
 	public static final field INSTANCE Lkoma/timetravel/compose/ComposableSingletons$InspectorScreenKt;
 	public fun <init> ()V
 	public final fun getLambda$-1046985028$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-1366945309$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
 	public final fun getLambda$-1797596237$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
 	public final fun getLambda$-307027532$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-703792646$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$1584814289$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
 }
 
 public final class koma/timetravel/compose/InspectorMode : java/lang/Enum {
@@ -17,9 +126,11 @@ public final class koma/timetravel/compose/InspectorMode : java/lang/Enum {
 }
 
 public final class koma/timetravel/compose/InspectorScreenKt {
-	public static final fun InspectorScreen (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/ReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun BranchPanel (Lkoma/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun DefinitionPanel (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun InspectorScreen (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/ReplayControls;Lkoma/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun ModeBar (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
-	public static final fun PositionPanel (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun PositionPanel (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/ReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun ReplayBar (Lkoma/timetravel/compose/ReplayControls;Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun StoresPanel (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun TimelinePanel (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
@@ -59,8 +170,10 @@ public final class koma/timetravel/compose/ReplayControls {
 	public final fun getLength ()I
 	public final fun getPosition ()I
 	public final fun getSession ()Lkoma/timetravel/ReplaySession;
+	public final fun getSnapshot ()Lkoma/statechart/machine/MachineSnapshot;
 	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
 	public final fun getVerdict ()Ljava/lang/String;
+	public final fun mermaid ()Ljava/lang/String;
 	public final fun seek (I)V
 	public final fun stepBackward ()V
 	public final fun stepForward ()V
