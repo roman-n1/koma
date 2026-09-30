@@ -892,6 +892,16 @@ viewStore.stateContent<CounterState.Main> {
 }
 ```
 
+To project the state into what one composable needs, `select` derives a value from it: the
+mapper runs when the state changes, and whatever reads the result recomposes only when the
+derived value changed. A UI model from a large state, or one field of it, is read this way
+without recomposing on every unrelated change.
+
+```kt
+val uiModel = viewStore.select { it.toUiModel() }   // a pure projection; readers recompose when uiModel changes
+Text(text = uiModel.title)
+```
+
 If you use lower components in the `stateContent()` block, pass its instance.
 
 ```kt

@@ -10,6 +10,7 @@ public final class koma/compose/ViewStore {
 	public final fun getEventFlow ()Lkotlinx/coroutines/flow/Flow;
 	public final fun getState ()Lkoma/core/State;
 	public final fun narrow (Lkotlin/jvm/functions/Function1;)Lkoma/compose/ViewStore;
+	public final fun select (Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)Ljava/lang/Object;
 }
 
 public final class koma/compose/ViewStoreKt {
