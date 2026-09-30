@@ -7,7 +7,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -48,14 +47,20 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         object : StateFlow<S> {
             override val replayCache: List<S> get() = _state.replayCache
             override val value: S get() = _state.value
-            override suspend fun collect(collector: FlowCollector<S>): Nothing = coroutineScope {
-                launch {
-                    _state.collect(collector)
+            // Collects in the caller's coroutine so operators that stop early, such as first() or
+            // take(n), end the collection. Startup is requested once the initial value has been
+            // read, so the collector still sees the state from before startup processing.
+            override suspend fun collect(collector: FlowCollector<S>): Nothing {
+                var startupRequested = false
+                _state.collect { value ->
+                    if (!startupRequested) {
+                        startupRequested = true
+                        if (autoStartPolicy == AutoStartPolicy.OnDispatchOrStateCollection) {
+                            launchStartup()
+                        }
+                    }
+                    collector.emit(value)
                 }
-                if (autoStartPolicy == AutoStartPolicy.OnDispatchOrStateCollection) {
-                    launchStartup()
-                }
-                awaitCancellation()
             }
         }
     }
