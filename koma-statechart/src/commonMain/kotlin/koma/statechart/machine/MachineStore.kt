@@ -112,20 +112,34 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     /** The underlying Koma Store; tests await it. */
     internal val inner: Store<MachineSnapshot<C>, MachineInput<A>, E> =
         Store(machine.initialSnapshot(context), coroutineContext) {
-            builder()
-            plugin(Executor())
-            validateRecovery { previous, recovered ->
-                require(previous == recovered) { "[Koma] MachineStore recover {} may not change the snapshot; dispatch an action the machine decides" }
-            }
+            // Registered before the configuration, so first-match selection never lets a
+            // configured enter {} or action {} run in the machine's place; recover {} handlers
+            // configured below still apply.
             state<MachineSnapshot<C>> {
                 enter {
-                    // A restored, already started snapshot has lost its commands: start over with its context.
-                    val base = if (state.isStarted) machine.initialSnapshot(state.context) else state
+                    val foreign = state.definition != machine.id || state.version != machine.version
+                    // A restored snapshot of another machine or version cannot be decided by this
+                    // one, and a restored, already started snapshot has lost its commands: both
+                    // start over with the restored context. The foreign one is reported.
+                    val base = if (foreign || state.isStarted) machine.initialSnapshot(state.context) else state
                     decide(base, MachineInput.Start(clock.now())) { nextState { it } }
+                    if (foreign) {
+                        val restored = state
+                        launch {
+                            throw IllegalStateException(
+                                "[Koma] MachineStore restored a snapshot of ${restored.definition} version ${restored.version} into ${machine.id} version ${machine.version}; started over with the restored context",
+                            )
+                        }
+                    }
                 }
                 action<MachineInput<A>> {
                     decide(state, action) { nextState { it } }
                 }
+            }
+            builder()
+            plugin(Executor())
+            validateRecovery { previous, recovered ->
+                require(previous == recovered) { "[Koma] MachineStore recover {} may not change the snapshot; dispatch an action the machine decides" }
             }
         }
 
