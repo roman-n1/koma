@@ -5,6 +5,7 @@ import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import koma.observability.FailureDescriptor
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -20,12 +21,15 @@ import kotlinx.coroutines.launch
  * as [MachineInput]s.
  *
  * All bookkeeping lives in one actor coroutine, so it needs no lock: [apply] only enqueues a
- * message and returns, which is what a caller holding the store's lock may do. Commands and
- * timers run as children of [parent] in a scope of their own, cancelled by [close].
+ * message and returns, which is what a caller holding the store's lock may do. The bookkeeping
+ * of commands is the pure [Lanes]; the actor owns only the jobs, the timers and what a
+ * [checkpoint] needs. Commands and timers run as children of [parent] in a scope of their own,
+ * cancelled by [close].
  */
 @OptIn(ExperimentalKomaApi::class)
 internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     parent: CoroutineScope,
+    initial: MachineSnapshot<C>,
     private val handler: CommandHandler<CMD, A>,
     private val clock: MachineClock,
     private val feed: (MachineInput<A>) -> Unit,
@@ -35,9 +39,12 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     private val messages = Channel<Message>(Channel.UNLIMITED)
 
     // Actor state: touched only from `actor`.
-    private val running = mutableMapOf<CommandId, Running<CMD>>()
-    private val lanes = mutableMapOf<LaneId, Lane<CMD>>()
+    private var lanes = Lanes<CMD>()
+    private val jobs = mutableMapOf<CommandId, Job>()
     private val timers = mutableMapOf<TimerId, Job>()
+    // The snapshot of the last decision carried out, and the commands finished here that it still holds.
+    private var lastSnapshot: MachineSnapshot<C> = initial
+    private val ending = mutableMapOf<CommandId, CommandRegistration<CMD>>()
 
     private val actor: Job = scope.launch {
         for (message in messages) handle(message)
@@ -48,6 +55,23 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
      */
     fun apply(decision: Decision<C, CMD, E>) {
         messages.trySend(Message.Apply(decision))
+    }
+
+    /**
+     * The executor's state at its next message boundary; see [MachineStore.checkpoint].
+     *
+     * @throws IllegalStateException if the scheduler is closed
+     */
+    suspend fun checkpoint(): ExecutorCheckpoint<C, CMD> {
+        val reply = CompletableDeferred<ExecutorCheckpoint<C, CMD>>()
+        // A closed actor answers no one: fail the request instead of waiting forever.
+        val closing = actor.invokeOnCompletion { reply.completeExceptionally(IllegalStateException("[Koma] The MachineStore is closed; no checkpoint")) }
+        try {
+            if (messages.trySend(Message.Checkpoint(reply)).isFailure) throw IllegalStateException("[Koma] The MachineStore is closed; no checkpoint")
+            return reply.await()
+        } finally {
+            closing.dispose()
+        }
     }
 
     /**
@@ -64,15 +88,8 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
         class Finished(val command: CommandId) : Message
 
         class TimerDone(val timer: TimerId) : Message
-    }
 
-    private class Running<CMD>(val registration: CommandRegistration<CMD>) {
-        lateinit var job: Job
-    }
-
-    private class Lane<CMD> {
-        val running = mutableSetOf<CommandId>()
-        val queue = ArrayDeque<CommandRegistration<CMD>>()
+        class Checkpoint<C, CMD>(val reply: CompletableDeferred<ExecutorCheckpoint<C, CMD>>) : Message
     }
 
     private fun handle(message: Message) {
@@ -83,56 +100,51 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
             }
             is Message.Finished -> finished(message.command)
             is Message.TimerDone -> timers.remove(message.timer)
+            is Message.Checkpoint<*, *> -> {
+                @Suppress("UNCHECKED_CAST")
+                val reply = message.reply as CompletableDeferred<ExecutorCheckpoint<C, CMD>>
+                // An inconsistent checkpoint is the requester's failure, not the actor's end.
+                try {
+                    reply.complete(checkpointNow())
+                } catch (e: IllegalArgumentException) {
+                    reply.completeExceptionally(e)
+                }
+            }
         }
     }
 
     private fun carryOut(decision: Decision<C, CMD, E>) {
-        val exited = decision.cancelledScopes.toSet()
-        for (command in running.values.filter { it.registration.scope in exited }) command.job.cancel()
-        // A command still waiting in its lane belongs to the exited activation too; the decision
-        // already deregistered it, so it is dropped without a report.
-        for (lane in lanes.values) lane.queue.removeAll { it.scope in exited }
+        lastSnapshot = decision.snapshot
+        // What the machine deregistered is no longer ending here.
+        ending.keys.retainAll(decision.snapshot.commands.keys)
+        apply(lanes.exited(decision.cancelledScopes))
         for (timer in decision.timersCancelled) timers.remove(timer)?.cancel()
         for (schedule in decision.timersScheduled) timers[schedule.id] = scope.launch {
             clock.delayUntil(schedule.deadline)
             feed(MachineInput.TimerFired(schedule.id, clock.now()))
             messages.trySend(Message.TimerDone(schedule.id))
         }
-        for (registration in decision.commands) admit(registration)
+        for (registration in decision.commands) apply(lanes.admit(registration))
     }
 
-    private fun admit(registration: CommandRegistration<CMD>) {
-        val laneId = registration.lane ?: return start(registration)
-        val lane = lanes.getOrPut(laneId) { Lane() }
-        when (val policy = registration.policy) {
-            ConcurrencyPolicy.Latest -> {
-                for (id in lane.running.toList()) abandon(running.getValue(id), AbandonReason.Superseded)
-                // Whatever waited in the lane is superseded as well: it never started, so the
-                // machine hears about it from here.
-                for (queued in lane.queue) feed(MachineInput.CommandAbandoned(queued.id, AbandonReason.Superseded, clock.now()))
-                lane.queue.clear()
-                start(registration)
-            }
-            ConcurrencyPolicy.Sequential -> if (lane.running.isEmpty()) start(registration) else lane.queue += registration
-            ConcurrencyPolicy.DropIfRunning -> if (lane.running.isEmpty()) start(registration) else feed(MachineInput.CommandAbandoned(registration.id, AbandonReason.Dropped, clock.now()))
-            is ConcurrencyPolicy.Parallel -> if (lane.running.size < policy.limit) start(registration) else lane.queue += registration
-            null -> start(registration)
+    // Carries out a change of the lanes: cancels, reports, starts, in that order.
+    private fun apply(change: LaneChange<CMD>) {
+        lanes = change.lanes
+        for (id in change.cancelled) jobs[id]?.cancel()
+        for (abandoned in change.abandoned) {
+            val id = abandoned.registration.id
+            // Cancelled and told to the machine at once: the job may never have started, so its
+            // body cannot be relied on to report anything.
+            jobs.remove(id)?.cancel()
+            if (id in lastSnapshot.commands) ending[id] = abandoned.registration
+            feed(MachineInput.CommandAbandoned(id, abandoned.reason, clock.now()))
         }
-    }
-
-    // Cancels the command and tells the machine at once: the job may never have started, so its
-    // body cannot be relied on to report anything.
-    private fun abandon(command: Running<CMD>, reason: AbandonReason) {
-        command.job.cancel()
-        feed(MachineInput.CommandAbandoned(command.registration.id, reason, clock.now()))
+        for (registration in change.started) start(registration)
     }
 
     private fun start(registration: CommandRegistration<CMD>) {
-        val command = Running(registration)
-        running[registration.id] = command
-        registration.lane?.let { lanes.getValue(it).running += registration.id }
         val envelope = CommandEnvelope(registration.id, registration.command, registration.scope, registration.lane)
-        command.job = scope.launch {
+        val job = scope.launch {
             try {
                 handler.execute(envelope) { action -> feed(MachineInput.CommandResult(registration.id, action, clock.now())) }
                 feed(MachineInput.CommandCompleted(registration.id, clock.now()))
@@ -145,8 +157,9 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
                 fail(registration.id, e)
             }
         }
+        jobs[registration.id] = job
         // Runs also for a job cancelled before it started, which its body could not report.
-        command.job.invokeOnCompletion { messages.trySend(Message.Finished(registration.id)) }
+        job.invokeOnCompletion { messages.trySend(Message.Finished(registration.id)) }
     }
 
     private fun fail(command: CommandId, error: Exception) {
@@ -155,20 +168,20 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     }
 
     private fun finished(id: CommandId) {
-        val command = running.remove(id) ?: return
-        val laneId = command.registration.lane ?: return
-        val lane = lanes.getValue(laneId)
-        lane.running -= id
-        while (lane.queue.isNotEmpty()) {
-            val next = lane.queue.first()
-            val fits = when (val policy = next.policy) {
-                ConcurrencyPolicy.Sequential -> lane.running.isEmpty()
-                is ConcurrencyPolicy.Parallel -> lane.running.size < policy.limit
-                else -> true
-            }
-            if (!fits) break
-            lane.queue.removeFirst()
-            start(next)
+        jobs.remove(id)
+        val registration = lanes.running[id] ?: return
+        // Its last input (completion, failure) is on its way while the machine still holds it.
+        if (id in lastSnapshot.commands) ending[id] = registration
+        apply(lanes.finished(id))
+    }
+
+    // The lanes as they settle once the ends already decided by the machine are booked: a
+    // command the snapshot no longer holds has ended, whatever its job is still doing.
+    private fun checkpointNow(): ExecutorCheckpoint<C, CMD> {
+        var settled = lanes
+        for (id in settled.running.keys.toList()) {
+            if (id !in lastSnapshot.commands) settled = settled.finished(id).lanes
         }
+        return ExecutorCheckpoint(lastSnapshot, clock.now(), settled, ending.toMap())
     }
 }

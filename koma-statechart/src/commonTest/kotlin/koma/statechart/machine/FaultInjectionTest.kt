@@ -100,7 +100,7 @@ class FaultInjectionTest {
     }
 
     /** The scripted scenario: loads with latencies that let some time out and some answer. */
-    private suspend fun TestScope.scenario(store: MachineStore<Ctx, Act, Nothing>, snapshots: MutableList<MachineSnapshot<Ctx>>) {
+    private suspend fun TestScope.scenario(store: MachineStore<Ctx, Act, Fetch, Nothing>, snapshots: MutableList<MachineSnapshot<Ctx>>) {
         (store as MachineStoreImpl<Ctx, Act, Fetch, Nothing>).inner.startAndAwait()
         runCurrent()
         val random = Random(99)
@@ -114,7 +114,7 @@ class FaultInjectionTest {
         snapshots += store.currentState
     }
 
-    private fun TestScope.newStore(faults: Random?, session: RecordingSession?, handled: MutableList<Throwable>, committed: MutableList<MachineSnapshot<Ctx>>): Pair<MachineStore<Ctx, Act, Nothing>, CoroutineScope> {
+    private fun TestScope.newStore(faults: Random?, session: RecordingSession?, handled: MutableList<Throwable>, committed: MutableList<MachineSnapshot<Ctx>>): Pair<MachineStore<Ctx, Act, Fetch, Nothing>, CoroutineScope> {
         val dispatcher = StandardTestDispatcher(testScheduler)
         val executionScope = CoroutineScope(dispatcher + SupervisorJob())
         val handler = CommandHandler<Fetch, Act> { command, results ->

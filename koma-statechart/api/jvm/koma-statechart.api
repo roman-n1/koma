@@ -981,6 +981,31 @@ public final class koma/statechart/machine/EffectId {
 	public final synthetic fun unbox-impl ()J
 }
 
+public final class koma/statechart/machine/ExecutorCheckpoint {
+	public static final field Companion Lkoma/statechart/machine/ExecutorCheckpoint$Companion;
+	public synthetic fun <init> (Lkoma/statechart/machine/MachineSnapshot;JLkoma/statechart/machine/Lanes;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkoma/statechart/machine/MachineSnapshot;JLkoma/statechart/machine/Lanes;Ljava/util/Map;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun component2-cDuxZ3M ()J
+	public final fun component3 ()Lkoma/statechart/machine/Lanes;
+	public final fun component4 ()Ljava/util/Map;
+	public final fun copy-I9EZV0Q (Lkoma/statechart/machine/MachineSnapshot;JLkoma/statechart/machine/Lanes;Ljava/util/Map;)Lkoma/statechart/machine/ExecutorCheckpoint;
+	public static synthetic fun copy-I9EZV0Q$default (Lkoma/statechart/machine/ExecutorCheckpoint;Lkoma/statechart/machine/MachineSnapshot;JLkoma/statechart/machine/Lanes;Ljava/util/Map;ILjava/lang/Object;)Lkoma/statechart/machine/ExecutorCheckpoint;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEnding ()Ljava/util/Map;
+	public final fun getLanes ()Lkoma/statechart/machine/Lanes;
+	public final fun getNow-cDuxZ3M ()J
+	public final fun getRegistrations ()Ljava/util/Map;
+	public final fun getSnapshot ()Lkoma/statechart/machine/MachineSnapshot;
+	public fun hashCode ()I
+	public final fun remaining-26fM1po (J)Lkotlin/time/Duration;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/ExecutorCheckpoint$Companion {
+	public final fun initial (Lkoma/statechart/machine/MachineSnapshot;)Lkoma/statechart/machine/ExecutorCheckpoint;
+}
+
 public final class koma/statechart/machine/IgnoreReason : java/lang/Enum {
 	public static final field AlreadyStarted Lkoma/statechart/machine/IgnoreReason;
 	public static final field NoTransition Lkoma/statechart/machine/IgnoreReason;
@@ -990,6 +1015,37 @@ public final class koma/statechart/machine/IgnoreReason : java/lang/Enum {
 	public static fun getEntries ()Lkotlin/enums/EnumEntries;
 	public static fun valueOf (Ljava/lang/String;)Lkoma/statechart/machine/IgnoreReason;
 	public static fun values ()[Lkoma/statechart/machine/IgnoreReason;
+}
+
+public final class koma/statechart/machine/LaneChange {
+	public fun <init> (Lkoma/statechart/machine/Lanes;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Lkoma/statechart/machine/Lanes;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkoma/statechart/machine/Lanes;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy (Lkoma/statechart/machine/Lanes;Ljava/util/List;Ljava/util/List;Ljava/util/List;)Lkoma/statechart/machine/LaneChange;
+	public static synthetic fun copy$default (Lkoma/statechart/machine/LaneChange;Lkoma/statechart/machine/Lanes;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lkoma/statechart/machine/LaneChange;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAbandoned ()Ljava/util/List;
+	public final fun getCancelled ()Ljava/util/List;
+	public final fun getLanes ()Lkoma/statechart/machine/Lanes;
+	public final fun getStarted ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/LaneChange$Abandoned {
+	public fun <init> (Lkoma/statechart/machine/CommandRegistration;Lkoma/statechart/machine/AbandonReason;)V
+	public final fun component1 ()Lkoma/statechart/machine/CommandRegistration;
+	public final fun component2 ()Lkoma/statechart/machine/AbandonReason;
+	public final fun copy (Lkoma/statechart/machine/CommandRegistration;Lkoma/statechart/machine/AbandonReason;)Lkoma/statechart/machine/LaneChange$Abandoned;
+	public static synthetic fun copy$default (Lkoma/statechart/machine/LaneChange$Abandoned;Lkoma/statechart/machine/CommandRegistration;Lkoma/statechart/machine/AbandonReason;ILjava/lang/Object;)Lkoma/statechart/machine/LaneChange$Abandoned;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Lkoma/statechart/machine/AbandonReason;
+	public final fun getRegistration ()Lkoma/statechart/machine/CommandRegistration;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class koma/statechart/machine/LaneId {
@@ -1004,6 +1060,26 @@ public final class koma/statechart/machine/LaneId {
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/Lanes {
+	public fun <init> ()V
+	public fun <init> (Ljava/util/Map;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/util/Map;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun admit (Lkoma/statechart/machine/CommandRegistration;)Lkoma/statechart/machine/LaneChange;
+	public final fun component1 ()Ljava/util/Map;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;Ljava/util/Map;)Lkoma/statechart/machine/Lanes;
+	public static synthetic fun copy$default (Lkoma/statechart/machine/Lanes;Ljava/util/Map;Ljava/util/Map;ILjava/lang/Object;)Lkoma/statechart/machine/Lanes;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun exited (Ljava/util/Collection;)Lkoma/statechart/machine/LaneChange;
+	public final fun finished-rf9sHPo (J)Lkoma/statechart/machine/LaneChange;
+	public final fun getAll ()Ljava/util/Map;
+	public final fun getQueued ()Ljava/util/Map;
+	public final fun getRunning ()Ljava/util/Map;
+	public fun hashCode ()I
+	public final fun runningIn-NZcw2Vk (Ljava/lang/String;)Ljava/util/List;
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class koma/statechart/machine/Machine {
@@ -1226,6 +1302,7 @@ public final class koma/statechart/machine/MachineSnapshot : koma/core/State {
 
 public abstract interface class koma/statechart/machine/MachineStore : koma/core/Store {
 	public abstract fun admit (Lkoma/core/Action;)Lkoma/statechart/machine/Admission;
+	public abstract fun checkpoint (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class koma/statechart/machine/MachineStore$DefaultImpls {

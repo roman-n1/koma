@@ -32,12 +32,28 @@ import kotlin.coroutines.CoroutineContext
  * commit. See [MachineStore] (the factory) for the protocol.
  */
 @ExperimentalKomaApi
-interface MachineStore<C, A : Action, E : Event> : Store<MachineSnapshot<C>, A, E> {
+interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>, A, E> {
     /**
      * Offers [action] and says whether it was accepted, according to the [AdmissionPolicy].
      * [dispatch] is this with the answer dropped.
      */
     fun admit(action: A): Admission
+
+    /**
+     * The executor's state as data, taken at a message boundary of its scheduler: the snapshot
+     * of the last decision it carried out, its clock, the commands running and waiting in their
+     * lanes, and the commands it has finished with whose last input the machine has not decided
+     * yet. The store may have committed later decisions by the time this returns; they are the
+     * steps after the checkpoint. A command the snapshot no longer holds is booked as ended,
+     * whatever its job is still doing, so the lanes are what the executor settles to.
+     *
+     * Every position of a `koma-timetravel` recording has such a checkpoint; this one is the
+     * live executor's, for a branch that starts where the run is, or for a recording that
+     * begins here.
+     *
+     * @throws IllegalStateException if the store is closed
+     */
+    suspend fun checkpoint(): ExecutorCheckpoint<C, CMD>
 }
 
 /**
@@ -54,11 +70,12 @@ interface MachineStore<C, A : Action, E : Event> : Store<MachineSnapshot<C>, A, 
  *    input commits nothing, registers nothing and fails the handler, so its cause reaches the
  *    exception handler; commands already running are untouched.
  *
- * Outside the lock, in [scope]: the scheduler starts the commands under their lane policies and
- * runs them through [handler], which feeds results, completion and failures back as inputs;
- * timers wait on [clock] and feed [MachineInput.TimerFired]; events are delivered through
- * [Store.event] in decision order. A command sees the committed snapshot in [Store.currentState].
- * If the store closes between the commit and the scheduler's turn, nothing starts.
+ * Outside the lock, in [scope]: the scheduler starts the commands under their lane policies
+ * (the pure [Lanes]) and runs them through [handler], which feeds results, completion and
+ * failures back as inputs; timers wait on [clock] and feed [MachineInput.TimerFired]; events are
+ * delivered through [Store.event] in decision order. A command sees the committed snapshot in
+ * [Store.currentState]. If the store closes between the commit and the scheduler's turn, nothing
+ * starts. [MachineStore.checkpoint] is the scheduler's state as data.
  *
  * `recover {}` handlers configured in [builder] may not change the snapshot: the machine is the
  * only writer. A `StateSaver` that restores an already started snapshot cannot restore its
@@ -89,7 +106,7 @@ fun <C, A : Action, CMD, E : Event> MachineStore(
     admission: AdmissionPolicy = AdmissionPolicy.Unbounded,
     observers: List<DecisionObserver<C, A, CMD, E>> = emptyList(),
     builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit = {},
-): MachineStore<C, A, E> = MachineStoreImpl(machine, context, handler, scope, clock, coroutineContext, admission, observers, builder)
+): MachineStore<C, A, CMD, E> = MachineStoreImpl(machine, context, handler, scope, clock, coroutineContext, admission, observers, builder)
 
 @OptIn(ExperimentalKomaApi::class, InternalKomaApi::class)
 internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
@@ -102,7 +119,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     private val admission: AdmissionPolicy,
     private val observers: List<DecisionObserver<C, A, CMD, E>>,
     builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit,
-) : MachineStore<C, A, E> {
+) : MachineStore<C, A, CMD, E> {
     init {
         require(scope.coroutineContext[ContinuationInterceptor] !== Dispatchers.Unconfined) {
             "[Koma] MachineStore needs an execution scope with a real dispatcher: with Dispatchers.Unconfined, command handlers would run under the store's lock"
@@ -130,7 +147,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     private var pluginScope: PluginScope<MachineSnapshot<C>, MachineInput<A>>? = null
 
-    private val scheduler = CommandScheduler<C, A, CMD, E>(executionScope, handler, clock, feed = { inner.dispatch(it) }, report = ::report)
+    private val scheduler = CommandScheduler<C, A, CMD, E>(executionScope, machine.initialSnapshot(context), handler, clock, feed = { inner.dispatch(it) }, report = ::report)
 
     /** The underlying Koma Store; tests await it. */
     internal val inner: Store<MachineSnapshot<C>, MachineInput<A>, E> =
@@ -244,6 +261,8 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
         inner.dispatch(MachineInput.Dispatch(action, clock.now()))
         return Admission.Accepted
     }
+
+    override suspend fun checkpoint(): ExecutorCheckpoint<C, CMD> = scheduler.checkpoint()
 
     override fun collectState(state: (MachineSnapshot<C>) -> Unit) = inner.collectState(state)
 

@@ -81,9 +81,8 @@ Not adopted:
   branches from an earlier position with the live store untouched, answers awaiting commands by
   hand or from an equal recorded command and refuses an unequal one, fires timers by advancing
   the clock, fails a command, and emulates `Latest`.
-- Still to come for the handoff's stage 5: serialized recordings (codecs, format versions,
-  migrations), checkpoints of the executor's state (running commands, lane queues, remaining
-  timer time) so a branch can start where a live run was, and the group replay of stage 6.
+- Still to come for the handoff's stage 5: the group replay of stage 6 and a file format for
+  recordings and journals; see the addenda below for codecs and executor checkpoints.
 - The recording keeps live objects; it is a debug tool and grows with the run. The journal's
   `DecisionCommitted` entries remain the production trace.
 
@@ -120,3 +119,41 @@ ignoring unknown keys.
 
 Not adopted: a serialization-free wire model of koma's own (a second JSON, for no gain) and
 `ignoreUnknownKeys` (it would turn a format drift into silently dropped data).
+
+## Addendum (2026-09-30): a recording begins at a checkpoint, and a branch runs the lanes
+
+- `Recording.start` is an `ExecutorCheckpoint` (the executor's state as data, see the
+  [commit protocol ADR](./2026-09-30-machine-store-commit-protocol.md)): for a whole run the
+  initial snapshot with nothing running, for a run recorded from a live checkpoint that
+  checkpoint. `checkpointAt(position)` carries it forward through the steps with the same `Lanes`
+  the executor uses: an end the machine decided is booked as finished, commands of exited
+  activations end at once (nothing runs in a recording, so nothing has cleanup to wait for),
+  the decision's commands are admitted under their lanes, and a superseded or dropped command is
+  ending until the machine decides its abandonment. Every position keeps being a checkpoint,
+  now of the executor as well; `snapshotAt` is its snapshot. `CheckpointTest` shows the carried
+  checkpoint equal to the live executor's once it has settled, and, under a storm, every live
+  checkpoint a checkpoint of the recording.
+- `recording.since(checkpoint)` is the run from a live checkpoint on: the steps after the
+  position whose snapshot the checkpoint has, with the checkpoint as `start`. It refuses a
+  checkpoint of another run, and one whose registrations are not what the run registered at
+  that revision, so a forged or foreign checkpoint cannot become a replay range. This is what a
+  journal keeps when its ring has dropped the beginning (handoff §7: a replay range begins at a
+  full checkpoint).
+- `Branch` starts from a checkpoint: a recorded position's (`session.branch()`) or the live
+  executor's (`Branch(machine, store.checkpoint())`, no recording needed). It runs the lanes
+  with jobs that end the moment they are told to: `awaiting` are the running commands and the
+  ending ones, `queued` what waits in a lane and starts, under every policy, when the running
+  ones end; a queued command cannot be answered, as it has not started. Abandonments (superseded,
+  dropped) are decided at once, as the executor feeds them at once. The `Latest`-only emulation
+  is gone. `branch.checkpoint` is the branch's own state, so a branch can be branched.
+- Format 2 of `RecordingCodec` writes `start` (snapshot, clock, running, queued and ending
+  commands, each sorted for canonical text) where format 1 wrote `initial`; the codec migrates
+  format 1 itself (`initial` becomes a start checkpoint at clock zero with nothing running), so
+  `migrations` is for formats it does not know. An inconsistent checkpoint is `Invalid` at
+  `start`. `RecordingCodecGoldenTest` pins format 2 for a whole run and for a run from a
+  checkpoint, keeps the format 1 text as the migration's input, and shows an application
+  migration 0 to 1 chaining into the codec's 1 to 2.
+- Not adopted: a checkpoint that also holds the store's queue of accepted, undecided inputs
+  (they are the steps after the checkpoint; a consistent admission boundary is the group barrier
+  of §8.1, stage 6) and the undelivered events (delivered by one coroutine right after the
+  commit; the effects are in the decisions).

@@ -5,10 +5,10 @@ import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import koma.statechart.machine.Decision
 import koma.statechart.machine.DecisionOutcome
+import koma.statechart.machine.ExecutorCheckpoint
 import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineSnapshot
-import koma.statechart.machine.MachineTime
 
 /**
  * The first point where a replay differs from its recording.
@@ -52,8 +52,8 @@ sealed interface ReplayStep<C, A : Action, CMD, E : Event> {
  * recorded ids stay the recording's; a branch continues the counters of the snapshot it starts
  * from, so its ids follow the recorded ones without colliding.
  *
- * Positions are checkpoints: [seek] and [stepBackward] take the recorded snapshot and cost
- * nothing; [stepForward] and [verify] are what compares.
+ * Positions are checkpoints: [seek] and [stepBackward] take the recorded snapshot and the
+ * executor's state there and cost nothing; [stepForward] and [verify] are what compares.
  *
  * @throws IllegalArgumentException if [recording] is not [Compatibility.Replayable] by [machine]
  */
@@ -131,14 +131,15 @@ class ReplaySession<C, A : Action, CMD, E : Event>(
         return null
     }
 
+    /** The executor's state at [position]; see [Recording.checkpointAt]. */
+    val checkpoint: ExecutorCheckpoint<C, CMD> get() = recording.checkpointAt(position)
+
     /**
-     * A new branch from the current position: the recorded snapshot and the clock of the last
-     * recorded input, ready for inputs of the caller's choosing.
+     * A new branch from the current position: the checkpoint there (the recorded snapshot, the
+     * clock of the last recorded input, the commands running and queued), ready for inputs of
+     * the caller's choosing.
      */
-    fun branch(): Branch<C, A, CMD, E> {
-        val now = recording.steps.take(position).lastOrNull()?.input?.now ?: MachineTime.Zero
-        return Branch(machine, snapshot, now, recording)
-    }
+    fun branch(): Branch<C, A, CMD, E> = Branch(machine, checkpoint, recording)
 
     private fun replay(index: Int, base: MachineSnapshot<C>, step: RecordedStep<C, A, CMD, E>): ReplayMismatch<C, A, CMD, E>? {
         val differences = mutableListOf<String>()

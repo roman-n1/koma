@@ -266,6 +266,7 @@ What a decision holds and what the machine guarantees:
 | Piece | Meaning |
 |---|---|
 | `MachineSnapshot` | Configuration, context, the activation of every active node, registered commands, scheduled timers, id counters. Plain data, a Koma `State`; the machine's part of a checkpoint. |
+| `Lanes`, `ExecutorCheckpoint` | The executor's part: which commands run and which wait in which lane, as a pure value with the policies' rules; the checkpoint is a snapshot, the clock and the lanes, and checks that its commands are the snapshot's. |
 | `MachineInput` | `Start`, `Dispatch`, `TimerFired`, `CommandResult`, `CommandCompleted`, `CommandFailed`; each carries the clock (`MachineTime`), so the machine never reads one. |
 | `Decision` | `Handled` (revision + 1, also when the business data is equal), `Ignored(reason)` (the same snapshot object) or `Failed` (a rule threw; nothing registered). Plus the transitions, exited and entered activations, commands to register, scopes to cancel, timers to schedule and cancel, events to deliver. |
 | Activations | Every entry into a node, a self-loop included, is a new `ActivationId`. Commands of an enter rule belong to it and are cancelled with it; a late `CommandResult` of a cancelled command is `Ignored(StaleCommand)`. |
@@ -337,11 +338,15 @@ What holds:
 - A command is cancelled when its activation exits, when a newer command supersedes it in a
   `Latest` lane, or when the store closes. `Sequential` and `Parallel(limit)` lanes queue,
   `DropIfRunning` drops; a dropped or superseded command is reported to the machine as
-  `CommandAbandoned`.
+  `CommandAbandoned`. The bookkeeping is `Lanes`, a pure value the scheduler, a recording and a
+  replay branch all run: a cancelled command holds its place in the lane until its job has ended.
 - A decision that fails (a rule threw) commits nothing and cancels nothing; its cause reaches the
   exception handler. `recover {}` may not change the snapshot.
 - A restored snapshot that was already started starts over with its context: commands are not
-  part of the snapshot. Checkpoints of the executor are a later stage.
+  part of the snapshot. They are part of `store.checkpoint()`, the executor's state as data
+  (`ExecutorCheckpoint`): the snapshot of the last decision it carried out, its clock, and every
+  command of that snapshot in exactly one place, running or queued in its lane or ending with
+  its last input on its way to the machine. `koma-timetravel` branches from it and records from it.
 - `AdmissionPolicy.Bounded(n)` refuses a dispatched action while `n` accepted actions still wait;
   `store.admit(action)` says whether it was accepted, `dispatch` drops the answer. Inputs the
   machine's own commands and timers send are never refused.

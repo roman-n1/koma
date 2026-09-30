@@ -19,10 +19,14 @@ import koma.statechart.Trigger
 import koma.statechart.machine.AbandonReason
 import koma.statechart.machine.CommandHandler
 import koma.statechart.machine.CommandId
+import koma.statechart.machine.CommandRecord
+import koma.statechart.machine.CommandRegistration
 import koma.statechart.machine.ConcurrencyPolicy
 import koma.statechart.machine.DefinitionId
 import koma.statechart.machine.DefinitionVersion
+import koma.statechart.machine.ExecutorCheckpoint
 import koma.statechart.machine.LaneId
+import koma.statechart.machine.Lanes
 import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineClock
 import koma.statechart.machine.MachineInput
@@ -113,7 +117,7 @@ class BranchTest {
     }
 
     /** A live run: Load("cats") answered, then Refresh with the answer still pending when recorded. */
-    private class Live(val recording: Recording<Ctx, Act, Fetch, Ev>, val store: MachineStore<Ctx, Act, Ev>, val handlerCalls: () -> Int)
+    private class Live(val recording: Recording<Ctx, Act, Fetch, Ev>, val store: MachineStore<Ctx, Act, Fetch, Ev>, val handlerCalls: () -> Int)
 
     private suspend fun kotlinx.coroutines.test.TestScope.recordedLive(): Live {
         val dispatcher = StandardTestDispatcher(testScheduler)
@@ -268,5 +272,71 @@ class BranchTest {
         assertTrue(abandoned != null)
         assertEquals(setOf(CommandId(2)), branch.snapshot.commands.keys)
         assertEquals(AbandonReason.Superseded, AbandonReason.Superseded)
+    }
+
+    /**
+     * ```
+     * [*] --> Busy       onEnter: Fetch("one"), Fetch("two"), Fetch("three") in lane "audit", Sequential; Fetch("ping-1"), Fetch("ping-2") in lane "ping", DropIfRunning
+     * Busy --Refresh--> Busy
+     * ```
+     */
+    private val sequential = Machine<Ctx, Act, Fetch, Ev>(
+        DefinitionId("sequential"), DefinitionVersion("1"),
+        StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, ActionMatcher.of<Act.Refresh>("Refresh")))),
+    ) {
+        onEnter(idle) {
+            command(Fetch("one"), LaneId("audit"), ConcurrencyPolicy.Sequential)
+            command(Fetch("two"), LaneId("audit"), ConcurrencyPolicy.Sequential)
+            command(Fetch("three"), LaneId("audit"), ConcurrencyPolicy.Sequential)
+            command(Fetch("ping-1"), LaneId("ping"), ConcurrencyPolicy.DropIfRunning)
+            command(Fetch("ping-2"), LaneId("ping"), ConcurrencyPolicy.DropIfRunning)
+        }
+    }
+
+    @Test
+    fun queuedCommands_cannotBeAnswered_untilTheirLaneLetsThemRun() {
+        val start = sequential.decide(sequential.initialSnapshot(Ctx()), MachineInput.Start(MachineTime.Zero))
+        // A branch from the start decision's checkpoint: the lanes as the executor would hold them.
+        val recording = Recording<Ctx, Act, Fetch, Ev>(sequential.id, sequential.version, sequential.initialSnapshot(Ctx()), listOf(RecordedStep.Committed<Ctx, Act, Fetch, Ev>(MachineInput.Start(MachineTime.Zero), start)))
+        val session = ReplaySession(sequential, recording)
+        session.seek(1)
+        val lanes = session.branch()
+
+        assertEquals(listOf(Fetch("one"), Fetch("ping-1")), lanes.checkpoint.lanes.running.values.map { it.command }, "one per sequential lane, the second ping was dropped")
+        assertEquals(listOf(Fetch("ping-2")), lanes.checkpoint.ending.values.map { it.command }, "dropped: its abandonment is on its way, so the machine still holds it")
+        assertEquals(listOf(Fetch("one"), Fetch("ping-1"), Fetch("ping-2")), lanes.awaiting.map { it.command }, "the caller may still answer what is ending, as a live result could arrive first")
+        assertEquals(mapOf(LaneId("audit") to listOf(Fetch("two"), Fetch("three"))), lanes.queued.mapValues { (_, waiting) -> waiting.map { it.command } })
+        val two = lanes.queued.getValue(LaneId("audit")).first()
+        val refused = assertFailsWith<IllegalArgumentException> { lanes.answer(two.id, Act.Loaded(emptyList())) }
+        assertTrue("queued in lane audit" in refused.message.orEmpty(), refused.message)
+
+        lanes.complete(lanes.awaiting.first { it.command == Fetch("one") }.id)
+
+        assertEquals(listOf(Fetch("ping-1"), Fetch("two"), Fetch("ping-2")), lanes.awaiting.map { it.command }, "the lane moved on; running commands keep their start order")
+        assertEquals(listOf(Fetch("three")), lanes.queued.getValue(LaneId("audit")).map { it.command })
+        lanes.complete(two.id)
+        lanes.complete(lanes.awaiting.first { it.command == Fetch("three") }.id)
+        assertTrue(lanes.queued.isEmpty())
+        assertEquals(listOf(Fetch("ping-1"), Fetch("ping-2")), lanes.awaiting.map { it.command })
+        assertEquals(lanes.snapshot.commands.keys, lanes.checkpoint.registrations.keys, "the branch's checkpoint is consistent")
+    }
+
+    @Test
+    fun aBranchFromTheLiveExecutorsCheckpoint_startsWhereTheRunIs_withoutARecording() = runTest {
+        val live = recordedLive()
+        val checkpoint = live.store.checkpoint()
+        assertEquals(listOf(Fetch("cats")), checkpoint.lanes.running.values.map { it.command })
+
+        val branch = Branch(machine, checkpoint)
+
+        assertEquals(checkpoint, branch.checkpoint)
+        assertEquals(listOf(Fetch("cats")), branch.awaiting.map { it.command })
+        assertNull(branch.reuseRecordedAnswers(branch.awaiting.single().id), "no recording: the caller answers")
+        branch.answer(branch.awaiting.single().id, Act.Loaded(listOf("garfield")))
+        assertTrue(branch.snapshot.isActive(content))
+        assertEquals(listOf("garfield"), branch.snapshot.context.items)
+        assertEquals(live.store.currentState.context.items, listOf("tom", "felix"), "the live store did not move")
+        assertFailsWith<IllegalArgumentException> { Branch(Machine<Ctx, Act, Fetch, Ev>(DefinitionId("other"), DefinitionVersion("1"), chart) {}, checkpoint) }
+        live.store.close()
     }
 }

@@ -91,10 +91,9 @@ Not adopted:
   timers.
 - Known limits, for the next stages: the journal records the snapshot commits but not the
   decision (transitions, commands, timers) as such; a machine-level journal entry is the next
-  observability step. The scheduler's state (running commands, queued lane entries, timer
-  deadlines) is not yet part of a checkpoint (§8). `CommandFailed` reports through
-  `PluginScope.launch`, so the journal attributes the failure to the input being processed when
-  the launch happened, not to the command.
+  observability step. `CommandFailed` reports through `PluginScope.launch`, so the journal
+  attributes the failure to the input being processed when the launch happened, not to the
+  command.
 - `StateChartStore` is untouched; a chart is either legacy or a `Machine`.
 
 ## Related
@@ -117,3 +116,34 @@ Not adopted:
   Inputs the machine's own work sends (results, completions, abandonments, timers) are never
   refused: refusing a result would leave the machine waiting for a command that already
   answered. A refused action is reported to the observers and never becomes an input.
+
+## Addendum (2026-09-30): the lanes are data, and the executor has a checkpoint
+
+- The scheduler's bookkeeping of commands moved out of the actor into `Lanes`, a pure value:
+  the commands running and the ones queued per lane, with `admit` (each policy's rule),
+  `finished` (frees the lane's place and starts what waited) and `exited` (cancels the running
+  commands of exited activations, drops their queued ones). Each returns a `LaneChange`: the
+  next lanes and the effects for whoever runs the commands. The actor applies a change by
+  cancelling, reporting the abandonments and launching, in that order, and owns nothing but the
+  jobs, the timers, the last snapshot it carried out and the commands `ending` (finished here,
+  their last input not yet decided by the machine). A `koma-timetravel` recording carries the
+  same lanes forward, and a branch runs them with jobs that end the moment they are told to; one
+  rule set, three executors. A cancelled command holds its place in the lane until its job has
+  ended, so a `DropIfRunning` lane still busy with the exited activation's command drops the new
+  one; `Latest` removes the superseded at once, as that lane never queues.
+- `MachineStore.checkpoint()` is the executor's state as data (`ExecutorCheckpoint`, handoff §8):
+  the snapshot of the last decision carried out, the clock, the lanes and the ending commands.
+  It is taken at a message boundary of the actor, so it is consistent with itself; the store may
+  already have committed later decisions, which are the steps after it. The lanes are given as
+  they settle once the ends the machine has already decided are booked: a running command the
+  snapshot no longer holds has ended, whatever its job is still doing. The checkpoint checks
+  itself: every command of its snapshot is in exactly one place, with the snapshot's scope and
+  lane. Not in it: the store's queue of accepted, undecided inputs, undelivered events, and
+  anything that is not data. After `close()` there is no checkpoint.
+- `MachineStore` now carries its command type (`MachineStore<C, A, CMD, E>`): the checkpoint's
+  registrations are typed, and a store does run commands of that type.
+- Tests: `LanesTest` (each policy, finishing, exiting), `ExecutorCheckpointTest` (the partition
+  of the snapshot's commands, ending until the machine decides, lanes moving on, timers'
+  remaining time, re-entry, close) and `ExecutorCheckpointStormTest` (checkpoints taken while
+  four threads re-enter and exit an activation with every lane policy: each a consistent cut,
+  lanes within policy, nothing queued behind a free lane, revisions monotonic).
