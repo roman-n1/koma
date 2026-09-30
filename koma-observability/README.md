@@ -60,7 +60,7 @@ val session = RecordingSession(
     scope = appScope, // owns the writer coroutine; outlives every Store
     group = MachineGroupId("chat-screen"),
     config = JournalConfig(
-        retainedRecords = 2_000,
+        retainedRecords = 4_000,
         writerQueueCapacity = 4_096,
         onFailure = { failure -> crashReporter.breadcrumb(failure.toString()) },
     ),
@@ -104,4 +104,7 @@ objects print their `toString()`.
   reported; nothing is written about it, so a broken sink cannot feed on its own reports. A slow
   sink delays the sinks after it and the queue, not a Store.
 - Two tabs of the same chat are two `StoreInstanceId`s. Registering one id twice fails.
-- Budgets in `JournalConfig` are placeholders until they are measured on the target devices.
+- The defaults of `JournalConfig` (4 000 retained records, a queue of 4 096) follow the JVM
+  measurements in `JournalBudgetJvmTest`: about 120 bytes per record under the production
+  policy, so about 0.5 MB each. A policy that retains payloads changes that; measure on the
+  target devices with `session.stats` and set the budgets in the application.
