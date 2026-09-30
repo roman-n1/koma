@@ -1,0 +1,19 @@
+public final class koma/compose/StateSaverKt {
+	public static final fun rememberStateSaver (Landroidx/compose/runtime/Composer;I)Lkoma/core/StateSaver;
+}
+
+public final class koma/compose/ViewStore {
+	public static final field $stable I
+	public fun <init> (Lkoma/core/State;Lkotlin/jvm/functions/Function1;Lkotlinx/coroutines/flow/Flow;)V
+	public synthetic fun <init> (Lkoma/core/State;Lkotlin/jvm/functions/Function1;Lkotlinx/coroutines/flow/Flow;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getDispatch ()Lkotlin/jvm/functions/Function1;
+	public final fun getEventFlow ()Lkotlinx/coroutines/flow/Flow;
+	public final fun getState ()Lkoma/core/State;
+	public final fun narrow (Lkotlin/jvm/functions/Function1;)Lkoma/compose/ViewStore;
+}
+
+public final class koma/compose/ViewStoreKt {
+	public static final fun rememberViewStore (Ljava/lang/Object;ZLkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)Lkoma/compose/ViewStore;
+	public static final fun rememberViewStore (Lkoma/core/Store;ZLandroidx/compose/runtime/Composer;II)Lkoma/compose/ViewStore;
+}
+
