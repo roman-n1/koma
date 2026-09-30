@@ -24,6 +24,7 @@ import koma.statechart.machine.MachineClock
 import koma.statechart.machine.MachineGroup
 import koma.statechart.machine.MachineStore
 import koma.statechart.machine.MachineTime
+import koma.statechart.test.VirtualMachineClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
@@ -113,15 +114,6 @@ object GroupFixture {
         GroupBranch.Route(rootId, pickerId) { (it as? RootEv)?.let(::rootToPicker) },
     )
 
-    class TestClock(private val scheduler: TestCoroutineScheduler) : MachineClock {
-        override fun now(): MachineTime = MachineTime(scheduler.currentTime.milliseconds)
-
-        override suspend fun delayUntil(deadline: MachineTime) {
-            val remaining = deadline - now()
-            if (remaining.isPositive()) delay(remaining)
-        }
-    }
-
     /** A live, journaled, recorded group on a test dispatcher. */
     class Live(scope: TestScope) {
         val dispatcher = StandardTestDispatcher(scope.testScheduler)
@@ -136,10 +128,10 @@ object GroupFixture {
                 delay(50.milliseconds)
                 results.result(PickerAct.Fetched(command.command.name))
             },
-            executionScope, TestClock(scope.testScheduler), dispatcher, observers = listOf(pickerMember, recorder.member(pickerId, picker, PickerCtx())),
+            executionScope, VirtualMachineClock(scope.testScheduler), dispatcher, observers = listOf(pickerMember, recorder.member(pickerId, picker, PickerCtx())),
         ) { exceptionHandler(ExceptionHandler.Ignore) }
         val rootStore: MachineStore<RootCtx, RootAct, Nothing, RootEv> = MachineStore(
-            rootMachine, RootCtx(), CommandHandler<Nothing, RootAct> { _, _ -> }, executionScope, TestClock(scope.testScheduler), dispatcher,
+            rootMachine, RootCtx(), CommandHandler<Nothing, RootAct> { _, _ -> }, executionScope, VirtualMachineClock(scope.testScheduler), dispatcher,
             observers = listOf(rootMember, recorder.member(rootId, rootMachine, RootCtx())),
         ) { exceptionHandler(ExceptionHandler.Ignore) }
 

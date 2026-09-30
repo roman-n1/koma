@@ -239,7 +239,7 @@ follow from this.
   commit, so a row of the inventory can be replaced by upstream's version of the same change or
   dropped on its own.
 - **The statechart layer only in its own modules.** `koma-statechart`, `koma-observability`,
-  `koma-timetravel`, `koma-timetravel-compose` and the planned `koma-statechart-test` and
+  `koma-timetravel`, `koma-timetravel-compose`, `koma-statechart-test` and the planned
   `koma-statechart-compose` are additive modules; they are not divergence, and they are built and
   published only with the fork's `koma-core`.
 - **The inventory is complete.** The tables below are the complete list of what the fork changed in

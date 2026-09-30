@@ -391,7 +391,11 @@ handler, the saver or the policies and appends plugins, and `createRecorder()` r
 snapshot, every commit and every effect the decisions emitted, transient and retained alike. A plugin appended
 this way sees the callers' actions (dispatched, fed, delivered), not the executor's inputs; its
 `dispatch` goes through admission. Replacing or clearing the plugins and probing through a patch are
-refused; `dispatchIf` is not supported.
+refused; `dispatchIf` is not supported. [koma-statechart-test](../koma-statechart-test/README.md)
+adds the machine's own test kit on top: `MachineTestDriver` (a virtual clock, a scripted command
+handler the test answers, a settle after every step, the recorder's cursor over the effects),
+`settle()`, `pendingWork()` and `assertNoPendingWork()` that name the commands, timers and effects
+still in hand.
 
 ```kotlin
 @Test

@@ -28,6 +28,7 @@ import koma.statechart.machine.MachineTime
 import koma.timetravel.MachineRecorder
 import koma.timetravel.RecordingCodec
 import koma.timetravel.ReplaySession
+import koma.statechart.test.VirtualMachineClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
@@ -121,15 +122,6 @@ class RecordingFileSinkTest {
     private val codec = RecordingCodec(Ctx.serializer(), Act.serializer(), Fetch.serializer(), Ev.serializer())
     private val store = StoreInstanceId("files-1")
 
-    private class TestClock(private val scheduler: TestCoroutineScheduler) : MachineClock {
-        override fun now(): MachineTime = MachineTime(scheduler.currentTime.milliseconds)
-
-        override suspend fun delayUntil(deadline: MachineTime) {
-            val remaining = deadline - now()
-            if (remaining.isPositive()) delay(remaining)
-        }
-    }
-
     private inner class Live(scope: TestScope, config: RecordingFileConfig = RecordingFileConfig()) {
         val dispatcher = StandardTestDispatcher(scope.testScheduler)
         val executionScope = CoroutineScope(dispatcher + SupervisorJob())
@@ -141,7 +133,7 @@ class RecordingFileSinkTest {
                 delay(100.milliseconds)
                 results.result(Act.Loaded(listOf(command.command.query + "!")))
             },
-            executionScope, TestClock(scope.testScheduler), dispatcher, observers = listOf(recorder, sink),
+            executionScope, VirtualMachineClock(scope.testScheduler), dispatcher, observers = listOf(recorder, sink),
         ) { exceptionHandler(ExceptionHandler.Ignore) }
     }
 

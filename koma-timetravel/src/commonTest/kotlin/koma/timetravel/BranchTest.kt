@@ -32,6 +32,7 @@ import koma.statechart.machine.MachineClock
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineStore
 import koma.statechart.machine.MachineTime
+import koma.statechart.test.VirtualMachineClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
@@ -105,17 +106,6 @@ class BranchTest {
         onEnter(content) { event(Ev.Shown) }
     }
 
-    private class TestClock(private val scheduler: TestCoroutineScheduler) : MachineClock {
-        private val origin = scheduler.currentTime
-
-        override fun now(): MachineTime = MachineTime((scheduler.currentTime - origin).milliseconds)
-
-        override suspend fun delayUntil(deadline: MachineTime) {
-            val remaining = deadline - now()
-            if (remaining.isPositive()) delay(remaining)
-        }
-    }
-
     /** A live run: Load("cats") answered, then Refresh with the answer still pending when recorded. */
     private class Live(val recording: Recording<Ctx, Act, Fetch, Ev>, val store: MachineStore<Ctx, Act, Fetch, Ev>, val handlerCalls: () -> Int)
 
@@ -133,7 +123,7 @@ class BranchTest {
             }
         }
         val recorder = MachineRecorder(machine, Ctx())
-        val store = MachineStore(machine, Ctx(), handler, scope, TestClock(testScheduler), dispatcher, observers = listOf(recorder)) {
+        val store = MachineStore(machine, Ctx(), handler, scope, VirtualMachineClock(testScheduler), dispatcher, observers = listOf(recorder)) {
             exceptionHandler(ExceptionHandler.Ignore)
         }
         store.start()

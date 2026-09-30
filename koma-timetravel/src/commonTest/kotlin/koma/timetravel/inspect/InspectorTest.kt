@@ -51,6 +51,7 @@ import koma.statechart.machine.decisionsOf
 import koma.statechart.machine.effectsOf
 import koma.timetravel.MachineRecorder
 import koma.timetravel.Recording
+import koma.statechart.test.VirtualMachineClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
@@ -131,17 +132,6 @@ class InspectorTest {
         onEnter(content) { event(Ev.Shown) }
     }
 
-    private class TestClock(private val scheduler: TestCoroutineScheduler) : MachineClock {
-        private val origin = scheduler.currentTime
-
-        override fun now(): MachineTime = MachineTime((scheduler.currentTime - origin).milliseconds)
-
-        override suspend fun delayUntil(deadline: MachineTime) {
-            val remaining = deadline - now()
-            if (remaining.isPositive()) delay(remaining)
-        }
-    }
-
     private val tab1 = StoreInstanceId("search-tab-1")
     private val tab2 = StoreInstanceId("search-tab-2")
 
@@ -165,7 +155,7 @@ class InspectorTest {
             }
             val recorder = MachineRecorder(machine, Ctx())
             val store = MachineStore(
-                machine, Ctx(), handler, scope, TestClock(testScheduler), dispatcher,
+                machine, Ctx(), handler, scope, VirtualMachineClock(testScheduler), dispatcher,
                 admission = AdmissionPolicy.Bounded(1),
                 observers = listOf(recorder, session.decisionsOf(id, command = { Payload.Projected("Fetch", mapOf("query" to it.query)) }, action = { Payload.Projected(it.toString()) })),
             ) {
@@ -380,7 +370,7 @@ class InspectorTest {
         val scope = CoroutineScope(dispatcher + SupervisorJob())
         val session = RecordingSession(backgroundScope, id = RuntimeSessionId("run-2"), group = MachineGroupId("picker"), timeSource = TestTimeSource())
         val store = MachineStore(
-            machine, Ctx(), CommandHandler<Fetch, Act> { _, _ -> awaitCancellation() }, scope, TestClock(testScheduler), dispatcher,
+            machine, Ctx(), CommandHandler<Fetch, Act> { _, _ -> awaitCancellation() }, scope, VirtualMachineClock(testScheduler), dispatcher,
             mailbox = koma.statechart.machine.MailboxConfig({ koma.statechart.machine.EffectPolicy.Retained() }, listeners = listOf(session.effectsOf(tab1) { Payload.Projected(it.toString()) })),
         ) { recordTo(session, tab1, PayloadPolicy.metadataOnly()) }
         store.start()
