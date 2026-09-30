@@ -31,6 +31,7 @@ import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MachineTime
 import koma.statechart.machine.MessageId
 import koma.statechart.machine.PendingEffect
+import koma.statechart.machine.SourceId
 import koma.statechart.machine.TimerId
 import koma.statechart.machine.TimerRecord
 import koma.statechart.machine.TimerSchedule
@@ -53,10 +54,10 @@ import kotlin.time.Duration
  *
  * History: 1 began at an `initial` snapshot; 2 begins at a `start` checkpoint of the executor
  * (snapshot, clock, commands running, queued and ending); 3 adds the `bridgeReceived` input
- * with its message; 4 adds the pending `effects` of the mailbox to the checkpoint. The codec
- * migrates each version to the next itself.
+ * with its message; 4 adds the pending `effects` of the mailbox to the checkpoint; 5 adds the
+ * `external` input with its source. The codec migrates each version to the next itself.
  */
-const val RECORDING_FORMAT_VERSION: Int = 4
+const val RECORDING_FORMAT_VERSION: Int = 5
 
 /**
  * Turns the JSON of one format version into the next: an explicit, testable step.
@@ -143,6 +144,12 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         FormatMigration(from = 3, to = 4) { v3 ->
             buildJsonObject {
                 for ((key, value) in v3) put(key, if (key == "formatVersion") JsonPrimitive(4) else value)
+            }
+        },
+        // Format 5 only adds an input type; a format 4 text is a format 5 text without external inputs.
+        FormatMigration(from = 4, to = 5) { v4 ->
+            buildJsonObject {
+                for ((key, value) in v4) put(key, if (key == "formatVersion") JsonPrimitive(5) else value)
             }
         },
     )
@@ -246,6 +253,7 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         is MachineInput.Start -> InputWire("start", now.sinceStart.toIsoString())
         is MachineInput.Dispatch -> InputWire("dispatch", now.sinceStart.toIsoString(), action = json.encodeToJsonElement(this@RecordingCodec.action, action))
         is MachineInput.BridgeReceived -> InputWire("bridgeReceived", now.sinceStart.toIsoString(), action = json.encodeToJsonElement(this@RecordingCodec.action, action), message = MessageWire(message.from.value, message.effect.value))
+        is MachineInput.External -> InputWire("external", now.sinceStart.toIsoString(), action = json.encodeToJsonElement(this@RecordingCodec.action, action), source = source.value)
         is MachineInput.TimerFired -> InputWire("timerFired", now.sinceStart.toIsoString(), timer = timer.value)
         is MachineInput.CommandResult -> InputWire("commandResult", now.sinceStart.toIsoString(), command = command.value, action = json.encodeToJsonElement(this@RecordingCodec.action, action))
         is MachineInput.CommandCompleted -> InputWire("commandCompleted", now.sinceStart.toIsoString(), command = command.value)
@@ -342,6 +350,7 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         return when (type) {
             "start" -> MachineInput.Start(now)
             "dispatch" -> MachineInput.Dispatch(decodeAction(action, "$at: action"), now)
+            "external" -> MachineInput.External(SourceId(source ?: throw DecodeFailure("external without a source", at)), decodeAction(action, "$at: action"), now)
             "bridgeReceived" -> MachineInput.BridgeReceived(
                 (message ?: throw DecodeFailure("bridgeReceived without a message", at)).let { MessageId(StoreInstanceId(it.from), EffectId(it.effect)) },
                 decodeAction(action, "$at: action"),
@@ -450,6 +459,7 @@ internal class InputWire(
     val failure: FailureWire? = null,
     val reason: String? = null,
     val message: MessageWire? = null,
+    val source: String? = null,
 )
 
 @Serializable

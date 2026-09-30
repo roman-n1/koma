@@ -17,9 +17,10 @@ import kotlin.time.Duration
  * History: 1 had the Store's own entries and the machine's decisions; 2 added the bridge entries
  * ([JournalEntry.BridgeSent], [JournalEntry.BridgeReceived]); 3 added the effect mailbox entries
  * ([JournalEntry.EffectQueued], [JournalEntry.EffectHandlingStarted], [JournalEntry.EffectAcknowledged],
- * [JournalEntry.EffectDiscarded]).
+ * [JournalEntry.EffectDiscarded]); 4 added [JournalEntry.ExternalReceived] and
+ * [JournalEntry.CheckpointCreated].
  */
-const val JOURNAL_FORMAT_VERSION: Int = 3
+const val JOURNAL_FORMAT_VERSION: Int = 4
 
 /**
  * One record of the journal: the envelope every record shares, and the typed [entry].
@@ -164,6 +165,18 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
 
     /** The mailbox gave up the effect [effect] for [reason] (the reason's name) without an acknowledgement. */
     data class EffectDiscarded(val effect: Long, val reason: String) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /**
+     * This Store decided an input the external source [source] fed while processing [input].
+     */
+    data class ExternalReceived(val input: InputId?, val source: String) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /**
+     * A consistent cut of the group was taken: [members] were frozen and idle, [sources] were
+     * paused and snapshotted, [inFlight] bridge messages were on their way. A record of the
+     * session itself, at the boundary the cut was taken at.
+     */
+    data class CheckpointCreated(val members: List<StoreInstanceId>, val sources: List<String>, val inFlight: Int) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * [dropped] published records before this one never reached the sinks: the writer's queue was

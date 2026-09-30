@@ -269,6 +269,25 @@ sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out kom
         final fun toString(): kotlin/String // koma.observability/JournalEntry.BridgeSent.toString|toString(){}[0]
     }
 
+    final class CheckpointCreated : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.CheckpointCreated|null[0]
+        constructor <init>(kotlin.collections/List<koma.observability/StoreInstanceId>, kotlin.collections/List<kotlin/String>, kotlin/Int) // koma.observability/JournalEntry.CheckpointCreated.<init>|<init>(kotlin.collections.List<koma.observability.StoreInstanceId>;kotlin.collections.List<kotlin.String>;kotlin.Int){}[0]
+
+        final val inFlight // koma.observability/JournalEntry.CheckpointCreated.inFlight|{}inFlight[0]
+            final fun <get-inFlight>(): kotlin/Int // koma.observability/JournalEntry.CheckpointCreated.inFlight.<get-inFlight>|<get-inFlight>(){}[0]
+        final val members // koma.observability/JournalEntry.CheckpointCreated.members|{}members[0]
+            final fun <get-members>(): kotlin.collections/List<koma.observability/StoreInstanceId> // koma.observability/JournalEntry.CheckpointCreated.members.<get-members>|<get-members>(){}[0]
+        final val sources // koma.observability/JournalEntry.CheckpointCreated.sources|{}sources[0]
+            final fun <get-sources>(): kotlin.collections/List<kotlin/String> // koma.observability/JournalEntry.CheckpointCreated.sources.<get-sources>|<get-sources>(){}[0]
+
+        final fun component1(): kotlin.collections/List<koma.observability/StoreInstanceId> // koma.observability/JournalEntry.CheckpointCreated.component1|component1(){}[0]
+        final fun component2(): kotlin.collections/List<kotlin/String> // koma.observability/JournalEntry.CheckpointCreated.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // koma.observability/JournalEntry.CheckpointCreated.component3|component3(){}[0]
+        final fun copy(kotlin.collections/List<koma.observability/StoreInstanceId> = ..., kotlin.collections/List<kotlin/String> = ..., kotlin/Int = ...): koma.observability/JournalEntry.CheckpointCreated // koma.observability/JournalEntry.CheckpointCreated.copy|copy(kotlin.collections.List<koma.observability.StoreInstanceId>;kotlin.collections.List<kotlin.String>;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.CheckpointCreated.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.CheckpointCreated.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.CheckpointCreated.toString|toString(){}[0]
+    }
+
     final class DecisionCommitted : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.DecisionCommitted|null[0]
         constructor <init>(koma.core/InputId?, kotlin/Long, kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/Int>, kotlin.collections/List<koma.observability/ActivationRef>, kotlin.collections/List<koma.observability/ActivationRef>, kotlin.collections/List<koma.observability/CommandRef>, kotlin.collections/List<kotlin/Long>, kotlin.collections/List<koma.observability/TimerRef>, kotlin.collections/List<kotlin/Long>, kotlin/Int) // koma.observability/JournalEntry.DecisionCommitted.<init>|<init>(koma.core.InputId?;kotlin.Long;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<koma.observability.ActivationRef>;kotlin.collections.List<koma.observability.ActivationRef>;kotlin.collections.List<koma.observability.CommandRef>;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<koma.observability.TimerRef>;kotlin.collections.List<kotlin.Long>;kotlin.Int){}[0]
 
@@ -371,6 +390,22 @@ sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out kom
         final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.EffectHandlingStarted.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.EffectHandlingStarted.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // koma.observability/JournalEntry.EffectHandlingStarted.toString|toString(){}[0]
+    }
+
+    final class ExternalReceived : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.ExternalReceived|null[0]
+        constructor <init>(koma.core/InputId?, kotlin/String) // koma.observability/JournalEntry.ExternalReceived.<init>|<init>(koma.core.InputId?;kotlin.String){}[0]
+
+        final val input // koma.observability/JournalEntry.ExternalReceived.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId? // koma.observability/JournalEntry.ExternalReceived.input.<get-input>|<get-input>(){}[0]
+        final val source // koma.observability/JournalEntry.ExternalReceived.source|{}source[0]
+            final fun <get-source>(): kotlin/String // koma.observability/JournalEntry.ExternalReceived.source.<get-source>|<get-source>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.observability/JournalEntry.ExternalReceived.component1|component1(){}[0]
+        final fun component2(): kotlin/String // koma.observability/JournalEntry.ExternalReceived.component2|component2(){}[0]
+        final fun copy(koma.core/InputId? = ..., kotlin/String = ...): koma.observability/JournalEntry.ExternalReceived // koma.observability/JournalEntry.ExternalReceived.copy|copy(koma.core.InputId?;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.ExternalReceived.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.ExternalReceived.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.ExternalReceived.toString|toString(){}[0]
     }
 
     final class FailureReported : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.FailureReported|null[0]
@@ -1105,6 +1140,7 @@ final class koma.observability/RecordingSession { // koma.observability/Recordin
         final fun <get-stats>(): koma.observability/JournalStats // koma.observability/RecordingSession.stats.<get-stats>|<get-stats>(){}[0]
 
     final fun <#A1: koma.core/State, #B1: koma.core/Action, #C1: koma.core/Event> probe(koma.observability/StoreInstanceId, koma.observability/PayloadPolicy<#A1, #B1, #C1>): koma.core/StoreProbe<#A1, #B1, #C1> // koma.observability/RecordingSession.probe|probe(koma.observability.StoreInstanceId;koma.observability.PayloadPolicy<0:0,0:1,0:2>){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+    final fun publish(koma.observability/JournalEntry<*, *, *>): koma.observability/JournalRecord<*, *, *>? // koma.observability/RecordingSession.publish|publish(koma.observability.JournalEntry<*,*,*>){}[0]
     final fun publish(koma.observability/StoreInstanceId, koma.observability/JournalEntry<*, *, *>): koma.observability/JournalRecord<*, *, *>? // koma.observability/RecordingSession.publish|publish(koma.observability.StoreInstanceId;koma.observability.JournalEntry<*,*,*>){}[0]
     final fun records(): kotlin.collections/List<koma.observability/JournalRecord<*, *, *>> // koma.observability/RecordingSession.records|records(){}[0]
     final suspend fun close() // koma.observability/RecordingSession.close|close(){}[0]

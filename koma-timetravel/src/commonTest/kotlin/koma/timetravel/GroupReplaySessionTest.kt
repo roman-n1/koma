@@ -8,6 +8,7 @@ import koma.statechart.machine.EffectId
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineTime
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.SourceId
 import koma.timetravel.GroupFixture.PickerAct
 import koma.timetravel.GroupFixture.PickerCtx
 import koma.timetravel.GroupFixture.RootAct
@@ -106,6 +107,15 @@ class GroupReplaySessionTest {
         val ghost = rootRecording.appending(MachineInput.BridgeReceived(MessageId(StoreInstanceId("ghost"), EffectId(1)), RootAct.Apply("x"), MachineTime(1000.milliseconds)))
         val haunted = GroupRecording(recording.members + (rootId to ghost), recording.order + GroupStep(rootId, ghost.length - 1), recording.routes)
         assertIs<GroupMismatch.SentByNobody>(GroupReplaySession(machines, haunted).verify().single())
+
+        // An input from a source the group had not attached: the run missed a source.
+        val pickerRecording = recording.members.getValue(pickerId) as Recording<PickerCtx, PickerAct, GroupFixture.Fetch, GroupFixture.PickerEv>
+        val fed = pickerRecording.appending(MachineInput.External(SourceId("socket:ghost"), PickerAct.Ack(99), MachineTime(1000.milliseconds)))
+        val unattached = GroupRecording(recording.members + (pickerId to fed), recording.order + GroupStep(pickerId, fed.length - 1), recording.routes)
+        val unknown = assertIs<GroupMismatch.UnknownSource>(GroupReplaySession(machines, unattached).verify().single())
+        assertEquals(SourceId("socket:ghost"), unknown.source)
+        val attached = GroupRecording(unattached.members, unattached.order, unattached.routes, sourceIds = setOf(SourceId("socket:ghost")))
+        assertEquals(emptyList(), GroupReplaySession(machines, attached).verify(), "attached, the source's input is the run's own")
 
         // A member decided differently: its own mismatch, at the group's position.
         val altered = GroupReplaySession(mapOf(pickerId to GroupFixture.picker, rootId to koma.statechart.machine.Machine<RootCtx, RootAct, Nothing, RootEv>(GroupFixture.rootMachine.id, GroupFixture.rootMachine.version, GroupFixture.rootMachine.chart) {

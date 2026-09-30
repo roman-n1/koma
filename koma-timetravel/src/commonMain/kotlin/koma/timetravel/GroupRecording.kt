@@ -15,6 +15,8 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineGroup
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.SourceId
+import koma.statechart.machine.SourceSnapshot
 import kotlinx.coroutines.sync.Mutex
 
 /** One step of a group's run: the [step] of [store]'s recording, at its position in the group's order. */
@@ -36,6 +38,10 @@ data class GroupRoute(val from: StoreInstanceId, val to: StoreInstanceId)
  * @property routes The routes of the bridge, so a replay can tell a delivery that had no route
  * @property inFlight The messages already sent when the run begins, for a run recorded since a
  * cut: their deliveries are expected, their sends are before the run
+ * @property sourceIds The external sources the group had attached: an input from any other
+ * source is a source the run missed (handoff §11)
+ * @property sourceSnapshots The sources' state where the run begins, for a run recorded since a
+ * cut: what a branch scripts the sources' next data from
  */
 @ExperimentalKomaApi
 class GroupRecording(
@@ -43,6 +49,8 @@ class GroupRecording(
     val order: List<GroupStep>,
     val routes: List<GroupRoute> = emptyList(),
     val inFlight: List<MessageId> = emptyList(),
+    val sourceIds: Set<SourceId> = emptySet(),
+    val sourceSnapshots: Map<SourceId, SourceSnapshot> = emptyMap(),
 ) {
     init {
         val counts = order.groupingBy { it.store }.eachCount()
@@ -92,7 +100,7 @@ class GroupRecording(
             val skip = dropped.getValue(step.store)
             if (index < skip) null else GroupStep(step.store, step.step - skip)
         }
-        return GroupRecording(trimmed, newOrder, routes, checkpoint.inFlight.map { it.id })
+        return GroupRecording(trimmed, newOrder, routes, checkpoint.inFlight.map { it.id }, sourceIds + checkpoint.sources.keys, checkpoint.sources)
     }
 
     override fun toString(): String = "GroupRecording(${members.keys}, ${order.size} steps)"
@@ -111,9 +119,12 @@ class GroupRecording(
  * registered after the recorder is created)
  */
 @ExperimentalKomaApi
-class GroupRecorder(private val routes: () -> List<GroupRoute> = { emptyList() }) {
-    /** Records the group [group] is; its routes are read when the recording is taken. */
-    constructor(group: MachineGroup) : this({ group.routes.map { GroupRoute(it.from, it.to) } })
+class GroupRecorder(
+    private val routes: () -> List<GroupRoute> = { emptyList() },
+    private val sources: () -> Set<SourceId> = { emptySet() },
+) {
+    /** Records the group [group] is; its routes and sources are read when the recording is taken. */
+    constructor(group: MachineGroup) : this({ group.routes.map { GroupRoute(it.from, it.to) } }, { group.sourceIds.toSet() })
 
     private val lock = Mutex()
     private val recorders = linkedMapOf<StoreInstanceId, MachineRecorder<*, *, *, *>>()
@@ -152,7 +163,7 @@ class GroupRecorder(private val routes: () -> List<GroupRoute> = { emptyList() }
 
     /** The group's recording so far. */
     fun recording(): GroupRecording = locked {
-        GroupRecording(recorders.mapValues { (_, recorder) -> recorder.recording() }, order.toList(), routes())
+        GroupRecording(recorders.mapValues { (_, recorder) -> recorder.recording() }, order.toList(), routes(), sourceIds = sources())
     }
 
     private fun step(id: StoreInstanceId) {

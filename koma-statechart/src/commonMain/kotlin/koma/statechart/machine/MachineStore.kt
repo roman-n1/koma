@@ -44,6 +44,13 @@ interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>
     fun admit(action: A): Admission
 
     /**
+     * Offers [action] as an input of the external source [source], under the [AdmissionPolicy]
+     * like a dispatch: a source that is refused decides itself whether to retry or drop. The
+     * input is a [MachineInput.External], so a recording knows where it came from.
+     */
+    fun feed(source: SourceId, action: A): Admission
+
+    /**
      * The retained mailbox of the effects whose [EffectPolicy] keeps them; [Store.event] carries
      * the transient ones. See [EffectMailbox].
      */
@@ -209,7 +216,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
                     }
                 }
                 action<MachineInput<A>> {
-                    if (action is MachineInput.Dispatch) waiting.update { it - 1 }
+                    if (action is MachineInput.Dispatch || action is MachineInput.External) waiting.update { it - 1 }
                     decide(state, action, currentInputId()) { nextState { it } }
                 }
             }
@@ -279,7 +286,11 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
         admit(action)
     }
 
-    override fun admit(action: A): Admission {
+    override fun admit(action: A): Admission = admitting(action) { MachineInput.Dispatch(action, clock.now()) }
+
+    override fun feed(source: SourceId, action: A): Admission = admitting(action) { MachineInput.External(source, action, clock.now()) }
+
+    private inline fun admitting(action: A, input: () -> MachineInput<A>): Admission {
         val limit = (admission as? AdmissionPolicy.Bounded)?.maxPending
         if (limit != null) {
             while (true) {
@@ -294,7 +305,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
         } else {
             waiting.update { it + 1 }
         }
-        enqueue(MachineInput.Dispatch(action, clock.now()))
+        enqueue(input())
         return Admission.Accepted
     }
 

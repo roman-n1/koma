@@ -302,6 +302,10 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
                     else -> step(snapshot, input, input.action, changed = false)
                 }
+                is MachineInput.External -> when {
+                    !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
+                    else -> step(snapshot, input, input.action, changed = false)
+                }
                 is MachineInput.TimerFired -> when {
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
                     else -> fire(snapshot, input)

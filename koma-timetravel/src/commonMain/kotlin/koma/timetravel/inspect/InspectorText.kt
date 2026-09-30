@@ -48,6 +48,7 @@ object InspectorText {
                 item.duration?.let { append(" in ").append(it) }
                 item.ignored?.let { append(" ignored=").append(it) }
                 item.message?.let { append(" via=").append(it) }
+                item.source?.let { append(" from=").append(it) }
                 item.decision?.let { decision ->
                     if (decision.transitions.isNotEmpty()) append(" transitions=").append(decision.transitions.joinToString(",", "[", "]") { "T$it" })
                     if (decision.commands.isNotEmpty()) append(" commands=").append(decision.commands.joinToString(",", "[", "]") { "c${it.id}${it.lane?.let { l -> " $l/${it.policy}" } ?: ""} ${JournalFormat.payload(it.command)}" })
@@ -62,6 +63,7 @@ object InspectorText {
             is TimelineItem.Pending -> append("Pending ").append(item.input).append(' ').append(input(item.kind)).append(" (no end in the journal)")
             is TimelineItem.Sent -> append("Sent ").append(item.message).append(" -> ").append(item.to).append(if (item.delivered) "" else " undelivered")
             is TimelineItem.Effect -> append(JournalFormat.entry(item.entry))
+            is TimelineItem.Checkpoint -> append("Checkpoint members=").append(item.members.joinToString(",", "[", "]")).append(" sources=").append(item.sources.joinToString(",", "[", "]")).append(" inFlight=").append(item.inFlight)
             is TimelineItem.Rejected -> append("Rejected ").append(JournalFormat.payload(item.action)).append(' ').append(item.reason)
             is TimelineItem.Closed -> append("Closed")
             is TimelineItem.Gap -> append("Gap dropped=").append(item.dropped)

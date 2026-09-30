@@ -11,6 +11,7 @@ import koma.observability.RecordingSession
 import koma.observability.StoreInstanceId
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
@@ -32,6 +33,8 @@ data class BridgeMessage(val id: MessageId, val to: StoreInstanceId)
  * let in after it, in order, and are the steps after the cut
  * @property boundary The last record the session had published at the cut, when a session is
  * attached; the records after it are after the cut
+ * @property sources The state of every attached [ExternalSource] at the cut, as the members had
+ * decided it
  */
 @ExperimentalKomaApi
 data class GroupCheckpoint(
@@ -39,6 +42,7 @@ data class GroupCheckpoint(
     val inFlight: List<BridgeMessage>,
     val held: Map<StoreInstanceId, Int>,
     val boundary: GroupSeq?,
+    val sources: Map<SourceId, SourceSnapshot> = emptyMap(),
 )
 
 /**
@@ -52,19 +56,22 @@ data class GroupCheckpoint(
  * nowhere and is journaled as undelivered: the group's record is then partial. Messages are
  * [inFlight] from delivery until the receiver decided them.
  *
- * **Cut.** [checkpoint] freezes every member's controlled queue (new inputs wait, whatever
- * their source), waits until each member has finished what it had already accepted, takes
- * every executor's checkpoint and the messages in flight, and thaws the queues in order. No
- * Store lock is held while waiting, and no member waits on another's user code; a member that
- * does not settle within the timeout aborts the cut and the group resumes. A result of a
- * command that arrives during the cut waits in the queue and is applied once, after it. Never
- * call [checkpoint] from a handler or a plugin of a member: it would wait for its own
- * processing to end.
+ * **Cut.** [checkpoint] pauses every attached [ExternalSource], freezes every member's
+ * controlled queue (new inputs wait, whatever their source), waits until each member has
+ * finished what it had already accepted, takes every executor's checkpoint, the messages in
+ * flight and every source's snapshot, then thaws the queues in order and resumes the sources.
+ * No Store lock is held while waiting, and no member waits on another's user code; a member
+ * that does not settle or a source that does not pause within the timeout aborts the cut and
+ * the group resumes. A result of a command that arrives during the cut waits in the queue and
+ * is applied once, after it. Never call [checkpoint] from a handler or a plugin of a member:
+ * it would wait for its own processing to end. A successful cut is journaled as
+ * [JournalEntry.CheckpointCreated].
  *
  * Members are registered with [member] (the observer to give the store) and [Member.attach]
- * (the store itself, once built).
+ * (the store itself, once built); sources with [source].
  *
- * @param session The journal that gets [JournalEntry.BridgeSent] and [JournalEntry.BridgeReceived]
+ * @param session The journal that gets [JournalEntry.BridgeSent], [JournalEntry.BridgeReceived]
+ * and [JournalEntry.CheckpointCreated]
  */
 @ExperimentalKomaApi
 class MachineGroup(private val session: RecordingSession? = null) {
@@ -73,6 +80,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
     private val members = linkedMapOf<StoreInstanceId, Member<*, *, *, *>>()
     private val routeList = mutableListOf<Route>()
     private val inFlightMessages = linkedMapOf<MessageId, BridgeMessage>()
+    private val sourceList = mutableListOf<ExternalSource>()
 
     /** A route of the bridge: effects of [from] that [map] turns into actions of [to]. */
     class Route internal constructor(val from: StoreInstanceId, val to: StoreInstanceId, internal val map: (Event) -> Action?) {
@@ -87,6 +95,21 @@ class MachineGroup(private val session: RecordingSession? = null) {
 
     /** The messages sent and not yet decided by their receiver. */
     val inFlight: List<BridgeMessage> get() = locked { inFlightMessages.values.toList() }
+
+    /** The attached sources, in registration order. */
+    val sourceIds: List<SourceId> get() = locked { sourceList.map { it.id } }
+
+    /**
+     * Attaches [source]: it is paused and snapshotted in every cut from now on.
+     *
+     * @throws IllegalArgumentException if a source with the same id is attached
+     */
+    fun source(source: ExternalSource) {
+        locked {
+            require(sourceList.none { it.id == source.id }) { "[Koma] ${source.id} is already attached to this group" }
+            sourceList += source
+        }
+    }
 
     /**
      * Routes the effects of [from] to [to]: each effect [map] returns an action for is delivered;
@@ -118,9 +141,19 @@ class MachineGroup(private val session: RecordingSession? = null) {
      */
     suspend fun checkpoint(timeout: Duration = 2.seconds): GroupCheckpoint? = coordinating.withLock {
         val attached = locked { members.values.mapNotNull { member -> member.store?.let { member.id to it } } }
-        for ((_, store) in attached) store.freeze()
+        val sources = locked { sourceList.toList() }
+        val started = TimeSource.Monotonic.markNow()
+        val paused = mutableListOf<ExternalSource>()
+        var frozen = false
         try {
-            val started = TimeSource.Monotonic.markNow()
+            // Sources first: once none feeds, what the members hold is all there is.
+            for (source in sources) {
+                val remaining = timeout - started.elapsedNow()
+                if (remaining <= Duration.ZERO || withTimeoutOrNull(remaining) { source.pause() } == null) return null
+                paused += source
+            }
+            for ((_, store) in attached) store.freeze()
+            frozen = true
             for ((_, store) in attached) {
                 val remaining = timeout - started.elapsedNow()
                 if (remaining <= Duration.ZERO || !store.awaitIdle(remaining)) return null
@@ -134,10 +167,13 @@ class MachineGroup(private val session: RecordingSession? = null) {
             }
             val held = attached.associate { (id, store) -> id to store.heldInputs }
             val messages = locked { inFlightMessages.values.toList() }
+            val snapshots = sources.associate { it.id to it.snapshot() }
             val boundary = session?.stats?.published?.takeIf { it > 0 }?.let(::GroupSeq)
-            GroupCheckpoint(cuts, messages, held, boundary)
+            session?.publish(JournalEntry.CheckpointCreated(attached.map { it.first }, sources.map { it.id.value }, messages.size))
+            GroupCheckpoint(cuts, messages, held, boundary, snapshots)
         } finally {
-            for ((_, store) in attached) store.thaw()
+            if (frozen) for ((_, store) in attached) store.thaw()
+            for (source in paused) source.resume()
         }
     }
 

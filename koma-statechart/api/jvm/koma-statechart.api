@@ -1096,19 +1096,30 @@ public final class koma/statechart/machine/ExecutorCheckpoint$Companion {
 	public final fun initial (Lkoma/statechart/machine/MachineSnapshot;)Lkoma/statechart/machine/ExecutorCheckpoint;
 }
 
+public abstract interface class koma/statechart/machine/ExternalSource {
+	public abstract fun getId-5cWyoho ()Ljava/lang/String;
+	public abstract fun getKind ()Ljava/lang/String;
+	public abstract fun pause (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun resume ()V
+	public abstract fun snapshot ()Lkoma/statechart/machine/SourceSnapshot;
+}
+
 public final class koma/statechart/machine/GroupCheckpoint {
-	public synthetic fun <init> (Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Lkoma/observability/GroupSeq;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Lkoma/observability/GroupSeq;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Lkoma/observability/GroupSeq;Ljava/util/Map;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/util/Map;
 	public final fun component2 ()Ljava/util/List;
 	public final fun component3 ()Ljava/util/Map;
 	public final fun component4-xnp4o7c ()Lkoma/observability/GroupSeq;
-	public final fun copy-tx5HZu0 (Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Lkoma/observability/GroupSeq;)Lkoma/statechart/machine/GroupCheckpoint;
-	public static synthetic fun copy-tx5HZu0$default (Lkoma/statechart/machine/GroupCheckpoint;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Lkoma/observability/GroupSeq;ILjava/lang/Object;)Lkoma/statechart/machine/GroupCheckpoint;
+	public final fun component5 ()Ljava/util/Map;
+	public final fun copy-u7Lzfy4 (Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Lkoma/observability/GroupSeq;Ljava/util/Map;)Lkoma/statechart/machine/GroupCheckpoint;
+	public static synthetic fun copy-u7Lzfy4$default (Lkoma/statechart/machine/GroupCheckpoint;Ljava/util/Map;Ljava/util/List;Ljava/util/Map;Lkoma/observability/GroupSeq;Ljava/util/Map;ILjava/lang/Object;)Lkoma/statechart/machine/GroupCheckpoint;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getBoundary-xnp4o7c ()Lkoma/observability/GroupSeq;
 	public final fun getHeld ()Ljava/util/Map;
 	public final fun getInFlight ()Ljava/util/List;
 	public final fun getMembers ()Ljava/util/Map;
+	public final fun getSources ()Ljava/util/Map;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -1281,8 +1292,10 @@ public final class koma/statechart/machine/MachineGroup {
 	public final fun getInFlight ()Ljava/util/List;
 	public final fun getMemberIds ()Ljava/util/List;
 	public final fun getRoutes ()Ljava/util/List;
+	public final fun getSourceIds ()Ljava/util/List;
 	public final fun member-QV6ywvQ (Ljava/lang/String;)Lkoma/statechart/machine/MachineGroup$Member;
 	public final fun route-DtQnzws (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lkoma/statechart/machine/MachineGroup$Route;
+	public final fun source (Lkoma/statechart/machine/ExternalSource;)V
 }
 
 public final class koma/statechart/machine/MachineGroup$Member : koma/statechart/machine/DecisionObserver {
@@ -1390,6 +1403,21 @@ public final class koma/statechart/machine/MachineInput$Dispatch : koma/statecha
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/statechart/machine/MachineInput$External : koma/statechart/machine/MachineInput {
+	public synthetic fun <init> (Ljava/lang/String;Lkoma/core/Action;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-5cWyoho ()Ljava/lang/String;
+	public final fun component2 ()Lkoma/core/Action;
+	public final fun component3-cDuxZ3M ()J
+	public final fun copy-RwxFEwo (Ljava/lang/String;Lkoma/core/Action;J)Lkoma/statechart/machine/MachineInput$External;
+	public static synthetic fun copy-RwxFEwo$default (Lkoma/statechart/machine/MachineInput$External;Ljava/lang/String;Lkoma/core/Action;JILjava/lang/Object;)Lkoma/statechart/machine/MachineInput$External;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lkoma/core/Action;
+	public fun getNow-cDuxZ3M ()J
+	public final fun getSource-5cWyoho ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/statechart/machine/MachineInput$Start : koma/statechart/machine/MachineInput {
 	public synthetic fun <init> (JLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-cDuxZ3M ()J
@@ -1454,6 +1482,7 @@ public abstract interface class koma/statechart/machine/MachineStore : koma/core
 	public abstract fun admit (Lkoma/core/Action;)Lkoma/statechart/machine/Admission;
 	public abstract fun checkpoint (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun deliver (Lkoma/statechart/machine/MessageId;Lkoma/core/Action;)V
+	public abstract fun feed-cIWSm68 (Ljava/lang/String;Lkoma/core/Action;)Lkoma/statechart/machine/Admission;
 	public abstract fun getMailbox ()Lkoma/statechart/machine/EffectMailbox;
 }
 
@@ -1534,6 +1563,37 @@ public final class koma/statechart/machine/PendingEffect {
 
 public abstract interface class koma/statechart/machine/ResultSink {
 	public abstract fun result (Lkoma/core/Action;)V
+}
+
+public final class koma/statechart/machine/SourceId {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Lkoma/statechart/machine/SourceId;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/SourceSnapshot {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILjava/util/Map;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-5cWyoho ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun component4 ()Ljava/util/Map;
+	public final fun copy-V-1ZulY (Ljava/lang/String;Ljava/lang/String;ILjava/util/Map;)Lkoma/statechart/machine/SourceSnapshot;
+	public static synthetic fun copy-V-1ZulY$default (Lkoma/statechart/machine/SourceSnapshot;Ljava/lang/String;Ljava/lang/String;ILjava/util/Map;ILjava/lang/Object;)Lkoma/statechart/machine/SourceSnapshot;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFields ()Ljava/util/Map;
+	public final fun getKind ()Ljava/lang/String;
+	public final fun getSource-5cWyoho ()Ljava/lang/String;
+	public final fun getVersion ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class koma/statechart/machine/TimerId {

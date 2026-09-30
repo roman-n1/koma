@@ -52,6 +52,7 @@ sealed interface TimelineItem {
      * @property decision The machine's decision behind the commit, when the Store journals decisions
      * @property ignored The reason the machine ignored the input, when it did
      * @property message The bridge message this input was, when it came over the bridge
+     * @property source The external source this input came from, when it did
      * @property recorded The recording's step for this processing, when attached and matching
      * @property before The machine's snapshot before the decision, from the recording
      * @property after The machine's snapshot after the decision, from the recording
@@ -77,6 +78,7 @@ sealed interface TimelineItem {
         val after: MachineSnapshot<*>?,
         val diff: SnapshotDiff?,
         val message: MessageRef? = null,
+        val source: String? = null,
     ) : TimelineItem {
         /** Whether the journal holds the end of this processing. */
         val isFinished: Boolean get() = outcome != null
@@ -99,6 +101,11 @@ sealed interface TimelineItem {
 
     /** An input the Store accepted that the journal holds no end of: still queued when the journal ends, or its end is lost. */
     data class Pending(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId, val input: InputId, val kind: InputDescriptor<*>) : TimelineItem
+
+    /** A consistent cut of the group was taken here: [members] frozen and idle, [sources] snapshotted, [inFlight] messages on their way. */
+    data class Checkpoint(override val groupSeq: GroupSeq, override val elapsed: Duration, val members: List<StoreInstanceId>, val sources: List<String>, val inFlight: Int) : TimelineItem {
+        override val store: StoreInstanceId? get() = null
+    }
 
     /** A bridge routed an effect of [store] to [to] as [message]; [delivered] is false when [to] was not attached. */
     data class Sent(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId, val input: InputId?, val message: MessageRef, val to: StoreInstanceId, val delivered: Boolean) : TimelineItem

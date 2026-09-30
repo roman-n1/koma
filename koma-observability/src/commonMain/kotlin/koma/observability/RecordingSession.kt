@@ -233,6 +233,12 @@ class RecordingSession(
     fun publish(store: StoreInstanceId, entry: JournalEntry<*, *, *>): JournalRecord<*, *, *>? = publishRecord(store, entry)
 
     /**
+     * Publishes [entry] as a record of the session itself, about no Store: a group's cut, for
+     * example. Returns the record, or `null` after [close].
+     */
+    fun publish(entry: JournalEntry<*, *, *>): JournalRecord<*, *, *>? = publishRecord(null, entry)
+
+    /**
      * Assigns the sequence numbers, retains the record and offers it to the writer, all under the
      * lock; `null` for a record of the session itself. Returns the record, or `null` after [close].
      */
