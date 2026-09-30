@@ -217,6 +217,23 @@ class StateChartDefinitionTest {
     }
 
     @Test
+    fun mermaidHighlightsTheActiveStates_byTheirReference_andIgnoresUnknownIds() {
+        val plain = chart.toMermaid()
+
+        val highlighted = chart.toMermaid(setOf(StateId("Loading"), StateId("Nowhere")))
+
+        assertEquals(
+            plain + "\n    classDef koma_active fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px\n    class Loading koma_active",
+            highlighted,
+        )
+        assertEquals(plain, chart.toMermaid(emptySet()))
+        val start = StateId("Not signed in")
+        val done = StateId("Signed-in")
+        val aliased = StateChartDefinition(initial = start, states = listOf(AtomicState(start), AtomicState(done)), transitions = listOf(Transition(start, done, submit)))
+        assertTrue(aliased.toMermaid(setOf(start, done)).endsWith("class koma_state_0,koma_state_1 koma_active"), aliased.toMermaid(setOf(start, done)))
+    }
+
+    @Test
     fun mermaidAliasesIdsThatAreNotIdentifiers() {
         val start = StateId("Not signed in")
         val done = StateId("Signed-in")

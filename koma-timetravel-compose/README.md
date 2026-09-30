@@ -17,11 +17,18 @@ Store and reaches no network.
   state; `rememberInspectorState(inspector)` for a history, `rememberLiveInspector(session)`
   for a running session, rebuilt every half second.
 - **`ReplayControls(store, session)`** and the replay bar: back, forward, seek, verify; a
-  disabled button says why (the end of the recording, a divergence).
+  disabled button says why (the end of the recording, a divergence). The position panel then
+  shows the machine's definition as Mermaid with the replay's active states highlighted
+  (`toMermaid(active)`), selectable for pasting into a renderer.
+- **`BranchControls(branch, machines, inputs)`** and the branch panel: every member's
+  snapshot, clock, awaiting and queued commands with buttons to complete, fail or answer
+  them, the scripted `BranchInput`s the application allows (a `Dispatch`, a `Feed`, an
+  `Answer` with a label), the clock's advance, the definition with the active states, and
+  every decision made with what it changed. The branch decides with the pure machines;
+  nothing runs.
 
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
-Not yet: a branch panel (dispatching into a `GroupBranch`, answering its commands), a Mermaid
-view of the definition with the active nodes, group-wide positions.
+Not yet: group-wide positions.
 
 ## Dependency
 
@@ -29,6 +36,9 @@ view of the definition with the active nodes, group-wide positions.
 // debug source set only: this module must not be in a release dependency graph
 implementation("io.github.roman-n1:koma-timetravel-compose:4.0.0-sc.1")
 ```
+
+The library's CI runs `checkDebugGraph`: no production module of koma depends on
+`koma-timetravel` or this module, so what an app keeps in a debug source set stays there.
 
 ## Quick start
 
@@ -45,4 +55,11 @@ fun ReplayOf(recording: Recording<Ctx, Act, Cmd, Ev>, journal: JournalFileConten
     val controls = remember { ReplayControls(storeId, ReplaySession(machine, recording)) }
     InspectorScreen(state, replay = controls)
 }
+
+@Composable
+fun BranchOf(session: GroupReplaySession, machines: Map<StoreInstanceId, Machine<*, *, *, *>>) {
+    val branch = remember { BranchControls(session.branch(routes), machines, listOf(BranchInput.Dispatch(storeId, "Load", Act.Load))) }
+    InspectorScreen(state, branch = branch)                       // mode Branch: the panel decides what the buttons send
+}
 ```
+

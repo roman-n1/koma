@@ -55,8 +55,43 @@ Not adopted:
   the replay bar stepping, seeking back, verifying, and saying why forward is disabled at the
   end). The browser targets compile the screen and run the common test only; the UI test runs
   on the JVM, where Skiko needs no browser.
-- Left for later: the branch panel, Mermaid, group-wide positions, a CI check that the module is
-  absent from release graphs (§12).
+- Left for later: group-wide positions.
+
+## Addendum 2026-09-30: the branch panel, the definition as Mermaid, and the graph check
+
+- **The branch panel takes scripted inputs from the application.** `BranchControls(branch,
+  machines, inputs)` wraps a `GroupBranch`: the members' snapshots, clocks, awaiting and
+  queued commands, and every decision made through it with what it changed
+  (`BranchDecision`, `SnapshotDiff`); `BranchInput` is what the application lets a viewer send,
+  a `Dispatch` or a `Feed` with a label for the button, or an `Answer` for whichever awaiting
+  command the viewer picks. Completing and failing a command and advancing the clock need no
+  script. A request the branch refuses (a command not awaiting) is a `problem` shown in the
+  panel, not a decision. `BranchPanel` takes the third column, or a fourth section on a narrow
+  screen, when the screen is given a branch. The branch decides with the pure machines;
+  nothing runs, and the live group is untouched.
+- **The definition is Mermaid text, not a drawing.** `StateChartDefinition.toMermaid(active)`
+  closes the diagram with a `classDef koma_active` and a `class` statement naming the active
+  states (by alias when they have one). `ReplayControls.mermaid()` draws the replay's position,
+  `BranchControls.mermaid(store)` a member's; `DefinitionPanel` shows the text selectable, for
+  pasting into a renderer. §11 allows Mermaid and forbids blocking the live runtime with
+  diagram generation: text from the model only, and no renderer in the module.
+- **CI checks the direction of the graph.** `checkDebugGraph` in the root build fails when a
+  production module declares a dependency on `koma-timetravel` or `koma-timetravel-compose`
+  in any configuration; it runs in the `apiCheck` job and under `check`. An app keeps the two
+  modules in a debug source set; the library side of §12's promise is that nothing production
+  pulls them in.
+
+Not adopted: rendering the diagram in Compose (a renderer is a dependency and a runtime cost
+the debug module need not carry; a viewer pastes the text); building actions from text in the
+panel (the application's action types are its own, so the application scripts them).
+
+Tests: `BranchControlsTest` (common: a scripted dispatch decides and registers a command, the
+answer and the completion move the machine on, a refused completion is a problem and not a
+decision, the clock fires the timer, the Mermaid highlights the active states);
+`InspectorScreenTest` (JVM: the replay's position panel carries the definition with the active
+states; the branch panel decides a scripted input, lists the decision, advances the clock);
+`StateChartDefinitionTest` (the highlighted diagram is the plain one plus the two statements,
+unknown ids ignored, aliased ids named by their alias).
 
 ## Related
 

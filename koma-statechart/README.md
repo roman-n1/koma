@@ -392,6 +392,8 @@ unreachable states, unguarded transitions that compete for one action or one del
 
 Draw it with `listChart.toMermaid()`, which returns a `stateDiagram-v2` you can paste into a
 Markdown file. Asserting it in a test keeps the diagram in the docs honest.
+`toMermaid(active)` highlights the given states (a snapshot's `configuration.active`), which is
+how the inspector draws a replay's or a branch's position.
 
 Generate paths and replay them against the Store with `koma-test` and the conformance plugin:
 

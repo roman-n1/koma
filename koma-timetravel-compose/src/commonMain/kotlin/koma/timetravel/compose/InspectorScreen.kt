@@ -5,6 +5,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -35,25 +38,31 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import koma.core.ExperimentalKomaApi
+import koma.observability.StoreInstanceId
 import koma.timetravel.inspect.Availability
 import koma.timetravel.inspect.Completeness
 import koma.timetravel.inspect.InspectorText
 import koma.timetravel.inspect.StoreView
 import koma.timetravel.inspect.TimelineItem
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * The inspector of a group's history (handoff §11): the mode and the completeness on top, the
  * Stores with their capabilities and reasons on the left, the timeline in the middle, the
- * selected position on the right; stacked on a narrow screen. Everything shown comes from the
- * [koma.timetravel.inspect.Inspector] in [state]; nothing here runs a Store, and a [replay]
- * moves a `ReplaySession` that decides and compares, never executes.
+ * selected position on the right, or the branch when there is one; stacked on a narrow
+ * screen. Everything shown comes from the [koma.timetravel.inspect.Inspector] in [state];
+ * nothing here runs a Store, a [replay] moves a `ReplaySession` that decides and compares,
+ * never executes, and a [branch] drives a `GroupBranch` that decides with the pure machines.
+ * With a replay, the position panel draws the machine's definition as Mermaid with the
+ * replay's active states highlighted.
  *
  * @param state The inspector and the selection
  * @param replay The replay of one Store's recording to drive, when the screen is in [InspectorMode.Replay]
+ * @param branch The branch to drive, when the screen is in [InspectorMode.Branch]
  */
 @ExperimentalKomaApi
 @Composable
-fun InspectorScreen(state: InspectorState, replay: ReplayControls<*, *, *, *>? = null, modifier: Modifier = Modifier) {
+fun InspectorScreen(state: InspectorState, replay: ReplayControls<*, *, *, *>? = null, branch: BranchControls? = null, modifier: Modifier = Modifier) {
     Surface(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             ModeBar(state)
@@ -65,7 +74,7 @@ fun InspectorScreen(state: InspectorState, replay: ReplayControls<*, *, *, *>? =
                         VerticalRule()
                         TimelinePanel(state, modifier = Modifier.weight(2f).fillMaxSize())
                         VerticalRule()
-                        PositionPanel(state, modifier = Modifier.weight(2f).fillMaxSize())
+                        if (branch != null) BranchPanel(branch, modifier = Modifier.weight(2f).fillMaxSize()) else PositionPanel(state, replay, modifier = Modifier.weight(2f).fillMaxSize())
                     }
                 } else {
                     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -73,7 +82,11 @@ fun InspectorScreen(state: InspectorState, replay: ReplayControls<*, *, *, *>? =
                         HorizontalDivider()
                         TimelinePanel(state, modifier = Modifier.fillMaxWidth().height(360.dp))
                         HorizontalDivider()
-                        PositionPanel(state, modifier = Modifier.fillMaxWidth())
+                        PositionPanel(state, replay, modifier = Modifier.fillMaxWidth())
+                        if (branch != null) {
+                            HorizontalDivider()
+                            BranchPanel(branch, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
             }
@@ -169,25 +182,106 @@ fun TimelinePanel(state: InspectorState, modifier: Modifier = Modifier) {
     }
 }
 
-/** The selected position in full: input and cause, outcome, active nodes, before and after, what changed, commands, timers, events, failures. */
+/**
+ * The selected position in full: input and cause, outcome, active nodes, before and after, what
+ * changed, commands, timers, events, failures; with a [replay], the machine's definition as
+ * Mermaid with the replay's active states highlighted.
+ */
 @ExperimentalKomaApi
 @Composable
-fun PositionPanel(state: InspectorState, modifier: Modifier = Modifier) {
+fun PositionPanel(state: InspectorState, replay: ReplayControls<*, *, *, *>? = null, modifier: Modifier = Modifier) {
     val item = state.selectedItem
-    Column(modifier = modifier.padding(8.dp).verticalScroll(rememberScrollState()).semantics(mergeDescendants = true) {}.testTag("position")) {
-        Heading("Position" + (state.selected?.let { " $it" } ?: ""))
-        if (item == null) {
-            Text("select a position of the timeline", style = MaterialTheme.typography.bodySmall)
-            return@Column
+    Column(modifier = modifier.padding(8.dp).verticalScroll(rememberScrollState())) {
+        Column(modifier = Modifier.semantics(mergeDescendants = true) {}.testTag("position")) {
+            Heading("Position" + (state.selected?.let { " $it" } ?: ""))
+            if (item == null) {
+                Text("select a position of the timeline", style = MaterialTheme.typography.bodySmall)
+            } else {
+                val lines = InspectorText.detail(item)
+                for ((index, line) in lines.withIndex()) {
+                    Text(line, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal)
+                }
+                if (item is TimelineItem.Processing && item.recorded == null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text("snapshots are what the journal kept; attach the Store's recording to see the machine's", style = MaterialTheme.typography.bodySmall, color = Color(0xFF8E24AA))
+                }
+            }
         }
-        val lines = InspectorText.detail(item)
-        for ((index, line) in lines.withIndex()) {
-            Text(line, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal)
-        }
-        if (item is TimelineItem.Processing && item.recorded == null) {
+        if (replay != null) {
             Spacer(Modifier.height(8.dp))
-            Text("snapshots are what the journal kept; attach the Store's recording to see the machine's", style = MaterialTheme.typography.bodySmall, color = Color(0xFF8E24AA))
+            DefinitionPanel(replay.mermaid(), "Definition of ${replay.store} at ${replay.position}", tag = "definition")
         }
+    }
+}
+
+/** A definition as Mermaid text, the active states highlighted, selectable for pasting into a renderer; the screen renders no diagram (handoff §11). */
+@ExperimentalKomaApi
+@Composable
+fun DefinitionPanel(mermaid: String, title: String, tag: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.semantics(mergeDescendants = true) {}.testTag(tag)) {
+        Heading(title)
+        SelectionContainer {
+            Text(mermaid, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+/**
+ * The branch: every member's snapshot, clock, awaiting and queued commands with the buttons to
+ * complete, fail or answer them, the scripted inputs the application allows, the clock's
+ * advance, the definition with the active states, and every decision made so far.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@ExperimentalKomaApi
+@Composable
+fun BranchPanel(branch: BranchControls, modifier: Modifier = Modifier) {
+    Column(modifier = modifier.padding(8.dp).verticalScroll(rememberScrollState()).testTag("branch")) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Heading("Branch")
+            OutlinedButton(onClick = { branch.advance(1.seconds) }, modifier = Modifier.testTag("branch-advance")) { Text("advance 1s") }
+        }
+        branch.problem?.let { Text("! $it", style = MaterialTheme.typography.bodySmall, color = Color(0xFFC62828), modifier = Modifier.testTag("branch-problem")) }
+        for (store in branch.members) BranchMemberCard(branch, store)
+        Heading("Decisions (${branch.decisions.size})")
+        for (decision in branch.decisions) {
+            Text(BranchText.line(decision), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("branch-decision-${decision.index}"))
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@ExperimentalKomaApi
+@Composable
+private fun BranchMemberCard(branch: BranchControls, store: StoreInstanceId) {
+    val snapshot = branch.snapshot(store)
+    val inputs = branch.inputsOf(store)
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+        Column(modifier = Modifier.semantics(mergeDescendants = true) {}.testTag("branch-${store.value}")) {
+            Text("${store.value}  revision ${snapshot.revision}  now ${branch.now(store).sinceStart}", fontWeight = FontWeight.Bold)
+            Text("active ${snapshot.configuration.active.map { it.value }.sorted().joinToString(",", "[", "]")}  context ${snapshot.context}", fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+            for ((lane, registrations) in branch.queued(store)) {
+                Text("queued in ${lane.value}: ${registrations.joinToString(",") { "c${it.id.value}" }}", fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (input in inputs) when (input) {
+                is BranchInput.Dispatch -> OutlinedButton(onClick = { branch.dispatch(input) }, modifier = Modifier.testTag("branch-input-${store.value}-${input.label}")) { Text(input.label) }
+                is BranchInput.Feed -> OutlinedButton(onClick = { branch.feed(input) }, modifier = Modifier.testTag("branch-input-${store.value}-${input.label}")) { Text("${input.label} (${input.source.value})") }
+                is BranchInput.Answer -> Unit
+            }
+        }
+        for (registration in branch.awaiting(store)) {
+            val id = registration.id
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.testTag("branch-awaiting-${store.value}-${id.value}")) {
+                Text("awaiting c${id.value} ${registration.command}${registration.lane?.let { " in ${it.value}" } ?: ""}", fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 12.dp))
+                OutlinedButton(onClick = { branch.complete(store, id) }, modifier = Modifier.testTag("branch-complete-${store.value}-${id.value}")) { Text("complete") }
+                OutlinedButton(onClick = { branch.fail(store, id) }, modifier = Modifier.testTag("branch-fail-${store.value}-${id.value}")) { Text("fail") }
+                for (input in inputs) if (input is BranchInput.Answer) {
+                    OutlinedButton(onClick = { branch.answer(input, id) }, modifier = Modifier.testTag("branch-answer-${store.value}-${id.value}-${input.label}")) { Text(input.label) }
+                }
+            }
+        }
+        DefinitionPanel(branch.mermaid(store), "Definition of ${store.value}", tag = "branch-definition-${store.value}")
     }
 }
 
