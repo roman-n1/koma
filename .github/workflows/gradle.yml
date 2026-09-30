@@ -32,7 +32,8 @@ jobs:
             os: ubuntu-latest
           - target: wasmJsBrowserTest
             os: ubuntu-latest
-          - target: apiCheck checkDebugGraph
+          # The device target is compiled where the simulator is tested; a device build needs a Mac.
+          - target: apiCheck checkDebugGraph compileKotlinIosArm64
             os: macos-26
     runs-on: ${{ matrix.os }}
 
