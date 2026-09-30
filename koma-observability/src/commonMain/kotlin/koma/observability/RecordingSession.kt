@@ -130,6 +130,7 @@ class RecordingSession(
     private val lock = Mutex()
     private val retained = ArrayDeque<JournalRecord<*, *, *>>()
     private val storeSeqs = mutableMapOf<StoreInstanceId, Long>()
+    private val probed = mutableSetOf<StoreInstanceId>()
     private var nextGroupSeq = 0L
     private var published = 0L
     private var evicted = 0L
@@ -156,10 +157,9 @@ class RecordingSession(
     @InternalKomaApi
     fun <S : State, A : Action, E : Event> probe(store: StoreInstanceId, policy: PayloadPolicy<S, A, E>): StoreProbe<S, A, E> {
         locked {
-            require(store !in storeSeqs) { "[Koma] Store $store is already recorded by this session; give every instance its own StoreInstanceId" }
-            storeSeqs[store] = 0L
+            require(probed.add(store)) { "[Koma] Store $store is already recorded by this session; give every instance its own StoreInstanceId" }
         }
-        publish(store, JournalEntry.StoreRegistered(Capability.InspectOnly))
+        publishRecord(store, JournalEntry.StoreRegistered(Capability.InspectOnly))
         return JournalProbe(this, store, policy)
     }
 
@@ -195,7 +195,7 @@ class RecordingSession(
             writer.join()
             return
         }
-        publish(null, JournalEntry.RecordingStopped)
+        publishRecord(null, JournalEntry.RecordingStopped)
         locked { stopped = true }
         queue.close()
         writer.join()
@@ -209,10 +209,19 @@ class RecordingSession(
     }
 
     /**
-     * Assigns the sequence numbers, retains the record and offers it to the writer, all under the
-     * lock. Returns the record, or `null` after [close].
+     * Publishes [entry] about [store]: assigns the sequence numbers ([StoreSeq] starts with the
+     * store's first record, from a probe or from here), retains the record and offers it to the
+     * writer, all in the session's short critical section. For records that no probe produces,
+     * such as the decisions of a replay-ready machine. Returns the record, or `null` after
+     * [close].
      */
-    internal fun publish(store: StoreInstanceId?, entry: JournalEntry<*, *, *>): JournalRecord<*, *, *>? {
+    fun publish(store: StoreInstanceId, entry: JournalEntry<*, *, *>): JournalRecord<*, *, *>? = publishRecord(store, entry)
+
+    /**
+     * Assigns the sequence numbers, retains the record and offers it to the writer, all under the
+     * lock; `null` for a record of the session itself. Returns the record, or `null` after [close].
+     */
+    internal fun publishRecord(store: StoreInstanceId?, entry: JournalEntry<*, *, *>): JournalRecord<*, *, *>? {
         return locked {
             if (stopped) {
                 publishedAfterStop++

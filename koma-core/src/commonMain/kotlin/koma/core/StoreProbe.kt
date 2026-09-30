@@ -1,5 +1,8 @@
+@file:OptIn(ExperimentalKomaApi::class)
+
 package koma.core
 
+import kotlinx.coroutines.currentCoroutineContext
 import kotlin.jvm.JvmInline
 
 /**
@@ -220,3 +223,15 @@ sealed interface StoreTrace<out S : State, out A : Action, out E : Event> {
      */
     data object StoreClosed : StoreTrace<Nothing, Nothing, Nothing>
 }
+
+/**
+ * The [InputId] the current coroutine works for, or `null` outside a Store.
+ *
+ * Inside a handler, hook or transaction it is the input being processed; inside a coroutine a
+ * handler or plugin launched, the input that was being processed when it was launched. One
+ * imprecision: a startup that the first dispatch triggered is processed in that dispatch's
+ * coroutine, so its handlers see the dispatch's id. Journals built on the probe use it to relate
+ * their own records to the Store's [StoreTrace]s.
+ */
+@InternalKomaApi
+suspend fun currentInputId(): InputId? = currentCoroutineContext()[InputOrigin]?.input

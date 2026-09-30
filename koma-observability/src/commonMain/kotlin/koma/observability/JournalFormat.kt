@@ -36,6 +36,20 @@ object JournalFormat {
         is JournalEntry.FailureReported -> "FailureReported ${entry.input ?: "?"} ${failure(entry.failure)}"
         is JournalEntry.ProcessingFinished -> "ProcessingFinished ${entry.input} ordinal=${entry.ordinal} ${outcome(entry.outcome)} in ${entry.duration}"
         JournalEntry.StoreClosed -> "StoreClosed"
+        is JournalEntry.InputRejected -> "InputRejected ${payload(entry.action)} ${entry.reason}"
+        is JournalEntry.DecisionCommitted -> buildString {
+            append("DecisionCommitted ").append(entry.input ?: "?").append(" revision=").append(entry.revision)
+            append(" active=").append(entry.active.joinToString(",", "[", "]"))
+            if (entry.transitions.isNotEmpty()) append(" transitions=").append(entry.transitions.joinToString(",", "[", "]") { "T$it" })
+            if (entry.exited.isNotEmpty()) append(" exited=").append(entry.exited.joinToString(",", "[", "]") { "${it.node}/a${it.activation}" })
+            if (entry.entered.isNotEmpty()) append(" entered=").append(entry.entered.joinToString(",", "[", "]") { "${it.node}/a${it.activation}" })
+            if (entry.commands.isNotEmpty()) append(" commands=").append(entry.commands.joinToString(",", "[", "]") { "c${it.id}@a${it.scope}${it.lane?.let { l -> " $l/${it.policy}" } ?: ""} ${payload(it.command)}" })
+            if (entry.cancelledScopes.isNotEmpty()) append(" cancelled=").append(entry.cancelledScopes.joinToString(",", "[", "]") { "a$it" })
+            if (entry.timersScheduled.isNotEmpty()) append(" timers=").append(entry.timersScheduled.joinToString(",", "[", "]") { "t${it.id}:T${it.transition}@a${it.activation}+${it.deadline}" })
+            if (entry.timersCancelled.isNotEmpty()) append(" timersCancelled=").append(entry.timersCancelled.joinToString(",", "[", "]") { "t$it" })
+            if (entry.effects > 0) append(" effects=").append(entry.effects)
+        }
+        is JournalEntry.DecisionIgnored -> "DecisionIgnored ${entry.input ?: "?"} ${entry.reason}"
         is JournalEntry.JournalGap -> "JournalGap dropped=${entry.dropped}"
         JournalEntry.RecordingStopped -> "RecordingStopped"
     }

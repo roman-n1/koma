@@ -102,3 +102,18 @@ Not adopted:
 - [A replay-ready statechart is a pure decision function](./2026-09-30-replay-ready-decision-machine.md)
 - [Store processing is observed through an internal probe](./2026-09-29-store-probe-processing-observation.md)
 - [Time Travel and structured logging handoff](../design/2026-09-29-time-travel-logging-handoff.md), §4.2, §4.3
+
+## Addendum (2026-09-30): observers and bounded admission
+
+- `MachineStore` takes `DecisionObserver`s: `onCommitted(input, decision)` runs from the store's
+  plugin after the commit, `onIgnored` from the handler, `onRejected` from the dispatching
+  thread; all short, none calling back into the store; a throwing observer is reported and the
+  store continues. `RecordingSession.decisionsOf(store)` is the observer that journals decisions.
+- `AdmissionPolicy.Bounded(maxPending)` refuses a dispatched action when that many accepted
+  actions still wait for processing; `admit(action)` returns `Accepted` or `Rejected(pending,
+  limit)`, and `dispatch` is `admit` with the answer dropped, as the handoff §4.3 asks
+  ("`dispatch()` with `Unit` proves nothing"). The count is kept in the store (incremented at
+  admission, decremented when the input's handler starts) because Koma's own queue is unbounded.
+  Inputs the machine's own work sends (results, completions, abandonments, timers) are never
+  refused: refusing a result would leave the machine waiting for a command that already
+  answered. A refused action is reported to the observers and never becomes an input.

@@ -22,6 +22,9 @@ builds the inspector and the replay on; this module is the journal only.
   writer's queue is counted and the next record that fits is preceded by a `JournalGap`.
 - **Sinks.** `JournalSink` receives records in order. `koma-logging` ships `LoggerJournalSink`,
   which writes `JournalFormat.line` to a `Logger`.
+- **Other producers.** `session.publish(store, entry)` publishes an entry a probe cannot see,
+  for a Store the session records. `koma-statechart` uses it for the decisions of a replay-ready
+  machine (`DecisionCommitted`, `DecisionIgnored`, `InputRejected`).
 
 Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
 fork [roman-n1/koma](https://github.com/roman-n1/koma). The record model has `JOURNAL_FORMAT_VERSION`

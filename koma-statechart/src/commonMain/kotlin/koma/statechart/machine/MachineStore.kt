@@ -3,11 +3,13 @@ package koma.statechart.machine
 import koma.core.Action
 import koma.core.Event
 import koma.core.ExperimentalKomaApi
+import koma.core.InputId
 import koma.core.InternalKomaApi
 import koma.core.Plugin
 import koma.core.PluginScope
 import koma.core.Store
 import koma.core.StoreBuilder
+import koma.core.currentInputId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -16,7 +18,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.ContinuationInterceptor
@@ -28,7 +32,13 @@ import kotlin.coroutines.CoroutineContext
  * commit. See [MachineStore] (the factory) for the protocol.
  */
 @ExperimentalKomaApi
-interface MachineStore<C, A : Action, E : Event> : Store<MachineSnapshot<C>, A, E>
+interface MachineStore<C, A : Action, E : Event> : Store<MachineSnapshot<C>, A, E> {
+    /**
+     * Offers [action] and says whether it was accepted, according to the [AdmissionPolicy].
+     * [dispatch] is this with the answer dropped.
+     */
+    fun admit(action: A): Admission
+}
 
 /**
  * Creates a Store that runs [machine] from [context].
@@ -62,6 +72,9 @@ interface MachineStore<C, A : Action, E : Event> : Store<MachineSnapshot<C>, A, 
  * [Dispatchers.Unconfined], or handlers would run under the store's lock
  * @param clock The machine's clock
  * @param coroutineContext The Store's coroutine context, as in Koma's `Store(...)`
+ * @param admission How many dispatched actions may wait; see [AdmissionPolicy]
+ * @param observers See the decisions as they are committed, ignored or refused; for example
+ * `session.decisionsOf(store)` to journal them
  * @param builder Store configuration: plugins, exception handler, state saver, journal
  * @throws IllegalArgumentException if [scope] uses [Dispatchers.Unconfined]
  */
@@ -73,8 +86,10 @@ fun <C, A : Action, CMD, E : Event> MachineStore(
     scope: CoroutineScope,
     clock: MachineClock = MachineClock.monotonic(),
     coroutineContext: CoroutineContext? = null,
+    admission: AdmissionPolicy = AdmissionPolicy.Unbounded,
+    observers: List<DecisionObserver<C, A, CMD, E>> = emptyList(),
     builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit = {},
-): MachineStore<C, A, E> = MachineStoreImpl(machine, context, handler, scope, clock, coroutineContext, builder)
+): MachineStore<C, A, E> = MachineStoreImpl(machine, context, handler, scope, clock, coroutineContext, admission, observers, builder)
 
 @OptIn(ExperimentalKomaApi::class, InternalKomaApi::class)
 internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
@@ -84,6 +99,8 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     scope: CoroutineScope,
     private val clock: MachineClock,
     coroutineContext: CoroutineContext?,
+    private val admission: AdmissionPolicy,
+    private val observers: List<DecisionObserver<C, A, CMD, E>>,
     builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit,
 ) : MachineStore<C, A, E> {
     init {
@@ -101,9 +118,15 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
         for (event in effects) _event.emit(event)
     }
 
-    // The decision whose snapshot the handler is committing; consumed by the plugin after the commit.
+    // The decision whose snapshot the handler is committing, with the input it was decided for;
+    // consumed by the plugin after the commit.
+    private class Pending<C, CMD, E : Event>(val decision: Decision<C, CMD, E>, val input: InputId?)
+
     @Volatile
-    private var pending: Decision<C, CMD, E>? = null
+    private var pending: Pending<C, CMD, E>? = null
+
+    // Dispatched actions accepted and not yet processed; a MutableStateFlow as a thread-safe counter.
+    private val waiting = MutableStateFlow(0)
 
     private var pluginScope: PluginScope<MachineSnapshot<C>, MachineInput<A>>? = null
 
@@ -117,12 +140,13 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
             // configured below still apply.
             state<MachineSnapshot<C>> {
                 enter {
+                    val input = currentInputId()
                     val foreign = state.definition != machine.id || state.version != machine.version
                     // A restored snapshot of another machine or version cannot be decided by this
                     // one, and a restored, already started snapshot has lost its commands: both
                     // start over with the restored context. The foreign one is reported.
                     val base = if (foreign || state.isStarted) machine.initialSnapshot(state.context) else state
-                    decide(base, MachineInput.Start(clock.now())) { nextState { it } }
+                    decide(base, MachineInput.Start(clock.now()), input) { nextState { it } }
                     if (foreign) {
                         val restored = state
                         launch {
@@ -133,7 +157,8 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
                     }
                 }
                 action<MachineInput<A>> {
-                    decide(state, action) { nextState { it } }
+                    if (action is MachineInput.Dispatch) waiting.update { it - 1 }
+                    decide(state, action, currentInputId()) { nextState { it } }
                 }
             }
             builder()
@@ -143,15 +168,25 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
             }
         }
 
-    private inline fun decide(snapshot: MachineSnapshot<C>, input: MachineInput<A>, commit: (MachineSnapshot<C>) -> Unit) {
+    private inline fun decide(snapshot: MachineSnapshot<C>, input: MachineInput<A>, inputId: InputId?, commit: (MachineSnapshot<C>) -> Unit) {
         val decision = machine.decide(snapshot, input)
         when (val outcome = decision.outcome) {
             DecisionOutcome.Handled -> {
-                pending = decision
+                pending = Pending(decision, inputId)
                 commit(decision.snapshot)
             }
-            is DecisionOutcome.Ignored -> Unit
+            is DecisionOutcome.Ignored -> observe { it.onIgnored(inputId, input, outcome.reason) }
             is DecisionOutcome.Failed -> throw outcome.cause
+        }
+    }
+
+    private inline fun observe(call: (DecisionObserver<C, A, CMD, E>) -> Unit) {
+        for (observer in observers) {
+            try {
+                call(observer)
+            } catch (e: Exception) {
+                report(e)
+            }
         }
     }
 
@@ -166,11 +201,13 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
         }
 
         override suspend fun onState(scope: PluginScope<MachineSnapshot<C>, MachineInput<A>>, prevState: MachineSnapshot<C>, state: MachineSnapshot<C>) {
-            val decision = pending ?: return
+            val committed = pending ?: return
+            val decision = committed.decision
             check(decision.snapshot === state) { "[Koma] MachineStore committed a snapshot that is not the pending decision's" }
             pending = null
             for (effect in decision.effects) effects.trySend(effect.event)
             scheduler.apply(decision)
+            observe { it.onCommitted(committed.input, decision) }
         }
     }
 
@@ -182,7 +219,28 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     override fun start() = inner.start()
 
-    override fun dispatch(action: A) = inner.dispatch(MachineInput.Dispatch(action, clock.now()))
+    override fun dispatch(action: A) {
+        admit(action)
+    }
+
+    override fun admit(action: A): Admission {
+        val limit = (admission as? AdmissionPolicy.Bounded)?.maxPending
+        if (limit != null) {
+            while (true) {
+                val current = waiting.value
+                if (current >= limit) {
+                    val rejection = Admission.Rejected(current, limit)
+                    observe { it.onRejected(action, rejection) }
+                    return rejection
+                }
+                if (waiting.compareAndSet(current, current + 1)) break
+            }
+        } else {
+            waiting.update { it + 1 }
+        }
+        inner.dispatch(MachineInput.Dispatch(action, clock.now()))
+        return Admission.Accepted
+    }
 
     override fun collectState(state: (MachineSnapshot<C>) -> Unit) = inner.collectState(state)
 

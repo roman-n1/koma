@@ -115,3 +115,16 @@ Not adopted:
 - [Store processing is observed through an internal probe](./2026-09-29-store-probe-processing-observation.md)
 - [Time Travel and structured logging handoff](../design/2026-09-29-time-travel-logging-handoff.md)
 - [Stability review](../notes/2026-09-29-stability-review.md), logging findings of rounds one and two
+
+## Addendum (2026-09-30): entries a probe cannot produce
+
+The journal now takes entries from producers other than the probe, through
+`RecordingSession.publish(store, entry)` for a Store the session records. The first producer is
+the replay-ready machine: `JournalEntry.DecisionCommitted` (transitions, activations, commands
+with lane and policy, cancelled scopes, timers, the count of events; ids and node names are the
+machine's, the command payload is what a describer keeps, nothing by default) follows the
+`StateCommitted` of the same input and revision; `DecisionIgnored` carries the machine's reason
+where the store's trace only says "unchanged"; `InputRejected` records an action refused at
+admission, which never became an input and so has no `InputId`. The input of a decision comes
+from `currentInputId()` of `koma-core`, the id carried by the coroutine that processes it, so the
+imprecision documented there (a startup processed inside the first dispatch) applies.

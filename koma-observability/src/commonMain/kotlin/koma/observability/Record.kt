@@ -100,6 +100,39 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
     data object StoreClosed : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
+     * An action was refused at admission, before it became an input: the store's pending queue
+     * was full. Nothing of it was processed. [action] is what the policy kept of it.
+     */
+    data class InputRejected<out A : Action>(val action: Payload<A>, val reason: String) : JournalEntry<Nothing, A, Nothing>
+
+    /**
+     * The decision of a replay-ready machine behind the [StateCommitted] of the same [input]
+     * and [revision]: which transitions were taken, which activations ended and began, which
+     * commands were registered and which scopes cancelled, which timers were scheduled and
+     * cancelled, and how many events were emitted. Ids are the machine's; node and lane names
+     * are the chart's declared ids.
+     */
+    data class DecisionCommitted(
+        val input: InputId?,
+        val revision: Long,
+        val active: List<String>,
+        val transitions: List<Int>,
+        val exited: List<ActivationRef>,
+        val entered: List<ActivationRef>,
+        val commands: List<CommandRef>,
+        val cancelledScopes: List<Long>,
+        val timersScheduled: List<TimerRef>,
+        val timersCancelled: List<Long>,
+        val effects: Int,
+    ) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /**
+     * A replay-ready machine ignored [input] for [reason] (the machine's `IgnoreReason` name):
+     * nothing was committed.
+     */
+    data class DecisionIgnored(val input: InputId?, val reason: String) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /**
      * [dropped] published records before this one never reached the sinks: the writer's queue was
      * full. They may still be in the session's retained records. The gap record has a sequence
      * number of its own, so a sink sees the hole between the previous record and this one, and
@@ -171,3 +204,23 @@ enum class OutcomeKind {
  */
 @ExperimentalKomaApi
 data class OutcomeDescriptor(val kind: OutcomeKind, val commits: Int = 0, val failure: FailureDescriptor? = null)
+
+/**
+ * A node with an activation id, as a decision names them.
+ */
+@ExperimentalKomaApi
+data class ActivationRef(val node: String, val activation: Long)
+
+/**
+ * A command a decision registered: its id, the activation it belongs to, its lane and policy
+ * names, and what the policy kept of the command itself.
+ */
+@ExperimentalKomaApi
+data class CommandRef(val id: Long, val scope: Long, val lane: String?, val policy: String?, val command: Payload<Any?>)
+
+/**
+ * A timer a decision scheduled: its id, the transition it fires (by position in the chart), the
+ * activation of its source and when it is due on the machine's clock.
+ */
+@ExperimentalKomaApi
+data class TimerRef(val id: Long, val transition: Int, val activation: Long, val deadline: Duration)
