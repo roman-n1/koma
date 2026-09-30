@@ -40,8 +40,11 @@ fun interface StoreProbe<S : State, A : Action, E : Event> {
  * dispatching threads called the Store, not the order the inputs are processed in; see
  * [StoreTrace.ProcessingStarted.ordinal] for that. Ids are not dense: an allocation that lost a
  * race leaves a gap. An id is never reused, not even when a startup is retried.
+ *
+ * Unlike the rest of the probe API, the id itself is experimental rather than internal: journals
+ * built on the probe expose it as the identity of an input.
  */
-@InternalKomaApi
+@ExperimentalKomaApi
 @JvmInline
 value class InputId(val value: Long) {
     override fun toString(): String = "#$value"

@@ -6,12 +6,12 @@ plugins {
     alias(libs.plugins.koma.publish)
 }
 
-group = "io.github.koma-kt"
+group = "io.github.roman-n1"
 version = libs.versions.koma.get()
 
 kotlin {
     android {
-        namespace = "koma.logging"
+        namespace = "koma.observability"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
@@ -30,19 +30,25 @@ kotlin {
     jvm()
     js(IR) {
         browser()
-        nodejs()
+        nodejs {
+            testTask {
+                useMocha { timeout = "300s" }
+            }
+        }
     }
     @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
     wasmJs {
         browser()
-        nodejs()
+        nodejs {
+            testTask {
+                useMocha { timeout = "300s" }
+            }
+        }
     }
 
     sourceSets {
         commonMain.dependencies {
             api(project(":koma-core"))
-            api(project(":koma-observability"))
-            implementation(libs.logger.kermit)
         }
         commonTest.dependencies {
             implementation(project(":koma-test"))
@@ -53,5 +59,5 @@ kotlin {
 }
 
 publishConvention {
-    artifactId = "koma-logging"
+    artifactId = "koma-observability"
 }

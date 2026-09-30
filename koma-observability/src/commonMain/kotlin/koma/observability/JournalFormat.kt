@@ -1,0 +1,76 @@
+package koma.observability
+
+import koma.core.ExperimentalKomaApi
+
+/**
+ * One-line text rendering of records, for loggers and quick inspection. It prints only what the
+ * records hold: a [Payload.Retained] payload prints its `toString()`, because the policy that
+ * retained it decided the object may be shown; an omitted payload prints as `-`.
+ */
+@ExperimentalKomaApi
+object JournalFormat {
+    /**
+     * `[session group store #groupSeq/storeSeq +elapsed] entry`; the store part is absent for
+     * records of the session itself.
+     */
+    fun line(record: JournalRecord<*, *, *>): String = buildString {
+        append('[').append(record.session.value).append(' ').append(record.group.value)
+        record.store?.let { append(' ').append(it.value) }
+        append(' ').append(record.groupSeq)
+        record.storeSeq?.let { append('/').append(it.value) }
+        if (record.mode != ExecutionMode.Live) append(' ').append(record.mode)
+        append(" +").append(record.elapsed).append("] ")
+        append(entry(record.entry))
+    }
+
+    /**
+     * The entry alone, without the envelope.
+     */
+    fun entry(entry: JournalEntry<*, *, *>): String = when (entry) {
+        is JournalEntry.StoreRegistered -> "StoreRegistered ${entry.capability}"
+        is JournalEntry.InputAccepted -> "InputAccepted ${entry.input} ${input(entry.kind)}"
+        is JournalEntry.InputDiscarded -> "InputDiscarded ${entry.input} ${entry.reason.kind}${entry.reason.failure?.let { " " + failure(it) } ?: ""}"
+        is JournalEntry.ProcessingStarted -> "ProcessingStarted ${entry.input} ordinal=${entry.ordinal}"
+        is JournalEntry.StateCommitted -> "StateCommitted ${entry.input} revision=${entry.revision} ${payload(entry.state)} <- ${payload(entry.previous)}"
+        is JournalEntry.EventEmitted -> "EventEmitted ${entry.input ?: "?"} ${payload(entry.event)}"
+        is JournalEntry.FailureReported -> "FailureReported ${entry.input ?: "?"} ${failure(entry.failure)}"
+        is JournalEntry.ProcessingFinished -> "ProcessingFinished ${entry.input} ordinal=${entry.ordinal} ${outcome(entry.outcome)} in ${entry.duration}"
+        JournalEntry.StoreClosed -> "StoreClosed"
+        is JournalEntry.JournalGap -> "JournalGap dropped=${entry.dropped}"
+        JournalEntry.RecordingStopped -> "RecordingStopped"
+    }
+
+    /**
+     * A payload: the retained object's `toString()`, a projection's label and fields, `-` when
+     * omitted, `?` when unavailable.
+     */
+    fun payload(payload: Payload<*>): String = when (payload) {
+        is Payload.Retained -> payload.value.toString()
+        is Payload.Projected -> if (payload.fields.isEmpty()) payload.label else payload.label + payload.fields.entries.joinToString(prefix = "(", postfix = ")") { "${it.key}=${it.value}" }
+        Payload.Omitted -> "-"
+        Payload.Unavailable -> "?"
+    }
+
+    /**
+     * A failure: `Type: message <- Cause` with `+n suppressed` when there are any.
+     */
+    fun failure(failure: FailureDescriptor): String = buildString {
+        append(failure.type ?: "failure")
+        failure.message?.let { append(": ").append(it) }
+        failure.cause?.let { append(" <- ").append(failure(it)) }
+        if (failure.suppressed.isNotEmpty()) append(" +").append(failure.suppressed.size).append(" suppressed")
+    }
+
+    private fun input(kind: InputDescriptor<*>): String = when (kind) {
+        InputDescriptor.Startup -> "Startup"
+        is InputDescriptor.Dispatch -> "Dispatch ${payload(kind.action)}"
+        is InputDescriptor.Transaction -> "Transaction origin=${kind.origin ?: "?"}"
+        is InputDescriptor.Recovery -> "Recovery origin=${kind.origin ?: "?"} ${failure(kind.failure)}"
+    }
+
+    private fun outcome(outcome: OutcomeDescriptor): String = buildString {
+        append(outcome.kind)
+        if (outcome.commits > 0) append(" commits=").append(outcome.commits)
+        outcome.failure?.let { append(' ').append(failure(it)) }
+    }
+}
