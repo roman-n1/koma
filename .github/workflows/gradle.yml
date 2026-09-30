@@ -32,6 +32,8 @@ jobs:
             os: ubuntu-latest
           - target: wasmJsBrowserTest
             os: ubuntu-latest
+          - target: apiCheck
+            os: macos-26
     runs-on: ${{ matrix.os }}
 
     steps:

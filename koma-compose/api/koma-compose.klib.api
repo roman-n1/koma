@@ -1,0 +1,31 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:koma-compose>
+final class <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.compose/ViewStore { // koma.compose/ViewStore|null[0]
+    constructor <init>(#A, kotlin/Function1<#B, kotlin/Unit> = ..., kotlinx.coroutines.flow/Flow<#C> = ...) // koma.compose/ViewStore.<init>|<init>(1:0;kotlin.Function1<1:1,kotlin.Unit>;kotlinx.coroutines.flow.Flow<1:2>){}[0]
+
+    final val dispatch // koma.compose/ViewStore.dispatch|{}dispatch[0]
+        final fun <get-dispatch>(): kotlin/Function1<#B, kotlin/Unit> // koma.compose/ViewStore.dispatch.<get-dispatch>|<get-dispatch>(){}[0]
+    final val eventFlow // koma.compose/ViewStore.eventFlow|{}eventFlow[0]
+        final fun <get-eventFlow>(): kotlinx.coroutines.flow/Flow<#C> // koma.compose/ViewStore.eventFlow.<get-eventFlow>|<get-eventFlow>(){}[0]
+    final val state // koma.compose/ViewStore.state|{}state[0]
+        final fun <get-state>(): #A // koma.compose/ViewStore.state.<get-state>|<get-state>(){}[0]
+
+    final fun <#A1: #A> narrow(kotlin/Function1<#A, kotlin/Boolean>): koma.compose/ViewStore<#A1, #B, #C> // koma.compose/ViewStore.narrow|narrow(kotlin.Function1<1:0,kotlin.Boolean>){0§<1:0>}[0]
+    final inline fun <#A1: reified #A> render(kotlin/Function3<koma.compose/ViewStore<#A1, #B, #C>, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // koma.compose/ViewStore.render|render(kotlin.Function3<koma.compose.ViewStore<0:0,1:1,1:2>,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<1:0>}[0]
+    final inline fun <#A1: reified #A> stateContent(kotlin/Function3<koma.compose/ViewStore<#A1, #B, #C>, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // koma.compose/ViewStore.stateContent|stateContent(kotlin.Function3<koma.compose.ViewStore<0:0,1:1,1:2>,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<1:0>}[0]
+    final inline fun <#A1: reified #C> eventEffect(noinline kotlin/Function2<koma.compose/ViewStore<#A, #B, #C>, #A1, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // koma.compose/ViewStore.eventEffect|eventEffect(kotlin.Function2<koma.compose.ViewStore<1:0,1:1,1:2>,0:0,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<1:2>}[0]
+    final inline fun <#A1: reified #C> handle(noinline kotlin/Function2<koma.compose/ViewStore<#A, #B, #C>, #A1, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // koma.compose/ViewStore.handle|handle(kotlin.Function2<koma.compose.ViewStore<1:0,1:1,1:2>,0:0,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<1:2>}[0]
+}
+
+final val koma.compose/koma_compose_ViewStore$stableprop // koma.compose/koma_compose_ViewStore$stableprop|#static{}koma_compose_ViewStore$stableprop[0]
+
+final fun <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.compose/rememberViewStore(koma.core/Store<#A, #B, #C>, kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): koma.compose/ViewStore<#A, #B, #C> // koma.compose/rememberViewStore|rememberViewStore(koma.core.Store<0:0,0:1,0:2>;kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+final fun <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.compose/rememberViewStore(kotlin/Any?, kotlin/Boolean, kotlin/Function0<koma.core/Store<#A, #B, #C>>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): koma.compose/ViewStore<#A, #B, #C> // koma.compose/rememberViewStore|rememberViewStore(kotlin.Any?;kotlin.Boolean;kotlin.Function0<koma.core.Store<0:0,0:1,0:2>>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+final fun <#A: koma.core/State> koma.compose/rememberStateSaver(androidx.compose.runtime/Composer?, kotlin/Int): koma.core/StateSaver<#A> // koma.compose/rememberStateSaver|rememberStateSaver(androidx.compose.runtime.Composer?;kotlin.Int){0§<koma.core.State>}[0]
+final fun koma.compose/koma_compose_ViewStore$stableprop_getter(): kotlin/Int // koma.compose/koma_compose_ViewStore$stableprop_getter|koma_compose_ViewStore$stableprop_getter(){}[0]

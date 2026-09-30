@@ -506,8 +506,10 @@ messenger features.
   for it, and the bus is stuck for every Store in the process. Dispatch and return.
 - The GitHub CI matrix runs the JS and Wasm tests in a browser (Karma) and never `jsNodeTest` or
   `wasmJsNodeTest`, never compiles `iosArm64` (the device architecture is first built by
-  `publish.yml`), and runs no Android device tests. There is no binary-compatibility check, and
-  `StoreInternalApi` gained an abstract member (`dispatchIf`) in the sixth round.
+  `publish.yml`), and runs no Android device tests. Since the tenth round CI runs `apiCheck`
+  (binary-compatibility-validator, JVM and klib dumps under `*/api/`), so a change of the public
+  surface, such as the abstract member `StoreInternalApi` gained in the sixth round, is a
+  deliberate `apiDump` in the same change.
 - Non-`Exception` throwables (`AssertionError`, `StackOverflowError`, out of memory) are fatal:
   they propagate untouched, so one thrown by `StateSaver.save` or a plugin hook still aborts the
   transition it interrupts.

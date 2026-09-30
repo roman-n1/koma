@@ -1,0 +1,741 @@
+public abstract interface class koma/core/Action {
+}
+
+public final class koma/core/ActionHandlerMatch {
+	public fun <init> (ILkotlin/reflect/KClass;Lkotlin/reflect/KClass;Z)V
+	public final fun getActionType ()Lkotlin/reflect/KClass;
+	public final fun getIndex ()I
+	public final fun getMatches ()Z
+	public final fun getStateType ()Lkotlin/reflect/KClass;
+}
+
+public abstract interface class koma/core/ActionScope : koma/core/StoreScope {
+	public abstract fun cancelLaunch (Lkoma/core/LaunchLane;)V
+	public abstract fun clearPendingActions ()V
+	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getAction ()Lkoma/core/Action;
+	public abstract fun getState ()Lkoma/core/State;
+	public abstract fun launch (Lkotlinx/coroutines/CoroutineDispatcher;Lkoma/core/LaunchControl;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun launch$default (Lkoma/core/ActionScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkoma/core/LaunchControl;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public fun nextState (Lkoma/core/State;)V
+	public abstract fun nextState (Lkotlin/jvm/functions/Function0;)V
+	public fun nextStateBy (Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class koma/core/ActionScope$DefaultImpls {
+	public static synthetic fun launch$default (Lkoma/core/ActionScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkoma/core/LaunchControl;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public static fun nextState (Lkoma/core/ActionScope;Lkoma/core/State;)V
+	public static fun nextStateBy (Lkoma/core/ActionScope;Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class koma/core/ActionScope$LaunchScope : koma/core/StoreScope {
+	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getAction ()Lkoma/core/Action;
+	public abstract fun isActive ()Z
+	public abstract fun transaction (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun transaction$default (Lkoma/core/ActionScope$LaunchScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class koma/core/ActionScope$LaunchScope$DefaultImpls {
+	public static synthetic fun transaction$default (Lkoma/core/ActionScope$LaunchScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class koma/core/ActionScope$LaunchScope$TransactionScope : koma/core/StoreScope {
+	public abstract fun clearPendingActions ()V
+	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getAction ()Lkoma/core/Action;
+	public abstract fun getState ()Lkoma/core/State;
+	public fun nextState (Lkoma/core/State;)V
+	public abstract fun nextState (Lkotlin/jvm/functions/Function0;)V
+	public fun nextStateBy (Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class koma/core/ActionScope$LaunchScope$TransactionScope$DefaultImpls {
+	public static fun nextState (Lkoma/core/ActionScope$LaunchScope$TransactionScope;Lkoma/core/State;)V
+	public static fun nextStateBy (Lkoma/core/ActionScope$LaunchScope$TransactionScope;Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class koma/core/AutoStartPolicy : java/lang/Enum {
+	public static final field OnDispatch Lkoma/core/AutoStartPolicy;
+	public static final field OnDispatchOrStateCollection Lkoma/core/AutoStartPolicy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lkoma/core/AutoStartPolicy;
+	public static fun values ()[Lkoma/core/AutoStartPolicy;
+}
+
+public abstract interface class koma/core/DiscardReason {
+}
+
+public final class koma/core/DiscardReason$ClearedExplicitly : koma/core/DiscardReason {
+	public static final field INSTANCE Lkoma/core/DiscardReason$ClearedExplicitly;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/DiscardReason$ClearedOnStateExit : koma/core/DiscardReason {
+	public static final field INSTANCE Lkoma/core/DiscardReason$ClearedOnStateExit;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/DiscardReason$LaunchInactive : koma/core/DiscardReason {
+	public static final field INSTANCE Lkoma/core/DiscardReason$LaunchInactive;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/DiscardReason$Rejected : koma/core/DiscardReason {
+	public fun <init> (Ljava/lang/Throwable;)V
+	public final fun component1 ()Ljava/lang/Throwable;
+	public final fun copy (Ljava/lang/Throwable;)Lkoma/core/DiscardReason$Rejected;
+	public static synthetic fun copy$default (Lkoma/core/DiscardReason$Rejected;Ljava/lang/Throwable;ILjava/lang/Object;)Lkoma/core/DiscardReason$Rejected;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/Throwable;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/DiscardReason$Stale : koma/core/DiscardReason {
+	public static final field INSTANCE Lkoma/core/DiscardReason$Stale;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/DiscardReason$StartupFailed : koma/core/DiscardReason {
+	public fun <init> (Ljava/lang/Throwable;)V
+	public final fun component1 ()Ljava/lang/Throwable;
+	public final fun copy (Ljava/lang/Throwable;)Lkoma/core/DiscardReason$StartupFailed;
+	public static synthetic fun copy$default (Lkoma/core/DiscardReason$StartupFailed;Ljava/lang/Throwable;ILjava/lang/Object;)Lkoma/core/DiscardReason$StartupFailed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/Throwable;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/DiscardReason$StoreClosed : koma/core/DiscardReason {
+	public static final field INSTANCE Lkoma/core/DiscardReason$StoreClosed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/core/EnterScope : koma/core/StoreScope {
+	public abstract fun clearPendingActions ()V
+	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getState ()Lkoma/core/State;
+	public abstract fun launch (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun launch$default (Lkoma/core/EnterScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public fun nextState (Lkoma/core/State;)V
+	public abstract fun nextState (Lkotlin/jvm/functions/Function0;)V
+	public fun nextStateBy (Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class koma/core/EnterScope$DefaultImpls {
+	public static synthetic fun launch$default (Lkoma/core/EnterScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public static fun nextState (Lkoma/core/EnterScope;Lkoma/core/State;)V
+	public static fun nextStateBy (Lkoma/core/EnterScope;Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class koma/core/EnterScope$LaunchScope : koma/core/StoreScope {
+	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun isActive ()Z
+	public abstract fun transaction (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun transaction$default (Lkoma/core/EnterScope$LaunchScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class koma/core/EnterScope$LaunchScope$DefaultImpls {
+	public static synthetic fun transaction$default (Lkoma/core/EnterScope$LaunchScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class koma/core/EnterScope$LaunchScope$TransactionScope : koma/core/StoreScope {
+	public abstract fun clearPendingActions ()V
+	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getState ()Lkoma/core/State;
+	public fun nextState (Lkoma/core/State;)V
+	public abstract fun nextState (Lkotlin/jvm/functions/Function0;)V
+	public fun nextStateBy (Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class koma/core/EnterScope$LaunchScope$TransactionScope$DefaultImpls {
+	public static fun nextState (Lkoma/core/EnterScope$LaunchScope$TransactionScope;Lkoma/core/State;)V
+	public static fun nextStateBy (Lkoma/core/EnterScope$LaunchScope$TransactionScope;Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class koma/core/Event {
+}
+
+public abstract interface class koma/core/ExceptionHandler {
+	public static final field Companion Lkoma/core/ExceptionHandler$Companion;
+	public abstract fun handle (Ljava/lang/Throwable;)V
+}
+
+public final class koma/core/ExceptionHandler$Companion {
+	public final fun getIgnore ()Lkoma/core/ExceptionHandler;
+	public final fun getLog ()Lkoma/core/ExceptionHandler;
+	public final fun getNoop ()Lkoma/core/ExceptionHandler;
+	public final fun getRethrow ()Lkoma/core/ExceptionHandler;
+	public final fun getUnhandled ()Lkoma/core/ExceptionHandler;
+}
+
+public final class koma/core/ExceptionHandlerKt {
+	public static final fun ExceptionHandler (Lkotlin/jvm/functions/Function1;)Lkoma/core/ExceptionHandler;
+}
+
+public abstract interface class koma/core/ExitScope : koma/core/StoreScope {
+	public abstract fun clearPendingActions ()V
+	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getState ()Lkoma/core/State;
+}
+
+public abstract interface annotation class koma/core/ExperimentalKomaApi : java/lang/annotation/Annotation {
+}
+
+public final class koma/core/HandlerMatcher {
+	public fun <init> (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;)V
+	public synthetic fun <init> (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkotlin/reflect/KClass;
+	public final fun component2 ()Lkotlin/reflect/KClass;
+	public final fun copy (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;)Lkoma/core/HandlerMatcher;
+	public static synthetic fun copy$default (Lkoma/core/HandlerMatcher;Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;ILjava/lang/Object;)Lkoma/core/HandlerMatcher;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInputType ()Lkotlin/reflect/KClass;
+	public final fun getStateType ()Lkotlin/reflect/KClass;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/HandlerMetadata {
+	public fun <init> (ILkotlin/reflect/KClass;Lkotlin/reflect/KClass;)V
+	public final fun getIndex ()I
+	public final fun getInputType ()Lkotlin/reflect/KClass;
+	public final fun getStateType ()Lkotlin/reflect/KClass;
+}
+
+public final class koma/core/InputId {
+	public static final synthetic fun box-impl (J)Lkoma/core/InputId;
+	public static fun constructor-impl (J)J
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (JLjava/lang/Object;)Z
+	public static final fun equals-impl0 (JJ)Z
+	public final fun getValue ()J
+	public fun hashCode ()I
+	public static fun hashCode-impl (J)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (J)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()J
+}
+
+public abstract interface class koma/core/InputKind {
+}
+
+public final class koma/core/InputKind$Dispatch : koma/core/InputKind {
+	public fun <init> (Lkoma/core/Action;)V
+	public final fun component1 ()Lkoma/core/Action;
+	public final fun copy (Lkoma/core/Action;)Lkoma/core/InputKind$Dispatch;
+	public static synthetic fun copy$default (Lkoma/core/InputKind$Dispatch;Lkoma/core/Action;ILjava/lang/Object;)Lkoma/core/InputKind$Dispatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lkoma/core/Action;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/InputKind$Recovery : koma/core/InputKind {
+	public synthetic fun <init> (Ljava/lang/Throwable;Lkoma/core/InputId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/Throwable;
+	public final fun component2-hFruGEc ()Lkoma/core/InputId;
+	public final fun copy-SPo1y_s (Ljava/lang/Throwable;Lkoma/core/InputId;)Lkoma/core/InputKind$Recovery;
+	public static synthetic fun copy-SPo1y_s$default (Lkoma/core/InputKind$Recovery;Ljava/lang/Throwable;Lkoma/core/InputId;ILjava/lang/Object;)Lkoma/core/InputKind$Recovery;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/Throwable;
+	public final fun getOrigin-hFruGEc ()Lkoma/core/InputId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/InputKind$Startup : koma/core/InputKind {
+	public static final field INSTANCE Lkoma/core/InputKind$Startup;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/InputKind$Transaction : koma/core/InputKind {
+	public synthetic fun <init> (Lkoma/core/InputId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-hFruGEc ()Lkoma/core/InputId;
+	public final fun copy-pK-Dwis (Lkoma/core/InputId;)Lkoma/core/InputKind$Transaction;
+	public static synthetic fun copy-pK-Dwis$default (Lkoma/core/InputKind$Transaction;Lkoma/core/InputId;ILjava/lang/Object;)Lkoma/core/InputKind$Transaction;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOrigin-hFruGEc ()Lkoma/core/InputId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface annotation class koma/core/InternalKomaApi : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class koma/core/KomaStoreDsl : java/lang/annotation/Annotation {
+}
+
+public abstract interface class koma/core/LaunchControl {
+}
+
+public final class koma/core/LaunchControl$CancelPrevious : koma/core/LaunchControl {
+	public fun <init> ()V
+	public fun <init> (Lkoma/core/LaunchLane;)V
+	public synthetic fun <init> (Lkoma/core/LaunchLane;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkoma/core/LaunchLane;
+	public final fun copy (Lkoma/core/LaunchLane;)Lkoma/core/LaunchControl$CancelPrevious;
+	public static synthetic fun copy$default (Lkoma/core/LaunchControl$CancelPrevious;Lkoma/core/LaunchLane;ILjava/lang/Object;)Lkoma/core/LaunchControl$CancelPrevious;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLane ()Lkoma/core/LaunchLane;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/LaunchControl$DropIfRunning : koma/core/LaunchControl {
+	public fun <init> ()V
+	public fun <init> (Lkoma/core/LaunchLane;)V
+	public synthetic fun <init> (Lkoma/core/LaunchLane;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkoma/core/LaunchLane;
+	public final fun copy (Lkoma/core/LaunchLane;)Lkoma/core/LaunchControl$DropIfRunning;
+	public static synthetic fun copy$default (Lkoma/core/LaunchControl$DropIfRunning;Lkoma/core/LaunchLane;ILjava/lang/Object;)Lkoma/core/LaunchControl$DropIfRunning;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLane ()Lkoma/core/LaunchLane;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/LaunchControl$Untracked : koma/core/LaunchControl {
+	public static final field INSTANCE Lkoma/core/LaunchControl$Untracked;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/LaunchLane {
+	public fun <init> ()V
+}
+
+public final class koma/core/PendingActionPolicy : java/lang/Enum {
+	public static final field ClearOnStateExit Lkoma/core/PendingActionPolicy;
+	public static final field Keep Lkoma/core/PendingActionPolicy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lkoma/core/PendingActionPolicy;
+	public static fun values ()[Lkoma/core/PendingActionPolicy;
+}
+
+public abstract interface class koma/core/Plugin {
+	public fun onAction (Lkoma/core/PluginScope;Lkoma/core/State;Lkoma/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun onEvent (Lkoma/core/PluginScope;Lkoma/core/State;Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun onStart (Lkoma/core/PluginScope;Lkoma/core/State;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun onState (Lkoma/core/PluginScope;Lkoma/core/State;Lkoma/core/State;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class koma/core/Plugin$DefaultImpls {
+	public static fun onAction (Lkoma/core/Plugin;Lkoma/core/PluginScope;Lkoma/core/State;Lkoma/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun onEvent (Lkoma/core/Plugin;Lkoma/core/PluginScope;Lkoma/core/State;Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun onStart (Lkoma/core/Plugin;Lkoma/core/PluginScope;Lkoma/core/State;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static fun onState (Lkoma/core/Plugin;Lkoma/core/PluginScope;Lkoma/core/State;Lkoma/core/State;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class koma/core/PluginExecutionPolicy : java/lang/Enum {
+	public static final field Concurrent Lkoma/core/PluginExecutionPolicy;
+	public static final field InRegistrationOrder Lkoma/core/PluginExecutionPolicy;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lkoma/core/PluginExecutionPolicy;
+	public static fun values ()[Lkoma/core/PluginExecutionPolicy;
+}
+
+public final class koma/core/PluginKt {
+	public static final fun Plugin (Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function4;Lkotlin/jvm/functions/Function4;Lkotlin/jvm/functions/Function4;)Lkoma/core/Plugin;
+	public static synthetic fun Plugin$default (Lkotlin/jvm/functions/Function3;Lkotlin/jvm/functions/Function4;Lkotlin/jvm/functions/Function4;Lkotlin/jvm/functions/Function4;ILjava/lang/Object;)Lkoma/core/Plugin;
+}
+
+public abstract interface class koma/core/PluginPatch {
+}
+
+public final class koma/core/PluginPatch$Append : koma/core/PluginPatch {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lkoma/core/PluginPatch$Append;
+	public static synthetic fun copy$default (Lkoma/core/PluginPatch$Append;Ljava/util/List;ILjava/lang/Object;)Lkoma/core/PluginPatch$Append;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPlugins ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/PluginPatch$Clear : koma/core/PluginPatch {
+	public fun <init> ()V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/PluginPatch$Replace : koma/core/PluginPatch {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lkoma/core/PluginPatch$Replace;
+	public static synthetic fun copy$default (Lkoma/core/PluginPatch$Replace;Ljava/util/List;ILjava/lang/Object;)Lkoma/core/PluginPatch$Replace;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPlugins ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/core/PluginScope {
+	public abstract fun dispatch (Lkoma/core/Action;)V
+	public abstract fun launch (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun launch$default (Lkoma/core/PluginScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+}
+
+public final class koma/core/PluginScope$DefaultImpls {
+	public static synthetic fun launch$default (Lkoma/core/PluginScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+}
+
+public abstract interface class koma/core/PluginScope$LaunchScope {
+	public abstract fun dispatch (Lkoma/core/Action;)V
+	public abstract fun getCurrentState ()Lkoma/core/State;
+}
+
+public abstract interface class koma/core/ProcessingOutcome {
+}
+
+public final class koma/core/ProcessingOutcome$Cancelled : koma/core/ProcessingOutcome {
+	public static final field INSTANCE Lkoma/core/ProcessingOutcome$Cancelled;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/ProcessingOutcome$Failed : koma/core/ProcessingOutcome {
+	public fun <init> (Ljava/lang/Throwable;)V
+	public final fun component1 ()Ljava/lang/Throwable;
+	public final fun copy (Ljava/lang/Throwable;)Lkoma/core/ProcessingOutcome$Failed;
+	public static synthetic fun copy$default (Lkoma/core/ProcessingOutcome$Failed;Ljava/lang/Throwable;ILjava/lang/Object;)Lkoma/core/ProcessingOutcome$Failed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/Throwable;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/ProcessingOutcome$Handled : koma/core/ProcessingOutcome {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Lkoma/core/ProcessingOutcome$Handled;
+	public static synthetic fun copy$default (Lkoma/core/ProcessingOutcome$Handled;IILjava/lang/Object;)Lkoma/core/ProcessingOutcome$Handled;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCommits ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/ProcessingOutcome$Ignored : koma/core/ProcessingOutcome {
+	public static final field INSTANCE Lkoma/core/ProcessingOutcome$Ignored;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/ProcessingOutcome$Recovered : koma/core/ProcessingOutcome {
+	public fun <init> (Ljava/lang/Throwable;I)V
+	public final fun component1 ()Ljava/lang/Throwable;
+	public final fun component2 ()I
+	public final fun copy (Ljava/lang/Throwable;I)Lkoma/core/ProcessingOutcome$Recovered;
+	public static synthetic fun copy$default (Lkoma/core/ProcessingOutcome$Recovered;Ljava/lang/Throwable;IILjava/lang/Object;)Lkoma/core/ProcessingOutcome$Recovered;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCommits ()I
+	public final fun getError ()Ljava/lang/Throwable;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/ProcessingOutcome$Unchanged : koma/core/ProcessingOutcome {
+	public static final field INSTANCE Lkoma/core/ProcessingOutcome$Unchanged;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/core/RecoverScope : koma/core/StoreScope {
+	public abstract fun clearPendingActions ()V
+	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getError ()Ljava/lang/Exception;
+	public abstract fun getState ()Lkoma/core/State;
+	public fun nextState (Lkoma/core/State;)V
+	public abstract fun nextState (Lkotlin/jvm/functions/Function0;)V
+	public fun nextStateBy (Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class koma/core/RecoverScope$DefaultImpls {
+	public static fun nextState (Lkoma/core/RecoverScope;Lkoma/core/State;)V
+	public static fun nextStateBy (Lkoma/core/RecoverScope;Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class koma/core/State {
+}
+
+public abstract interface class koma/core/StateSaver {
+	public static final field Companion Lkoma/core/StateSaver$Companion;
+	public abstract fun restore ()Lkoma/core/State;
+	public abstract fun save (Lkoma/core/State;)V
+}
+
+public final class koma/core/StateSaver$Companion {
+	public final fun Noop ()Lkoma/core/StateSaver;
+}
+
+public final class koma/core/StateSaverKt {
+	public static final fun StateSaver (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)Lkoma/core/StateSaver;
+}
+
+public abstract interface class koma/core/Store : java/lang/AutoCloseable {
+	public abstract fun close ()V
+	public abstract fun collectEvent (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun collectState (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun dispatch (Lkoma/core/Action;)V
+	public fun dispose ()V
+	public abstract fun getCurrentState ()Lkoma/core/State;
+	public abstract fun getEvent ()Lkotlinx/coroutines/flow/Flow;
+	public abstract fun getState ()Lkotlinx/coroutines/flow/StateFlow;
+	public abstract fun start ()V
+}
+
+public final class koma/core/Store$DefaultImpls {
+	public static fun dispose (Lkoma/core/Store;)V
+}
+
+public final class koma/core/StoreBuilder {
+	public final fun autoStartPolicy (Lkoma/core/AutoStartPolicy;)V
+	public final fun coroutineContext (Lkotlin/coroutines/CoroutineContext;)V
+	public final fun exceptionHandler (Lkoma/core/ExceptionHandler;)V
+	public final fun getRegisteredActionHandlers ()Ljava/util/List;
+	public final fun getRegisteredEnterHandlers ()Ljava/util/List;
+	public final fun getRegisteredErrorHandlers ()Ljava/util/List;
+	public final fun getRegisteredExitHandlers ()Ljava/util/List;
+	public final fun initialState (Lkoma/core/State;)V
+	public final fun pendingActionPolicy (Lkoma/core/PendingActionPolicy;)V
+	public final fun plugin (Lkoma/core/Plugin;[Lkoma/core/Plugin;)V
+	public final fun pluginExecutionPolicy (Lkoma/core/PluginExecutionPolicy;)V
+	public final fun probe (Lkoma/core/StoreProbe;[Lkoma/core/StoreProbe;)V
+	public final fun stateSaver (Lkoma/core/StateSaver;)V
+	public final fun validateRecovery (Lkotlin/jvm/functions/Function2;)V
+}
+
+public final class koma/core/StoreBuilder$StateHandler {
+	public fun <init> (Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)V
+	public fun <init> (Ljava/lang/Object;Lkotlin/jvm/functions/Function2;Lkoma/core/HandlerMatcher;)V
+	public final fun getHandler ()Lkotlin/jvm/functions/Function2;
+	public final fun getMatcher ()Lkoma/core/HandlerMatcher;
+	public final fun getPredicate ()Ljava/lang/Object;
+}
+
+public final class koma/core/StoreBuilder$StateHandlerConfig {
+	public fun <init> ()V
+	public final fun enter (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun enter$default (Lkoma/core/StoreBuilder$StateHandlerConfig;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public final fun exit (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun exit$default (Lkoma/core/StoreBuilder$StateHandlerConfig;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public final fun getStateActionHandlers ()Ljava/util/List;
+	public final fun getStateEnterHandlers ()Ljava/util/List;
+	public final fun getStateErrorHandlers ()Ljava/util/List;
+	public final fun getStateExitHandlers ()Ljava/util/List;
+}
+
+public final class koma/core/StoreBuilder$StateHandlerConfig$ThreadedHandler {
+	public fun <init> (Lkotlinx/coroutines/CoroutineDispatcher;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)V
+	public fun <init> (Lkotlinx/coroutines/CoroutineDispatcher;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;Lkotlin/reflect/KClass;)V
+	public final fun getInputType ()Lkotlin/reflect/KClass;
+	public final fun getPredicate ()Ljava/lang/Object;
+	public final fun invoke (Lkoma/core/StoreScope;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class koma/core/StoreBuilderKt {
+	public static final fun Store (Lkoma/core/State;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function1;)Lkoma/core/Store;
+	public static synthetic fun Store$default (Lkoma/core/State;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lkoma/core/Store;
+}
+
+public final class koma/core/StoreHandlerMetadata {
+	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public final fun getAction ()Ljava/util/List;
+	public final fun getEnter ()Ljava/util/List;
+	public final fun getExit ()Ljava/util/List;
+	public final fun getRecover ()Ljava/util/List;
+}
+
+public abstract interface class koma/core/StoreInternalApi {
+	public abstract fun dispatchAndAwait (Lkoma/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun dispatchIf (Lkoma/core/Action;Lkotlin/jvm/functions/Function0;)V
+	public abstract fun handlerMetadata ()Lkoma/core/StoreHandlerMetadata;
+	public abstract fun matchActionHandlers (Lkoma/core/State;Lkoma/core/Action;)Ljava/util/List;
+	public abstract fun patch (Lkoma/core/StorePatch;)Lkoma/core/Store;
+	public abstract fun startAndAwait (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class koma/core/StorePatch {
+	public fun <init> ()V
+	public fun <init> (Lkoma/core/State;Lkotlin/coroutines/CoroutineContext;Lkoma/core/StateSaver;Lkoma/core/ExceptionHandler;Lkoma/core/AutoStartPolicy;Lkoma/core/PendingActionPolicy;Lkoma/core/PluginExecutionPolicy;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Lkoma/core/State;Lkotlin/coroutines/CoroutineContext;Lkoma/core/StateSaver;Lkoma/core/ExceptionHandler;Lkoma/core/AutoStartPolicy;Lkoma/core/PendingActionPolicy;Lkoma/core/PluginExecutionPolicy;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkoma/core/State;
+	public final fun component2 ()Lkotlin/coroutines/CoroutineContext;
+	public final fun component3 ()Lkoma/core/StateSaver;
+	public final fun component4 ()Lkoma/core/ExceptionHandler;
+	public final fun component5 ()Lkoma/core/AutoStartPolicy;
+	public final fun component6 ()Lkoma/core/PendingActionPolicy;
+	public final fun component7 ()Lkoma/core/PluginExecutionPolicy;
+	public final fun component8 ()Ljava/util/List;
+	public final fun component9 ()Ljava/util/List;
+	public final fun copy (Lkoma/core/State;Lkotlin/coroutines/CoroutineContext;Lkoma/core/StateSaver;Lkoma/core/ExceptionHandler;Lkoma/core/AutoStartPolicy;Lkoma/core/PendingActionPolicy;Lkoma/core/PluginExecutionPolicy;Ljava/util/List;Ljava/util/List;)Lkoma/core/StorePatch;
+	public static synthetic fun copy$default (Lkoma/core/StorePatch;Lkoma/core/State;Lkotlin/coroutines/CoroutineContext;Lkoma/core/StateSaver;Lkoma/core/ExceptionHandler;Lkoma/core/AutoStartPolicy;Lkoma/core/PendingActionPolicy;Lkoma/core/PluginExecutionPolicy;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lkoma/core/StorePatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAutoStartPolicy ()Lkoma/core/AutoStartPolicy;
+	public final fun getCoroutineContext ()Lkotlin/coroutines/CoroutineContext;
+	public final fun getExceptionHandler ()Lkoma/core/ExceptionHandler;
+	public final fun getInitialState ()Lkoma/core/State;
+	public final fun getPendingActionPolicy ()Lkoma/core/PendingActionPolicy;
+	public final fun getPluginExecutionPolicy ()Lkoma/core/PluginExecutionPolicy;
+	public final fun getPluginPatches ()Ljava/util/List;
+	public final fun getProbes ()Ljava/util/List;
+	public final fun getStateSaver ()Lkoma/core/StateSaver;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/StorePatchBuilder {
+	public fun <init> ()V
+	public final fun autoStartPolicy (Lkoma/core/AutoStartPolicy;)V
+	public final fun build ()Lkoma/core/StorePatch;
+	public final fun clearPlugins ()V
+	public final fun coroutineContext (Lkotlin/coroutines/CoroutineContext;)V
+	public final fun exceptionHandler (Lkoma/core/ExceptionHandler;)V
+	public final fun initialState (Lkoma/core/State;)V
+	public final fun pendingActionPolicy (Lkoma/core/PendingActionPolicy;)V
+	public final fun plugin (Lkoma/core/Plugin;[Lkoma/core/Plugin;)V
+	public final fun pluginExecutionPolicy (Lkoma/core/PluginExecutionPolicy;)V
+	public final fun probe (Lkoma/core/StoreProbe;[Lkoma/core/StoreProbe;)V
+	public final fun replacePlugins (Lkoma/core/Plugin;[Lkoma/core/Plugin;)V
+	public final fun stateSaver (Lkoma/core/StateSaver;)V
+}
+
+public abstract interface class koma/core/StoreProbe {
+	public abstract fun record (Lkoma/core/StoreTrace;)V
+}
+
+public final class koma/core/StoreProbeKt {
+	public static final fun currentInputId (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class koma/core/StoreScope {
+}
+
+public abstract interface class koma/core/StoreTrace {
+}
+
+public final class koma/core/StoreTrace$EventEmitted : koma/core/StoreTrace {
+	public synthetic fun <init> (Lkoma/core/InputId;Lkoma/core/Event;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-hFruGEc ()Lkoma/core/InputId;
+	public final fun component2 ()Lkoma/core/Event;
+	public final fun copy-cDI26wg (Lkoma/core/InputId;Lkoma/core/Event;)Lkoma/core/StoreTrace$EventEmitted;
+	public static synthetic fun copy-cDI26wg$default (Lkoma/core/StoreTrace$EventEmitted;Lkoma/core/InputId;Lkoma/core/Event;ILjava/lang/Object;)Lkoma/core/StoreTrace$EventEmitted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEvent ()Lkoma/core/Event;
+	public final fun getInput-hFruGEc ()Lkoma/core/InputId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/StoreTrace$FailureReported : koma/core/StoreTrace {
+	public synthetic fun <init> (Lkoma/core/InputId;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-hFruGEc ()Lkoma/core/InputId;
+	public final fun component2 ()Ljava/lang/Throwable;
+	public final fun copy-cDI26wg (Lkoma/core/InputId;Ljava/lang/Throwable;)Lkoma/core/StoreTrace$FailureReported;
+	public static synthetic fun copy-cDI26wg$default (Lkoma/core/StoreTrace$FailureReported;Lkoma/core/InputId;Ljava/lang/Throwable;ILjava/lang/Object;)Lkoma/core/StoreTrace$FailureReported;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/Throwable;
+	public final fun getInput-hFruGEc ()Lkoma/core/InputId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/StoreTrace$InputAccepted : koma/core/StoreTrace {
+	public synthetic fun <init> (JLkoma/core/InputKind;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-GwpR4rE ()J
+	public final fun component2 ()Lkoma/core/InputKind;
+	public final fun copy-mCnr8pY (JLkoma/core/InputKind;)Lkoma/core/StoreTrace$InputAccepted;
+	public static synthetic fun copy-mCnr8pY$default (Lkoma/core/StoreTrace$InputAccepted;JLkoma/core/InputKind;ILjava/lang/Object;)Lkoma/core/StoreTrace$InputAccepted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-GwpR4rE ()J
+	public final fun getKind ()Lkoma/core/InputKind;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/StoreTrace$InputDiscarded : koma/core/StoreTrace {
+	public synthetic fun <init> (JLkoma/core/DiscardReason;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-GwpR4rE ()J
+	public final fun component2 ()Lkoma/core/DiscardReason;
+	public final fun copy-mCnr8pY (JLkoma/core/DiscardReason;)Lkoma/core/StoreTrace$InputDiscarded;
+	public static synthetic fun copy-mCnr8pY$default (Lkoma/core/StoreTrace$InputDiscarded;JLkoma/core/DiscardReason;ILjava/lang/Object;)Lkoma/core/StoreTrace$InputDiscarded;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-GwpR4rE ()J
+	public final fun getReason ()Lkoma/core/DiscardReason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/StoreTrace$ProcessingFinished : koma/core/StoreTrace {
+	public synthetic fun <init> (JJLkoma/core/ProcessingOutcome;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-GwpR4rE ()J
+	public final fun component2 ()J
+	public final fun component3 ()Lkoma/core/ProcessingOutcome;
+	public final fun copy-nFTNPq0 (JJLkoma/core/ProcessingOutcome;)Lkoma/core/StoreTrace$ProcessingFinished;
+	public static synthetic fun copy-nFTNPq0$default (Lkoma/core/StoreTrace$ProcessingFinished;JJLkoma/core/ProcessingOutcome;ILjava/lang/Object;)Lkoma/core/StoreTrace$ProcessingFinished;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-GwpR4rE ()J
+	public final fun getOrdinal ()J
+	public final fun getOutcome ()Lkoma/core/ProcessingOutcome;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/StoreTrace$ProcessingStarted : koma/core/StoreTrace {
+	public synthetic fun <init> (JJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-GwpR4rE ()J
+	public final fun component2 ()J
+	public final fun copy-mCnr8pY (JJ)Lkoma/core/StoreTrace$ProcessingStarted;
+	public static synthetic fun copy-mCnr8pY$default (Lkoma/core/StoreTrace$ProcessingStarted;JJILjava/lang/Object;)Lkoma/core/StoreTrace$ProcessingStarted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-GwpR4rE ()J
+	public final fun getOrdinal ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/StoreTrace$StateCommitted : koma/core/StoreTrace {
+	public synthetic fun <init> (JJLkoma/core/State;Lkoma/core/State;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-GwpR4rE ()J
+	public final fun component2 ()J
+	public final fun component3 ()Lkoma/core/State;
+	public final fun component4 ()Lkoma/core/State;
+	public final fun copy-tONfdAY (JJLkoma/core/State;Lkoma/core/State;)Lkoma/core/StoreTrace$StateCommitted;
+	public static synthetic fun copy-tONfdAY$default (Lkoma/core/StoreTrace$StateCommitted;JJLkoma/core/State;Lkoma/core/State;ILjava/lang/Object;)Lkoma/core/StoreTrace$StateCommitted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-GwpR4rE ()J
+	public final fun getPrevious ()Lkoma/core/State;
+	public final fun getRevision ()J
+	public final fun getState ()Lkoma/core/State;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/core/StoreTrace$StoreClosed : koma/core/StoreTrace {
+	public static final field INSTANCE Lkoma/core/StoreTrace$StoreClosed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

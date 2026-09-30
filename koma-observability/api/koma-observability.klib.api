@@ -1,0 +1,747 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:koma-observability>
+final enum class koma.observability/Capability : kotlin/Enum<koma.observability/Capability> { // koma.observability/Capability|null[0]
+    enum entry DeterministicReplay // koma.observability/Capability.DeterministicReplay|null[0]
+    enum entry InspectOnly // koma.observability/Capability.InspectOnly|null[0]
+
+    final val entries // koma.observability/Capability.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.observability/Capability> // koma.observability/Capability.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.observability/Capability // koma.observability/Capability.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.observability/Capability> // koma.observability/Capability.values|values#static(){}[0]
+}
+
+final enum class koma.observability/DiscardKind : kotlin/Enum<koma.observability/DiscardKind> { // koma.observability/DiscardKind|null[0]
+    enum entry ClearedExplicitly // koma.observability/DiscardKind.ClearedExplicitly|null[0]
+    enum entry ClearedOnStateExit // koma.observability/DiscardKind.ClearedOnStateExit|null[0]
+    enum entry LaunchInactive // koma.observability/DiscardKind.LaunchInactive|null[0]
+    enum entry Rejected // koma.observability/DiscardKind.Rejected|null[0]
+    enum entry Stale // koma.observability/DiscardKind.Stale|null[0]
+    enum entry StartupFailed // koma.observability/DiscardKind.StartupFailed|null[0]
+    enum entry StoreClosed // koma.observability/DiscardKind.StoreClosed|null[0]
+
+    final val entries // koma.observability/DiscardKind.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.observability/DiscardKind> // koma.observability/DiscardKind.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.observability/DiscardKind // koma.observability/DiscardKind.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.observability/DiscardKind> // koma.observability/DiscardKind.values|values#static(){}[0]
+}
+
+final enum class koma.observability/ExecutionMode : kotlin/Enum<koma.observability/ExecutionMode> { // koma.observability/ExecutionMode|null[0]
+    enum entry Live // koma.observability/ExecutionMode.Live|null[0]
+    enum entry Replay // koma.observability/ExecutionMode.Replay|null[0]
+
+    final val entries // koma.observability/ExecutionMode.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.observability/ExecutionMode> // koma.observability/ExecutionMode.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.observability/ExecutionMode // koma.observability/ExecutionMode.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.observability/ExecutionMode> // koma.observability/ExecutionMode.values|values#static(){}[0]
+}
+
+final enum class koma.observability/OutcomeKind : kotlin/Enum<koma.observability/OutcomeKind> { // koma.observability/OutcomeKind|null[0]
+    enum entry Cancelled // koma.observability/OutcomeKind.Cancelled|null[0]
+    enum entry Failed // koma.observability/OutcomeKind.Failed|null[0]
+    enum entry Handled // koma.observability/OutcomeKind.Handled|null[0]
+    enum entry Ignored // koma.observability/OutcomeKind.Ignored|null[0]
+    enum entry Recovered // koma.observability/OutcomeKind.Recovered|null[0]
+    enum entry Unchanged // koma.observability/OutcomeKind.Unchanged|null[0]
+
+    final val entries // koma.observability/OutcomeKind.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.observability/OutcomeKind> // koma.observability/OutcomeKind.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.observability/OutcomeKind // koma.observability/OutcomeKind.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.observability/OutcomeKind> // koma.observability/OutcomeKind.values|values#static(){}[0]
+}
+
+abstract fun interface koma.observability/JournalSink { // koma.observability/JournalSink|null[0]
+    abstract suspend fun write(koma.observability/JournalRecord<*, *, *>) // koma.observability/JournalSink.write|write(koma.observability.JournalRecord<*,*,*>){}[0]
+}
+
+abstract interface <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.observability/PayloadPolicy { // koma.observability/PayloadPolicy|null[0]
+    abstract fun action(#B): koma.observability/Payload<#B> // koma.observability/PayloadPolicy.action|action(1:1){}[0]
+    abstract fun event(#C): koma.observability/Payload<#C> // koma.observability/PayloadPolicy.event|event(1:2){}[0]
+    abstract fun failure(kotlin/Throwable): koma.observability/FailureDescriptor // koma.observability/PayloadPolicy.failure|failure(kotlin.Throwable){}[0]
+    abstract fun state(#A): koma.observability/Payload<#A> // koma.observability/PayloadPolicy.state|state(1:0){}[0]
+
+    final object Companion { // koma.observability/PayloadPolicy.Companion|null[0]
+        final fun <#A2: koma.core/State, #B2: koma.core/Action, #C2: koma.core/Event> metadataOnly(): koma.observability/PayloadPolicy<#A2, #B2, #C2> // koma.observability/PayloadPolicy.Companion.metadataOnly|metadataOnly(){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+        final fun <#A2: koma.core/State, #B2: koma.core/Action, #C2: koma.core/Event> retainAll(): koma.observability/PayloadPolicy<#A2, #B2, #C2> // koma.observability/PayloadPolicy.Companion.retainAll|retainAll(){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+    }
+}
+
+sealed interface <#A: out koma.core/Action> koma.observability/InputDescriptor { // koma.observability/InputDescriptor|null[0]
+    final class <#A1: out koma.core/Action> Dispatch : koma.observability/InputDescriptor<#A1> { // koma.observability/InputDescriptor.Dispatch|null[0]
+        constructor <init>(koma.observability/Payload<#A1>) // koma.observability/InputDescriptor.Dispatch.<init>|<init>(koma.observability.Payload<1:0>){}[0]
+
+        final val action // koma.observability/InputDescriptor.Dispatch.action|{}action[0]
+            final fun <get-action>(): koma.observability/Payload<#A1> // koma.observability/InputDescriptor.Dispatch.action.<get-action>|<get-action>(){}[0]
+
+        final fun component1(): koma.observability/Payload<#A1> // koma.observability/InputDescriptor.Dispatch.component1|component1(){}[0]
+        final fun copy(koma.observability/Payload<#A1> = ...): koma.observability/InputDescriptor.Dispatch<#A1> // koma.observability/InputDescriptor.Dispatch.copy|copy(koma.observability.Payload<1:0>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/InputDescriptor.Dispatch.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/InputDescriptor.Dispatch.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/InputDescriptor.Dispatch.toString|toString(){}[0]
+    }
+
+    final class Recovery : koma.observability/InputDescriptor<kotlin/Nothing> { // koma.observability/InputDescriptor.Recovery|null[0]
+        constructor <init>(koma.observability/FailureDescriptor, koma.core/InputId?) // koma.observability/InputDescriptor.Recovery.<init>|<init>(koma.observability.FailureDescriptor;koma.core.InputId?){}[0]
+
+        final val failure // koma.observability/InputDescriptor.Recovery.failure|{}failure[0]
+            final fun <get-failure>(): koma.observability/FailureDescriptor // koma.observability/InputDescriptor.Recovery.failure.<get-failure>|<get-failure>(){}[0]
+        final val origin // koma.observability/InputDescriptor.Recovery.origin|{}origin[0]
+            final fun <get-origin>(): koma.core/InputId? // koma.observability/InputDescriptor.Recovery.origin.<get-origin>|<get-origin>(){}[0]
+
+        final fun component1(): koma.observability/FailureDescriptor // koma.observability/InputDescriptor.Recovery.component1|component1(){}[0]
+        final fun component2(): koma.core/InputId? // koma.observability/InputDescriptor.Recovery.component2|component2(){}[0]
+        final fun copy(koma.observability/FailureDescriptor = ..., koma.core/InputId? = ...): koma.observability/InputDescriptor.Recovery // koma.observability/InputDescriptor.Recovery.copy|copy(koma.observability.FailureDescriptor;koma.core.InputId?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/InputDescriptor.Recovery.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/InputDescriptor.Recovery.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/InputDescriptor.Recovery.toString|toString(){}[0]
+    }
+
+    final class Transaction : koma.observability/InputDescriptor<kotlin/Nothing> { // koma.observability/InputDescriptor.Transaction|null[0]
+        constructor <init>(koma.core/InputId?) // koma.observability/InputDescriptor.Transaction.<init>|<init>(koma.core.InputId?){}[0]
+
+        final val origin // koma.observability/InputDescriptor.Transaction.origin|{}origin[0]
+            final fun <get-origin>(): koma.core/InputId? // koma.observability/InputDescriptor.Transaction.origin.<get-origin>|<get-origin>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.observability/InputDescriptor.Transaction.component1|component1(){}[0]
+        final fun copy(koma.core/InputId? = ...): koma.observability/InputDescriptor.Transaction // koma.observability/InputDescriptor.Transaction.copy|copy(koma.core.InputId?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/InputDescriptor.Transaction.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/InputDescriptor.Transaction.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/InputDescriptor.Transaction.toString|toString(){}[0]
+    }
+
+    final object Startup : koma.observability/InputDescriptor<kotlin/Nothing> { // koma.observability/InputDescriptor.Startup|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/InputDescriptor.Startup.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/InputDescriptor.Startup.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/InputDescriptor.Startup.toString|toString(){}[0]
+    }
+}
+
+sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out koma.core/Event> koma.observability/JournalEntry { // koma.observability/JournalEntry|null[0]
+    final class <#A1: out koma.core/Action> InputAccepted : koma.observability/JournalEntry<kotlin/Nothing, #A1, kotlin/Nothing> { // koma.observability/JournalEntry.InputAccepted|null[0]
+        constructor <init>(koma.core/InputId, koma.observability/InputDescriptor<#A1>) // koma.observability/JournalEntry.InputAccepted.<init>|<init>(koma.core.InputId;koma.observability.InputDescriptor<1:0>){}[0]
+
+        final val input // koma.observability/JournalEntry.InputAccepted.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.observability/JournalEntry.InputAccepted.input.<get-input>|<get-input>(){}[0]
+        final val kind // koma.observability/JournalEntry.InputAccepted.kind|{}kind[0]
+            final fun <get-kind>(): koma.observability/InputDescriptor<#A1> // koma.observability/JournalEntry.InputAccepted.kind.<get-kind>|<get-kind>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.observability/JournalEntry.InputAccepted.component1|component1(){}[0]
+        final fun component2(): koma.observability/InputDescriptor<#A1> // koma.observability/JournalEntry.InputAccepted.component2|component2(){}[0]
+        final fun copy(koma.core/InputId = ..., koma.observability/InputDescriptor<#A1> = ...): koma.observability/JournalEntry.InputAccepted<#A1> // koma.observability/JournalEntry.InputAccepted.copy|copy(koma.core.InputId;koma.observability.InputDescriptor<1:0>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.InputAccepted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.InputAccepted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.InputAccepted.toString|toString(){}[0]
+    }
+
+    final class <#A1: out koma.core/Action> InputRejected : koma.observability/JournalEntry<kotlin/Nothing, #A1, kotlin/Nothing> { // koma.observability/JournalEntry.InputRejected|null[0]
+        constructor <init>(koma.observability/Payload<#A1>, kotlin/String) // koma.observability/JournalEntry.InputRejected.<init>|<init>(koma.observability.Payload<1:0>;kotlin.String){}[0]
+
+        final val action // koma.observability/JournalEntry.InputRejected.action|{}action[0]
+            final fun <get-action>(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.InputRejected.action.<get-action>|<get-action>(){}[0]
+        final val reason // koma.observability/JournalEntry.InputRejected.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.observability/JournalEntry.InputRejected.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.InputRejected.component1|component1(){}[0]
+        final fun component2(): kotlin/String // koma.observability/JournalEntry.InputRejected.component2|component2(){}[0]
+        final fun copy(koma.observability/Payload<#A1> = ..., kotlin/String = ...): koma.observability/JournalEntry.InputRejected<#A1> // koma.observability/JournalEntry.InputRejected.copy|copy(koma.observability.Payload<1:0>;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.InputRejected.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.InputRejected.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.InputRejected.toString|toString(){}[0]
+    }
+
+    final class <#A1: out koma.core/Event> EventEmitted : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, #A1> { // koma.observability/JournalEntry.EventEmitted|null[0]
+        constructor <init>(koma.core/InputId?, koma.observability/Payload<#A1>) // koma.observability/JournalEntry.EventEmitted.<init>|<init>(koma.core.InputId?;koma.observability.Payload<1:0>){}[0]
+
+        final val event // koma.observability/JournalEntry.EventEmitted.event|{}event[0]
+            final fun <get-event>(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.EventEmitted.event.<get-event>|<get-event>(){}[0]
+        final val input // koma.observability/JournalEntry.EventEmitted.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId? // koma.observability/JournalEntry.EventEmitted.input.<get-input>|<get-input>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.observability/JournalEntry.EventEmitted.component1|component1(){}[0]
+        final fun component2(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.EventEmitted.component2|component2(){}[0]
+        final fun copy(koma.core/InputId? = ..., koma.observability/Payload<#A1> = ...): koma.observability/JournalEntry.EventEmitted<#A1> // koma.observability/JournalEntry.EventEmitted.copy|copy(koma.core.InputId?;koma.observability.Payload<1:0>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.EventEmitted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.EventEmitted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.EventEmitted.toString|toString(){}[0]
+    }
+
+    final class <#A1: out koma.core/State> StateCommitted : koma.observability/JournalEntry<#A1, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.StateCommitted|null[0]
+        constructor <init>(koma.core/InputId, kotlin/Long, koma.observability/Payload<#A1>, koma.observability/Payload<#A1>) // koma.observability/JournalEntry.StateCommitted.<init>|<init>(koma.core.InputId;kotlin.Long;koma.observability.Payload<1:0>;koma.observability.Payload<1:0>){}[0]
+
+        final val input // koma.observability/JournalEntry.StateCommitted.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.observability/JournalEntry.StateCommitted.input.<get-input>|<get-input>(){}[0]
+        final val previous // koma.observability/JournalEntry.StateCommitted.previous|{}previous[0]
+            final fun <get-previous>(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.StateCommitted.previous.<get-previous>|<get-previous>(){}[0]
+        final val revision // koma.observability/JournalEntry.StateCommitted.revision|{}revision[0]
+            final fun <get-revision>(): kotlin/Long // koma.observability/JournalEntry.StateCommitted.revision.<get-revision>|<get-revision>(){}[0]
+        final val state // koma.observability/JournalEntry.StateCommitted.state|{}state[0]
+            final fun <get-state>(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.StateCommitted.state.<get-state>|<get-state>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.observability/JournalEntry.StateCommitted.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // koma.observability/JournalEntry.StateCommitted.component2|component2(){}[0]
+        final fun component3(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.StateCommitted.component3|component3(){}[0]
+        final fun component4(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.StateCommitted.component4|component4(){}[0]
+        final fun copy(koma.core/InputId = ..., kotlin/Long = ..., koma.observability/Payload<#A1> = ..., koma.observability/Payload<#A1> = ...): koma.observability/JournalEntry.StateCommitted<#A1> // koma.observability/JournalEntry.StateCommitted.copy|copy(koma.core.InputId;kotlin.Long;koma.observability.Payload<1:0>;koma.observability.Payload<1:0>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.StateCommitted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.StateCommitted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.StateCommitted.toString|toString(){}[0]
+    }
+
+    final class DecisionCommitted : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.DecisionCommitted|null[0]
+        constructor <init>(koma.core/InputId?, kotlin/Long, kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/Int>, kotlin.collections/List<koma.observability/ActivationRef>, kotlin.collections/List<koma.observability/ActivationRef>, kotlin.collections/List<koma.observability/CommandRef>, kotlin.collections/List<kotlin/Long>, kotlin.collections/List<koma.observability/TimerRef>, kotlin.collections/List<kotlin/Long>, kotlin/Int) // koma.observability/JournalEntry.DecisionCommitted.<init>|<init>(koma.core.InputId?;kotlin.Long;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<koma.observability.ActivationRef>;kotlin.collections.List<koma.observability.ActivationRef>;kotlin.collections.List<koma.observability.CommandRef>;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<koma.observability.TimerRef>;kotlin.collections.List<kotlin.Long>;kotlin.Int){}[0]
+
+        final val active // koma.observability/JournalEntry.DecisionCommitted.active|{}active[0]
+            final fun <get-active>(): kotlin.collections/List<kotlin/String> // koma.observability/JournalEntry.DecisionCommitted.active.<get-active>|<get-active>(){}[0]
+        final val cancelledScopes // koma.observability/JournalEntry.DecisionCommitted.cancelledScopes|{}cancelledScopes[0]
+            final fun <get-cancelledScopes>(): kotlin.collections/List<kotlin/Long> // koma.observability/JournalEntry.DecisionCommitted.cancelledScopes.<get-cancelledScopes>|<get-cancelledScopes>(){}[0]
+        final val commands // koma.observability/JournalEntry.DecisionCommitted.commands|{}commands[0]
+            final fun <get-commands>(): kotlin.collections/List<koma.observability/CommandRef> // koma.observability/JournalEntry.DecisionCommitted.commands.<get-commands>|<get-commands>(){}[0]
+        final val effects // koma.observability/JournalEntry.DecisionCommitted.effects|{}effects[0]
+            final fun <get-effects>(): kotlin/Int // koma.observability/JournalEntry.DecisionCommitted.effects.<get-effects>|<get-effects>(){}[0]
+        final val entered // koma.observability/JournalEntry.DecisionCommitted.entered|{}entered[0]
+            final fun <get-entered>(): kotlin.collections/List<koma.observability/ActivationRef> // koma.observability/JournalEntry.DecisionCommitted.entered.<get-entered>|<get-entered>(){}[0]
+        final val exited // koma.observability/JournalEntry.DecisionCommitted.exited|{}exited[0]
+            final fun <get-exited>(): kotlin.collections/List<koma.observability/ActivationRef> // koma.observability/JournalEntry.DecisionCommitted.exited.<get-exited>|<get-exited>(){}[0]
+        final val input // koma.observability/JournalEntry.DecisionCommitted.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId? // koma.observability/JournalEntry.DecisionCommitted.input.<get-input>|<get-input>(){}[0]
+        final val revision // koma.observability/JournalEntry.DecisionCommitted.revision|{}revision[0]
+            final fun <get-revision>(): kotlin/Long // koma.observability/JournalEntry.DecisionCommitted.revision.<get-revision>|<get-revision>(){}[0]
+        final val timersCancelled // koma.observability/JournalEntry.DecisionCommitted.timersCancelled|{}timersCancelled[0]
+            final fun <get-timersCancelled>(): kotlin.collections/List<kotlin/Long> // koma.observability/JournalEntry.DecisionCommitted.timersCancelled.<get-timersCancelled>|<get-timersCancelled>(){}[0]
+        final val timersScheduled // koma.observability/JournalEntry.DecisionCommitted.timersScheduled|{}timersScheduled[0]
+            final fun <get-timersScheduled>(): kotlin.collections/List<koma.observability/TimerRef> // koma.observability/JournalEntry.DecisionCommitted.timersScheduled.<get-timersScheduled>|<get-timersScheduled>(){}[0]
+        final val transitions // koma.observability/JournalEntry.DecisionCommitted.transitions|{}transitions[0]
+            final fun <get-transitions>(): kotlin.collections/List<kotlin/Int> // koma.observability/JournalEntry.DecisionCommitted.transitions.<get-transitions>|<get-transitions>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.observability/JournalEntry.DecisionCommitted.component1|component1(){}[0]
+        final fun component10(): kotlin.collections/List<kotlin/Long> // koma.observability/JournalEntry.DecisionCommitted.component10|component10(){}[0]
+        final fun component11(): kotlin/Int // koma.observability/JournalEntry.DecisionCommitted.component11|component11(){}[0]
+        final fun component2(): kotlin/Long // koma.observability/JournalEntry.DecisionCommitted.component2|component2(){}[0]
+        final fun component3(): kotlin.collections/List<kotlin/String> // koma.observability/JournalEntry.DecisionCommitted.component3|component3(){}[0]
+        final fun component4(): kotlin.collections/List<kotlin/Int> // koma.observability/JournalEntry.DecisionCommitted.component4|component4(){}[0]
+        final fun component5(): kotlin.collections/List<koma.observability/ActivationRef> // koma.observability/JournalEntry.DecisionCommitted.component5|component5(){}[0]
+        final fun component6(): kotlin.collections/List<koma.observability/ActivationRef> // koma.observability/JournalEntry.DecisionCommitted.component6|component6(){}[0]
+        final fun component7(): kotlin.collections/List<koma.observability/CommandRef> // koma.observability/JournalEntry.DecisionCommitted.component7|component7(){}[0]
+        final fun component8(): kotlin.collections/List<kotlin/Long> // koma.observability/JournalEntry.DecisionCommitted.component8|component8(){}[0]
+        final fun component9(): kotlin.collections/List<koma.observability/TimerRef> // koma.observability/JournalEntry.DecisionCommitted.component9|component9(){}[0]
+        final fun copy(koma.core/InputId? = ..., kotlin/Long = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<kotlin/Int> = ..., kotlin.collections/List<koma.observability/ActivationRef> = ..., kotlin.collections/List<koma.observability/ActivationRef> = ..., kotlin.collections/List<koma.observability/CommandRef> = ..., kotlin.collections/List<kotlin/Long> = ..., kotlin.collections/List<koma.observability/TimerRef> = ..., kotlin.collections/List<kotlin/Long> = ..., kotlin/Int = ...): koma.observability/JournalEntry.DecisionCommitted // koma.observability/JournalEntry.DecisionCommitted.copy|copy(koma.core.InputId?;kotlin.Long;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<koma.observability.ActivationRef>;kotlin.collections.List<koma.observability.ActivationRef>;kotlin.collections.List<koma.observability.CommandRef>;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<koma.observability.TimerRef>;kotlin.collections.List<kotlin.Long>;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.DecisionCommitted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.DecisionCommitted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.DecisionCommitted.toString|toString(){}[0]
+    }
+
+    final class DecisionIgnored : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.DecisionIgnored|null[0]
+        constructor <init>(koma.core/InputId?, kotlin/String) // koma.observability/JournalEntry.DecisionIgnored.<init>|<init>(koma.core.InputId?;kotlin.String){}[0]
+
+        final val input // koma.observability/JournalEntry.DecisionIgnored.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId? // koma.observability/JournalEntry.DecisionIgnored.input.<get-input>|<get-input>(){}[0]
+        final val reason // koma.observability/JournalEntry.DecisionIgnored.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.observability/JournalEntry.DecisionIgnored.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.observability/JournalEntry.DecisionIgnored.component1|component1(){}[0]
+        final fun component2(): kotlin/String // koma.observability/JournalEntry.DecisionIgnored.component2|component2(){}[0]
+        final fun copy(koma.core/InputId? = ..., kotlin/String = ...): koma.observability/JournalEntry.DecisionIgnored // koma.observability/JournalEntry.DecisionIgnored.copy|copy(koma.core.InputId?;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.DecisionIgnored.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.DecisionIgnored.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.DecisionIgnored.toString|toString(){}[0]
+    }
+
+    final class FailureReported : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.FailureReported|null[0]
+        constructor <init>(koma.core/InputId?, koma.observability/FailureDescriptor) // koma.observability/JournalEntry.FailureReported.<init>|<init>(koma.core.InputId?;koma.observability.FailureDescriptor){}[0]
+
+        final val failure // koma.observability/JournalEntry.FailureReported.failure|{}failure[0]
+            final fun <get-failure>(): koma.observability/FailureDescriptor // koma.observability/JournalEntry.FailureReported.failure.<get-failure>|<get-failure>(){}[0]
+        final val input // koma.observability/JournalEntry.FailureReported.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId? // koma.observability/JournalEntry.FailureReported.input.<get-input>|<get-input>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.observability/JournalEntry.FailureReported.component1|component1(){}[0]
+        final fun component2(): koma.observability/FailureDescriptor // koma.observability/JournalEntry.FailureReported.component2|component2(){}[0]
+        final fun copy(koma.core/InputId? = ..., koma.observability/FailureDescriptor = ...): koma.observability/JournalEntry.FailureReported // koma.observability/JournalEntry.FailureReported.copy|copy(koma.core.InputId?;koma.observability.FailureDescriptor){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.FailureReported.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.FailureReported.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.FailureReported.toString|toString(){}[0]
+    }
+
+    final class InputDiscarded : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.InputDiscarded|null[0]
+        constructor <init>(koma.core/InputId, koma.observability/DiscardDescriptor) // koma.observability/JournalEntry.InputDiscarded.<init>|<init>(koma.core.InputId;koma.observability.DiscardDescriptor){}[0]
+
+        final val input // koma.observability/JournalEntry.InputDiscarded.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.observability/JournalEntry.InputDiscarded.input.<get-input>|<get-input>(){}[0]
+        final val reason // koma.observability/JournalEntry.InputDiscarded.reason|{}reason[0]
+            final fun <get-reason>(): koma.observability/DiscardDescriptor // koma.observability/JournalEntry.InputDiscarded.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.observability/JournalEntry.InputDiscarded.component1|component1(){}[0]
+        final fun component2(): koma.observability/DiscardDescriptor // koma.observability/JournalEntry.InputDiscarded.component2|component2(){}[0]
+        final fun copy(koma.core/InputId = ..., koma.observability/DiscardDescriptor = ...): koma.observability/JournalEntry.InputDiscarded // koma.observability/JournalEntry.InputDiscarded.copy|copy(koma.core.InputId;koma.observability.DiscardDescriptor){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.InputDiscarded.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.InputDiscarded.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.InputDiscarded.toString|toString(){}[0]
+    }
+
+    final class JournalGap : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.JournalGap|null[0]
+        constructor <init>(kotlin/Long) // koma.observability/JournalEntry.JournalGap.<init>|<init>(kotlin.Long){}[0]
+
+        final val dropped // koma.observability/JournalEntry.JournalGap.dropped|{}dropped[0]
+            final fun <get-dropped>(): kotlin/Long // koma.observability/JournalEntry.JournalGap.dropped.<get-dropped>|<get-dropped>(){}[0]
+
+        final fun component1(): kotlin/Long // koma.observability/JournalEntry.JournalGap.component1|component1(){}[0]
+        final fun copy(kotlin/Long = ...): koma.observability/JournalEntry.JournalGap // koma.observability/JournalEntry.JournalGap.copy|copy(kotlin.Long){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.JournalGap.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.JournalGap.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.JournalGap.toString|toString(){}[0]
+    }
+
+    final class ProcessingFinished : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.ProcessingFinished|null[0]
+        constructor <init>(koma.core/InputId, kotlin/Long, koma.observability/OutcomeDescriptor, kotlin.time/Duration) // koma.observability/JournalEntry.ProcessingFinished.<init>|<init>(koma.core.InputId;kotlin.Long;koma.observability.OutcomeDescriptor;kotlin.time.Duration){}[0]
+
+        final val duration // koma.observability/JournalEntry.ProcessingFinished.duration|{}duration[0]
+            final fun <get-duration>(): kotlin.time/Duration // koma.observability/JournalEntry.ProcessingFinished.duration.<get-duration>|<get-duration>(){}[0]
+        final val input // koma.observability/JournalEntry.ProcessingFinished.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.observability/JournalEntry.ProcessingFinished.input.<get-input>|<get-input>(){}[0]
+        final val ordinal // koma.observability/JournalEntry.ProcessingFinished.ordinal|{}ordinal[0]
+            final fun <get-ordinal>(): kotlin/Long // koma.observability/JournalEntry.ProcessingFinished.ordinal.<get-ordinal>|<get-ordinal>(){}[0]
+        final val outcome // koma.observability/JournalEntry.ProcessingFinished.outcome|{}outcome[0]
+            final fun <get-outcome>(): koma.observability/OutcomeDescriptor // koma.observability/JournalEntry.ProcessingFinished.outcome.<get-outcome>|<get-outcome>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.observability/JournalEntry.ProcessingFinished.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // koma.observability/JournalEntry.ProcessingFinished.component2|component2(){}[0]
+        final fun component3(): koma.observability/OutcomeDescriptor // koma.observability/JournalEntry.ProcessingFinished.component3|component3(){}[0]
+        final fun component4(): kotlin.time/Duration // koma.observability/JournalEntry.ProcessingFinished.component4|component4(){}[0]
+        final fun copy(koma.core/InputId = ..., kotlin/Long = ..., koma.observability/OutcomeDescriptor = ..., kotlin.time/Duration = ...): koma.observability/JournalEntry.ProcessingFinished // koma.observability/JournalEntry.ProcessingFinished.copy|copy(koma.core.InputId;kotlin.Long;koma.observability.OutcomeDescriptor;kotlin.time.Duration){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.ProcessingFinished.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.ProcessingFinished.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.ProcessingFinished.toString|toString(){}[0]
+    }
+
+    final class ProcessingStarted : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.ProcessingStarted|null[0]
+        constructor <init>(koma.core/InputId, kotlin/Long) // koma.observability/JournalEntry.ProcessingStarted.<init>|<init>(koma.core.InputId;kotlin.Long){}[0]
+
+        final val input // koma.observability/JournalEntry.ProcessingStarted.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.observability/JournalEntry.ProcessingStarted.input.<get-input>|<get-input>(){}[0]
+        final val ordinal // koma.observability/JournalEntry.ProcessingStarted.ordinal|{}ordinal[0]
+            final fun <get-ordinal>(): kotlin/Long // koma.observability/JournalEntry.ProcessingStarted.ordinal.<get-ordinal>|<get-ordinal>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.observability/JournalEntry.ProcessingStarted.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // koma.observability/JournalEntry.ProcessingStarted.component2|component2(){}[0]
+        final fun copy(koma.core/InputId = ..., kotlin/Long = ...): koma.observability/JournalEntry.ProcessingStarted // koma.observability/JournalEntry.ProcessingStarted.copy|copy(koma.core.InputId;kotlin.Long){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.ProcessingStarted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.ProcessingStarted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.ProcessingStarted.toString|toString(){}[0]
+    }
+
+    final class StoreRegistered : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.StoreRegistered|null[0]
+        constructor <init>(koma.observability/Capability) // koma.observability/JournalEntry.StoreRegistered.<init>|<init>(koma.observability.Capability){}[0]
+
+        final val capability // koma.observability/JournalEntry.StoreRegistered.capability|{}capability[0]
+            final fun <get-capability>(): koma.observability/Capability // koma.observability/JournalEntry.StoreRegistered.capability.<get-capability>|<get-capability>(){}[0]
+
+        final fun component1(): koma.observability/Capability // koma.observability/JournalEntry.StoreRegistered.component1|component1(){}[0]
+        final fun copy(koma.observability/Capability = ...): koma.observability/JournalEntry.StoreRegistered // koma.observability/JournalEntry.StoreRegistered.copy|copy(koma.observability.Capability){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.StoreRegistered.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.StoreRegistered.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.StoreRegistered.toString|toString(){}[0]
+    }
+
+    final object RecordingStopped : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.RecordingStopped|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.RecordingStopped.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.RecordingStopped.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.RecordingStopped.toString|toString(){}[0]
+    }
+
+    final object StoreClosed : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.StoreClosed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.StoreClosed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.StoreClosed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.StoreClosed.toString|toString(){}[0]
+    }
+}
+
+sealed interface <#A: out kotlin/Any?> koma.observability/Payload { // koma.observability/Payload|null[0]
+    final class <#A1: out kotlin/Any?> Retained : koma.observability/Payload<#A1> { // koma.observability/Payload.Retained|null[0]
+        constructor <init>(#A1) // koma.observability/Payload.Retained.<init>|<init>(1:0){}[0]
+
+        final val value // koma.observability/Payload.Retained.value|{}value[0]
+            final fun <get-value>(): #A1 // koma.observability/Payload.Retained.value.<get-value>|<get-value>(){}[0]
+
+        final fun component1(): #A1 // koma.observability/Payload.Retained.component1|component1(){}[0]
+        final fun copy(#A1 = ...): koma.observability/Payload.Retained<#A1> // koma.observability/Payload.Retained.copy|copy(1:0){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/Payload.Retained.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/Payload.Retained.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/Payload.Retained.toString|toString(){}[0]
+    }
+
+    final class Projected : koma.observability/Payload<kotlin/Nothing> { // koma.observability/Payload.Projected|null[0]
+        constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // koma.observability/Payload.Projected.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+
+        final val fields // koma.observability/Payload.Projected.fields|{}fields[0]
+            final fun <get-fields>(): kotlin.collections/Map<kotlin/String, kotlin/String> // koma.observability/Payload.Projected.fields.<get-fields>|<get-fields>(){}[0]
+        final val label // koma.observability/Payload.Projected.label|{}label[0]
+            final fun <get-label>(): kotlin/String // koma.observability/Payload.Projected.label.<get-label>|<get-label>(){}[0]
+
+        final fun component1(): kotlin/String // koma.observability/Payload.Projected.component1|component1(){}[0]
+        final fun component2(): kotlin.collections/Map<kotlin/String, kotlin/String> // koma.observability/Payload.Projected.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...): koma.observability/Payload.Projected // koma.observability/Payload.Projected.copy|copy(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/Payload.Projected.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/Payload.Projected.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/Payload.Projected.toString|toString(){}[0]
+    }
+
+    final object Omitted : koma.observability/Payload<kotlin/Nothing> { // koma.observability/Payload.Omitted|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/Payload.Omitted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/Payload.Omitted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/Payload.Omitted.toString|toString(){}[0]
+    }
+
+    final object Unavailable : koma.observability/Payload<kotlin/Nothing> { // koma.observability/Payload.Unavailable|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/Payload.Unavailable.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/Payload.Unavailable.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/Payload.Unavailable.toString|toString(){}[0]
+    }
+}
+
+sealed interface koma.observability/JournalFailure { // koma.observability/JournalFailure|null[0]
+    final class PolicyFailed : koma.observability/JournalFailure { // koma.observability/JournalFailure.PolicyFailed|null[0]
+        constructor <init>(koma.observability/StoreInstanceId, kotlin/Throwable) // koma.observability/JournalFailure.PolicyFailed.<init>|<init>(koma.observability.StoreInstanceId;kotlin.Throwable){}[0]
+
+        final val error // koma.observability/JournalFailure.PolicyFailed.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // koma.observability/JournalFailure.PolicyFailed.error.<get-error>|<get-error>(){}[0]
+        final val store // koma.observability/JournalFailure.PolicyFailed.store|{}store[0]
+            final fun <get-store>(): koma.observability/StoreInstanceId // koma.observability/JournalFailure.PolicyFailed.store.<get-store>|<get-store>(){}[0]
+
+        final fun component1(): koma.observability/StoreInstanceId // koma.observability/JournalFailure.PolicyFailed.component1|component1(){}[0]
+        final fun component2(): kotlin/Throwable // koma.observability/JournalFailure.PolicyFailed.component2|component2(){}[0]
+        final fun copy(koma.observability/StoreInstanceId = ..., kotlin/Throwable = ...): koma.observability/JournalFailure.PolicyFailed // koma.observability/JournalFailure.PolicyFailed.copy|copy(koma.observability.StoreInstanceId;kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalFailure.PolicyFailed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalFailure.PolicyFailed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalFailure.PolicyFailed.toString|toString(){}[0]
+    }
+
+    final class SinkFailed : koma.observability/JournalFailure { // koma.observability/JournalFailure.SinkFailed|null[0]
+        constructor <init>(koma.observability/JournalSink, kotlin/Throwable) // koma.observability/JournalFailure.SinkFailed.<init>|<init>(koma.observability.JournalSink;kotlin.Throwable){}[0]
+
+        final val error // koma.observability/JournalFailure.SinkFailed.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // koma.observability/JournalFailure.SinkFailed.error.<get-error>|<get-error>(){}[0]
+        final val sink // koma.observability/JournalFailure.SinkFailed.sink|{}sink[0]
+            final fun <get-sink>(): koma.observability/JournalSink // koma.observability/JournalFailure.SinkFailed.sink.<get-sink>|<get-sink>(){}[0]
+
+        final fun component1(): koma.observability/JournalSink // koma.observability/JournalFailure.SinkFailed.component1|component1(){}[0]
+        final fun component2(): kotlin/Throwable // koma.observability/JournalFailure.SinkFailed.component2|component2(){}[0]
+        final fun copy(koma.observability/JournalSink = ..., kotlin/Throwable = ...): koma.observability/JournalFailure.SinkFailed // koma.observability/JournalFailure.SinkFailed.copy|copy(koma.observability.JournalSink;kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalFailure.SinkFailed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalFailure.SinkFailed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalFailure.SinkFailed.toString|toString(){}[0]
+    }
+}
+
+final class <#A: out koma.core/State, #B: out koma.core/Action, #C: out koma.core/Event> koma.observability/JournalRecord { // koma.observability/JournalRecord|null[0]
+    constructor <init>(kotlin/Int, koma.observability/RuntimeSessionId, koma.observability/MachineGroupId, koma.observability/StoreInstanceId?, koma.observability/ExecutionMode, koma.observability/GroupSeq, koma.observability/StoreSeq?, kotlin.time/Duration, koma.observability/JournalEntry<#A, #B, #C>) // koma.observability/JournalRecord.<init>|<init>(kotlin.Int;koma.observability.RuntimeSessionId;koma.observability.MachineGroupId;koma.observability.StoreInstanceId?;koma.observability.ExecutionMode;koma.observability.GroupSeq;koma.observability.StoreSeq?;kotlin.time.Duration;koma.observability.JournalEntry<1:0,1:1,1:2>){}[0]
+
+    final val elapsed // koma.observability/JournalRecord.elapsed|{}elapsed[0]
+        final fun <get-elapsed>(): kotlin.time/Duration // koma.observability/JournalRecord.elapsed.<get-elapsed>|<get-elapsed>(){}[0]
+    final val entry // koma.observability/JournalRecord.entry|{}entry[0]
+        final fun <get-entry>(): koma.observability/JournalEntry<#A, #B, #C> // koma.observability/JournalRecord.entry.<get-entry>|<get-entry>(){}[0]
+    final val formatVersion // koma.observability/JournalRecord.formatVersion|{}formatVersion[0]
+        final fun <get-formatVersion>(): kotlin/Int // koma.observability/JournalRecord.formatVersion.<get-formatVersion>|<get-formatVersion>(){}[0]
+    final val group // koma.observability/JournalRecord.group|{}group[0]
+        final fun <get-group>(): koma.observability/MachineGroupId // koma.observability/JournalRecord.group.<get-group>|<get-group>(){}[0]
+    final val groupSeq // koma.observability/JournalRecord.groupSeq|{}groupSeq[0]
+        final fun <get-groupSeq>(): koma.observability/GroupSeq // koma.observability/JournalRecord.groupSeq.<get-groupSeq>|<get-groupSeq>(){}[0]
+    final val mode // koma.observability/JournalRecord.mode|{}mode[0]
+        final fun <get-mode>(): koma.observability/ExecutionMode // koma.observability/JournalRecord.mode.<get-mode>|<get-mode>(){}[0]
+    final val session // koma.observability/JournalRecord.session|{}session[0]
+        final fun <get-session>(): koma.observability/RuntimeSessionId // koma.observability/JournalRecord.session.<get-session>|<get-session>(){}[0]
+    final val store // koma.observability/JournalRecord.store|{}store[0]
+        final fun <get-store>(): koma.observability/StoreInstanceId? // koma.observability/JournalRecord.store.<get-store>|<get-store>(){}[0]
+    final val storeSeq // koma.observability/JournalRecord.storeSeq|{}storeSeq[0]
+        final fun <get-storeSeq>(): koma.observability/StoreSeq? // koma.observability/JournalRecord.storeSeq.<get-storeSeq>|<get-storeSeq>(){}[0]
+
+    final fun component1(): kotlin/Int // koma.observability/JournalRecord.component1|component1(){}[0]
+    final fun component2(): koma.observability/RuntimeSessionId // koma.observability/JournalRecord.component2|component2(){}[0]
+    final fun component3(): koma.observability/MachineGroupId // koma.observability/JournalRecord.component3|component3(){}[0]
+    final fun component4(): koma.observability/StoreInstanceId? // koma.observability/JournalRecord.component4|component4(){}[0]
+    final fun component5(): koma.observability/ExecutionMode // koma.observability/JournalRecord.component5|component5(){}[0]
+    final fun component6(): koma.observability/GroupSeq // koma.observability/JournalRecord.component6|component6(){}[0]
+    final fun component7(): koma.observability/StoreSeq? // koma.observability/JournalRecord.component7|component7(){}[0]
+    final fun component8(): kotlin.time/Duration // koma.observability/JournalRecord.component8|component8(){}[0]
+    final fun component9(): koma.observability/JournalEntry<#A, #B, #C> // koma.observability/JournalRecord.component9|component9(){}[0]
+    final fun copy(kotlin/Int = ..., koma.observability/RuntimeSessionId = ..., koma.observability/MachineGroupId = ..., koma.observability/StoreInstanceId? = ..., koma.observability/ExecutionMode = ..., koma.observability/GroupSeq = ..., koma.observability/StoreSeq? = ..., kotlin.time/Duration = ..., koma.observability/JournalEntry<#A, #B, #C> = ...): koma.observability/JournalRecord<#A, #B, #C> // koma.observability/JournalRecord.copy|copy(kotlin.Int;koma.observability.RuntimeSessionId;koma.observability.MachineGroupId;koma.observability.StoreInstanceId?;koma.observability.ExecutionMode;koma.observability.GroupSeq;koma.observability.StoreSeq?;kotlin.time.Duration;koma.observability.JournalEntry<1:0,1:1,1:2>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalRecord.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/JournalRecord.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/JournalRecord.toString|toString(){}[0]
+}
+
+final class koma.observability/ActivationRef { // koma.observability/ActivationRef|null[0]
+    constructor <init>(kotlin/String, kotlin/Long) // koma.observability/ActivationRef.<init>|<init>(kotlin.String;kotlin.Long){}[0]
+
+    final val activation // koma.observability/ActivationRef.activation|{}activation[0]
+        final fun <get-activation>(): kotlin/Long // koma.observability/ActivationRef.activation.<get-activation>|<get-activation>(){}[0]
+    final val node // koma.observability/ActivationRef.node|{}node[0]
+        final fun <get-node>(): kotlin/String // koma.observability/ActivationRef.node.<get-node>|<get-node>(){}[0]
+
+    final fun component1(): kotlin/String // koma.observability/ActivationRef.component1|component1(){}[0]
+    final fun component2(): kotlin/Long // koma.observability/ActivationRef.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Long = ...): koma.observability/ActivationRef // koma.observability/ActivationRef.copy|copy(kotlin.String;kotlin.Long){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/ActivationRef.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/ActivationRef.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/ActivationRef.toString|toString(){}[0]
+}
+
+final class koma.observability/CommandRef { // koma.observability/CommandRef|null[0]
+    constructor <init>(kotlin/Long, kotlin/Long, kotlin/String?, kotlin/String?, koma.observability/Payload<kotlin/Any?>) // koma.observability/CommandRef.<init>|<init>(kotlin.Long;kotlin.Long;kotlin.String?;kotlin.String?;koma.observability.Payload<kotlin.Any?>){}[0]
+
+    final val command // koma.observability/CommandRef.command|{}command[0]
+        final fun <get-command>(): koma.observability/Payload<kotlin/Any?> // koma.observability/CommandRef.command.<get-command>|<get-command>(){}[0]
+    final val id // koma.observability/CommandRef.id|{}id[0]
+        final fun <get-id>(): kotlin/Long // koma.observability/CommandRef.id.<get-id>|<get-id>(){}[0]
+    final val lane // koma.observability/CommandRef.lane|{}lane[0]
+        final fun <get-lane>(): kotlin/String? // koma.observability/CommandRef.lane.<get-lane>|<get-lane>(){}[0]
+    final val policy // koma.observability/CommandRef.policy|{}policy[0]
+        final fun <get-policy>(): kotlin/String? // koma.observability/CommandRef.policy.<get-policy>|<get-policy>(){}[0]
+    final val scope // koma.observability/CommandRef.scope|{}scope[0]
+        final fun <get-scope>(): kotlin/Long // koma.observability/CommandRef.scope.<get-scope>|<get-scope>(){}[0]
+
+    final fun component1(): kotlin/Long // koma.observability/CommandRef.component1|component1(){}[0]
+    final fun component2(): kotlin/Long // koma.observability/CommandRef.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // koma.observability/CommandRef.component3|component3(){}[0]
+    final fun component4(): kotlin/String? // koma.observability/CommandRef.component4|component4(){}[0]
+    final fun component5(): koma.observability/Payload<kotlin/Any?> // koma.observability/CommandRef.component5|component5(){}[0]
+    final fun copy(kotlin/Long = ..., kotlin/Long = ..., kotlin/String? = ..., kotlin/String? = ..., koma.observability/Payload<kotlin/Any?> = ...): koma.observability/CommandRef // koma.observability/CommandRef.copy|copy(kotlin.Long;kotlin.Long;kotlin.String?;kotlin.String?;koma.observability.Payload<kotlin.Any?>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/CommandRef.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/CommandRef.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/CommandRef.toString|toString(){}[0]
+}
+
+final class koma.observability/DiscardDescriptor { // koma.observability/DiscardDescriptor|null[0]
+    constructor <init>(koma.observability/DiscardKind, koma.observability/FailureDescriptor? = ...) // koma.observability/DiscardDescriptor.<init>|<init>(koma.observability.DiscardKind;koma.observability.FailureDescriptor?){}[0]
+
+    final val failure // koma.observability/DiscardDescriptor.failure|{}failure[0]
+        final fun <get-failure>(): koma.observability/FailureDescriptor? // koma.observability/DiscardDescriptor.failure.<get-failure>|<get-failure>(){}[0]
+    final val kind // koma.observability/DiscardDescriptor.kind|{}kind[0]
+        final fun <get-kind>(): koma.observability/DiscardKind // koma.observability/DiscardDescriptor.kind.<get-kind>|<get-kind>(){}[0]
+
+    final fun component1(): koma.observability/DiscardKind // koma.observability/DiscardDescriptor.component1|component1(){}[0]
+    final fun component2(): koma.observability/FailureDescriptor? // koma.observability/DiscardDescriptor.component2|component2(){}[0]
+    final fun copy(koma.observability/DiscardKind = ..., koma.observability/FailureDescriptor? = ...): koma.observability/DiscardDescriptor // koma.observability/DiscardDescriptor.copy|copy(koma.observability.DiscardKind;koma.observability.FailureDescriptor?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/DiscardDescriptor.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/DiscardDescriptor.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/DiscardDescriptor.toString|toString(){}[0]
+}
+
+final class koma.observability/FailureDescriptor { // koma.observability/FailureDescriptor|null[0]
+    constructor <init>(kotlin/String?, kotlin/String? = ..., koma.observability/FailureDescriptor? = ..., kotlin.collections/List<koma.observability/FailureDescriptor> = ...) // koma.observability/FailureDescriptor.<init>|<init>(kotlin.String?;kotlin.String?;koma.observability.FailureDescriptor?;kotlin.collections.List<koma.observability.FailureDescriptor>){}[0]
+
+    final val cause // koma.observability/FailureDescriptor.cause|{}cause[0]
+        final fun <get-cause>(): koma.observability/FailureDescriptor? // koma.observability/FailureDescriptor.cause.<get-cause>|<get-cause>(){}[0]
+    final val message // koma.observability/FailureDescriptor.message|{}message[0]
+        final fun <get-message>(): kotlin/String? // koma.observability/FailureDescriptor.message.<get-message>|<get-message>(){}[0]
+    final val suppressed // koma.observability/FailureDescriptor.suppressed|{}suppressed[0]
+        final fun <get-suppressed>(): kotlin.collections/List<koma.observability/FailureDescriptor> // koma.observability/FailureDescriptor.suppressed.<get-suppressed>|<get-suppressed>(){}[0]
+    final val type // koma.observability/FailureDescriptor.type|{}type[0]
+        final fun <get-type>(): kotlin/String? // koma.observability/FailureDescriptor.type.<get-type>|<get-type>(){}[0]
+
+    final fun component1(): kotlin/String? // koma.observability/FailureDescriptor.component1|component1(){}[0]
+    final fun component2(): kotlin/String? // koma.observability/FailureDescriptor.component2|component2(){}[0]
+    final fun component3(): koma.observability/FailureDescriptor? // koma.observability/FailureDescriptor.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/List<koma.observability/FailureDescriptor> // koma.observability/FailureDescriptor.component4|component4(){}[0]
+    final fun copy(kotlin/String? = ..., kotlin/String? = ..., koma.observability/FailureDescriptor? = ..., kotlin.collections/List<koma.observability/FailureDescriptor> = ...): koma.observability/FailureDescriptor // koma.observability/FailureDescriptor.copy|copy(kotlin.String?;kotlin.String?;koma.observability.FailureDescriptor?;kotlin.collections.List<koma.observability.FailureDescriptor>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/FailureDescriptor.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/FailureDescriptor.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/FailureDescriptor.toString|toString(){}[0]
+
+    final object Companion { // koma.observability/FailureDescriptor.Companion|null[0]
+        final val Unavailable // koma.observability/FailureDescriptor.Companion.Unavailable|{}Unavailable[0]
+            final fun <get-Unavailable>(): koma.observability/FailureDescriptor // koma.observability/FailureDescriptor.Companion.Unavailable.<get-Unavailable>|<get-Unavailable>(){}[0]
+
+        final fun of(kotlin/Throwable, kotlin/Boolean = ..., kotlin/Int = ...): koma.observability/FailureDescriptor // koma.observability/FailureDescriptor.Companion.of|of(kotlin.Throwable;kotlin.Boolean;kotlin.Int){}[0]
+    }
+}
+
+final class koma.observability/JournalConfig { // koma.observability/JournalConfig|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Function1<koma.observability/JournalFailure, kotlin/Unit> = ...) // koma.observability/JournalConfig.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Function1<koma.observability.JournalFailure,kotlin.Unit>){}[0]
+
+    final val onFailure // koma.observability/JournalConfig.onFailure|{}onFailure[0]
+        final fun <get-onFailure>(): kotlin/Function1<koma.observability/JournalFailure, kotlin/Unit> // koma.observability/JournalConfig.onFailure.<get-onFailure>|<get-onFailure>(){}[0]
+    final val retainedRecords // koma.observability/JournalConfig.retainedRecords|{}retainedRecords[0]
+        final fun <get-retainedRecords>(): kotlin/Int // koma.observability/JournalConfig.retainedRecords.<get-retainedRecords>|<get-retainedRecords>(){}[0]
+    final val writerQueueCapacity // koma.observability/JournalConfig.writerQueueCapacity|{}writerQueueCapacity[0]
+        final fun <get-writerQueueCapacity>(): kotlin/Int // koma.observability/JournalConfig.writerQueueCapacity.<get-writerQueueCapacity>|<get-writerQueueCapacity>(){}[0]
+
+    final fun component1(): kotlin/Int // koma.observability/JournalConfig.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // koma.observability/JournalConfig.component2|component2(){}[0]
+    final fun component3(): kotlin/Function1<koma.observability/JournalFailure, kotlin/Unit> // koma.observability/JournalConfig.component3|component3(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Function1<koma.observability/JournalFailure, kotlin/Unit> = ...): koma.observability/JournalConfig // koma.observability/JournalConfig.copy|copy(kotlin.Int;kotlin.Int;kotlin.Function1<koma.observability.JournalFailure,kotlin.Unit>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalConfig.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/JournalConfig.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/JournalConfig.toString|toString(){}[0]
+}
+
+final class koma.observability/JournalStats { // koma.observability/JournalStats|null[0]
+    constructor <init>(kotlin/Long, kotlin/Int, kotlin/Long, kotlin/Long, kotlin/Long, kotlin/Long, kotlin/Long) // koma.observability/JournalStats.<init>|<init>(kotlin.Long;kotlin.Int;kotlin.Long;kotlin.Long;kotlin.Long;kotlin.Long;kotlin.Long){}[0]
+
+    final val droppedForSinks // koma.observability/JournalStats.droppedForSinks|{}droppedForSinks[0]
+        final fun <get-droppedForSinks>(): kotlin/Long // koma.observability/JournalStats.droppedForSinks.<get-droppedForSinks>|<get-droppedForSinks>(){}[0]
+    final val evicted // koma.observability/JournalStats.evicted|{}evicted[0]
+        final fun <get-evicted>(): kotlin/Long // koma.observability/JournalStats.evicted.<get-evicted>|<get-evicted>(){}[0]
+    final val policyFailures // koma.observability/JournalStats.policyFailures|{}policyFailures[0]
+        final fun <get-policyFailures>(): kotlin/Long // koma.observability/JournalStats.policyFailures.<get-policyFailures>|<get-policyFailures>(){}[0]
+    final val published // koma.observability/JournalStats.published|{}published[0]
+        final fun <get-published>(): kotlin/Long // koma.observability/JournalStats.published.<get-published>|<get-published>(){}[0]
+    final val publishedAfterStop // koma.observability/JournalStats.publishedAfterStop|{}publishedAfterStop[0]
+        final fun <get-publishedAfterStop>(): kotlin/Long // koma.observability/JournalStats.publishedAfterStop.<get-publishedAfterStop>|<get-publishedAfterStop>(){}[0]
+    final val retained // koma.observability/JournalStats.retained|{}retained[0]
+        final fun <get-retained>(): kotlin/Int // koma.observability/JournalStats.retained.<get-retained>|<get-retained>(){}[0]
+    final val sinkFailures // koma.observability/JournalStats.sinkFailures|{}sinkFailures[0]
+        final fun <get-sinkFailures>(): kotlin/Long // koma.observability/JournalStats.sinkFailures.<get-sinkFailures>|<get-sinkFailures>(){}[0]
+
+    final fun component1(): kotlin/Long // koma.observability/JournalStats.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // koma.observability/JournalStats.component2|component2(){}[0]
+    final fun component3(): kotlin/Long // koma.observability/JournalStats.component3|component3(){}[0]
+    final fun component4(): kotlin/Long // koma.observability/JournalStats.component4|component4(){}[0]
+    final fun component5(): kotlin/Long // koma.observability/JournalStats.component5|component5(){}[0]
+    final fun component6(): kotlin/Long // koma.observability/JournalStats.component6|component6(){}[0]
+    final fun component7(): kotlin/Long // koma.observability/JournalStats.component7|component7(){}[0]
+    final fun copy(kotlin/Long = ..., kotlin/Int = ..., kotlin/Long = ..., kotlin/Long = ..., kotlin/Long = ..., kotlin/Long = ..., kotlin/Long = ...): koma.observability/JournalStats // koma.observability/JournalStats.copy|copy(kotlin.Long;kotlin.Int;kotlin.Long;kotlin.Long;kotlin.Long;kotlin.Long;kotlin.Long){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalStats.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/JournalStats.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/JournalStats.toString|toString(){}[0]
+}
+
+final class koma.observability/OutcomeDescriptor { // koma.observability/OutcomeDescriptor|null[0]
+    constructor <init>(koma.observability/OutcomeKind, kotlin/Int = ..., koma.observability/FailureDescriptor? = ...) // koma.observability/OutcomeDescriptor.<init>|<init>(koma.observability.OutcomeKind;kotlin.Int;koma.observability.FailureDescriptor?){}[0]
+
+    final val commits // koma.observability/OutcomeDescriptor.commits|{}commits[0]
+        final fun <get-commits>(): kotlin/Int // koma.observability/OutcomeDescriptor.commits.<get-commits>|<get-commits>(){}[0]
+    final val failure // koma.observability/OutcomeDescriptor.failure|{}failure[0]
+        final fun <get-failure>(): koma.observability/FailureDescriptor? // koma.observability/OutcomeDescriptor.failure.<get-failure>|<get-failure>(){}[0]
+    final val kind // koma.observability/OutcomeDescriptor.kind|{}kind[0]
+        final fun <get-kind>(): koma.observability/OutcomeKind // koma.observability/OutcomeDescriptor.kind.<get-kind>|<get-kind>(){}[0]
+
+    final fun component1(): koma.observability/OutcomeKind // koma.observability/OutcomeDescriptor.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // koma.observability/OutcomeDescriptor.component2|component2(){}[0]
+    final fun component3(): koma.observability/FailureDescriptor? // koma.observability/OutcomeDescriptor.component3|component3(){}[0]
+    final fun copy(koma.observability/OutcomeKind = ..., kotlin/Int = ..., koma.observability/FailureDescriptor? = ...): koma.observability/OutcomeDescriptor // koma.observability/OutcomeDescriptor.copy|copy(koma.observability.OutcomeKind;kotlin.Int;koma.observability.FailureDescriptor?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/OutcomeDescriptor.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/OutcomeDescriptor.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/OutcomeDescriptor.toString|toString(){}[0]
+}
+
+final class koma.observability/RecordingSession { // koma.observability/RecordingSession|null[0]
+    constructor <init>(kotlinx.coroutines/CoroutineScope, koma.observability/RuntimeSessionId = ..., koma.observability/MachineGroupId = ..., koma.observability/ExecutionMode = ..., koma.observability/JournalConfig = ..., kotlin.collections/List<koma.observability/JournalSink> = ..., kotlin.time/TimeSource = ...) // koma.observability/RecordingSession.<init>|<init>(kotlinx.coroutines.CoroutineScope;koma.observability.RuntimeSessionId;koma.observability.MachineGroupId;koma.observability.ExecutionMode;koma.observability.JournalConfig;kotlin.collections.List<koma.observability.JournalSink>;kotlin.time.TimeSource){}[0]
+
+    final val group // koma.observability/RecordingSession.group|{}group[0]
+        final fun <get-group>(): koma.observability/MachineGroupId // koma.observability/RecordingSession.group.<get-group>|<get-group>(){}[0]
+    final val id // koma.observability/RecordingSession.id|{}id[0]
+        final fun <get-id>(): koma.observability/RuntimeSessionId // koma.observability/RecordingSession.id.<get-id>|<get-id>(){}[0]
+    final val mode // koma.observability/RecordingSession.mode|{}mode[0]
+        final fun <get-mode>(): koma.observability/ExecutionMode // koma.observability/RecordingSession.mode.<get-mode>|<get-mode>(){}[0]
+    final val stats // koma.observability/RecordingSession.stats|{}stats[0]
+        final fun <get-stats>(): koma.observability/JournalStats // koma.observability/RecordingSession.stats.<get-stats>|<get-stats>(){}[0]
+
+    final fun <#A1: koma.core/State, #B1: koma.core/Action, #C1: koma.core/Event> probe(koma.observability/StoreInstanceId, koma.observability/PayloadPolicy<#A1, #B1, #C1>): koma.core/StoreProbe<#A1, #B1, #C1> // koma.observability/RecordingSession.probe|probe(koma.observability.StoreInstanceId;koma.observability.PayloadPolicy<0:0,0:1,0:2>){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+    final fun publish(koma.observability/StoreInstanceId, koma.observability/JournalEntry<*, *, *>): koma.observability/JournalRecord<*, *, *>? // koma.observability/RecordingSession.publish|publish(koma.observability.StoreInstanceId;koma.observability.JournalEntry<*,*,*>){}[0]
+    final fun records(): kotlin.collections/List<koma.observability/JournalRecord<*, *, *>> // koma.observability/RecordingSession.records|records(){}[0]
+    final suspend fun close() // koma.observability/RecordingSession.close|close(){}[0]
+}
+
+final class koma.observability/TimerRef { // koma.observability/TimerRef|null[0]
+    constructor <init>(kotlin/Long, kotlin/Int, kotlin/Long, kotlin.time/Duration) // koma.observability/TimerRef.<init>|<init>(kotlin.Long;kotlin.Int;kotlin.Long;kotlin.time.Duration){}[0]
+
+    final val activation // koma.observability/TimerRef.activation|{}activation[0]
+        final fun <get-activation>(): kotlin/Long // koma.observability/TimerRef.activation.<get-activation>|<get-activation>(){}[0]
+    final val deadline // koma.observability/TimerRef.deadline|{}deadline[0]
+        final fun <get-deadline>(): kotlin.time/Duration // koma.observability/TimerRef.deadline.<get-deadline>|<get-deadline>(){}[0]
+    final val id // koma.observability/TimerRef.id|{}id[0]
+        final fun <get-id>(): kotlin/Long // koma.observability/TimerRef.id.<get-id>|<get-id>(){}[0]
+    final val transition // koma.observability/TimerRef.transition|{}transition[0]
+        final fun <get-transition>(): kotlin/Int // koma.observability/TimerRef.transition.<get-transition>|<get-transition>(){}[0]
+
+    final fun component1(): kotlin/Long // koma.observability/TimerRef.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // koma.observability/TimerRef.component2|component2(){}[0]
+    final fun component3(): kotlin/Long // koma.observability/TimerRef.component3|component3(){}[0]
+    final fun component4(): kotlin.time/Duration // koma.observability/TimerRef.component4|component4(){}[0]
+    final fun copy(kotlin/Long = ..., kotlin/Int = ..., kotlin/Long = ..., kotlin.time/Duration = ...): koma.observability/TimerRef // koma.observability/TimerRef.copy|copy(kotlin.Long;kotlin.Int;kotlin.Long;kotlin.time.Duration){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/TimerRef.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/TimerRef.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/TimerRef.toString|toString(){}[0]
+}
+
+final value class koma.observability/GroupSeq { // koma.observability/GroupSeq|null[0]
+    constructor <init>(kotlin/Long) // koma.observability/GroupSeq.<init>|<init>(kotlin.Long){}[0]
+
+    final val value // koma.observability/GroupSeq.value|{}value[0]
+        final fun <get-value>(): kotlin/Long // koma.observability/GroupSeq.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/GroupSeq.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/GroupSeq.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/GroupSeq.toString|toString(){}[0]
+}
+
+final value class koma.observability/MachineGroupId { // koma.observability/MachineGroupId|null[0]
+    constructor <init>(kotlin/String) // koma.observability/MachineGroupId.<init>|<init>(kotlin.String){}[0]
+
+    final val value // koma.observability/MachineGroupId.value|{}value[0]
+        final fun <get-value>(): kotlin/String // koma.observability/MachineGroupId.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/MachineGroupId.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/MachineGroupId.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/MachineGroupId.toString|toString(){}[0]
+}
+
+final value class koma.observability/RuntimeSessionId { // koma.observability/RuntimeSessionId|null[0]
+    constructor <init>(kotlin/String) // koma.observability/RuntimeSessionId.<init>|<init>(kotlin.String){}[0]
+
+    final val value // koma.observability/RuntimeSessionId.value|{}value[0]
+        final fun <get-value>(): kotlin/String // koma.observability/RuntimeSessionId.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/RuntimeSessionId.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/RuntimeSessionId.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/RuntimeSessionId.toString|toString(){}[0]
+
+    final object Companion { // koma.observability/RuntimeSessionId.Companion|null[0]
+        final fun random(): koma.observability/RuntimeSessionId // koma.observability/RuntimeSessionId.Companion.random|random(){}[0]
+    }
+}
+
+final value class koma.observability/StoreInstanceId { // koma.observability/StoreInstanceId|null[0]
+    constructor <init>(kotlin/String) // koma.observability/StoreInstanceId.<init>|<init>(kotlin.String){}[0]
+
+    final val value // koma.observability/StoreInstanceId.value|{}value[0]
+        final fun <get-value>(): kotlin/String // koma.observability/StoreInstanceId.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/StoreInstanceId.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/StoreInstanceId.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/StoreInstanceId.toString|toString(){}[0]
+}
+
+final value class koma.observability/StoreSeq { // koma.observability/StoreSeq|null[0]
+    constructor <init>(kotlin/Long) // koma.observability/StoreSeq.<init>|<init>(kotlin.Long){}[0]
+
+    final val value // koma.observability/StoreSeq.value|{}value[0]
+        final fun <get-value>(): kotlin/Long // koma.observability/StoreSeq.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/StoreSeq.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability/StoreSeq.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability/StoreSeq.toString|toString(){}[0]
+}
+
+final object koma.observability/JournalFormat { // koma.observability/JournalFormat|null[0]
+    final fun entry(koma.observability/JournalEntry<*, *, *>): kotlin/String // koma.observability/JournalFormat.entry|entry(koma.observability.JournalEntry<*,*,*>){}[0]
+    final fun failure(koma.observability/FailureDescriptor): kotlin/String // koma.observability/JournalFormat.failure|failure(koma.observability.FailureDescriptor){}[0]
+    final fun line(koma.observability/JournalRecord<*, *, *>): kotlin/String // koma.observability/JournalFormat.line|line(koma.observability.JournalRecord<*,*,*>){}[0]
+    final fun payload(koma.observability/Payload<*>): kotlin/String // koma.observability/JournalFormat.payload|payload(koma.observability.Payload<*>){}[0]
+}
+
+final const val koma.observability/JOURNAL_FORMAT_VERSION // koma.observability/JOURNAL_FORMAT_VERSION|{}JOURNAL_FORMAT_VERSION[0]
+    final fun <get-JOURNAL_FORMAT_VERSION>(): kotlin/Int // koma.observability/JOURNAL_FORMAT_VERSION.<get-JOURNAL_FORMAT_VERSION>|<get-JOURNAL_FORMAT_VERSION>(){}[0]
+
+final fun <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> (koma.core/StoreBuilder<#A, #B, #C>).koma.observability/recordTo(koma.observability/RecordingSession, koma.observability/StoreInstanceId, koma.observability/PayloadPolicy<#A, #B, #C> = ...) // koma.observability/recordTo|recordTo@koma.core.StoreBuilder<0:0,0:1,0:2>(koma.observability.RecordingSession;koma.observability.StoreInstanceId;koma.observability.PayloadPolicy<0:0,0:1,0:2>){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+final fun <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> (koma.core/StorePatchBuilder<#A, #B, #C>).koma.observability/recordTo(koma.observability/RecordingSession, koma.observability/StoreInstanceId, koma.observability/PayloadPolicy<#A, #B, #C> = ...) // koma.observability/recordTo|recordTo@koma.core.StorePatchBuilder<0:0,0:1,0:2>(koma.observability.RecordingSession;koma.observability.StoreInstanceId;koma.observability.PayloadPolicy<0:0,0:1,0:2>){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+final fun <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.observability/PayloadPolicy(kotlin/Function1<#A, koma.observability/Payload<#A>> = ..., kotlin/Function1<#B, koma.observability/Payload<#B>> = ..., kotlin/Function1<#C, koma.observability/Payload<#C>> = ..., kotlin/Function1<kotlin/Throwable, koma.observability/FailureDescriptor> = ...): koma.observability/PayloadPolicy<#A, #B, #C> // koma.observability/PayloadPolicy|PayloadPolicy(kotlin.Function1<0:0,koma.observability.Payload<0:0>>;kotlin.Function1<0:1,koma.observability.Payload<0:1>>;kotlin.Function1<0:2,koma.observability.Payload<0:2>>;kotlin.Function1<kotlin.Throwable,koma.observability.FailureDescriptor>){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]

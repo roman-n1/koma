@@ -1,0 +1,787 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:koma-core>
+open annotation class koma.core/ExperimentalKomaApi : kotlin/Annotation { // koma.core/ExperimentalKomaApi|null[0]
+    constructor <init>() // koma.core/ExperimentalKomaApi.<init>|<init>(){}[0]
+}
+
+open annotation class koma.core/InternalKomaApi : kotlin/Annotation { // koma.core/InternalKomaApi|null[0]
+    constructor <init>() // koma.core/InternalKomaApi.<init>|<init>(){}[0]
+}
+
+open annotation class koma.core/KomaStoreDsl : kotlin/Annotation { // koma.core/KomaStoreDsl|null[0]
+    constructor <init>() // koma.core/KomaStoreDsl.<init>|<init>(){}[0]
+}
+
+final enum class koma.core/AutoStartPolicy : kotlin/Enum<koma.core/AutoStartPolicy> { // koma.core/AutoStartPolicy|null[0]
+    enum entry OnDispatch // koma.core/AutoStartPolicy.OnDispatch|null[0]
+    enum entry OnDispatchOrStateCollection // koma.core/AutoStartPolicy.OnDispatchOrStateCollection|null[0]
+
+    final val entries // koma.core/AutoStartPolicy.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.core/AutoStartPolicy> // koma.core/AutoStartPolicy.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.core/AutoStartPolicy // koma.core/AutoStartPolicy.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.core/AutoStartPolicy> // koma.core/AutoStartPolicy.values|values#static(){}[0]
+}
+
+final enum class koma.core/PendingActionPolicy : kotlin/Enum<koma.core/PendingActionPolicy> { // koma.core/PendingActionPolicy|null[0]
+    enum entry ClearOnStateExit // koma.core/PendingActionPolicy.ClearOnStateExit|null[0]
+    enum entry Keep // koma.core/PendingActionPolicy.Keep|null[0]
+
+    final val entries // koma.core/PendingActionPolicy.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.core/PendingActionPolicy> // koma.core/PendingActionPolicy.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.core/PendingActionPolicy // koma.core/PendingActionPolicy.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.core/PendingActionPolicy> // koma.core/PendingActionPolicy.values|values#static(){}[0]
+}
+
+final enum class koma.core/PluginExecutionPolicy : kotlin/Enum<koma.core/PluginExecutionPolicy> { // koma.core/PluginExecutionPolicy|null[0]
+    enum entry Concurrent // koma.core/PluginExecutionPolicy.Concurrent|null[0]
+    enum entry InRegistrationOrder // koma.core/PluginExecutionPolicy.InRegistrationOrder|null[0]
+
+    final val entries // koma.core/PluginExecutionPolicy.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.core/PluginExecutionPolicy> // koma.core/PluginExecutionPolicy.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.core/PluginExecutionPolicy // koma.core/PluginExecutionPolicy.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.core/PluginExecutionPolicy> // koma.core/PluginExecutionPolicy.values|values#static(){}[0]
+}
+
+abstract fun interface <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/StoreProbe { // koma.core/StoreProbe|null[0]
+    abstract fun record(koma.core/StoreTrace<#A, #B, #C>) // koma.core/StoreProbe.record|record(koma.core.StoreTrace<1:0,1:1,1:2>){}[0]
+}
+
+abstract interface <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event, #D: #A> koma.core/ActionScope : koma.core/StoreScope { // koma.core/ActionScope|null[0]
+    abstract val action // koma.core/ActionScope.action|{}action[0]
+        abstract fun <get-action>(): #B // koma.core/ActionScope.action.<get-action>|<get-action>(){}[0]
+    abstract val state // koma.core/ActionScope.state|{}state[0]
+        abstract fun <get-state>(): #D // koma.core/ActionScope.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun cancelLaunch(koma.core/LaunchLane) // koma.core/ActionScope.cancelLaunch|cancelLaunch(koma.core.LaunchLane){}[0]
+    abstract fun clearPendingActions() // koma.core/ActionScope.clearPendingActions|clearPendingActions(){}[0]
+    abstract fun launch(kotlinx.coroutines/CoroutineDispatcher? = ..., koma.core/LaunchControl = ..., kotlin.coroutines/SuspendFunction1<koma.core/ActionScope.LaunchScope<#A, #B, #C, #D>, kotlin/Unit>) // koma.core/ActionScope.launch|launch(kotlinx.coroutines.CoroutineDispatcher?;koma.core.LaunchControl;kotlin.coroutines.SuspendFunction1<koma.core.ActionScope.LaunchScope<1:0,1:1,1:2,1:3>,kotlin.Unit>){}[0]
+    abstract fun nextState(kotlin/Function0<#A>) // koma.core/ActionScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+    abstract suspend fun event(#C) // koma.core/ActionScope.event|event(1:2){}[0]
+    open fun nextState(#A) // koma.core/ActionScope.nextState|nextState(1:0){}[0]
+    open fun nextStateBy(kotlin/Function0<#A>) // koma.core/ActionScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+
+    abstract interface <#A1: koma.core/State, #B1: koma.core/Action, #C1: koma.core/Event, #D1: #A1> LaunchScope : koma.core/StoreScope { // koma.core/ActionScope.LaunchScope|null[0]
+        abstract val action // koma.core/ActionScope.LaunchScope.action|{}action[0]
+            abstract fun <get-action>(): #B1 // koma.core/ActionScope.LaunchScope.action.<get-action>|<get-action>(){}[0]
+        abstract val isActive // koma.core/ActionScope.LaunchScope.isActive|{}isActive[0]
+            abstract fun <get-isActive>(): kotlin/Boolean // koma.core/ActionScope.LaunchScope.isActive.<get-isActive>|<get-isActive>(){}[0]
+
+        abstract suspend fun event(#C1) // koma.core/ActionScope.LaunchScope.event|event(1:2){}[0]
+        abstract suspend fun transaction(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<koma.core/ActionScope.LaunchScope.TransactionScope<#A1, #B1, #C1, #D1>, kotlin/Unit>) // koma.core/ActionScope.LaunchScope.transaction|transaction(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.core.ActionScope.LaunchScope.TransactionScope<1:0,1:1,1:2,1:3>,kotlin.Unit>){}[0]
+
+        abstract interface <#A2: koma.core/State, #B2: koma.core/Action, #C2: koma.core/Event, #D2: #A2> TransactionScope : koma.core/StoreScope { // koma.core/ActionScope.LaunchScope.TransactionScope|null[0]
+            abstract val action // koma.core/ActionScope.LaunchScope.TransactionScope.action|{}action[0]
+                abstract fun <get-action>(): #B2 // koma.core/ActionScope.LaunchScope.TransactionScope.action.<get-action>|<get-action>(){}[0]
+            abstract val state // koma.core/ActionScope.LaunchScope.TransactionScope.state|{}state[0]
+                abstract fun <get-state>(): #D2 // koma.core/ActionScope.LaunchScope.TransactionScope.state.<get-state>|<get-state>(){}[0]
+
+            abstract fun clearPendingActions() // koma.core/ActionScope.LaunchScope.TransactionScope.clearPendingActions|clearPendingActions(){}[0]
+            abstract fun nextState(kotlin/Function0<#A2>) // koma.core/ActionScope.LaunchScope.TransactionScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+            abstract suspend fun event(#C2) // koma.core/ActionScope.LaunchScope.TransactionScope.event|event(1:2){}[0]
+            open fun nextState(#A2) // koma.core/ActionScope.LaunchScope.TransactionScope.nextState|nextState(1:0){}[0]
+            open fun nextStateBy(kotlin/Function0<#A2>) // koma.core/ActionScope.LaunchScope.TransactionScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+        }
+    }
+}
+
+abstract interface <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/Plugin { // koma.core/Plugin|null[0]
+    open suspend fun onAction(koma.core/PluginScope<#A, #B>, #A, #B) // koma.core/Plugin.onAction|onAction(koma.core.PluginScope<1:0,1:1>;1:0;1:1){}[0]
+    open suspend fun onEvent(koma.core/PluginScope<#A, #B>, #A, #C) // koma.core/Plugin.onEvent|onEvent(koma.core.PluginScope<1:0,1:1>;1:0;1:2){}[0]
+    open suspend fun onStart(koma.core/PluginScope<#A, #B>, #A) // koma.core/Plugin.onStart|onStart(koma.core.PluginScope<1:0,1:1>;1:0){}[0]
+    open suspend fun onState(koma.core/PluginScope<#A, #B>, #A, #A) // koma.core/Plugin.onState|onState(koma.core.PluginScope<1:0,1:1>;1:0;1:0){}[0]
+}
+
+abstract interface <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/Store : kotlin/AutoCloseable { // koma.core/Store|null[0]
+    abstract val currentState // koma.core/Store.currentState|{}currentState[0]
+        abstract fun <get-currentState>(): #A // koma.core/Store.currentState.<get-currentState>|<get-currentState>(){}[0]
+    abstract val event // koma.core/Store.event|{}event[0]
+        abstract fun <get-event>(): kotlinx.coroutines.flow/Flow<#C> // koma.core/Store.event.<get-event>|<get-event>(){}[0]
+    abstract val state // koma.core/Store.state|{}state[0]
+        abstract fun <get-state>(): kotlinx.coroutines.flow/StateFlow<#A> // koma.core/Store.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun close() // koma.core/Store.close|close(){}[0]
+    abstract fun collectEvent(kotlin/Function1<#C, kotlin/Unit>) // koma.core/Store.collectEvent|collectEvent(kotlin.Function1<1:2,kotlin.Unit>){}[0]
+    abstract fun collectState(kotlin/Function1<#A, kotlin/Unit>) // koma.core/Store.collectState|collectState(kotlin.Function1<1:0,kotlin.Unit>){}[0]
+    abstract fun dispatch(#B) // koma.core/Store.dispatch|dispatch(1:1){}[0]
+    abstract fun start() // koma.core/Store.start|start(){}[0]
+    open fun dispose() // koma.core/Store.dispose|dispose(){}[0]
+}
+
+abstract interface <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/StoreInternalApi { // koma.core/StoreInternalApi|null[0]
+    abstract fun dispatchIf(#B, kotlin/Function0<kotlin/Boolean>) // koma.core/StoreInternalApi.dispatchIf|dispatchIf(1:1;kotlin.Function0<kotlin.Boolean>){}[0]
+    abstract fun handlerMetadata(): koma.core/StoreHandlerMetadata // koma.core/StoreInternalApi.handlerMetadata|handlerMetadata(){}[0]
+    abstract fun matchActionHandlers(#A, #B): kotlin.collections/List<koma.core/ActionHandlerMatch> // koma.core/StoreInternalApi.matchActionHandlers|matchActionHandlers(1:0;1:1){}[0]
+    abstract fun patch(koma.core/StorePatch<#A, #B, #C>): koma.core/Store<#A, #B, #C> // koma.core/StoreInternalApi.patch|patch(koma.core.StorePatch<1:0,1:1,1:2>){}[0]
+    abstract suspend fun dispatchAndAwait(#B) // koma.core/StoreInternalApi.dispatchAndAwait|dispatchAndAwait(1:1){}[0]
+    abstract suspend fun startAndAwait() // koma.core/StoreInternalApi.startAndAwait|startAndAwait(){}[0]
+}
+
+abstract interface <#A: koma.core/State, #B: koma.core/Action> koma.core/PluginScope { // koma.core/PluginScope|null[0]
+    abstract fun dispatch(#B) // koma.core/PluginScope.dispatch|dispatch(1:1){}[0]
+    abstract fun launch(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<koma.core/PluginScope.LaunchScope<#A, #B>, kotlin/Unit>) // koma.core/PluginScope.launch|launch(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.core.PluginScope.LaunchScope<1:0,1:1>,kotlin.Unit>){}[0]
+
+    abstract interface <#A1: koma.core/State, #B1: koma.core/Action> LaunchScope { // koma.core/PluginScope.LaunchScope|null[0]
+        abstract val currentState // koma.core/PluginScope.LaunchScope.currentState|{}currentState[0]
+            abstract fun <get-currentState>(): #A1 // koma.core/PluginScope.LaunchScope.currentState.<get-currentState>|<get-currentState>(){}[0]
+
+        abstract fun dispatch(#B1) // koma.core/PluginScope.LaunchScope.dispatch|dispatch(1:1){}[0]
+    }
+}
+
+abstract interface <#A: koma.core/State, #B: koma.core/Event, #C: #A, #D: kotlin/Exception> koma.core/RecoverScope : koma.core/StoreScope { // koma.core/RecoverScope|null[0]
+    abstract val error // koma.core/RecoverScope.error|{}error[0]
+        abstract fun <get-error>(): #D // koma.core/RecoverScope.error.<get-error>|<get-error>(){}[0]
+    abstract val state // koma.core/RecoverScope.state|{}state[0]
+        abstract fun <get-state>(): #C // koma.core/RecoverScope.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun clearPendingActions() // koma.core/RecoverScope.clearPendingActions|clearPendingActions(){}[0]
+    abstract fun nextState(kotlin/Function0<#A>) // koma.core/RecoverScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+    abstract suspend fun event(#B) // koma.core/RecoverScope.event|event(1:1){}[0]
+    open fun nextState(#A) // koma.core/RecoverScope.nextState|nextState(1:0){}[0]
+    open fun nextStateBy(kotlin/Function0<#A>) // koma.core/RecoverScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+}
+
+abstract interface <#A: koma.core/State, #B: koma.core/Event, #C: #A> koma.core/EnterScope : koma.core/StoreScope { // koma.core/EnterScope|null[0]
+    abstract val state // koma.core/EnterScope.state|{}state[0]
+        abstract fun <get-state>(): #C // koma.core/EnterScope.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun clearPendingActions() // koma.core/EnterScope.clearPendingActions|clearPendingActions(){}[0]
+    abstract fun launch(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<koma.core/EnterScope.LaunchScope<#A, #B, #C>, kotlin/Unit>) // koma.core/EnterScope.launch|launch(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.core.EnterScope.LaunchScope<1:0,1:1,1:2>,kotlin.Unit>){}[0]
+    abstract fun nextState(kotlin/Function0<#A>) // koma.core/EnterScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+    abstract suspend fun event(#B) // koma.core/EnterScope.event|event(1:1){}[0]
+    open fun nextState(#A) // koma.core/EnterScope.nextState|nextState(1:0){}[0]
+    open fun nextStateBy(kotlin/Function0<#A>) // koma.core/EnterScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+
+    abstract interface <#A1: koma.core/State, #B1: koma.core/Event, #C1: #A1> LaunchScope : koma.core/StoreScope { // koma.core/EnterScope.LaunchScope|null[0]
+        abstract val isActive // koma.core/EnterScope.LaunchScope.isActive|{}isActive[0]
+            abstract fun <get-isActive>(): kotlin/Boolean // koma.core/EnterScope.LaunchScope.isActive.<get-isActive>|<get-isActive>(){}[0]
+
+        abstract suspend fun event(#B1) // koma.core/EnterScope.LaunchScope.event|event(1:1){}[0]
+        abstract suspend fun transaction(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<koma.core/EnterScope.LaunchScope.TransactionScope<#A1, #B1, #C1>, kotlin/Unit>) // koma.core/EnterScope.LaunchScope.transaction|transaction(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.core.EnterScope.LaunchScope.TransactionScope<1:0,1:1,1:2>,kotlin.Unit>){}[0]
+
+        abstract interface <#A2: koma.core/State, #B2: koma.core/Event, #C2: #A2> TransactionScope : koma.core/StoreScope { // koma.core/EnterScope.LaunchScope.TransactionScope|null[0]
+            abstract val state // koma.core/EnterScope.LaunchScope.TransactionScope.state|{}state[0]
+                abstract fun <get-state>(): #C2 // koma.core/EnterScope.LaunchScope.TransactionScope.state.<get-state>|<get-state>(){}[0]
+
+            abstract fun clearPendingActions() // koma.core/EnterScope.LaunchScope.TransactionScope.clearPendingActions|clearPendingActions(){}[0]
+            abstract fun nextState(kotlin/Function0<#A2>) // koma.core/EnterScope.LaunchScope.TransactionScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+            abstract suspend fun event(#B2) // koma.core/EnterScope.LaunchScope.TransactionScope.event|event(1:1){}[0]
+            open fun nextState(#A2) // koma.core/EnterScope.LaunchScope.TransactionScope.nextState|nextState(1:0){}[0]
+            open fun nextStateBy(kotlin/Function0<#A2>) // koma.core/EnterScope.LaunchScope.TransactionScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+        }
+    }
+}
+
+abstract interface <#A: koma.core/State, #B: koma.core/Event, #C: #A> koma.core/ExitScope : koma.core/StoreScope { // koma.core/ExitScope|null[0]
+    abstract val state // koma.core/ExitScope.state|{}state[0]
+        abstract fun <get-state>(): #C // koma.core/ExitScope.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun clearPendingActions() // koma.core/ExitScope.clearPendingActions|clearPendingActions(){}[0]
+    abstract suspend fun event(#B) // koma.core/ExitScope.event|event(1:1){}[0]
+}
+
+abstract interface <#A: koma.core/State> koma.core/StateSaver { // koma.core/StateSaver|null[0]
+    abstract fun restore(): #A? // koma.core/StateSaver.restore|restore(){}[0]
+    abstract fun save(#A) // koma.core/StateSaver.save|save(1:0){}[0]
+
+    final object Companion { // koma.core/StateSaver.Companion|null[0]
+        final fun <#A2: koma.core/State> Noop(): koma.core/StateSaver<#A2> // koma.core/StateSaver.Companion.Noop|Noop(){0§<koma.core.State>}[0]
+    }
+}
+
+abstract interface koma.core/Action // koma.core/Action|null[0]
+
+abstract interface koma.core/Event // koma.core/Event|null[0]
+
+abstract interface koma.core/ExceptionHandler { // koma.core/ExceptionHandler|null[0]
+    abstract fun handle(kotlin/Throwable) // koma.core/ExceptionHandler.handle|handle(kotlin.Throwable){}[0]
+
+    final object Companion { // koma.core/ExceptionHandler.Companion|null[0]
+        final val Ignore // koma.core/ExceptionHandler.Companion.Ignore|{}Ignore[0]
+            final fun <get-Ignore>(): koma.core/ExceptionHandler // koma.core/ExceptionHandler.Companion.Ignore.<get-Ignore>|<get-Ignore>(){}[0]
+        final val Log // koma.core/ExceptionHandler.Companion.Log|{}Log[0]
+            final fun <get-Log>(): koma.core/ExceptionHandler // koma.core/ExceptionHandler.Companion.Log.<get-Log>|<get-Log>(){}[0]
+        final val Noop // koma.core/ExceptionHandler.Companion.Noop|{}Noop[0]
+            final fun <get-Noop>(): koma.core/ExceptionHandler // koma.core/ExceptionHandler.Companion.Noop.<get-Noop>|<get-Noop>(){}[0]
+        final val Rethrow // koma.core/ExceptionHandler.Companion.Rethrow|{}Rethrow[0]
+            final fun <get-Rethrow>(): koma.core/ExceptionHandler // koma.core/ExceptionHandler.Companion.Rethrow.<get-Rethrow>|<get-Rethrow>(){}[0]
+        final val Unhandled // koma.core/ExceptionHandler.Companion.Unhandled|{}Unhandled[0]
+            final fun <get-Unhandled>(): koma.core/ExceptionHandler // koma.core/ExceptionHandler.Companion.Unhandled.<get-Unhandled>|<get-Unhandled>(){}[0]
+    }
+}
+
+abstract interface koma.core/State // koma.core/State|null[0]
+
+abstract interface koma.core/StoreScope // koma.core/StoreScope|null[0]
+
+sealed interface <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/PluginPatch { // koma.core/PluginPatch|null[0]
+    final class <#A1: koma.core/State, #B1: koma.core/Action, #C1: koma.core/Event> Append : koma.core/PluginPatch<#A1, #B1, #C1> { // koma.core/PluginPatch.Append|null[0]
+        constructor <init>(kotlin.collections/List<koma.core/Plugin<#A1, #B1, #C1>>) // koma.core/PluginPatch.Append.<init>|<init>(kotlin.collections.List<koma.core.Plugin<1:0,1:1,1:2>>){}[0]
+
+        final val plugins // koma.core/PluginPatch.Append.plugins|{}plugins[0]
+            final fun <get-plugins>(): kotlin.collections/List<koma.core/Plugin<#A1, #B1, #C1>> // koma.core/PluginPatch.Append.plugins.<get-plugins>|<get-plugins>(){}[0]
+
+        final fun component1(): kotlin.collections/List<koma.core/Plugin<#A1, #B1, #C1>> // koma.core/PluginPatch.Append.component1|component1(){}[0]
+        final fun copy(kotlin.collections/List<koma.core/Plugin<#A1, #B1, #C1>> = ...): koma.core/PluginPatch.Append<#A1, #B1, #C1> // koma.core/PluginPatch.Append.copy|copy(kotlin.collections.List<koma.core.Plugin<1:0,1:1,1:2>>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/PluginPatch.Append.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/PluginPatch.Append.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/PluginPatch.Append.toString|toString(){}[0]
+    }
+
+    final class <#A1: koma.core/State, #B1: koma.core/Action, #C1: koma.core/Event> Clear : koma.core/PluginPatch<#A1, #B1, #C1> { // koma.core/PluginPatch.Clear|null[0]
+        constructor <init>() // koma.core/PluginPatch.Clear.<init>|<init>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/PluginPatch.Clear.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/PluginPatch.Clear.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/PluginPatch.Clear.toString|toString(){}[0]
+    }
+
+    final class <#A1: koma.core/State, #B1: koma.core/Action, #C1: koma.core/Event> Replace : koma.core/PluginPatch<#A1, #B1, #C1> { // koma.core/PluginPatch.Replace|null[0]
+        constructor <init>(kotlin.collections/List<koma.core/Plugin<#A1, #B1, #C1>>) // koma.core/PluginPatch.Replace.<init>|<init>(kotlin.collections.List<koma.core.Plugin<1:0,1:1,1:2>>){}[0]
+
+        final val plugins // koma.core/PluginPatch.Replace.plugins|{}plugins[0]
+            final fun <get-plugins>(): kotlin.collections/List<koma.core/Plugin<#A1, #B1, #C1>> // koma.core/PluginPatch.Replace.plugins.<get-plugins>|<get-plugins>(){}[0]
+
+        final fun component1(): kotlin.collections/List<koma.core/Plugin<#A1, #B1, #C1>> // koma.core/PluginPatch.Replace.component1|component1(){}[0]
+        final fun copy(kotlin.collections/List<koma.core/Plugin<#A1, #B1, #C1>> = ...): koma.core/PluginPatch.Replace<#A1, #B1, #C1> // koma.core/PluginPatch.Replace.copy|copy(kotlin.collections.List<koma.core.Plugin<1:0,1:1,1:2>>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/PluginPatch.Replace.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/PluginPatch.Replace.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/PluginPatch.Replace.toString|toString(){}[0]
+    }
+}
+
+sealed interface <#A: out koma.core/Action> koma.core/InputKind { // koma.core/InputKind|null[0]
+    final class <#A1: out koma.core/Action> Dispatch : koma.core/InputKind<#A1> { // koma.core/InputKind.Dispatch|null[0]
+        constructor <init>(#A1) // koma.core/InputKind.Dispatch.<init>|<init>(1:0){}[0]
+
+        final val action // koma.core/InputKind.Dispatch.action|{}action[0]
+            final fun <get-action>(): #A1 // koma.core/InputKind.Dispatch.action.<get-action>|<get-action>(){}[0]
+
+        final fun component1(): #A1 // koma.core/InputKind.Dispatch.component1|component1(){}[0]
+        final fun copy(#A1 = ...): koma.core/InputKind.Dispatch<#A1> // koma.core/InputKind.Dispatch.copy|copy(1:0){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/InputKind.Dispatch.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/InputKind.Dispatch.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/InputKind.Dispatch.toString|toString(){}[0]
+    }
+
+    final class Recovery : koma.core/InputKind<kotlin/Nothing> { // koma.core/InputKind.Recovery|null[0]
+        constructor <init>(kotlin/Throwable, koma.core/InputId?) // koma.core/InputKind.Recovery.<init>|<init>(kotlin.Throwable;koma.core.InputId?){}[0]
+
+        final val error // koma.core/InputKind.Recovery.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // koma.core/InputKind.Recovery.error.<get-error>|<get-error>(){}[0]
+        final val origin // koma.core/InputKind.Recovery.origin|{}origin[0]
+            final fun <get-origin>(): koma.core/InputId? // koma.core/InputKind.Recovery.origin.<get-origin>|<get-origin>(){}[0]
+
+        final fun component1(): kotlin/Throwable // koma.core/InputKind.Recovery.component1|component1(){}[0]
+        final fun component2(): koma.core/InputId? // koma.core/InputKind.Recovery.component2|component2(){}[0]
+        final fun copy(kotlin/Throwable = ..., koma.core/InputId? = ...): koma.core/InputKind.Recovery // koma.core/InputKind.Recovery.copy|copy(kotlin.Throwable;koma.core.InputId?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/InputKind.Recovery.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/InputKind.Recovery.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/InputKind.Recovery.toString|toString(){}[0]
+    }
+
+    final class Transaction : koma.core/InputKind<kotlin/Nothing> { // koma.core/InputKind.Transaction|null[0]
+        constructor <init>(koma.core/InputId?) // koma.core/InputKind.Transaction.<init>|<init>(koma.core.InputId?){}[0]
+
+        final val origin // koma.core/InputKind.Transaction.origin|{}origin[0]
+            final fun <get-origin>(): koma.core/InputId? // koma.core/InputKind.Transaction.origin.<get-origin>|<get-origin>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.core/InputKind.Transaction.component1|component1(){}[0]
+        final fun copy(koma.core/InputId? = ...): koma.core/InputKind.Transaction // koma.core/InputKind.Transaction.copy|copy(koma.core.InputId?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/InputKind.Transaction.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/InputKind.Transaction.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/InputKind.Transaction.toString|toString(){}[0]
+    }
+
+    final object Startup : koma.core/InputKind<kotlin/Nothing> { // koma.core/InputKind.Startup|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/InputKind.Startup.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/InputKind.Startup.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/InputKind.Startup.toString|toString(){}[0]
+    }
+}
+
+sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out koma.core/Event> koma.core/StoreTrace { // koma.core/StoreTrace|null[0]
+    final class <#A1: out koma.core/Action> InputAccepted : koma.core/StoreTrace<kotlin/Nothing, #A1, kotlin/Nothing> { // koma.core/StoreTrace.InputAccepted|null[0]
+        constructor <init>(koma.core/InputId, koma.core/InputKind<#A1>) // koma.core/StoreTrace.InputAccepted.<init>|<init>(koma.core.InputId;koma.core.InputKind<1:0>){}[0]
+
+        final val input // koma.core/StoreTrace.InputAccepted.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.core/StoreTrace.InputAccepted.input.<get-input>|<get-input>(){}[0]
+        final val kind // koma.core/StoreTrace.InputAccepted.kind|{}kind[0]
+            final fun <get-kind>(): koma.core/InputKind<#A1> // koma.core/StoreTrace.InputAccepted.kind.<get-kind>|<get-kind>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.core/StoreTrace.InputAccepted.component1|component1(){}[0]
+        final fun component2(): koma.core/InputKind<#A1> // koma.core/StoreTrace.InputAccepted.component2|component2(){}[0]
+        final fun copy(koma.core/InputId = ..., koma.core/InputKind<#A1> = ...): koma.core/StoreTrace.InputAccepted<#A1> // koma.core/StoreTrace.InputAccepted.copy|copy(koma.core.InputId;koma.core.InputKind<1:0>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/StoreTrace.InputAccepted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/StoreTrace.InputAccepted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/StoreTrace.InputAccepted.toString|toString(){}[0]
+    }
+
+    final class <#A1: out koma.core/Event> EventEmitted : koma.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, #A1> { // koma.core/StoreTrace.EventEmitted|null[0]
+        constructor <init>(koma.core/InputId?, #A1) // koma.core/StoreTrace.EventEmitted.<init>|<init>(koma.core.InputId?;1:0){}[0]
+
+        final val event // koma.core/StoreTrace.EventEmitted.event|{}event[0]
+            final fun <get-event>(): #A1 // koma.core/StoreTrace.EventEmitted.event.<get-event>|<get-event>(){}[0]
+        final val input // koma.core/StoreTrace.EventEmitted.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId? // koma.core/StoreTrace.EventEmitted.input.<get-input>|<get-input>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.core/StoreTrace.EventEmitted.component1|component1(){}[0]
+        final fun component2(): #A1 // koma.core/StoreTrace.EventEmitted.component2|component2(){}[0]
+        final fun copy(koma.core/InputId? = ..., #A1 = ...): koma.core/StoreTrace.EventEmitted<#A1> // koma.core/StoreTrace.EventEmitted.copy|copy(koma.core.InputId?;1:0){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/StoreTrace.EventEmitted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/StoreTrace.EventEmitted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/StoreTrace.EventEmitted.toString|toString(){}[0]
+    }
+
+    final class <#A1: out koma.core/State> StateCommitted : koma.core/StoreTrace<#A1, kotlin/Nothing, kotlin/Nothing> { // koma.core/StoreTrace.StateCommitted|null[0]
+        constructor <init>(koma.core/InputId, kotlin/Long, #A1, #A1) // koma.core/StoreTrace.StateCommitted.<init>|<init>(koma.core.InputId;kotlin.Long;1:0;1:0){}[0]
+
+        final val input // koma.core/StoreTrace.StateCommitted.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.core/StoreTrace.StateCommitted.input.<get-input>|<get-input>(){}[0]
+        final val previous // koma.core/StoreTrace.StateCommitted.previous|{}previous[0]
+            final fun <get-previous>(): #A1 // koma.core/StoreTrace.StateCommitted.previous.<get-previous>|<get-previous>(){}[0]
+        final val revision // koma.core/StoreTrace.StateCommitted.revision|{}revision[0]
+            final fun <get-revision>(): kotlin/Long // koma.core/StoreTrace.StateCommitted.revision.<get-revision>|<get-revision>(){}[0]
+        final val state // koma.core/StoreTrace.StateCommitted.state|{}state[0]
+            final fun <get-state>(): #A1 // koma.core/StoreTrace.StateCommitted.state.<get-state>|<get-state>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.core/StoreTrace.StateCommitted.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // koma.core/StoreTrace.StateCommitted.component2|component2(){}[0]
+        final fun component3(): #A1 // koma.core/StoreTrace.StateCommitted.component3|component3(){}[0]
+        final fun component4(): #A1 // koma.core/StoreTrace.StateCommitted.component4|component4(){}[0]
+        final fun copy(koma.core/InputId = ..., kotlin/Long = ..., #A1 = ..., #A1 = ...): koma.core/StoreTrace.StateCommitted<#A1> // koma.core/StoreTrace.StateCommitted.copy|copy(koma.core.InputId;kotlin.Long;1:0;1:0){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/StoreTrace.StateCommitted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/StoreTrace.StateCommitted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/StoreTrace.StateCommitted.toString|toString(){}[0]
+    }
+
+    final class FailureReported : koma.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.core/StoreTrace.FailureReported|null[0]
+        constructor <init>(koma.core/InputId?, kotlin/Throwable) // koma.core/StoreTrace.FailureReported.<init>|<init>(koma.core.InputId?;kotlin.Throwable){}[0]
+
+        final val error // koma.core/StoreTrace.FailureReported.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // koma.core/StoreTrace.FailureReported.error.<get-error>|<get-error>(){}[0]
+        final val input // koma.core/StoreTrace.FailureReported.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId? // koma.core/StoreTrace.FailureReported.input.<get-input>|<get-input>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.core/StoreTrace.FailureReported.component1|component1(){}[0]
+        final fun component2(): kotlin/Throwable // koma.core/StoreTrace.FailureReported.component2|component2(){}[0]
+        final fun copy(koma.core/InputId? = ..., kotlin/Throwable = ...): koma.core/StoreTrace.FailureReported // koma.core/StoreTrace.FailureReported.copy|copy(koma.core.InputId?;kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/StoreTrace.FailureReported.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/StoreTrace.FailureReported.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/StoreTrace.FailureReported.toString|toString(){}[0]
+    }
+
+    final class InputDiscarded : koma.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.core/StoreTrace.InputDiscarded|null[0]
+        constructor <init>(koma.core/InputId, koma.core/DiscardReason) // koma.core/StoreTrace.InputDiscarded.<init>|<init>(koma.core.InputId;koma.core.DiscardReason){}[0]
+
+        final val input // koma.core/StoreTrace.InputDiscarded.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.core/StoreTrace.InputDiscarded.input.<get-input>|<get-input>(){}[0]
+        final val reason // koma.core/StoreTrace.InputDiscarded.reason|{}reason[0]
+            final fun <get-reason>(): koma.core/DiscardReason // koma.core/StoreTrace.InputDiscarded.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.core/StoreTrace.InputDiscarded.component1|component1(){}[0]
+        final fun component2(): koma.core/DiscardReason // koma.core/StoreTrace.InputDiscarded.component2|component2(){}[0]
+        final fun copy(koma.core/InputId = ..., koma.core/DiscardReason = ...): koma.core/StoreTrace.InputDiscarded // koma.core/StoreTrace.InputDiscarded.copy|copy(koma.core.InputId;koma.core.DiscardReason){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/StoreTrace.InputDiscarded.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/StoreTrace.InputDiscarded.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/StoreTrace.InputDiscarded.toString|toString(){}[0]
+    }
+
+    final class ProcessingFinished : koma.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.core/StoreTrace.ProcessingFinished|null[0]
+        constructor <init>(koma.core/InputId, kotlin/Long, koma.core/ProcessingOutcome) // koma.core/StoreTrace.ProcessingFinished.<init>|<init>(koma.core.InputId;kotlin.Long;koma.core.ProcessingOutcome){}[0]
+
+        final val input // koma.core/StoreTrace.ProcessingFinished.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.core/StoreTrace.ProcessingFinished.input.<get-input>|<get-input>(){}[0]
+        final val ordinal // koma.core/StoreTrace.ProcessingFinished.ordinal|{}ordinal[0]
+            final fun <get-ordinal>(): kotlin/Long // koma.core/StoreTrace.ProcessingFinished.ordinal.<get-ordinal>|<get-ordinal>(){}[0]
+        final val outcome // koma.core/StoreTrace.ProcessingFinished.outcome|{}outcome[0]
+            final fun <get-outcome>(): koma.core/ProcessingOutcome // koma.core/StoreTrace.ProcessingFinished.outcome.<get-outcome>|<get-outcome>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.core/StoreTrace.ProcessingFinished.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // koma.core/StoreTrace.ProcessingFinished.component2|component2(){}[0]
+        final fun component3(): koma.core/ProcessingOutcome // koma.core/StoreTrace.ProcessingFinished.component3|component3(){}[0]
+        final fun copy(koma.core/InputId = ..., kotlin/Long = ..., koma.core/ProcessingOutcome = ...): koma.core/StoreTrace.ProcessingFinished // koma.core/StoreTrace.ProcessingFinished.copy|copy(koma.core.InputId;kotlin.Long;koma.core.ProcessingOutcome){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/StoreTrace.ProcessingFinished.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/StoreTrace.ProcessingFinished.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/StoreTrace.ProcessingFinished.toString|toString(){}[0]
+    }
+
+    final class ProcessingStarted : koma.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.core/StoreTrace.ProcessingStarted|null[0]
+        constructor <init>(koma.core/InputId, kotlin/Long) // koma.core/StoreTrace.ProcessingStarted.<init>|<init>(koma.core.InputId;kotlin.Long){}[0]
+
+        final val input // koma.core/StoreTrace.ProcessingStarted.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId // koma.core/StoreTrace.ProcessingStarted.input.<get-input>|<get-input>(){}[0]
+        final val ordinal // koma.core/StoreTrace.ProcessingStarted.ordinal|{}ordinal[0]
+            final fun <get-ordinal>(): kotlin/Long // koma.core/StoreTrace.ProcessingStarted.ordinal.<get-ordinal>|<get-ordinal>(){}[0]
+
+        final fun component1(): koma.core/InputId // koma.core/StoreTrace.ProcessingStarted.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // koma.core/StoreTrace.ProcessingStarted.component2|component2(){}[0]
+        final fun copy(koma.core/InputId = ..., kotlin/Long = ...): koma.core/StoreTrace.ProcessingStarted // koma.core/StoreTrace.ProcessingStarted.copy|copy(koma.core.InputId;kotlin.Long){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/StoreTrace.ProcessingStarted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/StoreTrace.ProcessingStarted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/StoreTrace.ProcessingStarted.toString|toString(){}[0]
+    }
+
+    final object StoreClosed : koma.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.core/StoreTrace.StoreClosed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/StoreTrace.StoreClosed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/StoreTrace.StoreClosed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/StoreTrace.StoreClosed.toString|toString(){}[0]
+    }
+}
+
+sealed interface koma.core/DiscardReason { // koma.core/DiscardReason|null[0]
+    final class Rejected : koma.core/DiscardReason { // koma.core/DiscardReason.Rejected|null[0]
+        constructor <init>(kotlin/Throwable) // koma.core/DiscardReason.Rejected.<init>|<init>(kotlin.Throwable){}[0]
+
+        final val error // koma.core/DiscardReason.Rejected.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // koma.core/DiscardReason.Rejected.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): kotlin/Throwable // koma.core/DiscardReason.Rejected.component1|component1(){}[0]
+        final fun copy(kotlin/Throwable = ...): koma.core/DiscardReason.Rejected // koma.core/DiscardReason.Rejected.copy|copy(kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/DiscardReason.Rejected.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/DiscardReason.Rejected.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/DiscardReason.Rejected.toString|toString(){}[0]
+    }
+
+    final class StartupFailed : koma.core/DiscardReason { // koma.core/DiscardReason.StartupFailed|null[0]
+        constructor <init>(kotlin/Throwable) // koma.core/DiscardReason.StartupFailed.<init>|<init>(kotlin.Throwable){}[0]
+
+        final val error // koma.core/DiscardReason.StartupFailed.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // koma.core/DiscardReason.StartupFailed.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): kotlin/Throwable // koma.core/DiscardReason.StartupFailed.component1|component1(){}[0]
+        final fun copy(kotlin/Throwable = ...): koma.core/DiscardReason.StartupFailed // koma.core/DiscardReason.StartupFailed.copy|copy(kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/DiscardReason.StartupFailed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/DiscardReason.StartupFailed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/DiscardReason.StartupFailed.toString|toString(){}[0]
+    }
+
+    final object ClearedExplicitly : koma.core/DiscardReason { // koma.core/DiscardReason.ClearedExplicitly|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/DiscardReason.ClearedExplicitly.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/DiscardReason.ClearedExplicitly.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/DiscardReason.ClearedExplicitly.toString|toString(){}[0]
+    }
+
+    final object ClearedOnStateExit : koma.core/DiscardReason { // koma.core/DiscardReason.ClearedOnStateExit|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/DiscardReason.ClearedOnStateExit.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/DiscardReason.ClearedOnStateExit.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/DiscardReason.ClearedOnStateExit.toString|toString(){}[0]
+    }
+
+    final object LaunchInactive : koma.core/DiscardReason { // koma.core/DiscardReason.LaunchInactive|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/DiscardReason.LaunchInactive.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/DiscardReason.LaunchInactive.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/DiscardReason.LaunchInactive.toString|toString(){}[0]
+    }
+
+    final object Stale : koma.core/DiscardReason { // koma.core/DiscardReason.Stale|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/DiscardReason.Stale.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/DiscardReason.Stale.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/DiscardReason.Stale.toString|toString(){}[0]
+    }
+
+    final object StoreClosed : koma.core/DiscardReason { // koma.core/DiscardReason.StoreClosed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/DiscardReason.StoreClosed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/DiscardReason.StoreClosed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/DiscardReason.StoreClosed.toString|toString(){}[0]
+    }
+}
+
+sealed interface koma.core/LaunchControl { // koma.core/LaunchControl|null[0]
+    final class CancelPrevious : koma.core/LaunchControl { // koma.core/LaunchControl.CancelPrevious|null[0]
+        constructor <init>(koma.core/LaunchLane? = ...) // koma.core/LaunchControl.CancelPrevious.<init>|<init>(koma.core.LaunchLane?){}[0]
+
+        final val lane // koma.core/LaunchControl.CancelPrevious.lane|{}lane[0]
+            final fun <get-lane>(): koma.core/LaunchLane? // koma.core/LaunchControl.CancelPrevious.lane.<get-lane>|<get-lane>(){}[0]
+
+        final fun component1(): koma.core/LaunchLane? // koma.core/LaunchControl.CancelPrevious.component1|component1(){}[0]
+        final fun copy(koma.core/LaunchLane? = ...): koma.core/LaunchControl.CancelPrevious // koma.core/LaunchControl.CancelPrevious.copy|copy(koma.core.LaunchLane?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/LaunchControl.CancelPrevious.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/LaunchControl.CancelPrevious.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/LaunchControl.CancelPrevious.toString|toString(){}[0]
+    }
+
+    final class DropIfRunning : koma.core/LaunchControl { // koma.core/LaunchControl.DropIfRunning|null[0]
+        constructor <init>(koma.core/LaunchLane? = ...) // koma.core/LaunchControl.DropIfRunning.<init>|<init>(koma.core.LaunchLane?){}[0]
+
+        final val lane // koma.core/LaunchControl.DropIfRunning.lane|{}lane[0]
+            final fun <get-lane>(): koma.core/LaunchLane? // koma.core/LaunchControl.DropIfRunning.lane.<get-lane>|<get-lane>(){}[0]
+
+        final fun component1(): koma.core/LaunchLane? // koma.core/LaunchControl.DropIfRunning.component1|component1(){}[0]
+        final fun copy(koma.core/LaunchLane? = ...): koma.core/LaunchControl.DropIfRunning // koma.core/LaunchControl.DropIfRunning.copy|copy(koma.core.LaunchLane?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/LaunchControl.DropIfRunning.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/LaunchControl.DropIfRunning.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/LaunchControl.DropIfRunning.toString|toString(){}[0]
+    }
+
+    final object Untracked : koma.core/LaunchControl { // koma.core/LaunchControl.Untracked|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/LaunchControl.Untracked.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/LaunchControl.Untracked.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/LaunchControl.Untracked.toString|toString(){}[0]
+    }
+}
+
+sealed interface koma.core/ProcessingOutcome { // koma.core/ProcessingOutcome|null[0]
+    final class Failed : koma.core/ProcessingOutcome { // koma.core/ProcessingOutcome.Failed|null[0]
+        constructor <init>(kotlin/Throwable) // koma.core/ProcessingOutcome.Failed.<init>|<init>(kotlin.Throwable){}[0]
+
+        final val error // koma.core/ProcessingOutcome.Failed.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // koma.core/ProcessingOutcome.Failed.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): kotlin/Throwable // koma.core/ProcessingOutcome.Failed.component1|component1(){}[0]
+        final fun copy(kotlin/Throwable = ...): koma.core/ProcessingOutcome.Failed // koma.core/ProcessingOutcome.Failed.copy|copy(kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/ProcessingOutcome.Failed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/ProcessingOutcome.Failed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/ProcessingOutcome.Failed.toString|toString(){}[0]
+    }
+
+    final class Handled : koma.core/ProcessingOutcome { // koma.core/ProcessingOutcome.Handled|null[0]
+        constructor <init>(kotlin/Int) // koma.core/ProcessingOutcome.Handled.<init>|<init>(kotlin.Int){}[0]
+
+        final val commits // koma.core/ProcessingOutcome.Handled.commits|{}commits[0]
+            final fun <get-commits>(): kotlin/Int // koma.core/ProcessingOutcome.Handled.commits.<get-commits>|<get-commits>(){}[0]
+
+        final fun component1(): kotlin/Int // koma.core/ProcessingOutcome.Handled.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): koma.core/ProcessingOutcome.Handled // koma.core/ProcessingOutcome.Handled.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/ProcessingOutcome.Handled.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/ProcessingOutcome.Handled.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/ProcessingOutcome.Handled.toString|toString(){}[0]
+    }
+
+    final class Recovered : koma.core/ProcessingOutcome { // koma.core/ProcessingOutcome.Recovered|null[0]
+        constructor <init>(kotlin/Throwable, kotlin/Int) // koma.core/ProcessingOutcome.Recovered.<init>|<init>(kotlin.Throwable;kotlin.Int){}[0]
+
+        final val commits // koma.core/ProcessingOutcome.Recovered.commits|{}commits[0]
+            final fun <get-commits>(): kotlin/Int // koma.core/ProcessingOutcome.Recovered.commits.<get-commits>|<get-commits>(){}[0]
+        final val error // koma.core/ProcessingOutcome.Recovered.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // koma.core/ProcessingOutcome.Recovered.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): kotlin/Throwable // koma.core/ProcessingOutcome.Recovered.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // koma.core/ProcessingOutcome.Recovered.component2|component2(){}[0]
+        final fun copy(kotlin/Throwable = ..., kotlin/Int = ...): koma.core/ProcessingOutcome.Recovered // koma.core/ProcessingOutcome.Recovered.copy|copy(kotlin.Throwable;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/ProcessingOutcome.Recovered.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/ProcessingOutcome.Recovered.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/ProcessingOutcome.Recovered.toString|toString(){}[0]
+    }
+
+    final object Cancelled : koma.core/ProcessingOutcome { // koma.core/ProcessingOutcome.Cancelled|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/ProcessingOutcome.Cancelled.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/ProcessingOutcome.Cancelled.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/ProcessingOutcome.Cancelled.toString|toString(){}[0]
+    }
+
+    final object Ignored : koma.core/ProcessingOutcome { // koma.core/ProcessingOutcome.Ignored|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/ProcessingOutcome.Ignored.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/ProcessingOutcome.Ignored.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/ProcessingOutcome.Ignored.toString|toString(){}[0]
+    }
+
+    final object Unchanged : koma.core/ProcessingOutcome { // koma.core/ProcessingOutcome.Unchanged|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/ProcessingOutcome.Unchanged.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.core/ProcessingOutcome.Unchanged.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.core/ProcessingOutcome.Unchanged.toString|toString(){}[0]
+    }
+}
+
+final class <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/StoreBuilder { // koma.core/StoreBuilder|null[0]
+    final val registeredActionHandlers // koma.core/StoreBuilder.registeredActionHandlers|{}registeredActionHandlers[0]
+        final fun <get-registeredActionHandlers>(): kotlin.collections/MutableList<koma.core/StoreBuilder.StateHandler<kotlin/Function2<#A, #B, kotlin/Boolean>, koma.core/ActionScope<#A, #B, #C, #A>>> // koma.core/StoreBuilder.registeredActionHandlers.<get-registeredActionHandlers>|<get-registeredActionHandlers>(){}[0]
+    final val registeredEnterHandlers // koma.core/StoreBuilder.registeredEnterHandlers|{}registeredEnterHandlers[0]
+        final fun <get-registeredEnterHandlers>(): kotlin.collections/MutableList<koma.core/StoreBuilder.StateHandler<kotlin/Function1<#A, kotlin/Boolean>, koma.core/EnterScope<#A, #C, #A>>> // koma.core/StoreBuilder.registeredEnterHandlers.<get-registeredEnterHandlers>|<get-registeredEnterHandlers>(){}[0]
+    final val registeredErrorHandlers // koma.core/StoreBuilder.registeredErrorHandlers|{}registeredErrorHandlers[0]
+        final fun <get-registeredErrorHandlers>(): kotlin.collections/MutableList<koma.core/StoreBuilder.StateHandler<kotlin/Function2<#A, kotlin/Exception, kotlin/Boolean>, koma.core/RecoverScope<#A, #C, #A, kotlin/Exception>>> // koma.core/StoreBuilder.registeredErrorHandlers.<get-registeredErrorHandlers>|<get-registeredErrorHandlers>(){}[0]
+    final val registeredExitHandlers // koma.core/StoreBuilder.registeredExitHandlers|{}registeredExitHandlers[0]
+        final fun <get-registeredExitHandlers>(): kotlin.collections/MutableList<koma.core/StoreBuilder.StateHandler<kotlin/Function1<#A, kotlin/Boolean>, koma.core/ExitScope<#A, #C, #A>>> // koma.core/StoreBuilder.registeredExitHandlers.<get-registeredExitHandlers>|<get-registeredExitHandlers>(){}[0]
+
+    final fun autoStartPolicy(koma.core/AutoStartPolicy) // koma.core/StoreBuilder.autoStartPolicy|autoStartPolicy(koma.core.AutoStartPolicy){}[0]
+    final fun coroutineContext(kotlin.coroutines/CoroutineContext) // koma.core/StoreBuilder.coroutineContext|coroutineContext(kotlin.coroutines.CoroutineContext){}[0]
+    final fun exceptionHandler(koma.core/ExceptionHandler) // koma.core/StoreBuilder.exceptionHandler|exceptionHandler(koma.core.ExceptionHandler){}[0]
+    final fun initialState(#A) // koma.core/StoreBuilder.initialState|initialState(1:0){}[0]
+    final fun pendingActionPolicy(koma.core/PendingActionPolicy) // koma.core/StoreBuilder.pendingActionPolicy|pendingActionPolicy(koma.core.PendingActionPolicy){}[0]
+    final fun plugin(koma.core/Plugin<#A, #B, #C>, kotlin/Array<out koma.core/Plugin<#A, #B, #C>>...) // koma.core/StoreBuilder.plugin|plugin(koma.core.Plugin<1:0,1:1,1:2>;kotlin.Array<out|koma.core.Plugin<1:0,1:1,1:2>>...){}[0]
+    final fun pluginExecutionPolicy(koma.core/PluginExecutionPolicy) // koma.core/StoreBuilder.pluginExecutionPolicy|pluginExecutionPolicy(koma.core.PluginExecutionPolicy){}[0]
+    final fun probe(koma.core/StoreProbe<#A, #B, #C>, kotlin/Array<out koma.core/StoreProbe<#A, #B, #C>>...) // koma.core/StoreBuilder.probe|probe(koma.core.StoreProbe<1:0,1:1,1:2>;kotlin.Array<out|koma.core.StoreProbe<1:0,1:1,1:2>>...){}[0]
+    final fun stateSaver(koma.core/StateSaver<#A>) // koma.core/StoreBuilder.stateSaver|stateSaver(koma.core.StateSaver<1:0>){}[0]
+    final fun validateRecovery(kotlin/Function2<#A, #A, kotlin/Unit>) // koma.core/StoreBuilder.validateRecovery|validateRecovery(kotlin.Function2<1:0,1:0,kotlin.Unit>){}[0]
+    final inline fun <#A1: reified #A> state(noinline kotlin/Function1<koma.core/StoreBuilder.StateHandlerConfig<#A, #B, #C, #A1>, kotlin/Unit>) // koma.core/StoreBuilder.state|state(kotlin.Function1<koma.core.StoreBuilder.StateHandlerConfig<1:0,1:1,1:2,0:0>,kotlin.Unit>){0§<1:0>}[0]
+
+    final class <#A1: koma.core/State, #B1: koma.core/Action, #C1: koma.core/Event, #D1: #A1> StateHandlerConfig { // koma.core/StoreBuilder.StateHandlerConfig|null[0]
+        constructor <init>() // koma.core/StoreBuilder.StateHandlerConfig.<init>|<init>(){}[0]
+
+        final val stateActionHandlers // koma.core/StoreBuilder.StateHandlerConfig.stateActionHandlers|{}stateActionHandlers[0]
+            final fun <get-stateActionHandlers>(): kotlin.collections/MutableList<koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler<kotlin/Function1<#B1, kotlin/Boolean>, koma.core/ActionScope<#A1, #B1, #C1, #D1>>> // koma.core/StoreBuilder.StateHandlerConfig.stateActionHandlers.<get-stateActionHandlers>|<get-stateActionHandlers>(){}[0]
+        final val stateEnterHandlers // koma.core/StoreBuilder.StateHandlerConfig.stateEnterHandlers|{}stateEnterHandlers[0]
+            final fun <get-stateEnterHandlers>(): kotlin.collections/MutableList<koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler<kotlin/Nothing?, koma.core/EnterScope<#A1, #C1, #D1>>> // koma.core/StoreBuilder.StateHandlerConfig.stateEnterHandlers.<get-stateEnterHandlers>|<get-stateEnterHandlers>(){}[0]
+        final val stateErrorHandlers // koma.core/StoreBuilder.StateHandlerConfig.stateErrorHandlers|{}stateErrorHandlers[0]
+            final fun <get-stateErrorHandlers>(): kotlin.collections/MutableList<koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler<kotlin/Function1<kotlin/Exception, kotlin/Boolean>, koma.core/RecoverScope<#A1, #C1, #D1, kotlin/Exception>>> // koma.core/StoreBuilder.StateHandlerConfig.stateErrorHandlers.<get-stateErrorHandlers>|<get-stateErrorHandlers>(){}[0]
+        final val stateExitHandlers // koma.core/StoreBuilder.StateHandlerConfig.stateExitHandlers|{}stateExitHandlers[0]
+            final fun <get-stateExitHandlers>(): kotlin.collections/MutableList<koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler<kotlin/Nothing?, koma.core/ExitScope<#A1, #C1, #D1>>> // koma.core/StoreBuilder.StateHandlerConfig.stateExitHandlers.<get-stateExitHandlers>|<get-stateExitHandlers>(){}[0]
+
+        final fun enter(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<koma.core/EnterScope<#A1, #C1, #D1>, kotlin/Unit>) // koma.core/StoreBuilder.StateHandlerConfig.enter|enter(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.core.EnterScope<1:0,1:2,1:3>,kotlin.Unit>){}[0]
+        final fun exit(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<koma.core/ExitScope<#A1, #C1, #D1>, kotlin/Unit>) // koma.core/StoreBuilder.StateHandlerConfig.exit|exit(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.core.ExitScope<1:0,1:2,1:3>,kotlin.Unit>){}[0]
+        final inline fun <#A2: reified #B1> action(kotlinx.coroutines/CoroutineDispatcher? = ..., noinline kotlin.coroutines/SuspendFunction1<koma.core/ActionScope<#A1, #A2, #C1, #D1>, kotlin/Unit>) // koma.core/StoreBuilder.StateHandlerConfig.action|action(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.core.ActionScope<1:0,0:0,1:2,1:3>,kotlin.Unit>){0§<1:1>}[0]
+        final inline fun <#A2: reified kotlin/Exception> error(kotlinx.coroutines/CoroutineDispatcher? = ..., noinline kotlin.coroutines/SuspendFunction1<koma.core/RecoverScope<#A1, #C1, #D1, #A2>, kotlin/Unit>) // koma.core/StoreBuilder.StateHandlerConfig.error|error(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.core.RecoverScope<1:0,1:2,1:3,0:0>,kotlin.Unit>){0§<kotlin.Exception>}[0]
+        final inline fun <#A2: reified kotlin/Exception> recover(kotlinx.coroutines/CoroutineDispatcher? = ..., noinline kotlin.coroutines/SuspendFunction1<koma.core/RecoverScope<#A1, #C1, #D1, #A2>, kotlin/Unit>) // koma.core/StoreBuilder.StateHandlerConfig.recover|recover(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.core.RecoverScope<1:0,1:2,1:3,0:0>,kotlin.Unit>){0§<kotlin.Exception>}[0]
+
+        final class <#A2: kotlin/Any?, #B2: koma.core/StoreScope> ThreadedHandler { // koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler|null[0]
+            constructor <init>(kotlinx.coroutines/CoroutineDispatcher?, #A2, kotlin.coroutines/SuspendFunction1<#B2, kotlin/Unit>) // koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.<init>|<init>(kotlinx.coroutines.CoroutineDispatcher?;1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>){}[0]
+            constructor <init>(kotlinx.coroutines/CoroutineDispatcher?, #A2, kotlin.coroutines/SuspendFunction1<#B2, kotlin/Unit>, kotlin.reflect/KClass<*>?) // koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.<init>|<init>(kotlinx.coroutines.CoroutineDispatcher?;1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>;kotlin.reflect.KClass<*>?){}[0]
+
+            final val inputType // koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.inputType|{}inputType[0]
+                final fun <get-inputType>(): kotlin.reflect/KClass<*>? // koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.inputType.<get-inputType>|<get-inputType>(){}[0]
+            final val predicate // koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.predicate|{}predicate[0]
+                final fun <get-predicate>(): #A2 // koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.predicate.<get-predicate>|<get-predicate>(){}[0]
+
+            final suspend fun invoke(#B2) // koma.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.invoke|invoke(1:1){}[0]
+        }
+    }
+
+    final class <#A1: kotlin/Any?, #B1: koma.core/StoreScope> StateHandler { // koma.core/StoreBuilder.StateHandler|null[0]
+        constructor <init>(#A1, kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit>) // koma.core/StoreBuilder.StateHandler.<init>|<init>(1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>){}[0]
+        constructor <init>(#A1, kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit>, koma.core/HandlerMatcher?) // koma.core/StoreBuilder.StateHandler.<init>|<init>(1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>;koma.core.HandlerMatcher?){}[0]
+
+        final val handler // koma.core/StoreBuilder.StateHandler.handler|{}handler[0]
+            final fun <get-handler>(): kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit> // koma.core/StoreBuilder.StateHandler.handler.<get-handler>|<get-handler>(){}[0]
+        final val matcher // koma.core/StoreBuilder.StateHandler.matcher|{}matcher[0]
+            final fun <get-matcher>(): koma.core/HandlerMatcher? // koma.core/StoreBuilder.StateHandler.matcher.<get-matcher>|<get-matcher>(){}[0]
+        final val predicate // koma.core/StoreBuilder.StateHandler.predicate|{}predicate[0]
+            final fun <get-predicate>(): #A1 // koma.core/StoreBuilder.StateHandler.predicate.<get-predicate>|<get-predicate>(){}[0]
+    }
+}
+
+final class <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/StorePatch { // koma.core/StorePatch|null[0]
+    constructor <init>(#A? = ..., kotlin.coroutines/CoroutineContext? = ..., koma.core/StateSaver<#A>? = ..., koma.core/ExceptionHandler? = ..., koma.core/AutoStartPolicy? = ..., koma.core/PendingActionPolicy? = ..., koma.core/PluginExecutionPolicy? = ..., kotlin.collections/List<koma.core/PluginPatch<#A, #B, #C>> = ..., kotlin.collections/List<koma.core/StoreProbe<#A, #B, #C>> = ...) // koma.core/StorePatch.<init>|<init>(1:0?;kotlin.coroutines.CoroutineContext?;koma.core.StateSaver<1:0>?;koma.core.ExceptionHandler?;koma.core.AutoStartPolicy?;koma.core.PendingActionPolicy?;koma.core.PluginExecutionPolicy?;kotlin.collections.List<koma.core.PluginPatch<1:0,1:1,1:2>>;kotlin.collections.List<koma.core.StoreProbe<1:0,1:1,1:2>>){}[0]
+
+    final val autoStartPolicy // koma.core/StorePatch.autoStartPolicy|{}autoStartPolicy[0]
+        final fun <get-autoStartPolicy>(): koma.core/AutoStartPolicy? // koma.core/StorePatch.autoStartPolicy.<get-autoStartPolicy>|<get-autoStartPolicy>(){}[0]
+    final val coroutineContext // koma.core/StorePatch.coroutineContext|{}coroutineContext[0]
+        final fun <get-coroutineContext>(): kotlin.coroutines/CoroutineContext? // koma.core/StorePatch.coroutineContext.<get-coroutineContext>|<get-coroutineContext>(){}[0]
+    final val exceptionHandler // koma.core/StorePatch.exceptionHandler|{}exceptionHandler[0]
+        final fun <get-exceptionHandler>(): koma.core/ExceptionHandler? // koma.core/StorePatch.exceptionHandler.<get-exceptionHandler>|<get-exceptionHandler>(){}[0]
+    final val initialState // koma.core/StorePatch.initialState|{}initialState[0]
+        final fun <get-initialState>(): #A? // koma.core/StorePatch.initialState.<get-initialState>|<get-initialState>(){}[0]
+    final val pendingActionPolicy // koma.core/StorePatch.pendingActionPolicy|{}pendingActionPolicy[0]
+        final fun <get-pendingActionPolicy>(): koma.core/PendingActionPolicy? // koma.core/StorePatch.pendingActionPolicy.<get-pendingActionPolicy>|<get-pendingActionPolicy>(){}[0]
+    final val pluginExecutionPolicy // koma.core/StorePatch.pluginExecutionPolicy|{}pluginExecutionPolicy[0]
+        final fun <get-pluginExecutionPolicy>(): koma.core/PluginExecutionPolicy? // koma.core/StorePatch.pluginExecutionPolicy.<get-pluginExecutionPolicy>|<get-pluginExecutionPolicy>(){}[0]
+    final val pluginPatches // koma.core/StorePatch.pluginPatches|{}pluginPatches[0]
+        final fun <get-pluginPatches>(): kotlin.collections/List<koma.core/PluginPatch<#A, #B, #C>> // koma.core/StorePatch.pluginPatches.<get-pluginPatches>|<get-pluginPatches>(){}[0]
+    final val probes // koma.core/StorePatch.probes|{}probes[0]
+        final fun <get-probes>(): kotlin.collections/List<koma.core/StoreProbe<#A, #B, #C>> // koma.core/StorePatch.probes.<get-probes>|<get-probes>(){}[0]
+    final val stateSaver // koma.core/StorePatch.stateSaver|{}stateSaver[0]
+        final fun <get-stateSaver>(): koma.core/StateSaver<#A>? // koma.core/StorePatch.stateSaver.<get-stateSaver>|<get-stateSaver>(){}[0]
+
+    final fun component1(): #A? // koma.core/StorePatch.component1|component1(){}[0]
+    final fun component2(): kotlin.coroutines/CoroutineContext? // koma.core/StorePatch.component2|component2(){}[0]
+    final fun component3(): koma.core/StateSaver<#A>? // koma.core/StorePatch.component3|component3(){}[0]
+    final fun component4(): koma.core/ExceptionHandler? // koma.core/StorePatch.component4|component4(){}[0]
+    final fun component5(): koma.core/AutoStartPolicy? // koma.core/StorePatch.component5|component5(){}[0]
+    final fun component6(): koma.core/PendingActionPolicy? // koma.core/StorePatch.component6|component6(){}[0]
+    final fun component7(): koma.core/PluginExecutionPolicy? // koma.core/StorePatch.component7|component7(){}[0]
+    final fun component8(): kotlin.collections/List<koma.core/PluginPatch<#A, #B, #C>> // koma.core/StorePatch.component8|component8(){}[0]
+    final fun component9(): kotlin.collections/List<koma.core/StoreProbe<#A, #B, #C>> // koma.core/StorePatch.component9|component9(){}[0]
+    final fun copy(#A? = ..., kotlin.coroutines/CoroutineContext? = ..., koma.core/StateSaver<#A>? = ..., koma.core/ExceptionHandler? = ..., koma.core/AutoStartPolicy? = ..., koma.core/PendingActionPolicy? = ..., koma.core/PluginExecutionPolicy? = ..., kotlin.collections/List<koma.core/PluginPatch<#A, #B, #C>> = ..., kotlin.collections/List<koma.core/StoreProbe<#A, #B, #C>> = ...): koma.core/StorePatch<#A, #B, #C> // koma.core/StorePatch.copy|copy(1:0?;kotlin.coroutines.CoroutineContext?;koma.core.StateSaver<1:0>?;koma.core.ExceptionHandler?;koma.core.AutoStartPolicy?;koma.core.PendingActionPolicy?;koma.core.PluginExecutionPolicy?;kotlin.collections.List<koma.core.PluginPatch<1:0,1:1,1:2>>;kotlin.collections.List<koma.core.StoreProbe<1:0,1:1,1:2>>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/StorePatch.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.core/StorePatch.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.core/StorePatch.toString|toString(){}[0]
+}
+
+final class <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/StorePatchBuilder { // koma.core/StorePatchBuilder|null[0]
+    constructor <init>() // koma.core/StorePatchBuilder.<init>|<init>(){}[0]
+
+    final fun autoStartPolicy(koma.core/AutoStartPolicy) // koma.core/StorePatchBuilder.autoStartPolicy|autoStartPolicy(koma.core.AutoStartPolicy){}[0]
+    final fun build(): koma.core/StorePatch<#A, #B, #C> // koma.core/StorePatchBuilder.build|build(){}[0]
+    final fun clearPlugins() // koma.core/StorePatchBuilder.clearPlugins|clearPlugins(){}[0]
+    final fun coroutineContext(kotlin.coroutines/CoroutineContext) // koma.core/StorePatchBuilder.coroutineContext|coroutineContext(kotlin.coroutines.CoroutineContext){}[0]
+    final fun exceptionHandler(koma.core/ExceptionHandler) // koma.core/StorePatchBuilder.exceptionHandler|exceptionHandler(koma.core.ExceptionHandler){}[0]
+    final fun initialState(#A) // koma.core/StorePatchBuilder.initialState|initialState(1:0){}[0]
+    final fun pendingActionPolicy(koma.core/PendingActionPolicy) // koma.core/StorePatchBuilder.pendingActionPolicy|pendingActionPolicy(koma.core.PendingActionPolicy){}[0]
+    final fun plugin(koma.core/Plugin<#A, #B, #C>, kotlin/Array<out koma.core/Plugin<#A, #B, #C>>...) // koma.core/StorePatchBuilder.plugin|plugin(koma.core.Plugin<1:0,1:1,1:2>;kotlin.Array<out|koma.core.Plugin<1:0,1:1,1:2>>...){}[0]
+    final fun pluginExecutionPolicy(koma.core/PluginExecutionPolicy) // koma.core/StorePatchBuilder.pluginExecutionPolicy|pluginExecutionPolicy(koma.core.PluginExecutionPolicy){}[0]
+    final fun probe(koma.core/StoreProbe<#A, #B, #C>, kotlin/Array<out koma.core/StoreProbe<#A, #B, #C>>...) // koma.core/StorePatchBuilder.probe|probe(koma.core.StoreProbe<1:0,1:1,1:2>;kotlin.Array<out|koma.core.StoreProbe<1:0,1:1,1:2>>...){}[0]
+    final fun replacePlugins(koma.core/Plugin<#A, #B, #C>, kotlin/Array<out koma.core/Plugin<#A, #B, #C>>...) // koma.core/StorePatchBuilder.replacePlugins|replacePlugins(koma.core.Plugin<1:0,1:1,1:2>;kotlin.Array<out|koma.core.Plugin<1:0,1:1,1:2>>...){}[0]
+    final fun stateSaver(koma.core/StateSaver<#A>) // koma.core/StorePatchBuilder.stateSaver|stateSaver(koma.core.StateSaver<1:0>){}[0]
+}
+
+final class koma.core/ActionHandlerMatch { // koma.core/ActionHandlerMatch|null[0]
+    constructor <init>(kotlin/Int, kotlin.reflect/KClass<*>?, kotlin.reflect/KClass<*>?, kotlin/Boolean) // koma.core/ActionHandlerMatch.<init>|<init>(kotlin.Int;kotlin.reflect.KClass<*>?;kotlin.reflect.KClass<*>?;kotlin.Boolean){}[0]
+
+    final val actionType // koma.core/ActionHandlerMatch.actionType|{}actionType[0]
+        final fun <get-actionType>(): kotlin.reflect/KClass<*>? // koma.core/ActionHandlerMatch.actionType.<get-actionType>|<get-actionType>(){}[0]
+    final val index // koma.core/ActionHandlerMatch.index|{}index[0]
+        final fun <get-index>(): kotlin/Int // koma.core/ActionHandlerMatch.index.<get-index>|<get-index>(){}[0]
+    final val matches // koma.core/ActionHandlerMatch.matches|{}matches[0]
+        final fun <get-matches>(): kotlin/Boolean // koma.core/ActionHandlerMatch.matches.<get-matches>|<get-matches>(){}[0]
+    final val stateType // koma.core/ActionHandlerMatch.stateType|{}stateType[0]
+        final fun <get-stateType>(): kotlin.reflect/KClass<*>? // koma.core/ActionHandlerMatch.stateType.<get-stateType>|<get-stateType>(){}[0]
+}
+
+final class koma.core/HandlerMatcher { // koma.core/HandlerMatcher|null[0]
+    constructor <init>(kotlin.reflect/KClass<*>, kotlin.reflect/KClass<*>? = ...) // koma.core/HandlerMatcher.<init>|<init>(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>?){}[0]
+
+    final val inputType // koma.core/HandlerMatcher.inputType|{}inputType[0]
+        final fun <get-inputType>(): kotlin.reflect/KClass<*>? // koma.core/HandlerMatcher.inputType.<get-inputType>|<get-inputType>(){}[0]
+    final val stateType // koma.core/HandlerMatcher.stateType|{}stateType[0]
+        final fun <get-stateType>(): kotlin.reflect/KClass<*> // koma.core/HandlerMatcher.stateType.<get-stateType>|<get-stateType>(){}[0]
+
+    final fun component1(): kotlin.reflect/KClass<*> // koma.core/HandlerMatcher.component1|component1(){}[0]
+    final fun component2(): kotlin.reflect/KClass<*>? // koma.core/HandlerMatcher.component2|component2(){}[0]
+    final fun copy(kotlin.reflect/KClass<*> = ..., kotlin.reflect/KClass<*>? = ...): koma.core/HandlerMatcher // koma.core/HandlerMatcher.copy|copy(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/HandlerMatcher.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.core/HandlerMatcher.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.core/HandlerMatcher.toString|toString(){}[0]
+}
+
+final class koma.core/HandlerMetadata { // koma.core/HandlerMetadata|null[0]
+    constructor <init>(kotlin/Int, kotlin.reflect/KClass<*>?, kotlin.reflect/KClass<*>?) // koma.core/HandlerMetadata.<init>|<init>(kotlin.Int;kotlin.reflect.KClass<*>?;kotlin.reflect.KClass<*>?){}[0]
+
+    final val index // koma.core/HandlerMetadata.index|{}index[0]
+        final fun <get-index>(): kotlin/Int // koma.core/HandlerMetadata.index.<get-index>|<get-index>(){}[0]
+    final val inputType // koma.core/HandlerMetadata.inputType|{}inputType[0]
+        final fun <get-inputType>(): kotlin.reflect/KClass<*>? // koma.core/HandlerMetadata.inputType.<get-inputType>|<get-inputType>(){}[0]
+    final val stateType // koma.core/HandlerMetadata.stateType|{}stateType[0]
+        final fun <get-stateType>(): kotlin.reflect/KClass<*>? // koma.core/HandlerMetadata.stateType.<get-stateType>|<get-stateType>(){}[0]
+}
+
+final class koma.core/LaunchLane { // koma.core/LaunchLane|null[0]
+    constructor <init>() // koma.core/LaunchLane.<init>|<init>(){}[0]
+}
+
+final class koma.core/StoreHandlerMetadata { // koma.core/StoreHandlerMetadata|null[0]
+    constructor <init>(kotlin.collections/List<koma.core/HandlerMetadata>, kotlin.collections/List<koma.core/HandlerMetadata>, kotlin.collections/List<koma.core/HandlerMetadata>, kotlin.collections/List<koma.core/HandlerMetadata>) // koma.core/StoreHandlerMetadata.<init>|<init>(kotlin.collections.List<koma.core.HandlerMetadata>;kotlin.collections.List<koma.core.HandlerMetadata>;kotlin.collections.List<koma.core.HandlerMetadata>;kotlin.collections.List<koma.core.HandlerMetadata>){}[0]
+
+    final val action // koma.core/StoreHandlerMetadata.action|{}action[0]
+        final fun <get-action>(): kotlin.collections/List<koma.core/HandlerMetadata> // koma.core/StoreHandlerMetadata.action.<get-action>|<get-action>(){}[0]
+    final val enter // koma.core/StoreHandlerMetadata.enter|{}enter[0]
+        final fun <get-enter>(): kotlin.collections/List<koma.core/HandlerMetadata> // koma.core/StoreHandlerMetadata.enter.<get-enter>|<get-enter>(){}[0]
+    final val exit // koma.core/StoreHandlerMetadata.exit|{}exit[0]
+        final fun <get-exit>(): kotlin.collections/List<koma.core/HandlerMetadata> // koma.core/StoreHandlerMetadata.exit.<get-exit>|<get-exit>(){}[0]
+    final val recover // koma.core/StoreHandlerMetadata.recover|{}recover[0]
+        final fun <get-recover>(): kotlin.collections/List<koma.core/HandlerMetadata> // koma.core/StoreHandlerMetadata.recover.<get-recover>|<get-recover>(){}[0]
+}
+
+final value class koma.core/InputId { // koma.core/InputId|null[0]
+    constructor <init>(kotlin/Long) // koma.core/InputId.<init>|<init>(kotlin.Long){}[0]
+
+    final val value // koma.core/InputId.value|{}value[0]
+        final fun <get-value>(): kotlin/Long // koma.core/InputId.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.core/InputId.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.core/InputId.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.core/InputId.toString|toString(){}[0]
+}
+
+final fun <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/Plugin(kotlin.coroutines/SuspendFunction2<koma.core/PluginScope<#A, #B>, #A, kotlin/Unit> = ..., kotlin.coroutines/SuspendFunction3<koma.core/PluginScope<#A, #B>, #A, #B, kotlin/Unit> = ..., kotlin.coroutines/SuspendFunction3<koma.core/PluginScope<#A, #B>, #A, #A, kotlin/Unit> = ..., kotlin.coroutines/SuspendFunction3<koma.core/PluginScope<#A, #B>, #A, #C, kotlin/Unit> = ...): koma.core/Plugin<#A, #B, #C> // koma.core/Plugin|Plugin(kotlin.coroutines.SuspendFunction2<koma.core.PluginScope<0:0,0:1>,0:0,kotlin.Unit>;kotlin.coroutines.SuspendFunction3<koma.core.PluginScope<0:0,0:1>,0:0,0:1,kotlin.Unit>;kotlin.coroutines.SuspendFunction3<koma.core.PluginScope<0:0,0:1>,0:0,0:0,kotlin.Unit>;kotlin.coroutines.SuspendFunction3<koma.core.PluginScope<0:0,0:1>,0:0,0:2,kotlin.Unit>){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+final fun <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.core/Store(#A? = ..., kotlin.coroutines/CoroutineContext? = ..., kotlin/Function1<koma.core/StoreBuilder<#A, #B, #C>, kotlin/Unit>): koma.core/Store<#A, #B, #C> // koma.core/Store|Store(0:0?;kotlin.coroutines.CoroutineContext?;kotlin.Function1<koma.core.StoreBuilder<0:0,0:1,0:2>,kotlin.Unit>){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
+final fun <#A: koma.core/State> koma.core/StateSaver(kotlin/Function1<#A, kotlin/Unit>, kotlin/Function0<#A?>): koma.core/StateSaver<#A> // koma.core/StateSaver|StateSaver(kotlin.Function1<0:0,kotlin.Unit>;kotlin.Function0<0:0?>){0§<koma.core.State>}[0]
+final fun koma.core/ExceptionHandler(kotlin/Function1<kotlin/Throwable, kotlin/Unit>): koma.core/ExceptionHandler // koma.core/ExceptionHandler|ExceptionHandler(kotlin.Function1<kotlin.Throwable,kotlin.Unit>){}[0]
+final suspend fun koma.core/currentInputId(): koma.core/InputId? // koma.core/currentInputId|currentInputId(){}[0]

@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run specific test target: `./gradlew iosSimulatorArm64Test` (targets: jvm, iosArm64, iosSimulatorArm64, js, wasmJs, Android host)
 - Debug tests with: `./gradlew jvmTest --info`
 - Lint: `./gradlew lint`
+- Public API/ABI check (CI runs it): `./gradlew apiCheck`; after a deliberate change of the public surface, refresh the dumps under `*/api/` with `./gradlew apiDump` in the same change
 
 ## Code Style Guidelines
 
