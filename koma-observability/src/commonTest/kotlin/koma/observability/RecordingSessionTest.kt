@@ -78,7 +78,7 @@ class RecordingSessionTest {
         session.publish(a, JournalEntry.StoreClosed)
         session.publish(b, JournalEntry.StoreClosed)
         session.publish(a, JournalEntry.StoreClosed)
-        session.publish(null, JournalEntry.RecordingStopped)
+        session.publishRecord(null, JournalEntry.RecordingStopped)
         runCurrent()
 
         val records = session.records()

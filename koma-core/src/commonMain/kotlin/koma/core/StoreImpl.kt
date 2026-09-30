@@ -1130,15 +1130,15 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    // The input a coroutine works for: carried by the dispatch, startup, transaction and recovery
-    // coroutines and by the coroutines a handler or a plugin launches.
-    private class InputOrigin(val input: InputId) : AbstractCoroutineContextElement(InputOrigin) {
-        companion object Key : CoroutineContext.Key<InputOrigin>
-    }
-
     private class PendingDispatchCleared(val reason: DiscardReason) : CancellationException("[Koma] Pending action cleared")
 
     private companion object {
         const val MAX_ENTER_CHAIN = 500
     }
+}
+
+// The input a coroutine works for: carried by the dispatch, startup, transaction and recovery
+// coroutines and by the coroutines a handler or a plugin launches. Read by [currentInputId].
+internal class InputOrigin(val input: InputId) : AbstractCoroutineContextElement(InputOrigin) {
+    companion object Key : CoroutineContext.Key<InputOrigin>
 }

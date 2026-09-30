@@ -342,6 +342,13 @@ What holds:
   exception handler. `recover {}` may not change the snapshot.
 - A restored snapshot that was already started starts over with its context: commands are not
   part of the snapshot. Checkpoints of the executor are a later stage.
+- `AdmissionPolicy.Bounded(n)` refuses a dispatched action while `n` accepted actions still wait;
+  `store.admit(action)` says whether it was accepted, `dispatch` drops the answer. Inputs the
+  machine's own commands and timers send are never refused.
+- With `koma-observability`, `recordTo(session, id)` in the configuration journals the store's
+  inputs and commits, and `observers = listOf(session.decisionsOf(id))` adds the decisions
+  themselves: transitions, activations, commands, timers, ignored inputs with their reason,
+  refused actions. Commands and refused actions carry only what the describers you pass keep.
 
 ## Validation, Mermaid, paths and conformance
 
