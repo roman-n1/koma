@@ -1,0 +1,69 @@
+public final class koma/timetravel/compose/ComposableSingletons$InspectorScreenKt {
+	public static final field INSTANCE Lkoma/timetravel/compose/ComposableSingletons$InspectorScreenKt;
+	public fun <init> ()V
+	public final fun getLambda$-1046985028$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-1797596237$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-307027532$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class koma/timetravel/compose/InspectorMode : java/lang/Enum {
+	public static final field Branch Lkoma/timetravel/compose/InspectorMode;
+	public static final field Inspect Lkoma/timetravel/compose/InspectorMode;
+	public static final field Live Lkoma/timetravel/compose/InspectorMode;
+	public static final field Replay Lkoma/timetravel/compose/InspectorMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lkoma/timetravel/compose/InspectorMode;
+	public static fun values ()[Lkoma/timetravel/compose/InspectorMode;
+}
+
+public final class koma/timetravel/compose/InspectorScreenKt {
+	public static final fun InspectorScreen (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/ReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun ModeBar (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun PositionPanel (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun ReplayBar (Lkoma/timetravel/compose/ReplayControls;Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun StoresPanel (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun TimelinePanel (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun label (Lkoma/timetravel/inspect/Completeness;)Ljava/lang/String;
+}
+
+public final class koma/timetravel/compose/InspectorState {
+	public static final field $stable I
+	public fun <init> (Lkoma/timetravel/inspect/Inspector;Lkoma/timetravel/compose/InspectorMode;)V
+	public synthetic fun <init> (Lkoma/timetravel/inspect/Inspector;Lkoma/timetravel/compose/InspectorMode;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getInspector ()Lkoma/timetravel/inspect/Inspector;
+	public final fun getMode ()Lkoma/timetravel/compose/InspectorMode;
+	public final fun getSelected ()Ljava/lang/Integer;
+	public final fun getSelectedItem ()Lkoma/timetravel/inspect/TimelineItem;
+	public final fun getStoreFilter-BiBoV80 ()Ljava/lang/String;
+	public final fun getVisibleTimeline ()Ljava/util/List;
+	public final fun refresh (Lkoma/timetravel/inspect/Inspector;)V
+	public final fun select (Ljava/lang/Integer;)V
+	public final fun setMode (Lkoma/timetravel/compose/InspectorMode;)V
+	public final fun setSelected (Ljava/lang/Integer;)V
+	public final fun setStoreFilter-mhMA1FE (Ljava/lang/String;)V
+	public final fun toggleFilter-QV6ywvQ (Ljava/lang/String;)V
+}
+
+public final class koma/timetravel/compose/InspectorStateKt {
+	public static final fun rememberInspectorState (Lkoma/timetravel/inspect/Inspector;Lkoma/timetravel/compose/InspectorMode;Landroidx/compose/runtime/Composer;II)Lkoma/timetravel/compose/InspectorState;
+	public static final fun rememberLiveInspector-WPi__2c (Lkoma/observability/RecordingSession;Ljava/util/Map;JLandroidx/compose/runtime/Composer;II)Lkoma/timetravel/compose/InspectorState;
+}
+
+public final class koma/timetravel/compose/ReplayControls {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Lkoma/timetravel/ReplaySession;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getCanStepBackward ()Z
+	public final fun getCanStepForward ()Z
+	public final fun getDivergence ()Ljava/lang/String;
+	public final fun getForwardUnavailable ()Ljava/lang/String;
+	public final fun getLength ()I
+	public final fun getPosition ()I
+	public final fun getSession ()Lkoma/timetravel/ReplaySession;
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public final fun getVerdict ()Ljava/lang/String;
+	public final fun seek (I)V
+	public final fun stepBackward ()V
+	public final fun stepForward ()V
+	public final fun verify ()V
+}
+
