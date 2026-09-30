@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Build all modules: `./gradlew build`
 - Run all tests: `./gradlew allTests`
 - Run single module tests: `./gradlew :koma-core:jvmTest` (or `:koma-core:allTests`)
+- Compose UI tests of `koma-timetravel-compose` run on the JVM desktop runtime: `./gradlew :koma-timetravel-compose:jvmTest`
 - Run specific test target: `./gradlew iosSimulatorArm64Test` (targets: jvm, iosArm64, iosSimulatorArm64, js, wasmJs, Android host)
 - Debug tests with: `./gradlew jvmTest --info`
 - Lint: `./gradlew lint`

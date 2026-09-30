@@ -46,7 +46,8 @@ Store, in memory.
   position with its input and cause, commits, decision, commands, timers, events and failures,
   the snapshots before and after with their difference when a `MachineRecorder` recording is
   attached and matches, and an explicit `Completeness` that names what the journal does not
-  hold. `InspectorText` renders it as lines; a debug UI reads the same model.
+  hold. `InspectorText` renders it as lines;
+  [koma-timetravel-compose](../koma-timetravel-compose/README.md) is the Compose screen over it.
 
 - **Groups.** `GroupRecorder` records a `MachineGroup` (see the statechart README): each member's
   recording and the order the decisions were made in across the group. `GroupReplaySession`
