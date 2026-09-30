@@ -40,8 +40,16 @@ Store, in memory.
   format 1 itself. Give the application's sealed types explicit `@SerialName`s: the wire must
   not carry class names.
 
+- **Inspector.** `Inspector` (package `inspect`) is the read model of stage 4: the Stores of a
+  group with their capabilities, the timeline of what happened in the group's order, each
+  position with its input and cause, commits, decision, commands, timers, events and failures,
+  the snapshots before and after with their difference when a `MachineRecorder` recording is
+  attached and matches, and an explicit `Completeness` that names what the journal does not
+  hold. `InspectorText` renders it as lines; a debug UI reads the same model.
+
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
-Not yet: a file format with segments and checksums, and group replay of several stores.
+Not yet: a Compose timeline over the inspector, a file format for recordings, and group replay
+of several stores.
 
 ## Dependency
 
@@ -77,6 +85,42 @@ val checkpoint = store.checkpoint()      // the live executor's state, as data
 Branch(listMachine, checkpoint)          // what if, from where the app is right now
 recording.since(checkpoint)              // the run from the checkpoint on: replays and branches from it
 ```
+
+## Inspecting a run
+
+```kotlin
+val inspector = Inspector.of(session, recordings = mapOf(StoreInstanceId("list-7") to recorder.recording()))
+// or, after a process death: Inspector.of(JournalFiles(storage), sessionId, recordings)
+
+inspector.stores                          // StoreView: capability, counts, recording status, completeness
+inspector.completeness.isComplete         // false when anything is missing; the reasons say what
+inspector.timeline                        // TimelineItem: Processing, Discarded, Pending, Rejected, Closed, Gap, Stopped, Damage, ...
+val position = inspector.timeline.filterIsInstance<TimelineItem.Processing>()[12]
+position.before; position.after; position.diff   // from the recording, when attached and matching
+position.commits; position.decision              // what the journal kept
+inspector.replayability(StoreInstanceId("list-7")) // Available, or Unavailable with the reasons
+
+InspectorText.overview(inspector)         // session, completeness, one line per Store with its reasons
+InspectorText.timeline(inspector)         // one line per position
+InspectorText.detail(position)            // input and cause, outcome, active nodes, before/after, changed, commands, timers, events
+```
+
+What one position looks like, with a recording attached:
+
+```
+#14 +1.204s list-7 Processing #4 Dispatch Load(cats) -> Handled commits=1 revision=2 in 812us transitions=[T0] commands=[c1 load/Latest Fetch(query=cats)] timers=[t1+10s] active=[Loading,Root] [recorded]
+  input: Dispatch Load(cats)
+  outcome: Handled commits=1
+  active: Loading, Root
+  before: revision=1 active=[Idle,Root] context=Ctx(query=, items=[], timeouts=0)
+  after:  revision=2 active=[Loading,Root] context=Ctx(query=cats, items=[], timeouts=0) commands=[c1] timers=[t1]
+  changed: context; entered Loading; exited Idle; commands +c1; timers +t1
+  commands: c1 Fetch(query=cats) in load (Latest) for a3
+  timers: t1 T3 at +10s
+```
+
+Without a recording the same position shows the commits as the policy kept them (`-` under
+the production policy) and the Store's completeness says `payloads omitted by the policy`.
 
 ## Serializing a recording
 

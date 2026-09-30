@@ -240,3 +240,549 @@ public final class koma/timetravel/ReplayStep$Matched : koma/timetravel/ReplaySt
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface class koma/timetravel/inspect/Availability {
+}
+
+public final class koma/timetravel/inspect/Availability$Available : koma/timetravel/inspect/Availability {
+	public static final field INSTANCE Lkoma/timetravel/inspect/Availability$Available;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Availability$Unavailable : koma/timetravel/inspect/Availability {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lkoma/timetravel/inspect/Availability$Unavailable;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/Availability$Unavailable;Ljava/util/List;ILjava/lang/Object;)Lkoma/timetravel/inspect/Availability$Unavailable;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReasons ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Completeness {
+	public static final field Companion Lkoma/timetravel/inspect/Completeness$Companion;
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lkoma/timetravel/inspect/Completeness;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/Completeness;Ljava/util/List;ILjava/lang/Object;)Lkoma/timetravel/inspect/Completeness;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReasons ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun isComplete ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Completeness$Companion {
+	public final fun getComplete ()Lkoma/timetravel/inspect/Completeness;
+}
+
+public abstract interface class koma/timetravel/inspect/Incompleteness {
+}
+
+public final class koma/timetravel/inspect/Incompleteness$Damaged : koma/timetravel/inspect/Incompleteness {
+	public fun <init> (Lkoma/observability/file/SegmentMark;)V
+	public final fun component1 ()Lkoma/observability/file/SegmentMark;
+	public final fun copy (Lkoma/observability/file/SegmentMark;)Lkoma/timetravel/inspect/Incompleteness$Damaged;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/Incompleteness$Damaged;Lkoma/observability/file/SegmentMark;ILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$Damaged;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMark ()Lkoma/observability/file/SegmentMark;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$InputsPending : koma/timetravel/inspect/Incompleteness {
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy-oFPGkRc (Ljava/lang/String;I)Lkoma/timetravel/inspect/Incompleteness$InputsPending;
+	public static synthetic fun copy-oFPGkRc$default (Lkoma/timetravel/inspect/Incompleteness$InputsPending;Ljava/lang/String;IILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$InputsPending;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCount ()I
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$NotRegistered : koma/timetravel/inspect/Incompleteness {
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun copy-QV6ywvQ (Ljava/lang/String;)Lkoma/timetravel/inspect/Incompleteness$NotRegistered;
+	public static synthetic fun copy-QV6ywvQ$default (Lkoma/timetravel/inspect/Incompleteness$NotRegistered;Ljava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$NotRegistered;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$PayloadsOmitted : koma/timetravel/inspect/Incompleteness {
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy-oFPGkRc (Ljava/lang/String;I)Lkoma/timetravel/inspect/Incompleteness$PayloadsOmitted;
+	public static synthetic fun copy-oFPGkRc$default (Lkoma/timetravel/inspect/Incompleteness$PayloadsOmitted;Ljava/lang/String;IILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$PayloadsOmitted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCount ()I
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$PayloadsUnavailable : koma/timetravel/inspect/Incompleteness {
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy-oFPGkRc (Ljava/lang/String;I)Lkoma/timetravel/inspect/Incompleteness$PayloadsUnavailable;
+	public static synthetic fun copy-oFPGkRc$default (Lkoma/timetravel/inspect/Incompleteness$PayloadsUnavailable;Ljava/lang/String;IILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$PayloadsUnavailable;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCount ()I
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$RecordingMismatch : koma/timetravel/inspect/Incompleteness {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-oFPGkRc (Ljava/lang/String;Ljava/lang/String;)Lkoma/timetravel/inspect/Incompleteness$RecordingMismatch;
+	public static synthetic fun copy-oFPGkRc$default (Lkoma/timetravel/inspect/Incompleteness$RecordingMismatch;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$RecordingMismatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$RecordsAfterStop : koma/timetravel/inspect/Incompleteness {
+	public fun <init> (J)V
+	public final fun component1 ()J
+	public final fun copy (J)Lkoma/timetravel/inspect/Incompleteness$RecordsAfterStop;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/Incompleteness$RecordsAfterStop;JILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$RecordsAfterStop;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCount ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$RecordsDropped : koma/timetravel/inspect/Incompleteness {
+	public fun <init> (IJ)V
+	public final fun component1 ()I
+	public final fun component2 ()J
+	public final fun copy (IJ)Lkoma/timetravel/inspect/Incompleteness$RecordsDropped;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/Incompleteness$RecordsDropped;IJILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$RecordsDropped;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDropped ()J
+	public final fun getGaps ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$RecordsEvicted : koma/timetravel/inspect/Incompleteness {
+	public fun <init> (J)V
+	public final fun component1 ()J
+	public final fun copy (J)Lkoma/timetravel/inspect/Incompleteness$RecordsEvicted;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/Incompleteness$RecordsEvicted;JILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$RecordsEvicted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCount ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$StoppedWhileOpen : koma/timetravel/inspect/Incompleteness {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lkoma/timetravel/inspect/Incompleteness$StoppedWhileOpen;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/Incompleteness$StoppedWhileOpen;Ljava/util/List;ILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$StoppedWhileOpen;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getStores ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Incompleteness$Unattributed : koma/timetravel/inspect/Incompleteness {
+	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-BiBoV80 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy-IQuowEo (Ljava/lang/String;I)Lkoma/timetravel/inspect/Incompleteness$Unattributed;
+	public static synthetic fun copy-IQuowEo$default (Lkoma/timetravel/inspect/Incompleteness$Unattributed;Ljava/lang/String;IILjava/lang/Object;)Lkoma/timetravel/inspect/Incompleteness$Unattributed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCount ()I
+	public final fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/Inspector {
+	public static final field Companion Lkoma/timetravel/inspect/Inspector$Companion;
+	public fun <init> (Ljava/util/List;Ljava/util/Map;Lkoma/observability/JournalStats;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/Map;Lkoma/observability/JournalStats;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getCompleteness ()Lkoma/timetravel/inspect/Completeness;
+	public final fun getEvents ()Ljava/util/List;
+	public final fun getGroup-WUfUqnY ()Ljava/lang/String;
+	public final fun getMode ()Lkoma/observability/ExecutionMode;
+	public final fun getRecords ()Ljava/util/List;
+	public final fun getSession-UCHdZ-Y ()Ljava/lang/String;
+	public final fun getStats ()Lkoma/observability/JournalStats;
+	public final fun getStores ()Ljava/util/List;
+	public final fun getTimeline ()Ljava/util/List;
+	public final fun replayability-QV6ywvQ (Ljava/lang/String;)Lkoma/timetravel/inspect/Availability;
+	public final fun timelineOf-QV6ywvQ (Ljava/lang/String;)Ljava/util/List;
+}
+
+public final class koma/timetravel/inspect/Inspector$Companion {
+	public final fun of (Ljava/util/List;Ljava/util/Map;Lkoma/observability/JournalStats;)Lkoma/timetravel/inspect/Inspector;
+	public final fun of (Lkoma/observability/RecordingSession;Ljava/util/Map;)Lkoma/timetravel/inspect/Inspector;
+	public static synthetic fun of$default (Lkoma/timetravel/inspect/Inspector$Companion;Ljava/util/List;Ljava/util/Map;Lkoma/observability/JournalStats;ILjava/lang/Object;)Lkoma/timetravel/inspect/Inspector;
+	public static synthetic fun of$default (Lkoma/timetravel/inspect/Inspector$Companion;Lkoma/observability/RecordingSession;Ljava/util/Map;ILjava/lang/Object;)Lkoma/timetravel/inspect/Inspector;
+	public final fun of-94BF9uQ (Lkoma/observability/file/JournalFiles;Ljava/lang/String;Ljava/util/Map;)Lkoma/timetravel/inspect/Inspector;
+	public static synthetic fun of-94BF9uQ$default (Lkoma/timetravel/inspect/Inspector$Companion;Lkoma/observability/file/JournalFiles;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Lkoma/timetravel/inspect/Inspector;
+}
+
+public final class koma/timetravel/inspect/InspectorText {
+	public static final field INSTANCE Lkoma/timetravel/inspect/InspectorText;
+	public final fun completeness (Lkoma/timetravel/inspect/Completeness;)Ljava/lang/String;
+	public final fun detail (Lkoma/timetravel/inspect/TimelineItem;)Ljava/util/List;
+	public final fun line (Lkoma/timetravel/inspect/TimelineItem;)Ljava/lang/String;
+	public final fun mark (Lkoma/observability/file/SegmentMark;)Ljava/lang/String;
+	public final fun overview (Lkoma/timetravel/inspect/Inspector;)Ljava/util/List;
+	public final fun reason (Lkoma/timetravel/inspect/Incompleteness;)Ljava/lang/String;
+	public final fun timeline-G_Gd1Bs (Lkoma/timetravel/inspect/Inspector;Ljava/lang/String;)Ljava/util/List;
+	public static synthetic fun timeline-G_Gd1Bs$default (Lkoma/timetravel/inspect/InspectorText;Lkoma/timetravel/inspect/Inspector;Ljava/lang/String;ILjava/lang/Object;)Ljava/util/List;
+}
+
+public abstract interface class koma/timetravel/inspect/RecordingStatus {
+}
+
+public final class koma/timetravel/inspect/RecordingStatus$Attached : koma/timetravel/inspect/RecordingStatus {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Lkoma/timetravel/inspect/RecordingStatus$Attached;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/RecordingStatus$Attached;IILjava/lang/Object;)Lkoma/timetravel/inspect/RecordingStatus$Attached;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSteps ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/RecordingStatus$Mismatch : koma/timetravel/inspect/RecordingStatus {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lkoma/timetravel/inspect/RecordingStatus$Mismatch;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/RecordingStatus$Mismatch;Ljava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/inspect/RecordingStatus$Mismatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/RecordingStatus$None : koma/timetravel/inspect/RecordingStatus {
+	public static final field INSTANCE Lkoma/timetravel/inspect/RecordingStatus$None;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/SnapshotDiff {
+	public static final field Companion Lkoma/timetravel/inspect/SnapshotDiff$Companion;
+	public fun <init> (ZZLjava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;)V
+	public final fun component1 ()Z
+	public final fun component2 ()Z
+	public final fun component3 ()Ljava/util/Set;
+	public final fun component4 ()Ljava/util/Set;
+	public final fun component5 ()Ljava/util/Set;
+	public final fun component6 ()Ljava/util/Set;
+	public final fun component7 ()Ljava/util/Set;
+	public final fun component8 ()Ljava/util/Set;
+	public final fun copy (ZZLjava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;)Lkoma/timetravel/inspect/SnapshotDiff;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/SnapshotDiff;ZZLjava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;Ljava/util/Set;ILjava/lang/Object;)Lkoma/timetravel/inspect/SnapshotDiff;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCommandsEnded ()Ljava/util/Set;
+	public final fun getCommandsRegistered ()Ljava/util/Set;
+	public final fun getContextChanged ()Z
+	public final fun getEntered ()Ljava/util/Set;
+	public final fun getExited ()Ljava/util/Set;
+	public final fun getRevisionAdvanced ()Z
+	public final fun getTimersCancelled ()Ljava/util/Set;
+	public final fun getTimersScheduled ()Ljava/util/Set;
+	public fun hashCode ()I
+	public final fun isEmpty ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/SnapshotDiff$Companion {
+	public final fun between (Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/machine/MachineSnapshot;)Lkoma/timetravel/inspect/SnapshotDiff;
+}
+
+public final class koma/timetravel/inspect/StoreView {
+	public synthetic fun <init> (Ljava/lang/String;Lkoma/observability/Capability;IILjava/lang/Long;ZLkoma/timetravel/inspect/RecordingStatus;Lkoma/timetravel/inspect/Completeness;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()Lkoma/observability/Capability;
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()Ljava/lang/Long;
+	public final fun component6 ()Z
+	public final fun component7 ()Lkoma/timetravel/inspect/RecordingStatus;
+	public final fun component8 ()Lkoma/timetravel/inspect/Completeness;
+	public final fun copy--QHlPNk (Ljava/lang/String;Lkoma/observability/Capability;IILjava/lang/Long;ZLkoma/timetravel/inspect/RecordingStatus;Lkoma/timetravel/inspect/Completeness;)Lkoma/timetravel/inspect/StoreView;
+	public static synthetic fun copy--QHlPNk$default (Lkoma/timetravel/inspect/StoreView;Ljava/lang/String;Lkoma/observability/Capability;IILjava/lang/Long;ZLkoma/timetravel/inspect/RecordingStatus;Lkoma/timetravel/inspect/Completeness;ILjava/lang/Object;)Lkoma/timetravel/inspect/StoreView;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCapability ()Lkoma/observability/Capability;
+	public final fun getClosed ()Z
+	public final fun getCompleteness ()Lkoma/timetravel/inspect/Completeness;
+	public final fun getId-G0_Fx5k ()Ljava/lang/String;
+	public final fun getProcessings ()I
+	public final fun getRecording ()Lkoma/timetravel/inspect/RecordingStatus;
+	public final fun getRecords ()I
+	public final fun getRevision ()Ljava/lang/Long;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/timetravel/inspect/TimelineItem {
+	public abstract fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public abstract fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public abstract fun getStore-BiBoV80 ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Closed : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3-G0_Fx5k ()Ljava/lang/String;
+	public final fun copy-rnZa5p8 (JJLjava/lang/String;)Lkoma/timetravel/inspect/TimelineItem$Closed;
+	public static synthetic fun copy-rnZa5p8$default (Lkoma/timetravel/inspect/TimelineItem$Closed;JJLjava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Closed;
+	public fun equals (Ljava/lang/Object;)Z
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public synthetic fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Commit {
+	public fun <init> (JLkoma/observability/Payload;Lkoma/observability/Payload;)V
+	public final fun component1 ()J
+	public final fun component2 ()Lkoma/observability/Payload;
+	public final fun component3 ()Lkoma/observability/Payload;
+	public final fun copy (JLkoma/observability/Payload;Lkoma/observability/Payload;)Lkoma/timetravel/inspect/TimelineItem$Commit;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/TimelineItem$Commit;JLkoma/observability/Payload;Lkoma/observability/Payload;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Commit;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfter ()Lkoma/observability/Payload;
+	public final fun getBefore ()Lkoma/observability/Payload;
+	public final fun getRevision ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Damage : koma/timetravel/inspect/TimelineItem {
+	public fun <init> (Lkoma/observability/file/SegmentMark;)V
+	public final fun component1 ()Lkoma/observability/file/SegmentMark;
+	public final fun copy (Lkoma/observability/file/SegmentMark;)Lkoma/timetravel/inspect/TimelineItem$Damage;
+	public static synthetic fun copy$default (Lkoma/timetravel/inspect/TimelineItem$Damage;Lkoma/observability/file/SegmentMark;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Damage;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public final fun getMark ()Lkoma/observability/file/SegmentMark;
+	public fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Discarded : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLjava/lang/String;JLkoma/observability/InputDescriptor;Lkoma/observability/DiscardDescriptor;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3-G0_Fx5k ()Ljava/lang/String;
+	public final fun component4-GwpR4rE ()J
+	public final fun component5 ()Lkoma/observability/InputDescriptor;
+	public final fun component6 ()Lkoma/observability/DiscardDescriptor;
+	public final fun copy-2zjez9U (JJLjava/lang/String;JLkoma/observability/InputDescriptor;Lkoma/observability/DiscardDescriptor;)Lkoma/timetravel/inspect/TimelineItem$Discarded;
+	public static synthetic fun copy-2zjez9U$default (Lkoma/timetravel/inspect/TimelineItem$Discarded;JJLjava/lang/String;JLkoma/observability/InputDescriptor;Lkoma/observability/DiscardDescriptor;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Discarded;
+	public fun equals (Ljava/lang/Object;)Z
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public final fun getInput-GwpR4rE ()J
+	public final fun getKind ()Lkoma/observability/InputDescriptor;
+	public final fun getReason ()Lkoma/observability/DiscardDescriptor;
+	public synthetic fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Gap : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3 ()J
+	public final fun copy-FXPK4mc (JJJ)Lkoma/timetravel/inspect/TimelineItem$Gap;
+	public static synthetic fun copy-FXPK4mc$default (Lkoma/timetravel/inspect/TimelineItem$Gap;JJJILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Gap;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDropped ()J
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Pending : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLjava/lang/String;JLkoma/observability/InputDescriptor;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3-G0_Fx5k ()Ljava/lang/String;
+	public final fun component4-GwpR4rE ()J
+	public final fun component5 ()Lkoma/observability/InputDescriptor;
+	public final fun copy-XCSpOgs (JJLjava/lang/String;JLkoma/observability/InputDescriptor;)Lkoma/timetravel/inspect/TimelineItem$Pending;
+	public static synthetic fun copy-XCSpOgs$default (Lkoma/timetravel/inspect/TimelineItem$Pending;JJLjava/lang/String;JLkoma/observability/InputDescriptor;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Pending;
+	public fun equals (Ljava/lang/Object;)Z
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public final fun getInput-GwpR4rE ()J
+	public final fun getKind ()Lkoma/observability/InputDescriptor;
+	public synthetic fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Processing : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLjava/lang/String;JLkoma/observability/InputDescriptor;Lkoma/core/InputId;JLkoma/observability/OutcomeDescriptor;Lkotlin/time/Duration;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lkoma/observability/JournalEntry$DecisionCommitted;Ljava/lang/String;Lkoma/timetravel/RecordedStep;Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/machine/MachineSnapshot;Lkoma/timetravel/inspect/SnapshotDiff;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component10 ()Ljava/util/List;
+	public final fun component11 ()Ljava/util/List;
+	public final fun component12 ()Ljava/util/List;
+	public final fun component13 ()Lkoma/observability/JournalEntry$DecisionCommitted;
+	public final fun component14 ()Ljava/lang/String;
+	public final fun component15 ()Lkoma/timetravel/RecordedStep;
+	public final fun component16 ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun component17 ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun component18 ()Lkoma/timetravel/inspect/SnapshotDiff;
+	public final fun component2-UwyO8pc ()J
+	public final fun component3-G0_Fx5k ()Ljava/lang/String;
+	public final fun component4-GwpR4rE ()J
+	public final fun component5 ()Lkoma/observability/InputDescriptor;
+	public final fun component6-hFruGEc ()Lkoma/core/InputId;
+	public final fun component7 ()J
+	public final fun component8 ()Lkoma/observability/OutcomeDescriptor;
+	public final fun component9-FghU774 ()Lkotlin/time/Duration;
+	public final fun copy-uTfg4g4 (JJLjava/lang/String;JLkoma/observability/InputDescriptor;Lkoma/core/InputId;JLkoma/observability/OutcomeDescriptor;Lkotlin/time/Duration;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lkoma/observability/JournalEntry$DecisionCommitted;Ljava/lang/String;Lkoma/timetravel/RecordedStep;Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/machine/MachineSnapshot;Lkoma/timetravel/inspect/SnapshotDiff;)Lkoma/timetravel/inspect/TimelineItem$Processing;
+	public static synthetic fun copy-uTfg4g4$default (Lkoma/timetravel/inspect/TimelineItem$Processing;JJLjava/lang/String;JLkoma/observability/InputDescriptor;Lkoma/core/InputId;JLkoma/observability/OutcomeDescriptor;Lkotlin/time/Duration;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lkoma/observability/JournalEntry$DecisionCommitted;Ljava/lang/String;Lkoma/timetravel/RecordedStep;Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/machine/MachineSnapshot;Lkoma/timetravel/inspect/SnapshotDiff;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Processing;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActiveNodes ()Ljava/util/List;
+	public final fun getAfter ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun getBefore ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun getCause-hFruGEc ()Lkoma/core/InputId;
+	public final fun getCommits ()Ljava/util/List;
+	public final fun getDecision ()Lkoma/observability/JournalEntry$DecisionCommitted;
+	public final fun getDiff ()Lkoma/timetravel/inspect/SnapshotDiff;
+	public final fun getDuration-FghU774 ()Lkotlin/time/Duration;
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public final fun getEvents ()Ljava/util/List;
+	public final fun getFailures ()Ljava/util/List;
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public final fun getIgnored ()Ljava/lang/String;
+	public final fun getInput-GwpR4rE ()J
+	public final fun getKind ()Lkoma/observability/InputDescriptor;
+	public final fun getOrdinal ()J
+	public final fun getOutcome ()Lkoma/observability/OutcomeDescriptor;
+	public final fun getRecorded ()Lkoma/timetravel/RecordedStep;
+	public final fun getRevision ()Ljava/lang/Long;
+	public synthetic fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isDecision ()Z
+	public final fun isFinished ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Registered : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLjava/lang/String;Lkoma/observability/Capability;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3-G0_Fx5k ()Ljava/lang/String;
+	public final fun component4 ()Lkoma/observability/Capability;
+	public final fun copy-hlD0pSE (JJLjava/lang/String;Lkoma/observability/Capability;)Lkoma/timetravel/inspect/TimelineItem$Registered;
+	public static synthetic fun copy-hlD0pSE$default (Lkoma/timetravel/inspect/TimelineItem$Registered;JJLjava/lang/String;Lkoma/observability/Capability;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Registered;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCapability ()Lkoma/observability/Capability;
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public synthetic fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Rejected : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLjava/lang/String;Lkoma/observability/Payload;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3-G0_Fx5k ()Ljava/lang/String;
+	public final fun component4 ()Lkoma/observability/Payload;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy-Yrez7bo (JJLjava/lang/String;Lkoma/observability/Payload;Ljava/lang/String;)Lkoma/timetravel/inspect/TimelineItem$Rejected;
+	public static synthetic fun copy-Yrez7bo$default (Lkoma/timetravel/inspect/TimelineItem$Rejected;JJLjava/lang/String;Lkoma/observability/Payload;Ljava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Rejected;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lkoma/observability/Payload;
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public final fun getReason ()Ljava/lang/String;
+	public synthetic fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Stopped : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun copy-MfJsee8 (JJ)Lkoma/timetravel/inspect/TimelineItem$Stopped;
+	public static synthetic fun copy-MfJsee8$default (Lkoma/timetravel/inspect/TimelineItem$Stopped;JJILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Stopped;
+	public fun equals (Ljava/lang/Object;)Z
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Unattributed : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLjava/lang/String;Lkoma/observability/JournalEntry;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3-BiBoV80 ()Ljava/lang/String;
+	public final fun component4 ()Lkoma/observability/JournalEntry;
+	public final fun copy-g-QtfdI (JJLjava/lang/String;Lkoma/observability/JournalEntry;)Lkoma/timetravel/inspect/TimelineItem$Unattributed;
+	public static synthetic fun copy-g-QtfdI$default (Lkoma/timetravel/inspect/TimelineItem$Unattributed;JJLjava/lang/String;Lkoma/observability/JournalEntry;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Unattributed;
+	public fun equals (Ljava/lang/Object;)Z
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public final fun getEntry ()Lkoma/observability/JournalEntry;
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
