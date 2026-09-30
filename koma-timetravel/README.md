@@ -61,7 +61,8 @@ Store, in memory.
 - **Files.** `RecordingFileSink` records a run to segments of a `SegmentStorage` as it happens,
   each segment beginning with the executor's checkpoint, rotated by size and bounded, so a
   ring that dropped the oldest ones still replays from what remains; `RecordingFiles.read`
-  returns the last continuous range and marks every hole, which a replay never crosses.
+  returns the last continuous range and marks every hole, which a replay never crosses. A
+  step dropped at the very end of a run is absent, and only the sink's `stats` count it.
   `GroupRecordingFileSink` and `GroupRecordingFiles` do the same for a group: the members'
   files and an order file with the messages in flight at every segment's start.
 

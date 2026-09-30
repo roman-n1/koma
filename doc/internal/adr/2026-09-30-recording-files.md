@@ -33,7 +33,10 @@ The format lives in `koma.timetravel.file`; the framing is the journal's, made s
 - **A drop makes a hole, not a corruption.** A step the writer's queue has no room for is
   dropped and counted; the next step begins a new segment with the checkpoint that already
   includes the dropped one. The file then has a hole (`StepsMissing`) and a replayable range
-  after it, instead of a segment whose steps do not lead to the next.
+  after it, instead of a segment whose steps do not lead to the next. A step dropped with no
+  step after it, at the end of a run, is simply absent: the files end before the run did, and
+  only the sink's counters tell; a closing checkpoint would document it, but as a segment of
+  its own it would be the "last range" a reader returns, an empty one, so it is not written.
 - **A hole is never crossed.** `RecordingFiles.read` walks the segments in index order and
   returns the last continuous range: a missing segment, a jump in `firstStep`, a checkpoint
   that does not continue the previous segment's steps, or damage inside a segment ends the

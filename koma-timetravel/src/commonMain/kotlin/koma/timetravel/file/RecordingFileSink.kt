@@ -64,8 +64,10 @@ data class RecordingFileStats(val recorded: Long, val written: Long, val dropped
  *
  * A step the writer's queue has no room for is dropped and counted, and the next step begins
  * a new segment: the recording file then has a hole, which [RecordingFiles] reports, and a
- * replayable range after it. A run that did not begin at the machine's initial snapshot is
- * noticed at its first step and reported through [problem], like `MachineRecorder`.
+ * replayable range after it. A step dropped with no step after it, at the end of a run, is
+ * simply absent: the files end before the run did, and only [stats] tells. A run that did not
+ * begin at the machine's initial snapshot is noticed at its first step and reported through
+ * [problem], like `MachineRecorder`.
  *
  * @param store The Store this recording is of; names the segments
  * @param machine The machine of the store
