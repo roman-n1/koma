@@ -69,7 +69,10 @@ Store, in memory.
   files and an order file with the messages in flight at every segment's start. A cut of the
   group begins a segment in every file, the order segment's header carrying the sources'
   snapshots, so the run since a cut (`since(cut)`) knows them like the in-memory one.
-  `RecordingFiles.prune` bounds what all the files take together.
+  `RecordingFiles.prune` bounds what all the files take together. The formats are frozen:
+  `RECORDING_FORMAT_VERSION`, `RECORDING_FILE_FORMAT_VERSION` and the order file's
+  `GroupRecordingFileFormat.VERSION` bump only with a reader of the previous version, its test
+  and a golden, per the [format freeze policy](../doc/internal/adr/2026-10-01-format-freeze-policy.md).
 
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
 Not yet: group-wide positions in the Compose inspector.
