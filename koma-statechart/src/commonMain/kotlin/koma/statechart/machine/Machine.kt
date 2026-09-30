@@ -5,6 +5,7 @@ import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import koma.core.KomaStoreDsl
 import koma.observability.FailureDescriptor
+import koma.statechart.ActionMatcher
 import koma.statechart.HistoryState
 import koma.statechart.StateChartDefinition
 import koma.statechart.StateChartRuntime
@@ -95,8 +96,44 @@ interface MachineExitScope<C, out A : Action, in E : Event> {
 }
 
 /**
- * Builder of a [Machine]: the implementations of the chart's guard and effect labels and the
- * enter and exit rules of its nodes, all pure.
+ * What an action handler of a [Machine] sees and may do; pure like [MachineEnterScope]. It runs
+ * for an action that no transition takes while [node] is active: the configuration stays, the
+ * activation stays, and commands registered here belong to that activation.
+ */
+@ExperimentalKomaApi
+@KomaStoreDsl
+interface MachineActionScope<C, out A : Action, in CMD, in E : Event> {
+    /** The node whose handler runs. */
+    val node: StateId
+
+    /** The current activation of [node]; commands registered here belong to it. */
+    val activation: ActivationId
+
+    /** The input that caused the step. */
+    val input: MachineInput<A>
+
+    /** The action being handled: the dispatched action, a command result or [CommandFailure]. */
+    val action: Action
+
+    /** The machine's clock, from the input. */
+    val now: MachineTime
+
+    /** The context as updated so far in this step; assign it to update it. */
+    var context: C
+
+    /** Registers a command that runs on its own, cancelled when [activation] exits. */
+    fun command(command: CMD): CommandId
+
+    /** Registers a command in [lane] under [policy], cancelled when [activation] exits. */
+    fun command(command: CMD, lane: LaneId, policy: ConcurrencyPolicy): CommandId
+
+    /** Asks the executor to deliver [event] after the snapshot is committed. */
+    fun event(event: E): EffectId
+}
+
+/**
+ * Builder of a [Machine]: the implementations of the chart's guard and effect labels, the enter
+ * and exit rules of its nodes and the action handlers of its nodes, all pure.
  */
 @ExperimentalKomaApi
 @KomaStoreDsl
@@ -105,6 +142,9 @@ class MachineBuilder<C, A : Action, CMD, E : Event> internal constructor() {
     internal val effects = mutableMapOf<String, (C, Action) -> C>()
     internal val entries = mutableMapOf<StateId, MutableList<MachineEnterScope<C, A, CMD, E>.() -> Unit>>()
     internal val exits = mutableMapOf<StateId, MutableList<MachineExitScope<C, A, E>.() -> Unit>>()
+    internal val handlers = mutableMapOf<StateId, MutableList<ActionHandler<C, A, CMD, E>>>()
+
+    internal class ActionHandler<C, A : Action, CMD, E : Event>(val matcher: ActionMatcher, val rule: MachineActionScope<C, A, CMD, E>.() -> Unit)
 
     /**
      * Implements the guard [label]: a pure predicate over the snapshot before the step and the
@@ -140,6 +180,18 @@ class MachineBuilder<C, A : Action, CMD, E : Event> internal constructor() {
      */
     fun onExit(id: StateId, rule: MachineExitScope<C, A, E>.() -> Unit) {
         exits.getOrPut(id) { mutableListOf() } += rule
+    }
+
+    /**
+     * Adds a handler for actions matching [matcher] while [id] is active and no transition of the
+     * active configuration takes the action: the way to update the context, register a command
+     * or emit an event without leaving and re-entering a node (a self-loop would end the node's
+     * activation and cancel its commands). Transitions always win. Among handlers, the innermost
+     * active node with a matching handler wins, and within a node the first added; one handler
+     * runs per input.
+     */
+    fun onAction(id: StateId, matcher: ActionMatcher, rule: MachineActionScope<C, A, CMD, E>.() -> Unit) {
+        handlers.getOrPut(id) { mutableListOf() } += ActionHandler(matcher, rule)
     }
 }
 
@@ -177,6 +229,9 @@ fun <C, A : Action, CMD, E : Event> Machine(
  *
  * A step that exits and re-enters a node (a self-loop, a transition into an ancestor) ends its
  * activation and creates a new one: commands of the old one are cancelled, its timers restart.
+ * An action that no transition takes may still be handled by an action handler of an active node
+ * (see [MachineBuilder.onAction]): the context, commands and events change, the configuration
+ * and the activations do not.
  * A [MachineInput.CommandResult] whose command is not registered any more is ignored as stale;
  * that is how a late result of a cancelled load cannot complete a newer one.
  */
@@ -191,6 +246,7 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
     private val effects: Map<String, (C, Action) -> C> = config.effects.toMap()
     private val entries: Map<StateId, List<MachineEnterScope<C, A, CMD, E>.() -> Unit>> = config.entries.mapValues { it.value.toList() }
     private val exits: Map<StateId, List<MachineExitScope<C, A, E>.() -> Unit>> = config.exits.mapValues { it.value.toList() }
+    private val handlers: Map<StateId, List<MachineBuilder.ActionHandler<C, A, CMD, E>>> = config.handlers.mapValues { it.value.toList() }
 
     private val runtime = StateChartRuntime<MachineSnapshot<C>>(chart, { chart.activeLeaves(it.configuration).first() }, guards)
 
@@ -198,7 +254,7 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
         val missing = chart.transitions.mapNotNull { it.effect }.distinct().filter { it !in effects }
         require(missing.isEmpty()) { "[Koma] Missing effect implementations: ${missing.joinToString()}" }
         val declared = chart.states.filter { it !is HistoryState }.map { it.id }.toSet()
-        val undeclared = (entries.keys + exits.keys).filter { it !in declared }
+        val undeclared = (entries.keys + exits.keys + handlers.keys).filter { it !in declared }
         require(undeclared.isEmpty()) { "[Koma] Rules for undeclared states: ${undeclared.joinToString()}" }
         val undeclaredStates = chart.endpointIssues()
         require(undeclaredStates.isEmpty()) { "[Koma] Chart refers to undeclared or duplicate states: ${undeclaredStates.joinToString()}" }
@@ -290,9 +346,24 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
      */
     private fun step(base: MachineSnapshot<C>, input: MachineInput<A>, action: Action, changed: Boolean): Decision<C, CMD, E> {
         return when (val result = runtime.step(base.configuration, base, action)) {
-            StepResult.Ignored -> if (changed) Decision(DecisionOutcome.Handled, base.copy(revision = base.revision + 1)) else ignored(base, IgnoreReason.NoTransition)
+            StepResult.Ignored -> handle(base, input, action)
+                ?: if (changed) Decision(DecisionOutcome.Handled, base.copy(revision = base.revision + 1)) else ignored(base, IgnoreReason.NoTransition)
             is StepResult.Transitioned -> take(base, input, action, result)
         }
+    }
+
+    /**
+     * Runs the first action handler of the innermost active node that matches [action], if any:
+     * the configuration and the activations stay as they are.
+     */
+    private fun handle(base: MachineSnapshot<C>, input: MachineInput<A>, action: Action): Decision<C, CMD, E>? {
+        for (node in chart.inEntryOrder(base.configuration.active).asReversed()) {
+            val handler = handlers[node]?.firstOrNull { it.matcher.matches(action) } ?: continue
+            val step = Step(base, input, action)
+            step.handle(node, handler.rule)
+            return step.decision(configuration = base.configuration, transitions = emptyList())
+        }
+        return null
     }
 
     private fun fire(snapshot: MachineSnapshot<C>, input: MachineInput.TimerFired): Decision<C, CMD, E> {
@@ -397,37 +468,48 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
             )
         }
 
-        inner class EnterScope(private val owner: Activation) : MachineEnterScope<C, A, CMD, E> {
-            override val node: StateId get() = owner.node
-            override val activation: ActivationId get() = owner.id
-            override val input: MachineInput<A> get() = this@Step.input
-            override val action: Action? get() = this@Step.action
-            override val now: MachineTime get() = this@Step.input.now
-            override var context: C = this@Step.context
+        fun handle(node: StateId, rule: MachineActionScope<C, A, CMD, E>.() -> Unit) {
+            val scope = ActionScope(Activation(node, base.activations.getValue(node)))
+            scope.rule()
+            context = scope.context
+        }
 
-            override fun command(command: CMD): CommandId = register(command, lane = null, policy = null)
+        /** What every scope shares: the activation it belongs to, the input, the clock, the context. */
+        abstract inner class Scope(private val owner: Activation) {
+            val node: StateId get() = owner.node
+            val activation: ActivationId get() = owner.id
+            val input: MachineInput<A> get() = this@Step.input
+            val now: MachineTime get() = this@Step.input.now
+            var context: C = this@Step.context
 
-            override fun command(command: CMD, lane: LaneId, policy: ConcurrencyPolicy): CommandId = register(command, lane, policy)
+            fun event(event: E): EffectId = emit(event)
 
-            private fun register(command: CMD, lane: LaneId?, policy: ConcurrencyPolicy?): CommandId {
+            protected fun register(command: CMD, lane: LaneId?, policy: ConcurrencyPolicy?): CommandId {
                 val id = CommandId(counters.commands + 1)
                 counters = counters.copy(commands = id.value)
                 commands += CommandRegistration(id, command, owner.id, lane, policy)
                 return id
             }
-
-            override fun event(event: E): EffectId = emit(event)
         }
 
-        inner class ExitScope(private val owner: Activation) : MachineExitScope<C, A, E> {
-            override val node: StateId get() = owner.node
-            override val activation: ActivationId get() = owner.id
-            override val input: MachineInput<A> get() = this@Step.input
+        inner class EnterScope(owner: Activation) : Scope(owner), MachineEnterScope<C, A, CMD, E> {
             override val action: Action? get() = this@Step.action
-            override val now: MachineTime get() = this@Step.input.now
-            override var context: C = this@Step.context
 
-            override fun event(event: E): EffectId = emit(event)
+            override fun command(command: CMD): CommandId = register(command, lane = null, policy = null)
+
+            override fun command(command: CMD, lane: LaneId, policy: ConcurrencyPolicy): CommandId = register(command, lane, policy)
+        }
+
+        inner class ActionScope(owner: Activation) : Scope(owner), MachineActionScope<C, A, CMD, E> {
+            override val action: Action get() = checkNotNull(this@Step.action)
+
+            override fun command(command: CMD): CommandId = register(command, lane = null, policy = null)
+
+            override fun command(command: CMD, lane: LaneId, policy: ConcurrencyPolicy): CommandId = register(command, lane, policy)
+        }
+
+        inner class ExitScope(owner: Activation) : Scope(owner), MachineExitScope<C, A, E> {
+            override val action: Action? get() = this@Step.action
         }
 
         private fun emit(event: E): EffectId {

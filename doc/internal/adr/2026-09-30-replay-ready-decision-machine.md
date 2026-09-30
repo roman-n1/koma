@@ -101,3 +101,20 @@ Not adopted:
 - [Statechart semantics](../design/2026-09-28-statechart-semantics.md)
 - [Store processing is observed through an internal probe](./2026-09-29-store-probe-processing-observation.md)
 - [Journal identity, ordering and payload policy](./2026-09-29-journal-identity-ordering-and-payload-policy.md)
+
+## Addendum (2026-09-30, stage 3 pilot): action handlers
+
+The pilot needed what the handoff §4.1 asks for and forbids to fake with a self-loop: handling an
+input without changing the configuration, for example selecting a contact while the results are
+shown, or remembering a group while idle. A self-loop would end the node's activation, cancel its
+search and restart its timers.
+
+`MachineBuilder.onAction(node, matcher) { }` adds an action handler. It runs only when no
+transition of the active configuration takes the action; the innermost active node with a
+matching handler wins, then the first handler added. It may update the context, register
+commands (scoped to the node's current activation) and emit events; the configuration and the
+activations stay. The decision is `Handled` with a new revision and no transitions. Transitions
+keep priority so that a chart's declared behaviour is never shadowed by a handler; a handler on
+an inactive node is never consulted. This is the machine's counterpart of SCXML's targetless
+transitions, kept out of the chart model so that validation, Mermaid and the legacy Store are
+unaffected.

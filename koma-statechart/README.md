@@ -281,6 +281,30 @@ A chart is either a legacy `StateChartStore` or a `Machine`; the two are not mix
 `Machine` fails fast for the same reasons `StateChartStore` does: a missing guard or effect
 implementation, a rule for an undeclared node, undeclared endpoints, an instant timer loop.
 
+### Handling an action without leaving a node
+
+A self-loop exits and re-enters its node: its activation ends, its commands are cancelled and its
+timers restart. For an update that must not do that (a selection while results are shown, a
+filter remembered while idle) add an action handler:
+
+```kotlin
+onAction(search, ActionMatcher.of<SearchAction.ToggleSelect>("ToggleSelect")) {
+    context = context.toggleSelect((action as SearchAction.ToggleSelect).contactId)
+}
+```
+
+It runs only when no transition of the active configuration takes the action, so a declared
+transition always wins; among handlers, the innermost active node with a matching handler wins,
+then the first added. It may update the context, register commands (scoped to the node's current
+activation) and emit events. The decision is `Handled` with a new revision and no transitions.
+
+The stage 3 pilot,
+[`AddressBookSearchMachine`](src/commonTest/kotlin/koma/statechart/example/picker/AddressBookSearchMachine.kt)
+with [its scenarios](src/commonTest/kotlin/koma/statechart/example/picker/AddressBookSearchPilotTest.kt),
+shows a whole screen built this way: a debounced search that the latest query supersedes, stale
+answers ignored, closing during a request, selection without touching the search, a `UiMapper`
+from the snapshot, and two tabs of the same screen recorded into one journal.
+
 ### Running a machine
 
 `MachineStore` runs a `Machine` as a Koma `Store<MachineSnapshot<C>, A, E>`: decisions are

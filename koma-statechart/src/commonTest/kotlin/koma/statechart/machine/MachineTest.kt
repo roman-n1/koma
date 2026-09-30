@@ -430,6 +430,84 @@ class MachineTest {
         assertEquals(commandIds.toSet().size, commandIds.size, "command ids are never reused")
     }
 
+    // --- action handlers ---
+
+    private fun machineWithHandlers(extra: MachineBuilder<ListContext, ListAction, ListCommand, ListEvent>.() -> Unit) =
+        Machine<ListContext, ListAction, ListCommand, ListEvent>(DefinitionId("handlers"), DefinitionVersion("1"), chart) {
+            guard("canRetry") { snapshot, _ -> snapshot.context.attempts < 3 }
+            effect("rememberQuery") { context, action -> context.copy(query = (action as ListAction.Load).query) }
+            effect("storeItems") { context, _ -> context }
+            effect("countAttempt") { context, _ -> context.copy(attempts = context.attempts + 1) }
+            effect("resetAttempts") { context, _ -> context.copy(attempts = 0) }
+            onEnter(session) { command(ListCommand.Connect, net, ConcurrencyPolicy.Latest) }
+            extra()
+        }
+
+    private val nothing = ActionMatcher.of<ListAction.Nothing>("Nothing")
+
+    @Test
+    fun actionHandler_updatesTheContext_withoutLeavingAnyNode_orCancellingAnything() {
+        val machine = machineWithHandlers {
+            onAction(session, nothing) {
+                context = context.copy(attempts = 42)
+                command(ListCommand.Fetch("side", 0))
+                event(ListEvent.ItemsShown)
+            }
+        }
+        val snapshot = started(machine)
+
+        val decision = machine.decide(snapshot, MachineInput.Dispatch(ListAction.Nothing, at(1))).handled()
+
+        assertTrue(decision.transitions.isEmpty() && decision.exited.isEmpty() && decision.entered.isEmpty() && decision.cancelledScopes.isEmpty())
+        assertEquals(snapshot.configuration, decision.snapshot.configuration)
+        assertEquals(snapshot.activations, decision.snapshot.activations)
+        assertEquals(42, decision.snapshot.context.attempts)
+        assertEquals(listOf(CommandRegistration(CommandId(2), ListCommand.Fetch("side", 0), scope = ActivationId(1))), decision.commands, "scoped to Session's current activation")
+        assertEquals(setOf(CommandId(1), CommandId(2)), decision.snapshot.commands.keys)
+        assertEquals(listOf(EffectEnvelope(EffectId(1), ListEvent.ItemsShown)), decision.effects)
+        assertEquals(snapshot.revision + 1, decision.snapshot.revision)
+    }
+
+    @Test
+    fun aTransition_winsOverAnActionHandler() {
+        val machine = machineWithHandlers {
+            onAction(session, load) { context = context.copy(attempts = 99) }
+        }
+
+        val decision = machine.decide(started(machine), MachineInput.Dispatch(ListAction.Load("cats"), at(1))).handled()
+
+        assertEquals(listOf(TransitionId(0)), decision.transitions)
+        assertEquals(ListContext(query = "cats"), decision.snapshot.context, "the handler did not run")
+    }
+
+    @Test
+    fun theInnermostActiveNodeWithAMatchingHandler_wins() {
+        val machine = machineWithHandlers {
+            onAction(session, nothing) { context = context.copy(attempts = 1) }
+            onAction(idle, nothing) { context = context.copy(attempts = 2) }
+        }
+
+        val decision = machine.decide(started(machine), MachineInput.Dispatch(ListAction.Nothing, at(1))).handled()
+
+        assertEquals(2, decision.snapshot.context.attempts)
+    }
+
+    @Test
+    fun aHandlerOnAnInactiveNode_isNotConsulted() {
+        val machine = machineWithHandlers {
+            onAction(content, nothing) { context = context.copy(attempts = 7) }
+        }
+
+        machine.decide(started(machine), MachineInput.Dispatch(ListAction.Nothing, at(1))).ignored(IgnoreReason.NoTransition)
+    }
+
+    @Test
+    fun aHandlerForAnUndeclaredNode_isRejected() {
+        assertFailsWith<IllegalArgumentException> {
+            machineWithHandlers { onAction(StateId("Nowhere"), nothing) { } }
+        }
+    }
+
     // --- construction ---
 
     @Test

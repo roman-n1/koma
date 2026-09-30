@@ -485,7 +485,9 @@ CI также должен проверять API/ABI и отсутствие de
 | Этап 2a: чистая машина решений `koma.statechart.machine` (`Machine`, `MachineSnapshot`, `MachineInput`, `Decision`; activations, команды и таймеры как данные, детерминированные id из счётчиков снимка) | Реализовано 2026-09-30 | `koma-statechart`, [ADR](../adr/2026-09-30-replay-ready-decision-machine.md), `MachineTest`, `MachinePropertyTest` |
 | Этап 2b: исполнитель `MachineStore` — Store со снимком машины, commit-протокол (§4.2) через plugin после commit, scheduler-actor с lane-политиками, `CommandHandler`, таймеры через `MachineClock`, события после commit, close до/после commit | Реализовано 2026-09-30 | `koma-statechart`, [ADR](../adr/2026-09-30-machine-store-commit-protocol.md), `MachineStoreTest` |
 | Остатки этапа 2: bounded admission (§4.3), запись `Abandoned(StoreClosed)` в журнал, журнальная запись `DecisionCommitted` с переходами/командами/таймерами (§6), checkpoint состояния scheduler (§8) | Не начато | — |
-| Этапы 3–7 | Не начато | — |
+| Этап 3, часть koma: пилот Search-экрана address-book picker как `Machine` (debounce, Latest-поиск, stale-ответы, закрытие во время запроса, выбор через action handlers, `UiMapper`, две вкладки в одном журнале) | Реализовано 2026-09-30 как reference-пример в тестах `koma-statechart` | `example/picker/AddressBookSearchMachine.kt`, `AddressBookSearchPilotTest`, [заметка об интеграции](../notes/2026-09-30-picker-pilot-integration.md) |
+| Этап 3, часть приложения: подключение koma в `su.ivcs.messenger`, retained owner в Decompose, Bridge/News, `SelectionStore` как контекст root-машины, DI | Не начато: нужно решение о способе подключения (composite build / submodule / артефакт) | [заметка](../notes/2026-09-30-picker-pilot-integration.md) |
+| Этапы 4–7 | Не начато | — |
 
 Предпочтительный пилот — поиск address-book-picker: быстрые смены query, старые ответы,
 закрытие во время запроса, две вкладки и разделение root/Main уже обсуждались. Первый этап
