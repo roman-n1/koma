@@ -76,7 +76,7 @@ class Recording<C, A : Action, CMD, E : Event>(
             var current = start
             add(current)
             for (step in steps) {
-                current = current.after(step)
+                current = current.carriedPast(step)
                 add(current)
             }
         }
@@ -134,34 +134,38 @@ class Recording<C, A : Action, CMD, E : Event>(
     }
 
     override fun toString(): String = "Recording($definition $version, from revision ${initial.revision}, ${steps.size} steps)"
+}
 
-    // The executor's state after a step, as the live executor books it: an end the machine
-    // decided has been booked, commands of exited activations have ended (nothing runs here, so
-    // nothing has cleanup to wait for), the decision's commands are admitted under their lanes,
-    // and what was abandoned is ending until the machine deregisters it.
-    private fun ExecutorCheckpoint<C, CMD>.after(step: RecordedStep<C, A, CMD, E>): ExecutorCheckpoint<C, CMD> {
-        val now = maxOf(now, step.input.now)
-        if (step !is RecordedStep.Committed) return copy(now = now)
-        val decision = step.decision
-        var lanes = lanes
-        val ending = ending.toMutableMap()
-        when (val input = step.input) {
-            is MachineInput.CommandCompleted -> lanes = lanes.finished(input.command).lanes
-            is MachineInput.CommandFailed -> lanes = lanes.finished(input.command).lanes
-            is MachineInput.CommandAbandoned -> lanes = lanes.finished(input.command).lanes
-            else -> Unit
-        }
-        val exited = lanes.exited(decision.cancelledScopes)
-        lanes = exited.lanes
-        for (id in exited.cancelled) lanes = lanes.finished(id).lanes
-        for (registration in decision.commands) {
-            val change = lanes.admit(registration)
-            lanes = change.lanes
-            for (abandoned in change.abandoned) ending[abandoned.registration.id] = abandoned.registration
-        }
-        ending.keys.retainAll(decision.snapshot.commands.keys)
-        return ExecutorCheckpoint(decision.snapshot, now, lanes, ending)
+/**
+ * The executor's state after [step], as the live executor books it: an end the machine decided
+ * has been booked, commands of exited activations have ended (nothing runs in a recording, so
+ * nothing has cleanup to wait for), the decision's commands are admitted under their lanes, and
+ * what was abandoned is ending until the machine deregisters it. What [Recording.checkpointAt]
+ * carries forward, and what a recording file begins each segment with.
+ */
+@ExperimentalKomaApi
+fun <C, A : Action, CMD, E : Event> ExecutorCheckpoint<C, CMD>.carriedPast(step: RecordedStep<C, A, CMD, E>): ExecutorCheckpoint<C, CMD> {
+    val now = maxOf(now, step.input.now)
+    if (step !is RecordedStep.Committed) return copy(now = now)
+    val decision = step.decision
+    var lanes = lanes
+    val ending = ending.toMutableMap()
+    when (val input = step.input) {
+        is MachineInput.CommandCompleted -> lanes = lanes.finished(input.command).lanes
+        is MachineInput.CommandFailed -> lanes = lanes.finished(input.command).lanes
+        is MachineInput.CommandAbandoned -> lanes = lanes.finished(input.command).lanes
+        else -> Unit
     }
+    val exited = lanes.exited(decision.cancelledScopes)
+    lanes = exited.lanes
+    for (id in exited.cancelled) lanes = lanes.finished(id).lanes
+    for (registration in decision.commands) {
+        val change = lanes.admit(registration)
+        lanes = change.lanes
+        for (abandoned in change.abandoned) ending[abandoned.registration.id] = abandoned.registration
+    }
+    ending.keys.retainAll(decision.snapshot.commands.keys)
+    return ExecutorCheckpoint(decision.snapshot, now, lanes, ending)
 }
 
 /**

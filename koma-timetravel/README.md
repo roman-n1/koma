@@ -58,8 +58,15 @@ Store, in memory.
   `GroupBranch` continues every member with a local bridge that delivers routed effects as
   they are decided and `feed(store, source, action)` for the scripted data of a source.
 
+- **Files.** `RecordingFileSink` records a run to segments of a `SegmentStorage` as it happens,
+  each segment beginning with the executor's checkpoint, rotated by size and bounded, so a
+  ring that dropped the oldest ones still replays from what remains; `RecordingFiles.read`
+  returns the last continuous range and marks every hole, which a replay never crosses.
+  `GroupRecordingFileSink` and `GroupRecordingFiles` do the same for a group: the members'
+  files and an order file with the messages in flight at every segment's start.
+
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
-Not yet: a Compose timeline over the inspector and a file format for recordings.
+Not yet: sources' snapshots in the order file, and a branch panel in the Compose inspector.
 
 ## Dependency
 
@@ -149,6 +156,24 @@ GroupReplaySession(machines, recording.since(cut!!))
 
 val branch = session.branch(routes)       // every member from here, with a local bridge
 branch.dispatch(pickerId, Pick("zed"))    // the pick, the root's apply, the acknowledgement back
+```
+
+## Recording to files
+
+```kotlin
+val storage = FileSegmentStorage("$filesDir/recordings")
+val sink = RecordingFileSink(storeId, listMachine, ListContext(), codec, storage, appScope, RecordingFileConfig(maxSegmentBytes = 512 * 1024, maxSegments = 8))
+val store = MachineStore(listMachine, ListContext(), handler, appScope, observers = listOf(sink))
+// ... the app runs; on exit:
+sink.close()
+
+val contents = RecordingFiles(storage).read(storeId, codec)   // the last continuous range, from a checkpoint
+contents.recording?.let { ReplaySession(listMachine, it).verify() }
+contents.marks                                              // MissingSegments, StepsMissing, StartMismatch, Damaged
+
+val groupSink = GroupRecordingFileSink(group, MachineGroupId("chat"), storage, appScope)
+val picker = MachineStore(pickerMachine, PickerCtx(), handler, appScope, observers = listOf(group.member(pickerId), groupSink.member(pickerId, pickerMachine, PickerCtx(), pickerCodec)))
+GroupRecordingFiles(storage).read(MachineGroupId("chat"), codecs).recording?.let { GroupReplaySession(machines, it).verify() }
 ```
 
 ## Serializing a recording

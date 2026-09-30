@@ -812,6 +812,27 @@ public final class koma/observability/file/FileSegmentStorage : koma/observabili
 	public fun read (Ljava/lang/String;)[B
 }
 
+public final class koma/observability/file/FramesRead {
+	public fun <init> (Ljava/util/List;Lkoma/observability/file/SegmentMark;Z)V
+	public final fun getFinished ()Z
+	public final fun getFrames ()Ljava/util/List;
+	public final fun getMark ()Lkoma/observability/file/SegmentMark;
+}
+
+public final class koma/observability/file/Framing {
+	public static final field INSTANCE Lkoma/observability/file/Framing;
+	public static final field MAX_FRAME_BYTES I
+	public final fun frame ([B)[B
+	public final fun getEND ()[B
+	public final fun read (Ljava/lang/String;[B[B)Lkoma/observability/file/FramesRead;
+}
+
+public final class koma/observability/file/Framing$Frame {
+	public fun <init> (I[B)V
+	public final fun getOffset ()I
+	public final fun getPayload ()[B
+}
+
 public final class koma/observability/file/InMemorySegmentStorage : koma/observability/file/SegmentStorage {
 	public fun <init> ()V
 	public fun append (Ljava/lang/String;)Lkoma/observability/file/SegmentOutput;

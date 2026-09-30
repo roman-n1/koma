@@ -1310,6 +1310,7 @@ public final class koma/statechart/machine/MachineGroup$Member : koma/statechart
 public final class koma/statechart/machine/MachineGroup$Route {
 	public final fun getFrom-G0_Fx5k ()Ljava/lang/String;
 	public final fun getTo-G0_Fx5k ()Ljava/lang/String;
+	public final fun mapEvent (Lkoma/core/Event;)Lkoma/core/Action;
 	public fun toString ()Ljava/lang/String;
 }
 

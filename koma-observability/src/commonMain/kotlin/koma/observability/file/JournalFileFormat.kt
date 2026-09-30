@@ -54,11 +54,11 @@ object JournalFileFormat {
     /** The first eight bytes of every segment. */
     val MAGIC: ByteArray = "KOMAJRNL".encodeToByteArray()
 
-    /** The end frame: a length of zero and the CRC of nothing. */
-    val END: ByteArray = ByteArray(8)
+    /** The end frame: a length of zero and the CRC of nothing; see [Framing.END]. */
+    val END: ByteArray get() = Framing.END
 
-    /** A frame longer than this is corruption, whatever its checksum says. */
-    const val MAX_FRAME_BYTES: Int = 16 * 1024 * 1024
+    /** A frame longer than this is corruption, whatever its checksum says; see [Framing.MAX_FRAME_BYTES]. */
+    const val MAX_FRAME_BYTES: Int = Framing.MAX_FRAME_BYTES
 
     /** The extension of segment names. */
     const val EXTENSION: String = ".journal"
@@ -102,12 +102,12 @@ object JournalFileFormat {
         }.toByteArray()
         return ByteWriter(MAGIC.size + 8 + payload.size).apply {
             raw(MAGIC)
-            raw(frame(payload))
+            raw(Framing.frame(payload))
         }.toByteArray()
     }
 
     /** The frame of [record]: its store, sequence numbers, elapsed time and entry, framed. */
-    fun frame(record: JournalRecord<*, *, *>): ByteArray = frame(encodeRecord(record))
+    fun frame(record: JournalRecord<*, *, *>): ByteArray = Framing.frame(encodeRecord(record))
 
     /**
      * Reads [bytes] as the segment [name]: the header, the records that can be read, and what
@@ -116,84 +116,42 @@ object JournalFileFormat {
      * rest was not read.
      */
     fun decodeSegment(name: String, bytes: ByteArray): DecodedSegment {
-        if (bytes.size < MAGIC.size || !bytes.copyOf(MAGIC.size).contentEquals(MAGIC)) {
-            return DecodedSegment(null, emptyList(), SegmentMark.NotASegment(name, "no magic"), finished = false)
-        }
-        val reader = ByteReader(bytes, MAGIC.size)
-        val header = when (val first = readFrame(reader)) {
-            is Frame.Payload -> try {
-                decodeHeader(ByteReader(first.bytes))
-            } catch (e: ByteReader.Malformed) {
-                return DecodedSegment(null, emptyList(), SegmentMark.Corrupt(name, MAGIC.size, 0, "header: ${e.message}"), finished = false)
+        val read = Framing.read(name, bytes, MAGIC)
+        val frames = read.frames
+        if (frames.isEmpty()) {
+            // Cut right after the magic: the header was never written, nothing was dropped.
+            val mark = when (val mark = read.mark) {
+                is SegmentMark.Unfinished -> SegmentMark.TruncatedTail(name, 0, 0)
+                null -> SegmentMark.Corrupt(name, MAGIC.size, 0, "ended before the header")
+                else -> mark
             }
-            Frame.End -> return DecodedSegment(null, emptyList(), SegmentMark.Corrupt(name, MAGIC.size, 0, "ended before the header"), finished = false)
-            is Frame.Truncated -> return DecodedSegment(null, emptyList(), SegmentMark.TruncatedTail(name, 0, first.trailingBytes), finished = false)
-            is Frame.Bad -> return DecodedSegment(null, emptyList(), SegmentMark.Corrupt(name, first.offset, 0, "header: ${first.reason}"), finished = false)
+            return DecodedSegment(null, emptyList(), mark, finished = false)
+        }
+        val header = try {
+            decodeHeader(ByteReader(frames[0].payload))
+        } catch (e: ByteReader.Malformed) {
+            return DecodedSegment(null, emptyList(), SegmentMark.Corrupt(name, frames[0].offset, 0, "header: ${e.message}"), finished = false)
         }
         if (header.fileFormatVersion > JOURNAL_FILE_FORMAT_VERSION || header.recordFormatVersion > JOURNAL_FORMAT_VERSION) {
             return DecodedSegment(header, emptyList(), SegmentMark.UnsupportedFormat(name, header.fileFormatVersion, header.recordFormatVersion), finished = false)
         }
         val records = mutableListOf<JournalRecord<Nothing, Nothing, Nothing>>()
-        while (true) {
-            val offset = reader.position
-            if (reader.remaining == 0) return DecodedSegment(header, records, SegmentMark.Unfinished(name, records.size), finished = false)
-            when (val frame = readFrame(reader)) {
-                is Frame.Payload -> {
-                    val record = try {
-                        decodeRecord(ByteReader(frame.bytes), header)
-                    } catch (e: ByteReader.Malformed) {
-                        return DecodedSegment(header, records, SegmentMark.Corrupt(name, offset, records.size, "record: ${e.message}"), finished = false)
-                    }
-                    records += record
-                }
-                Frame.End -> {
-                    val trailing = reader.remaining
-                    val mark = if (trailing > 0) SegmentMark.Corrupt(name, reader.position, records.size, "$trailing bytes after the end frame") else null
-                    return DecodedSegment(header, records, mark, finished = true)
-                }
-                is Frame.Truncated -> return DecodedSegment(header, records, SegmentMark.TruncatedTail(name, records.size, frame.trailingBytes), finished = false)
-                is Frame.Bad -> return DecodedSegment(header, records, SegmentMark.Corrupt(name, frame.offset, records.size, frame.reason), finished = false)
+        for (frame in frames.drop(1)) {
+            val record = try {
+                decodeRecord(ByteReader(frame.payload), header)
+            } catch (e: ByteReader.Malformed) {
+                return DecodedSegment(header, records, SegmentMark.Corrupt(name, frame.offset, records.size, "record: ${e.message}"), finished = false)
             }
+            records += record
         }
-    }
-
-    // --- frames ---
-
-    private sealed interface Frame {
-        class Payload(val bytes: ByteArray) : Frame
-
-        data object End : Frame
-
-        class Truncated(val trailingBytes: Int) : Frame
-
-        class Bad(val offset: Int, val reason: String) : Frame
-    }
-
-    private fun frame(payload: ByteArray): ByteArray = ByteWriter(8 + payload.size).apply {
-        i32(payload.size)
-        i32(Crc32.of(payload))
-        raw(payload)
-    }.toByteArray()
-
-    private fun readFrame(reader: ByteReader): Frame {
-        val offset = reader.position
-        if (reader.remaining < 8) return Frame.Truncated(reader.remaining)
-        val length = reader.i32()
-        val crc = reader.i32()
-        if (length == 0) return if (crc == 0) Frame.End else Frame.Bad(offset, "an end frame with a checksum")
-        if (length < 0 || length > MAX_FRAME_BYTES) return Frame.Bad(offset, "frame length $length")
-        if (length > reader.remaining) return Frame.Truncated(8 + reader.remaining)
-        val payload = ByteArray(length)
-        val start = reader.position
-        reader.position = start + length
-        val actual = Crc32.of(payloadOf(reader, start, length, payload))
-        if (actual != crc) return Frame.Bad(offset, "checksum")
-        return Frame.Payload(payload)
-    }
-
-    private fun payloadOf(reader: ByteReader, start: Int, length: Int, into: ByteArray): ByteArray {
-        reader.copyInto(start, length, into)
-        return into
+        // The framing counted the header among the frames it read; records do not include it.
+        val mark = when (val mark = read.mark) {
+            is SegmentMark.TruncatedTail -> mark.copy(recordsRead = records.size)
+            is SegmentMark.Unfinished -> mark.copy(recordsRead = records.size)
+            is SegmentMark.Corrupt -> mark.copy(recordsRead = records.size)
+            else -> mark
+        }
+        return DecodedSegment(header, records, mark, read.finished)
     }
 
     // --- header ---

@@ -385,11 +385,19 @@ public final class koma/timetravel/RecordingCodec {
 	public fun <init> (Lkotlinx/serialization/KSerializer;Lkotlinx/serialization/KSerializer;Lkotlinx/serialization/KSerializer;Lkotlinx/serialization/KSerializer;Ljava/util/List;)V
 	public synthetic fun <init> (Lkotlinx/serialization/KSerializer;Lkotlinx/serialization/KSerializer;Lkotlinx/serialization/KSerializer;Lkotlinx/serialization/KSerializer;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun decode (Ljava/lang/String;)Lkoma/timetravel/DecodedRecording;
+	public final fun decodeCheckpoint-PkkQmwg (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lkoma/statechart/machine/ExecutorCheckpoint;
+	public final fun decodeStep-PkkQmwg (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lkoma/timetravel/RecordedStep;
 	public final fun encode (Lkoma/timetravel/Recording;)Ljava/lang/String;
+	public final fun encodeCheckpoint (Lkoma/statechart/machine/ExecutorCheckpoint;)Ljava/lang/String;
+	public final fun encodeStep (Lkoma/timetravel/RecordedStep;)Ljava/lang/String;
 }
 
 public final class koma/timetravel/RecordingCodecKt {
 	public static final field RECORDING_FORMAT_VERSION I
+}
+
+public final class koma/timetravel/RecordingKt {
+	public static final fun carriedPast (Lkoma/statechart/machine/ExecutorCheckpoint;Lkoma/timetravel/RecordedStep;)Lkoma/statechart/machine/ExecutorCheckpoint;
 }
 
 public final class koma/timetravel/ReplayMismatch {
@@ -452,6 +460,299 @@ public final class koma/timetravel/ReplayStep$Matched : koma/timetravel/ReplaySt
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDecision ()Lkoma/statechart/machine/Decision;
 	public final fun getPosition ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/DecodedGroupSegment {
+	public fun <init> (Lkoma/timetravel/file/GroupSegmentHeader;Ljava/util/List;Lkoma/observability/file/SegmentMark;Z)V
+	public final fun component1 ()Lkoma/timetravel/file/GroupSegmentHeader;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Lkoma/observability/file/SegmentMark;
+	public final fun component4 ()Z
+	public final fun copy (Lkoma/timetravel/file/GroupSegmentHeader;Ljava/util/List;Lkoma/observability/file/SegmentMark;Z)Lkoma/timetravel/file/DecodedGroupSegment;
+	public static synthetic fun copy$default (Lkoma/timetravel/file/DecodedGroupSegment;Lkoma/timetravel/file/GroupSegmentHeader;Ljava/util/List;Lkoma/observability/file/SegmentMark;ZILjava/lang/Object;)Lkoma/timetravel/file/DecodedGroupSegment;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEntries ()Ljava/util/List;
+	public final fun getFinished ()Z
+	public final fun getHeader ()Lkoma/timetravel/file/GroupSegmentHeader;
+	public final fun getMark ()Lkoma/observability/file/SegmentMark;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/DecodedRecordingSegment {
+	public fun <init> (Lkoma/timetravel/file/RecordingSegmentHeader;Lkoma/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lkoma/observability/file/SegmentMark;Z)V
+	public final fun component1 ()Lkoma/timetravel/file/RecordingSegmentHeader;
+	public final fun component2 ()Lkoma/statechart/machine/ExecutorCheckpoint;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Lkoma/observability/file/SegmentMark;
+	public final fun component5 ()Z
+	public final fun copy (Lkoma/timetravel/file/RecordingSegmentHeader;Lkoma/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lkoma/observability/file/SegmentMark;Z)Lkoma/timetravel/file/DecodedRecordingSegment;
+	public static synthetic fun copy$default (Lkoma/timetravel/file/DecodedRecordingSegment;Lkoma/timetravel/file/RecordingSegmentHeader;Lkoma/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lkoma/observability/file/SegmentMark;ZILjava/lang/Object;)Lkoma/timetravel/file/DecodedRecordingSegment;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFinished ()Z
+	public final fun getHeader ()Lkoma/timetravel/file/RecordingSegmentHeader;
+	public final fun getMark ()Lkoma/observability/file/SegmentMark;
+	public final fun getStart ()Lkoma/statechart/machine/ExecutorCheckpoint;
+	public final fun getSteps ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/GroupOrderEntry {
+	public synthetic fun <init> (Ljava/lang/String;ILjava/util/List;Lkoma/statechart/machine/MessageId;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;ILjava/util/List;Lkoma/statechart/machine/MessageId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Lkoma/statechart/machine/MessageId;
+	public final fun copy-KGnagKE (Ljava/lang/String;ILjava/util/List;Lkoma/statechart/machine/MessageId;)Lkoma/timetravel/file/GroupOrderEntry;
+	public static synthetic fun copy-KGnagKE$default (Lkoma/timetravel/file/GroupOrderEntry;Ljava/lang/String;ILjava/util/List;Lkoma/statechart/machine/MessageId;ILjava/lang/Object;)Lkoma/timetravel/file/GroupOrderEntry;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReceived ()Lkoma/statechart/machine/MessageId;
+	public final fun getSent ()Ljava/util/List;
+	public final fun getStep ()I
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/GroupRecordingFileContents {
+	public fun <init> (Lkoma/timetravel/GroupRecording;Ljava/lang/Integer;Ljava/util/List;)V
+	public final fun component1 ()Lkoma/timetravel/GroupRecording;
+	public final fun component2 ()Ljava/lang/Integer;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Lkoma/timetravel/GroupRecording;Ljava/lang/Integer;Ljava/util/List;)Lkoma/timetravel/file/GroupRecordingFileContents;
+	public static synthetic fun copy$default (Lkoma/timetravel/file/GroupRecordingFileContents;Lkoma/timetravel/GroupRecording;Ljava/lang/Integer;Ljava/util/List;ILjava/lang/Object;)Lkoma/timetravel/file/GroupRecordingFileContents;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMarks ()Ljava/util/List;
+	public final fun getPosition ()Ljava/lang/Integer;
+	public final fun getRecording ()Lkoma/timetravel/GroupRecording;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/GroupRecordingFileFormat {
+	public static final field EXTENSION Ljava/lang/String;
+	public static final field INSTANCE Lkoma/timetravel/file/GroupRecordingFileFormat;
+	public final fun decodeSegment (Ljava/lang/String;[B)Lkoma/timetravel/file/DecodedGroupSegment;
+	public final fun entryFrame (Lkoma/timetravel/file/GroupOrderEntry;)[B
+	public final fun getMAGIC ()[B
+	public final fun header (Lkoma/timetravel/file/GroupSegmentHeader;)[B
+	public final fun parseSegmentName (Ljava/lang/String;)Lkotlin/Pair;
+	public final fun segmentName-nodEmFU (Ljava/lang/String;I)Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/GroupRecordingFileSink {
+	public synthetic fun <init> (Lkoma/statechart/machine/MachineGroup;Ljava/lang/String;Lkoma/observability/file/SegmentStorage;Lkotlinx/coroutines/CoroutineScope;Lkoma/timetravel/file/RecordingFileConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkoma/statechart/machine/MachineGroup;Ljava/lang/String;Lkoma/observability/file/SegmentStorage;Lkotlinx/coroutines/CoroutineScope;Lkoma/timetravel/file/RecordingFileConfig;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun close (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun getDropped ()J
+	public final fun getMembers ()Ljava/util/Map;
+	public final fun member-KGnagKE (Ljava/lang/String;Lkoma/statechart/machine/Machine;Ljava/lang/Object;Lkoma/timetravel/RecordingCodec;)Lkoma/statechart/machine/DecisionObserver;
+}
+
+public final class koma/timetravel/file/GroupRecordingFiles {
+	public fun <init> (Lkoma/observability/file/SegmentStorage;)V
+	public final fun groups ()Ljava/util/List;
+	public final fun read-nodEmFU (Ljava/lang/String;Ljava/util/Map;)Lkoma/timetravel/file/GroupRecordingFileContents;
+}
+
+public final class koma/timetravel/file/GroupSegmentHeader {
+	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2-qCaNbV4 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Ljava/util/Set;
+	public final fun component6 ()I
+	public final fun component7 ()I
+	public final fun component8 ()Ljava/util/List;
+	public final fun copy-3o_LGLw (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;)Lkoma/timetravel/file/GroupSegmentHeader;
+	public static synthetic fun copy-3o_LGLw$default (Lkoma/timetravel/file/GroupSegmentHeader;ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;ILjava/lang/Object;)Lkoma/timetravel/file/GroupSegmentHeader;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFileFormatVersion ()I
+	public final fun getFirstEntry ()I
+	public final fun getGroup-qCaNbV4 ()Ljava/lang/String;
+	public final fun getInFlight ()Ljava/util/List;
+	public final fun getIndex ()I
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getRoutes ()Ljava/util/List;
+	public final fun getSourceIds ()Ljava/util/Set;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/RecordingFileConfig {
+	public fun <init> ()V
+	public fun <init> (IIIILkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (IIIILkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()I
+	public final fun component5 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy (IIIILkotlin/jvm/functions/Function1;)Lkoma/timetravel/file/RecordingFileConfig;
+	public static synthetic fun copy$default (Lkoma/timetravel/file/RecordingFileConfig;IIIILkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lkoma/timetravel/file/RecordingFileConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFlushEveryFrames ()I
+	public final fun getMaxSegmentBytes ()I
+	public final fun getMaxSegments ()I
+	public final fun getOnFailure ()Lkotlin/jvm/functions/Function1;
+	public final fun getQueueCapacity ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/RecordingFileContents {
+	public fun <init> (Lkoma/timetravel/Recording;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Lkoma/timetravel/Recording;
+	public final fun component2 ()Ljava/lang/Integer;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy (Lkoma/timetravel/Recording;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;)Lkoma/timetravel/file/RecordingFileContents;
+	public static synthetic fun copy$default (Lkoma/timetravel/file/RecordingFileContents;Lkoma/timetravel/Recording;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lkoma/timetravel/file/RecordingFileContents;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFirstStep ()Ljava/lang/Integer;
+	public final fun getMarks ()Ljava/util/List;
+	public final fun getRecording ()Lkoma/timetravel/Recording;
+	public final fun getSegments ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun isComplete ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/RecordingFileFormat {
+	public static final field EXTENSION Ljava/lang/String;
+	public static final field INSTANCE Lkoma/timetravel/file/RecordingFileFormat;
+	public final fun checkpointFrame (Ljava/lang/String;)[B
+	public final fun decodeSegment (Ljava/lang/String;[BLkoma/timetravel/RecordingCodec;)Lkoma/timetravel/file/DecodedRecordingSegment;
+	public final fun getMAGIC ()[B
+	public final fun header-mm_jqZY (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;II)[B
+	public final fun parseSegmentName (Ljava/lang/String;)Lkotlin/Pair;
+	public final fun segmentName-oFPGkRc (Ljava/lang/String;I)Ljava/lang/String;
+	public final fun stepFrame (Ljava/lang/String;)[B
+}
+
+public final class koma/timetravel/file/RecordingFileFormatKt {
+	public static final field RECORDING_FILE_FORMAT_VERSION I
+}
+
+public abstract interface class koma/timetravel/file/RecordingFileMark {
+}
+
+public final class koma/timetravel/file/RecordingFileMark$Damaged : koma/timetravel/file/RecordingFileMark {
+	public fun <init> (Lkoma/observability/file/SegmentMark;)V
+	public final fun component1 ()Lkoma/observability/file/SegmentMark;
+	public final fun copy (Lkoma/observability/file/SegmentMark;)Lkoma/timetravel/file/RecordingFileMark$Damaged;
+	public static synthetic fun copy$default (Lkoma/timetravel/file/RecordingFileMark$Damaged;Lkoma/observability/file/SegmentMark;ILjava/lang/Object;)Lkoma/timetravel/file/RecordingFileMark$Damaged;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMark ()Lkoma/observability/file/SegmentMark;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/RecordingFileMark$MissingSegments : koma/timetravel/file/RecordingFileMark {
+	public synthetic fun <init> (Ljava/lang/String;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy-zLaGOrk (Ljava/lang/String;II)Lkoma/timetravel/file/RecordingFileMark$MissingSegments;
+	public static synthetic fun copy-zLaGOrk$default (Lkoma/timetravel/file/RecordingFileMark$MissingSegments;Ljava/lang/String;IIILjava/lang/Object;)Lkoma/timetravel/file/RecordingFileMark$MissingSegments;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFromIndex ()I
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public final fun getToIndex ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/RecordingFileMark$StartMismatch : koma/timetravel/file/RecordingFileMark {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy-zLaGOrk (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lkoma/timetravel/file/RecordingFileMark$StartMismatch;
+	public static synthetic fun copy-zLaGOrk$default (Lkoma/timetravel/file/RecordingFileMark$StartMismatch;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/file/RecordingFileMark$StartMismatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getSegment ()Ljava/lang/String;
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/RecordingFileMark$StepsMissing : koma/timetravel/file/RecordingFileMark {
+	public synthetic fun <init> (Ljava/lang/String;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy-zLaGOrk (Ljava/lang/String;II)Lkoma/timetravel/file/RecordingFileMark$StepsMissing;
+	public static synthetic fun copy-zLaGOrk$default (Lkoma/timetravel/file/RecordingFileMark$StepsMissing;Ljava/lang/String;IIILjava/lang/Object;)Lkoma/timetravel/file/RecordingFileMark$StepsMissing;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExpected ()I
+	public final fun getFound ()I
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/RecordingFileSink : koma/statechart/machine/DecisionObserver {
+	public synthetic fun <init> (Ljava/lang/String;Lkoma/statechart/machine/Machine;Ljava/lang/Object;Lkoma/timetravel/RecordingCodec;Lkoma/observability/file/SegmentStorage;Lkotlinx/coroutines/CoroutineScope;Lkoma/timetravel/file/RecordingFileConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Lkoma/statechart/machine/Machine;Ljava/lang/Object;Lkoma/timetravel/RecordingCodec;Lkoma/observability/file/SegmentStorage;Lkotlinx/coroutines/CoroutineScope;Lkoma/timetravel/file/RecordingFileConfig;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun close (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun getProblem ()Ljava/lang/String;
+	public final fun getSegments ()Ljava/util/List;
+	public final fun getStats ()Lkoma/timetravel/file/RecordingFileStats;
+	public fun onCommitted-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)V
+	public fun onFailed-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)V
+	public fun onIgnored-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;)V
+	public fun onRejected (Lkoma/core/Action;Lkoma/statechart/machine/Admission$Rejected;)V
+}
+
+public final class koma/timetravel/file/RecordingFileStats {
+	public fun <init> (JJJI)V
+	public final fun component1 ()J
+	public final fun component2 ()J
+	public final fun component3 ()J
+	public final fun component4 ()I
+	public final fun copy (JJJI)Lkoma/timetravel/file/RecordingFileStats;
+	public static synthetic fun copy$default (Lkoma/timetravel/file/RecordingFileStats;JJJIILjava/lang/Object;)Lkoma/timetravel/file/RecordingFileStats;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDropped ()J
+	public final fun getRecorded ()J
+	public final fun getSegments ()I
+	public final fun getWritten ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/RecordingFiles {
+	public fun <init> (Lkoma/observability/file/SegmentStorage;)V
+	public final fun read-oFPGkRc (Ljava/lang/String;Lkoma/timetravel/RecordingCodec;)Lkoma/timetravel/file/RecordingFileContents;
+	public final fun stores ()Ljava/util/List;
+}
+
+public final class koma/timetravel/file/RecordingSegmentHeader {
+	public synthetic fun <init> (IILjava/lang/String;Ljava/lang/String;Ljava/lang/String;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3-i1OI-TI ()Ljava/lang/String;
+	public final fun component4-BnUQ-xA ()Ljava/lang/String;
+	public final fun component5-G0_Fx5k ()Ljava/lang/String;
+	public final fun component6 ()I
+	public final fun component7 ()I
+	public final fun copy-jjXfHP4 (IILjava/lang/String;Ljava/lang/String;Ljava/lang/String;II)Lkoma/timetravel/file/RecordingSegmentHeader;
+	public static synthetic fun copy-jjXfHP4$default (Lkoma/timetravel/file/RecordingSegmentHeader;IILjava/lang/String;Ljava/lang/String;Ljava/lang/String;IIILjava/lang/Object;)Lkoma/timetravel/file/RecordingSegmentHeader;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDefinition-i1OI-TI ()Ljava/lang/String;
+	public final fun getFileFormatVersion ()I
+	public final fun getFirstStep ()I
+	public final fun getIndex ()I
+	public final fun getRecordingFormatVersion ()I
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public final fun getVersion-BnUQ-xA ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
