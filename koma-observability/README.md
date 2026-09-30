@@ -26,8 +26,9 @@ builds the inspector and the replay on; this module is the journal only.
 - **Other producers.** `session.publish(store, entry)` publishes an entry a probe cannot see,
   for a Store the session records. `koma-statechart` uses it for the decisions of a replay-ready
   machine (`DecisionCommitted`, `DecisionIgnored`, `InputRejected`), for the bridge of a
-  group (`BridgeSent`, `BridgeReceived`, `BridgeDropped` for a message the store it was
-  delivered to closed without deciding, with the message's sender and effect), for the
+  group (`BridgeSent` with the request a reply was decided from as its `cause`,
+  `BridgeReceived`, `BridgeDropped` for a message the store it was delivered to closed without
+  deciding, with the message's sender and effect), for the
   effect mailbox (`EffectQueued`, `EffectHandlingStarted`, `EffectAcknowledged`, `EffectDiscarded`),
   for inputs of external sources (`ExternalReceived`), for a group's cut (`CheckpointCreated`,
   a record of the session itself through `session.publish(entry)`) and for a store closed with
@@ -35,7 +36,8 @@ builds the inspector and the replay on; this module is the journal only.
 
 Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
 fork [roman-n1/koma](https://github.com/roman-n1/koma). The record model has `JOURNAL_FORMAT_VERSION`
-6 (new variants only at the end, under new tags; a reader of a version reads every earlier one),
+7 (new variants only at the end, under new tags, new fields only at the end of a variant; a
+reader of a version reads every earlier one),
 the segment layout `JOURNAL_FILE_FORMAT_VERSION` 1; every recording is `Capability.InspectOnly`
 (the replay recording is `koma-timetravel`'s).
 

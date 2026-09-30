@@ -107,8 +107,12 @@ sealed interface TimelineItem {
         override val store: StoreInstanceId? get() = null
     }
 
-    /** A bridge routed an effect of [store] to [to] as [message]; [delivered] is false when [to] was not attached, had closed or had left. */
-    data class Sent(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId, val input: InputId?, val message: MessageRef, val to: StoreInstanceId, val delivered: Boolean) : TimelineItem
+    /**
+     * A bridge routed an effect of [store] to [to] as [message]; [delivered] is false when [to]
+     * was not attached, had closed or had left; [cause] is the bridge message [store] was
+     * deciding when it emitted the effect, when it was one: what a reply replies to.
+     */
+    data class Sent(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId, val input: InputId?, val message: MessageRef, val to: StoreInstanceId, val delivered: Boolean, val cause: MessageRef? = null) : TimelineItem
 
     /** The bridge message [message], delivered to [store] and not decided, never will be: the store it was delivered to closed ([reason]). */
     data class Dropped(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId, val message: MessageRef, val reason: String) : TimelineItem

@@ -8,6 +8,8 @@ import koma.statechart.machine.EffectId
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineTime
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.PairRole
+import koma.statechart.machine.RoutePair
 import koma.statechart.machine.SourceId
 import koma.timetravel.GroupFixture.PickerAct
 import koma.timetravel.GroupFixture.PickerCtx
@@ -140,6 +142,33 @@ class GroupReplaySessionTest {
 
         assertEquals(setOf(GroupRoute(pickerId, rootId), GroupRoute(rootId, pickerId)), recording.routes.toSet(), "the removed route is remembered")
         assertEquals(emptyList(), GroupReplaySession(machines, recording).verify(), "the deliveries the route carried had a route")
+        live.close()
+    }
+
+    @Test
+    fun aReplyOverAPair_followsARequestOfThePair_orIsAMismatch() = runTest {
+        val live = GroupFixture.Live(this, paired = true)
+        script(live)
+        val recording = live.recorder.recording()
+        assertEquals(setOf(RoutePair("apply", PairRole.Request), RoutePair("apply", PairRole.Reply)), recording.routes.mapNotNull { it.pair }.toSet())
+        assertEquals(emptyList(), GroupReplaySession(machines, recording).verify(), "every acknowledgement replies to a pick the root had received")
+
+        // The root's receives turned into dispatches: it never received a request, so every
+        // acknowledgement the picker received over the reply route replies to nothing.
+        val rootRecording = recording.members.getValue(rootId) as Recording<RootCtx, RootAct, Nothing, RootEv>
+        val unrequested = Recording(
+            rootRecording.definition, rootRecording.version, rootRecording.start,
+            rootRecording.steps.map { step ->
+                val input = step.input
+                if (step is RecordedStep.Committed<RootCtx, RootAct, Nothing, RootEv> && input is MachineInput.BridgeReceived) step.copy(input = MachineInput.Dispatch(input.action, input.now)) else step
+            },
+        )
+        val doctored = GroupRecording(recording.members + (rootId to unrequested), recording.order, recording.routes)
+
+        val mismatches = GroupReplaySession(machines, doctored).verify()
+
+        val reply = mismatches.filterIsInstance<GroupMismatch.ReplyWithoutRequest>()
+        assertTrue(reply.isNotEmpty() && reply.all { it.store == pickerId && it.pair == "apply" && it.message.from == rootId }, mismatches.toString())
         live.close()
     }
 

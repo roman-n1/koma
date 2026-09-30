@@ -21,6 +21,8 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineGroup
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.PairRole
+import koma.statechart.machine.RoutePair
 import koma.statechart.machine.SourceId
 import koma.statechart.machine.SourceSnapshot
 import koma.timetravel.GroupRecording
@@ -48,7 +50,8 @@ import kotlinx.serialization.json.Json
  * [GroupRecordingFiles] reads them back into a [GroupRecording] over the range every file
  * still covers.
  *
- * Format 2 added the cut to the header; a format 1 segment reads as one without cuts.
+ * Format 2 added the cut to the header; a format 1 segment reads as one without cuts. Format 3
+ * added the pair of a route; a format 2 segment reads as routes without pairs.
  */
 @ExperimentalKomaApi
 object GroupRecordingFileFormat {
@@ -57,7 +60,7 @@ object GroupRecordingFileFormat {
     const val EXTENSION: String = ".group"
 
     /** The version of this layout, written into every header. */
-    const val VERSION: Int = 2
+    const val VERSION: Int = 3
 
     private const val TAG_HEADER = 1
     private const val TAG_ENTRY = 2
@@ -81,7 +84,7 @@ object GroupRecordingFileFormat {
 
     fun header(header: GroupSegmentHeader): ByteArray {
         val wire = GroupHeaderWire(
-            header.fileFormatVersion, header.group.value, header.members.map { it.value }, header.routes.map { RouteWire(it.from.value, it.to.value) },
+            header.fileFormatVersion, header.group.value, header.members.map { it.value }, header.routes.map { RouteWire(it.from.value, it.to.value, it.pair?.name, it.pair?.role?.name) },
             header.sourceIds.map { it.value }, header.index, header.firstEntry, header.inFlight.map { MessageWireG(it.from.value, it.effect.value) },
             header.cut?.let { cut ->
                 CutWire(
@@ -114,7 +117,7 @@ object GroupRecordingFileFormat {
             require(payload.isNotEmpty() && payload[0].toInt() == TAG_HEADER) { "not a header frame" }
             val wire = json.decodeFromString(GroupHeaderWire.serializer(), payload.decodeToString(1))
             GroupSegmentHeader(
-                wire.formatVersion, MachineGroupId(wire.group), wire.members.map(::StoreInstanceId), wire.routes.map { GroupRoute(StoreInstanceId(it.from), StoreInstanceId(it.to)) },
+                wire.formatVersion, MachineGroupId(wire.group), wire.members.map(::StoreInstanceId), wire.routes.map { GroupRoute(StoreInstanceId(it.from), StoreInstanceId(it.to), it.pair()) },
                 wire.sourceIds.map(::SourceId).toSet(), wire.index, wire.firstEntry, wire.inFlight.map { MessageId(StoreInstanceId(it.from), EffectId(it.effect)) },
                 wire.cut?.let { cut ->
                     RecordedCut(
@@ -174,7 +177,9 @@ internal class CutWire(val counts: Map<String, Int>, val sources: List<SourceSna
 internal class SourceSnapshotWire(val source: String, val kind: String, val version: Int, val fields: Map<String, String>)
 
 @Serializable
-internal class RouteWire(val from: String, val to: String)
+internal class RouteWire(val from: String, val to: String, val pair: String? = null, val role: String? = null) {
+    fun pair(): RoutePair? = if (pair != null && role != null) RoutePair(pair, PairRole.valueOf(role)) else null
+}
 
 @Serializable
 internal class MessageWireG(val from: String, val effect: Long)
@@ -382,7 +387,7 @@ class GroupRecordingFileSink(
     private fun open(item: Item) {
         segmentIndex = if (segmentIndex < 0) nextIndex() else segmentIndex + 1
         val header = GroupRecordingFileFormat.header(
-            GroupSegmentHeader(GroupRecordingFileFormat.VERSION, id, locked { sinks.keys.toList() }, group.routeHistory.map { GroupRoute(it.from, it.to) }, group.sourceIds.toSet(), segmentIndex, item.index, item.inFlight, item.cut),
+            GroupSegmentHeader(GroupRecordingFileFormat.VERSION, id, locked { sinks.keys.toList() }, group.routeHistory.map { GroupRoute(it.from, it.to, it.pair) }, group.sourceIds.toSet(), segmentIndex, item.index, item.inFlight, item.cut),
         )
         val output = storage.append(GroupRecordingFileFormat.segmentName(id, segmentIndex))
         output.write(header)

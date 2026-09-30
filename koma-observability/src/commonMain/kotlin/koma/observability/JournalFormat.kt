@@ -50,7 +50,7 @@ object JournalFormat {
             if (entry.effects > 0) append(" effects=").append(entry.effects)
         }
         is JournalEntry.DecisionIgnored -> "DecisionIgnored ${entry.input ?: "?"} ${entry.reason}"
-        is JournalEntry.BridgeSent -> "BridgeSent ${entry.input ?: "?"} ${entry.message} -> ${entry.to}${if (entry.delivered) "" else " undelivered"}"
+        is JournalEntry.BridgeSent -> "BridgeSent ${entry.input ?: "?"} ${entry.message} -> ${entry.to}${if (entry.delivered) "" else " undelivered"}${entry.cause?.let { " reply-to=$it" } ?: ""}"
         is JournalEntry.BridgeReceived -> "BridgeReceived ${entry.input ?: "?"} ${entry.message}"
         is JournalEntry.BridgeDropped -> "BridgeDropped ${entry.message} -> ${entry.to} ${entry.reason}"
         is JournalEntry.EffectQueued -> "EffectQueued ${entry.input ?: "?"} e${entry.effect} ${entry.policy} ${payload(entry.event)}"

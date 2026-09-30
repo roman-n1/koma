@@ -19,10 +19,11 @@ import kotlin.time.Duration
  * ([JournalEntry.EffectQueued], [JournalEntry.EffectHandlingStarted], [JournalEntry.EffectAcknowledged],
  * [JournalEntry.EffectDiscarded]); 4 added [JournalEntry.ExternalReceived] and
  * [JournalEntry.CheckpointCreated]; 5 added [JournalEntry.CommandsAbandoned]; 6 added
- * [JournalEntry.BridgeDropped]. New variants only at the end, under new tags; a reader of a
- * version reads every earlier one.
+ * [JournalEntry.BridgeDropped]; 7 added [JournalEntry.BridgeSent.cause]. New variants only at
+ * the end, under new tags, new fields only at the end of a variant; a reader of a version reads
+ * every earlier one.
  */
-const val JOURNAL_FORMAT_VERSION: Int = 6
+const val JOURNAL_FORMAT_VERSION: Int = 7
 
 /**
  * One record of the journal: the envelope every record shares, and the typed [entry].
@@ -142,10 +143,12 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
 
     /**
      * A bridge routed an effect of this Store to [to] as the message [message]; [delivered] is
-     * false when [to] was not attached to the bridge, so the message went nowhere and the
-     * group's record is partial.
+     * false when [to] was not attached to the bridge, had closed or had left, so the message
+     * went nowhere and the group's record is partial. [cause] is the bridge message this Store
+     * was deciding when it emitted the effect, when it was one: the request a reply decided in
+     * the same step replies to.
      */
-    data class BridgeSent(val input: InputId?, val message: MessageRef, val to: StoreInstanceId, val delivered: Boolean) : JournalEntry<Nothing, Nothing, Nothing>
+    data class BridgeSent(val input: InputId?, val message: MessageRef, val to: StoreInstanceId, val delivered: Boolean, val cause: MessageRef? = null) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * This Store decided the bridge message [message] while processing [input]: the

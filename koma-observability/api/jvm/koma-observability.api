@@ -206,14 +206,17 @@ public final class koma/observability/JournalEntry$BridgeReceived : koma/observa
 }
 
 public final class koma/observability/JournalEntry$BridgeSent : koma/observability/JournalEntry {
-	public synthetic fun <init> (Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkoma/observability/MessageRef;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkoma/observability/MessageRef;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-hFruGEc ()Lkoma/core/InputId;
 	public final fun component2 ()Lkoma/observability/MessageRef;
 	public final fun component3-G0_Fx5k ()Ljava/lang/String;
 	public final fun component4 ()Z
-	public final fun copy-2fIcLts (Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;Z)Lkoma/observability/JournalEntry$BridgeSent;
-	public static synthetic fun copy-2fIcLts$default (Lkoma/observability/JournalEntry$BridgeSent;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZILjava/lang/Object;)Lkoma/observability/JournalEntry$BridgeSent;
+	public final fun component5 ()Lkoma/observability/MessageRef;
+	public final fun copy-oJZUuWk (Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkoma/observability/MessageRef;)Lkoma/observability/JournalEntry$BridgeSent;
+	public static synthetic fun copy-oJZUuWk$default (Lkoma/observability/JournalEntry$BridgeSent;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkoma/observability/MessageRef;ILjava/lang/Object;)Lkoma/observability/JournalEntry$BridgeSent;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Lkoma/observability/MessageRef;
 	public final fun getDelivered ()Z
 	public final fun getInput-hFruGEc ()Lkoma/core/InputId;
 	public final fun getMessage ()Lkoma/observability/MessageRef;

@@ -61,7 +61,10 @@ object InspectorText {
             }
             is TimelineItem.Discarded -> append("Discarded ").append(item.input).append(' ').append(item.kind?.let { input(it) } ?: "?").append(" ").append(item.reason.kind).append(item.reason.failure?.let { " " + JournalFormat.failure(it) } ?: "")
             is TimelineItem.Pending -> append("Pending ").append(item.input).append(' ').append(input(item.kind)).append(" (no end in the journal)")
-            is TimelineItem.Sent -> append("Sent ").append(item.message).append(" -> ").append(item.to).append(if (item.delivered) "" else " undelivered")
+            is TimelineItem.Sent -> {
+                append("Sent ").append(item.message).append(" -> ").append(item.to).append(if (item.delivered) "" else " undelivered")
+                item.cause?.let { append(" reply-to=").append(it) }
+            }
             is TimelineItem.Dropped -> append("Dropped ").append(item.message).append(' ').append(item.reason)
             is TimelineItem.Effect -> append(JournalFormat.entry(item.entry))
             is TimelineItem.Checkpoint -> append("Checkpoint members=").append(item.members.joinToString(",", "[", "]")).append(" sources=").append(item.sources.joinToString(",", "[", "]")).append(" inFlight=").append(item.inFlight)

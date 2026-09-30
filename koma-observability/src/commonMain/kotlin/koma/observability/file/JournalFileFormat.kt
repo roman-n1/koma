@@ -107,7 +107,10 @@ object JournalFileFormat {
     }
 
     /** The frame of [record]: its store, sequence numbers, elapsed time and entry, framed. */
-    fun frame(record: JournalRecord<*, *, *>): ByteArray = Framing.frame(encodeRecord(record))
+    fun frame(record: JournalRecord<*, *, *>): ByteArray = Framing.frame(encodeRecord(record, JOURNAL_FORMAT_VERSION))
+
+    // What a writer of [recordFormatVersion] wrote, so tests can write what an earlier one did.
+    internal fun frame(record: JournalRecord<*, *, *>, recordFormatVersion: Int): ByteArray = Framing.frame(encodeRecord(record, recordFormatVersion))
 
     /**
      * Reads [bytes] as the segment [name]: the header, the records that can be read, and what
@@ -177,13 +180,13 @@ object JournalFileFormat {
 
     // --- records ---
 
-    private fun encodeRecord(record: JournalRecord<*, *, *>): ByteArray = ByteWriter().apply {
+    private fun encodeRecord(record: JournalRecord<*, *, *>, recordFormatVersion: Int): ByteArray = ByteWriter().apply {
         u8(tagOf(record.entry))
         nullable(record.store) { string(it.value) }
         i64(record.groupSeq.value)
         nullable(record.storeSeq) { i64(it.value) }
         duration(record.elapsed)
-        entry(record.entry)
+        entry(record.entry, recordFormatVersion)
     }.toByteArray()
 
     private fun decodeRecord(reader: ByteReader, header: SegmentHeader): JournalRecord<Nothing, Nothing, Nothing> {
@@ -192,7 +195,7 @@ object JournalFileFormat {
         val groupSeq = GroupSeq(reader.i64())
         val storeSeq = reader.nullable { StoreSeq(reader.i64()) }
         val elapsed = reader.duration()
-        val entry = reader.entry(tag)
+        val entry = reader.entry(tag, header.recordFormatVersion)
         reader.expectEnd()
         return JournalRecord(header.recordFormatVersion, header.session, header.group, store, header.mode, groupSeq, storeSeq, elapsed, entry)
     }
@@ -224,7 +227,9 @@ object JournalFileFormat {
         is JournalEntry.BridgeDropped -> 24
     }
 
-    private fun ByteWriter.entry(entry: JournalEntry<*, *, *>) {
+    // [recordFormatVersion] decides the fields a variant has: a field added in a later version is
+    // written only from that version on, and read only from a segment of that version on.
+    private fun ByteWriter.entry(entry: JournalEntry<*, *, *>, recordFormatVersion: Int) {
         when (entry) {
             is JournalEntry.StoreRegistered -> string(entry.capability.name)
             is JournalEntry.InputAccepted -> {
@@ -302,6 +307,7 @@ object JournalFileFormat {
                 message(entry.message)
                 string(entry.to.value)
                 bool(entry.delivered)
+                if (recordFormatVersion >= 7) nullable(entry.cause) { message(it) }
             }
             is JournalEntry.BridgeReceived -> {
                 nullable(entry.input) { i64(it.value) }
@@ -344,7 +350,7 @@ object JournalFileFormat {
         }
     }
 
-    private fun ByteReader.entry(tag: Int): JournalEntry<Nothing, Nothing, Nothing> = when (tag) {
+    private fun ByteReader.entry(tag: Int, recordFormatVersion: Int): JournalEntry<Nothing, Nothing, Nothing> = when (tag) {
         1 -> JournalEntry.StoreRegistered(enumNamed<Capability>(string()))
         2 -> JournalEntry.InputAccepted(InputId(i64()), input())
         3 -> JournalEntry.InputDiscarded(InputId(i64()), DiscardDescriptor(enumNamed<DiscardKind>(string()), nullable { failure() }))
@@ -371,7 +377,7 @@ object JournalFileFormat {
         12 -> JournalEntry.DecisionIgnored(nullable { InputId(i64()) }, string())
         13 -> JournalEntry.JournalGap(i64())
         14 -> JournalEntry.RecordingStopped
-        15 -> JournalEntry.BridgeSent(nullable { InputId(i64()) }, message(), StoreInstanceId(string()), bool())
+        15 -> JournalEntry.BridgeSent(nullable { InputId(i64()) }, message(), StoreInstanceId(string()), bool(), if (recordFormatVersion >= 7) nullable { message() } else null)
         16 -> JournalEntry.BridgeReceived(nullable { InputId(i64()) }, message())
         17 -> JournalEntry.EffectQueued(nullable { InputId(i64()) }, i64(), string(), payload())
         18 -> JournalEntry.EffectHandlingStarted(i64(), i32())

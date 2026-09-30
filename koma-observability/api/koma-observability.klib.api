@@ -267,8 +267,10 @@ sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out kom
     }
 
     final class BridgeSent : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.BridgeSent|null[0]
-        constructor <init>(koma.core/InputId?, koma.observability/MessageRef, koma.observability/StoreInstanceId, kotlin/Boolean) // koma.observability/JournalEntry.BridgeSent.<init>|<init>(koma.core.InputId?;koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.Boolean){}[0]
+        constructor <init>(koma.core/InputId?, koma.observability/MessageRef, koma.observability/StoreInstanceId, kotlin/Boolean, koma.observability/MessageRef? = ...) // koma.observability/JournalEntry.BridgeSent.<init>|<init>(koma.core.InputId?;koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.Boolean;koma.observability.MessageRef?){}[0]
 
+        final val cause // koma.observability/JournalEntry.BridgeSent.cause|{}cause[0]
+            final fun <get-cause>(): koma.observability/MessageRef? // koma.observability/JournalEntry.BridgeSent.cause.<get-cause>|<get-cause>(){}[0]
         final val delivered // koma.observability/JournalEntry.BridgeSent.delivered|{}delivered[0]
             final fun <get-delivered>(): kotlin/Boolean // koma.observability/JournalEntry.BridgeSent.delivered.<get-delivered>|<get-delivered>(){}[0]
         final val input // koma.observability/JournalEntry.BridgeSent.input|{}input[0]
@@ -282,7 +284,8 @@ sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out kom
         final fun component2(): koma.observability/MessageRef // koma.observability/JournalEntry.BridgeSent.component2|component2(){}[0]
         final fun component3(): koma.observability/StoreInstanceId // koma.observability/JournalEntry.BridgeSent.component3|component3(){}[0]
         final fun component4(): kotlin/Boolean // koma.observability/JournalEntry.BridgeSent.component4|component4(){}[0]
-        final fun copy(koma.core/InputId? = ..., koma.observability/MessageRef = ..., koma.observability/StoreInstanceId = ..., kotlin/Boolean = ...): koma.observability/JournalEntry.BridgeSent // koma.observability/JournalEntry.BridgeSent.copy|copy(koma.core.InputId?;koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.Boolean){}[0]
+        final fun component5(): koma.observability/MessageRef? // koma.observability/JournalEntry.BridgeSent.component5|component5(){}[0]
+        final fun copy(koma.core/InputId? = ..., koma.observability/MessageRef = ..., koma.observability/StoreInstanceId = ..., kotlin/Boolean = ..., koma.observability/MessageRef? = ...): koma.observability/JournalEntry.BridgeSent // koma.observability/JournalEntry.BridgeSent.copy|copy(koma.core.InputId?;koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.Boolean;koma.observability.MessageRef?){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.BridgeSent.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.BridgeSent.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // koma.observability/JournalEntry.BridgeSent.toString|toString(){}[0]

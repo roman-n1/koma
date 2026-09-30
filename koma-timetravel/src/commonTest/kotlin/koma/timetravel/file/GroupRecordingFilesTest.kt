@@ -24,6 +24,8 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineGroup
 import koma.statechart.machine.MachineStore
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.PairRole
+import koma.statechart.machine.RoutePair
 import koma.statechart.machine.SourceId
 import koma.statechart.machine.SourceSnapshot
 import koma.observability.file.Framing
@@ -342,7 +344,7 @@ class GroupRecordingFilesTest {
     @Test
     fun anOrderSegment_roundTrips_andEveryCutIsAPrefix() {
         val header = GroupSegmentHeader(
-            GroupRecordingFileFormat.VERSION, groupId, listOf(pingId, pongId), listOf(GroupRoute(pingId, pongId)), setOf(SourceId("paging:x")), 3, 40, listOf(MessageId(pingId, EffectId(7))),
+            GroupRecordingFileFormat.VERSION, groupId, listOf(pingId, pongId), listOf(GroupRoute(pingId, pongId, RoutePair("ping", PairRole.Request)), GroupRoute(pongId, pingId, RoutePair("ping", PairRole.Reply)), GroupRoute(pongId, pingId)), setOf(SourceId("paging:x")), 3, 40, listOf(MessageId(pingId, EffectId(7))),
             RecordedCut(40, mapOf(pingId to 21, pongId to 19), mapOf(SourceId("paging:x") to SourceSnapshot(SourceId("paging:x"), "paging", 2, mapOf("loaded" to "3", "generation" to "1")))),
         )
         val entries = listOf(
@@ -366,10 +368,14 @@ class GroupRecordingFilesTest {
         }
         assertEquals(groupId to 3, GroupRecordingFileFormat.parseSegmentName("pingpong-000003.group"))
         assertIs<SegmentMark.UnsupportedFormat>(GroupRecordingFileFormat.decodeSegment("n", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = GroupRecordingFileFormat.VERSION + 1)) + Framing.END).mark)
-        // A format 1 segment, written before cuts existed, reads as one without a cut.
-        val old = GroupRecordingFileFormat.decodeSegment("old", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = 1, cut = null)) + GroupRecordingFileFormat.entryFrame(entries[0]) + Framing.END)
-        assertEquals(header.copy(fileFormatVersion = 1, cut = null), old.header)
+        // A format 1 segment, written before cuts existed, reads as one without a cut; a format 2
+        // segment, written before pairs, as routes without pairs.
+        val unpaired = listOf(GroupRoute(pingId, pongId))
+        val old = GroupRecordingFileFormat.decodeSegment("old", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = 1, routes = unpaired, cut = null)) + GroupRecordingFileFormat.entryFrame(entries[0]) + Framing.END)
+        assertEquals(header.copy(fileFormatVersion = 1, routes = unpaired, cut = null), old.header)
         assertEquals(entries.take(1), old.entries)
         assertTrue(old.finished && old.mark == null)
+        val v2 = GroupRecordingFileFormat.decodeSegment("v2", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = 2, routes = unpaired)) + Framing.END)
+        assertEquals(header.copy(fileFormatVersion = 2, routes = unpaired), v2.header)
     }
 }

@@ -220,6 +220,31 @@ class MachineGroupTest {
     }
 
     @Test
+    fun aRequestReplyPair_isTwoRoutes_andAReplyDecidedFromTheRequest_namesIt() = runTest {
+        val f = Fixture(this, routed = false)
+        val pair = f.group.requestReply(
+            f.pickerMember, f.rootMember, "apply",
+            request = { picked: PickerEv -> (picked as? PickerEv.Picked)?.let { RootAct.Apply(it.name) } },
+            reply = { applied: RootEv -> (applied as? RootEv.Applied)?.let { PickerAct.Ack(it.count) } },
+        )
+        runCurrent()
+        assertEquals(listOf(pair.request, pair.reply), f.group.routes)
+        assertEquals(RoutePair("apply", PairRole.Request), pair.request.pair)
+        assertEquals(RoutePair("apply", PairRole.Reply), pair.reply.pair)
+        assertEquals("$pickerId -> $rootId (apply Request)", pair.request.toString())
+
+        f.pickerStore.dispatch(PickerAct.Pick("tom"))
+        runCurrent()
+
+        assertEquals(listOf("tom"), f.rootStore.currentState.context.names)
+        assertEquals(listOf(1), f.pickerStore.currentState.context.acks)
+        val sent = f.session.records().map { it.entry }.filterIsInstance<JournalEntry.BridgeSent>()
+        assertEquals(listOf(MessageRef(pickerId, 1) to rootId, MessageRef(rootId, 1) to pickerId), sent.map { it.message to it.to })
+        assertEquals(listOf<MessageRef?>(null, MessageRef(pickerId, 1)), sent.map { it.cause }, "the request replies to nothing; the reply, decided from the request, names it")
+        f.close()
+    }
+
+    @Test
     fun aMemberWhoseStoreClosed_getsNoMoreMessages_andWhatWasInFlightToIt_isDropped() = runTest {
         val f = Fixture(this)
         runCurrent()
