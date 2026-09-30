@@ -229,9 +229,8 @@ val transitions = listOf(
 
 `koma.statechart.machine` runs a chart as a pure decision function instead of a Store with
 suspending hooks. It is the foundation of the time-travel work
-([handoff](../doc/internal/design/2026-09-29-time-travel-logging-handoff.md), stage 2), and the
-first half of it: deciding. Executing decisions (a Store, a command scheduler, timers) follows in
-a later release; until then a `Machine` is something to test and to drive from your own code.
+([handoff](../doc/internal/design/2026-09-29-time-travel-logging-handoff.md), stage 2): a `Machine`
+decides, and a `MachineStore` (below) executes its decisions.
 
 ```kotlin
 sealed interface ListCommand {
@@ -281,6 +280,44 @@ into a typed `CommandResult`.
 A chart is either a legacy `StateChartStore` or a `Machine`; the two are not mixed. Building a
 `Machine` fails fast for the same reasons `StateChartStore` does: a missing guard or effect
 implementation, a rule for an undeclared node, undeclared endpoints, an instant timer loop.
+
+### Running a machine
+
+`MachineStore` runs a `Machine` as a Koma `Store<MachineSnapshot<C>, A, E>`: decisions are
+committed under the store's lock, and after each commit a scheduler starts the registered
+commands through your `CommandHandler`, fires timers on the clock and delivers the events.
+
+```kotlin
+val handler = CommandHandler<ListCommand, ListAction> { command, results ->
+    when (val c = command.command) {
+        is ListCommand.Fetch -> results.result(ListAction.Loaded(api.items(c.query))) // an expected failure would be a typed result too
+    }
+}
+
+val store = MachineStore(listMachine, ListContext(), handler, scope = appScope) {
+    exceptionHandler(ExceptionHandler { log(it) })
+    recordTo(session, StoreInstanceId("list-$tabInstanceId"))   // the journal, if you use one
+}
+
+store.dispatch(ListAction.Load)          // accepted as MachineInput.Dispatch(Load, clock.now())
+store.state.collect { snapshot -> render(snapshot) }
+store.event.collect { event -> toast(event) } // delivered after the commit, in decision order
+```
+
+What holds:
+
+- A command starts only after the decision that registered it was committed, outside the lock,
+  in `scope` (which must not use `Dispatchers.Unconfined`); it sees the committed snapshot in
+  `currentState`. Its results, completion and failure come back as inputs; a result of a command
+  the machine no longer holds is ignored.
+- A command is cancelled when its activation exits, when a newer command supersedes it in a
+  `Latest` lane, or when the store closes. `Sequential` and `Parallel(limit)` lanes queue,
+  `DropIfRunning` drops; a dropped or superseded command is reported to the machine as
+  `CommandAbandoned`.
+- A decision that fails (a rule threw) commits nothing and cancels nothing; its cause reaches the
+  exception handler. `recover {}` may not change the snapshot.
+- A restored snapshot that was already started starts over with its context: commands are not
+  part of the snapshot. Checkpoints of the executor are a later stage.
 
 ## Validation, Mermaid, paths and conformance
 
