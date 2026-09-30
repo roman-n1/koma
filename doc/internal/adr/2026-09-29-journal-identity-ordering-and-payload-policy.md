@@ -144,3 +144,13 @@ group) and `writerQueueCapacity = 4_096` (about 0.5 MB when full). They replace 
 of the first version. Still open: the same measurement on Android and iOS devices (the test is
 JVM-only because it reads the JVM heap), and the cost with a retaining policy, which is the
 policy's to bound.
+
+## Addendum (2026-09-30): the gap always comes first
+
+`JournalConcurrencyTest` showed that the writer could hand a record to the sinks without the gap
+that should precede it: the gap record failed to enter the full queue, the writer then freed a
+slot, and the record took it. The rule is now: a record is offered only after its gap entered
+the queue; when the gap does not fit, both are dropped and counted, and the next publication
+tries again. `close()` sends the final gap and `RecordingStopped` with the suspending `send`
+after the session stopped accepting records, so a sink always ends with a complete account of
+what it missed.

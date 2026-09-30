@@ -59,7 +59,7 @@ abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: koma.core/Event> 
 }
 
 abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/DecisionObserver { // koma.statechart.machine/DecisionObserver|null[0]
-    open fun onCommitted(koma.core/InputId?, koma.statechart.machine/Decision<#A, #C, #D>) // koma.statechart.machine/DecisionObserver.onCommitted|onCommitted(koma.core.InputId?;koma.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
+    open fun onCommitted(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/Decision<#A, #C, #D>) // koma.statechart.machine/DecisionObserver.onCommitted|onCommitted(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
     open fun onIgnored(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/IgnoreReason) // koma.statechart.machine/DecisionObserver.onIgnored|onIgnored(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.IgnoreReason){}[0]
     open fun onRejected(#B, koma.statechart.machine/Admission.Rejected) // koma.statechart.machine/DecisionObserver.onRejected|onRejected(1:1;koma.statechart.machine.Admission.Rejected){}[0]
 }

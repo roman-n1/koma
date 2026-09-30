@@ -120,10 +120,10 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     // The decision whose snapshot the handler is committing, with the input it was decided for;
     // consumed by the plugin after the commit.
-    private class Pending<C, CMD, E : Event>(val decision: Decision<C, CMD, E>, val input: InputId?)
+    private class Pending<C, A : Action, CMD, E : Event>(val decision: Decision<C, CMD, E>, val input: InputId?, val machineInput: MachineInput<A>)
 
     @Volatile
-    private var pending: Pending<C, CMD, E>? = null
+    private var pending: Pending<C, A, CMD, E>? = null
 
     // Dispatched actions accepted and not yet processed; a MutableStateFlow as a thread-safe counter.
     private val waiting = MutableStateFlow(0)
@@ -172,7 +172,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
         val decision = machine.decide(snapshot, input)
         when (val outcome = decision.outcome) {
             DecisionOutcome.Handled -> {
-                pending = Pending(decision, inputId)
+                pending = Pending(decision, inputId, input)
                 commit(decision.snapshot)
             }
             is DecisionOutcome.Ignored -> observe { it.onIgnored(inputId, input, outcome.reason) }
@@ -207,7 +207,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
             pending = null
             for (effect in decision.effects) effects.trySend(effect.event)
             scheduler.apply(decision)
-            observe { it.onCommitted(committed.input, decision) }
+            observe { it.onCommitted(committed.input, committed.machineInput, decision) }
         }
     }
 

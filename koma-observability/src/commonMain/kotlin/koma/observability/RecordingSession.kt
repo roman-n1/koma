@@ -197,13 +197,21 @@ class RecordingSession(
      * and ends the writer. Idempotent.
      */
     suspend fun close() {
-        val alreadyStopped = locked { stopped }
-        if (alreadyStopped) {
-            writer.join()
-            return
+        // Stop first, so nothing publishes after the closing records; then send them with the
+        // suspending `send`: the last gap and the stop record reach the sinks even when the queue
+        // is full, unlike the records of the hot path.
+        val closing = locked {
+            if (stopped) return@locked emptyList()
+            stopped = true
+            buildList {
+                if (pendingGap > 0) {
+                    add(allocate(null, JournalEntry.JournalGap(pendingGap)).also(::retain))
+                    pendingGap = 0
+                }
+                add(allocate(null, JournalEntry.RecordingStopped).also(::retain))
+            }
         }
-        publishRecord(null, JournalEntry.RecordingStopped)
-        locked { stopped = true }
+        for (record in closing) queue.send(record)
         queue.close()
         writer.join()
     }
@@ -237,7 +245,17 @@ class RecordingSession(
             if (pendingGap > 0) {
                 val gap = allocate(null, JournalEntry.JournalGap(pendingGap))
                 retain(gap)
-                if (queue.trySend(gap).isSuccess) pendingGap = 0 else lost()
+                if (queue.trySend(gap).isSuccess) {
+                    pendingGap = 0
+                } else {
+                    // The writer may free a slot between the two offers; the record must not take
+                    // it, or a sink would see a hole with no gap in front of the next record.
+                    lost()
+                    val record = allocate(store, entry)
+                    retain(record)
+                    lost()
+                    return@locked record
+                }
             }
             val record = allocate(store, entry)
             retain(record)
