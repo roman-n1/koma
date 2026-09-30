@@ -1,7 +1,12 @@
+@file:OptIn(InternalKomaApi::class)
+
 package koma.core
 
 import kotlin.coroutines.CoroutineContext
 
+/**
+ * @property probes [StoreProbe]s to append; an internal observation API (see [StoreProbe])
+ */
 data class StorePatch<S : State, A : Action, E : Event>(
     val initialState: S? = null,
     val coroutineContext: CoroutineContext? = null,
@@ -11,6 +16,7 @@ data class StorePatch<S : State, A : Action, E : Event>(
     val pendingActionPolicy: PendingActionPolicy? = null,
     val pluginExecutionPolicy: PluginExecutionPolicy? = null,
     val pluginPatches: List<PluginPatch<S, A, E>> = emptyList(),
+    val probes: List<StoreProbe<S, A, E>> = emptyList(),
 )
 
 sealed interface PluginPatch<S : State, A : Action, E : Event> {
@@ -40,6 +46,7 @@ class StorePatchBuilder<S : State, A : Action, E : Event> {
     private var pendingActionPolicyPatch: PendingActionPolicy? = null
     private var pluginExecutionPolicyPatch: PluginExecutionPolicy? = null
     private val pluginPatches = mutableListOf<PluginPatch<S, A, E>>()
+    private val probePatches = mutableListOf<StoreProbe<S, A, E>>()
 
     fun initialState(state: S) {
         initialStatePatch = state
@@ -81,6 +88,16 @@ class StorePatchBuilder<S : State, A : Action, E : Event> {
         pluginPatches += PluginPatch.Clear()
     }
 
+    /**
+     * Appends [StoreProbe]s that observe the processing boundaries of the Store. Probes are an
+     * internal observation API for journals and inspectors, not an extension point.
+     */
+    @InternalKomaApi
+    fun probe(first: StoreProbe<S, A, E>, vararg rest: StoreProbe<S, A, E>) {
+        probePatches += first
+        probePatches += rest
+    }
+
     fun build(): StorePatch<S, A, E> {
         return StorePatch(
             initialState = initialStatePatch,
@@ -91,6 +108,7 @@ class StorePatchBuilder<S : State, A : Action, E : Event> {
             pendingActionPolicy = pendingActionPolicyPatch,
             pluginExecutionPolicy = pluginExecutionPolicyPatch,
             pluginPatches = pluginPatches.toList(),
+            probes = probePatches.toList(),
         )
     }
 }

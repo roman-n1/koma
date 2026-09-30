@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -40,7 +41,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             try {
                 stateSaver.restore() ?: initialState
             } catch (t: Throwable) {
-                handleException(t)
+                handleException(t, input = null)
                 if (t is Exception) {
                     initialState
                 } else {
@@ -94,6 +95,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     protected abstract val plugins: MutableList<Plugin<S, A, E>>
 
+    protected abstract val probes: MutableList<StoreProbe<S, A, E>>
+
     protected abstract val onEnter: suspend EnterScope<S, E, S>.() -> Unit
 
     protected abstract val onAction: suspend ActionScope<S, A, E, S>.() -> Unit
@@ -108,11 +111,14 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private val coroutineScope by lazy {
         isCoroutineScopeCreated = true
-        CoroutineScope(
-            coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { _, exception ->
-                handleException(exception)
+        val scope = CoroutineScope(
+            coroutineContext + SupervisorJob(coroutineContext[Job]) + CoroutineExceptionHandler { context, exception ->
+                handleException(exception, context[InputOrigin]?.input)
             },
         )
+        // Traced once every coroutine of the Store has ended, after close() or a parent's cancellation.
+        scope.coroutineContext[Job]?.invokeOnCompletion { trace { StoreTrace.StoreClosed } }
+        scope
     }
 
     private val dispatchScope by lazy {
@@ -128,7 +134,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             }
 
             override fun launch(dispatcher: CoroutineDispatcher?, block: suspend PluginLaunchScope<S, A>.() -> Unit) {
-                coroutineScope.launch(dispatcher ?: EmptyCoroutineContext) {
+                coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + launchOrigin()) {
                     block(
                         object : PluginLaunchScope<S, A> {
                             override val currentState: S get() = this@StoreImpl.currentState
@@ -262,31 +268,49 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun launchStartup(): Job {
-        isStartupRequested = true
-        return coroutineScope.launch(insideStore) {
+        val startup = requestStartup()
+        return coroutineScope.launch(insideStore + InputOrigin(startup)) {
             mutex.withLock {
                 initializeIfNeeded()
             }
         }
     }
 
-    private fun launchDispatch(action: A, isValid: () -> Boolean = { true }): Job {
+    // Marks startup as requested and returns the startup input, allocating it on the first call.
+    private fun requestStartup(): InputId {
         isStartupRequested = true
+        startupInput.value?.let { return it }
+        val candidate = allocateInputId()
+        if (startupInput.compareAndSet(null, candidate)) {
+            trace { StoreTrace.InputAccepted(candidate, InputKind.Startup) }
+            return candidate
+        }
+        return checkNotNull(startupInput.value)
+    }
+
+    private fun allocateInputId(): InputId = InputId(nextInputId.updateAndGet { it + 1 })
+
+    private fun launchDispatch(action: A, isValid: () -> Boolean = { true }): Job {
+        // The startup this dispatch may trigger gets its id before the action.
+        requestStartup()
+        val input = allocateInputId()
+        trace { StoreTrace.InputAccepted(input, InputKind.Dispatch(action)) }
         val previousDone = CompletableDeferred<Job?>()
         // Completed when this dispatch's work under the lock is over (or the dispatch never ran),
         // not when its coroutine ends: a handler that leaves a child coroutine behind in its own
         // Job must not hold up every later dispatch.
         val done = Job()
-        val job = dispatchScope.launch(insideStore) {
+        val queued = QueuedInput(input)
+        val job = dispatchScope.launch(insideStore + InputOrigin(input)) {
             // Keeps dispatch order: a cancelled or failed predecessor completes too, so this never
             // waits forever. Waiting here costs nothing extra, as the lock serializes dispatches anyway.
             previousDone.await()?.join()
             mutex.withLock {
+                queued.locked = true
                 val dispatchJob = coroutineContext[Job]
                 activeDispatchJob = dispatchJob
                 try {
-                    initializeIfNeeded()
-                    if (isValid()) onActionDispatched(currentState, action)
+                    processDispatch(input, action, isValid)
                 } finally {
                     if (activeDispatchJob == dispatchJob) {
                         activeDispatchJob = null
@@ -295,9 +319,36 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
             }
         }
-        job.invokeOnCompletion { done.complete() }
+        job.invokeOnCompletion { cause ->
+            done.complete()
+            queued.traceDiscardIfNeverLocked(cause)
+        }
         previousDone.complete(lastDispatchDone.getAndUpdate { done })
         return job
+    }
+
+    // Must be called only while holding `mutex`.
+    private suspend fun processDispatch(input: InputId, action: A, isValid: () -> Boolean) {
+        try {
+            initializeIfNeeded()
+        } catch (t: Throwable) {
+            // The startup this dispatch triggered failed, so the action is dropped; the next
+            // dispatch or start() retries the startup (see initializeIfNeeded).
+            val closed = t is CancellationException && !currentCoroutineContext().isActive
+            trace { StoreTrace.InputDiscarded(input, if (closed) DiscardReason.StoreClosed else DiscardReason.StartupFailed(t.unwrapped())) }
+            throw t
+        }
+        val valid = try {
+            isValid()
+        } catch (t: Throwable) {
+            trace { StoreTrace.InputDiscarded(input, DiscardReason.Rejected(t)) }
+            throw t
+        }
+        if (!valid) {
+            trace { StoreTrace.InputDiscarded(input, DiscardReason.Stale) }
+            return
+        }
+        process(input) { onActionDispatched(currentState, action) }
     }
 
     final override fun collectState(state: (S) -> Unit) {
@@ -336,24 +387,29 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 is PluginPatch.Clear -> plugins.clear()
             }
         }
+        probes.addAll(patch.probes)
     }
 
     // Must be called only while holding `mutex`.
     private suspend fun initializeIfNeeded() {
         if (isInitialized) return
-        if (!arePluginsStarted) {
-            processPlugins(starting = true) { onStart(pluginScope, currentState) }
-            arePluginsStarted = true
-        }
-        // A failed initial `enter {}` (no recover {} handled it) is reported, and the Store counts
-        // as started, as after a failed `enter {}` of a later state: otherwise every later dispatch
-        // would run the handler again and drop its action while it keeps failing.
-        try {
-            onStateEntered(currentState)
-        } catch (t: InternalError) {
-            reportWithoutAborting(t)
-        } finally {
-            isInitialized = true
+        process(startupInput.value ?: requestStartup()) {
+            if (!arePluginsStarted) {
+                processPlugins(starting = true) { onStart(pluginScope, currentState) }
+                arePluginsStarted = true
+            }
+            // A failed initial `enter {}` (no recover {} handled it) is reported, and the Store counts
+            // as started, as after a failed `enter {}` of a later state: otherwise every later dispatch
+            // would run the handler again and drop its action while it keeps failing.
+            try {
+                onStateEntered(currentState)
+            } catch (t: InternalError) {
+                // The Store counts as started, but the startup did not succeed: its outcome says so.
+                processing?.failure = t.original
+                reportWithoutAborting(t)
+            } finally {
+                isInitialized = true
+            }
         }
     }
 
@@ -444,6 +500,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             val nextState = processError(state, exception)
             validateRecoveredState(state, nextState)
             commitTransition(state, nextState, inErrorHandling = true)
+            processing?.recoveredFrom = exception
         } catch (t: Throwable) {
             // A failing recover {}, or a failing enter {} of the state it moved to, must not hide
             // the error that was being handled.
@@ -455,6 +512,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private suspend fun processActionDispatch(state: S, action: A): S {
+        // Whether any `action {}` handler matches is checked for the probes only; the selection
+        // itself stays in the builder's first-match `onAction`.
+        if (probes.isNotEmpty() && handlerRegistry.actionPredicates.none { it(state, action) }) processing?.ignored = true
         processPlugins { onAction(pluginScope, state, action) }
         var newState: S? = null
         onAction.invoke(
@@ -466,7 +526,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
 
                 override fun clearPendingActions() {
-                    clearPendingDispatchJobs()
+                    clearPendingDispatchJobs(DiscardReason.ClearedExplicitly)
                 }
 
                 override suspend fun event(event: E) {
@@ -513,7 +573,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
 
                 override fun clearPendingActions() {
-                    clearPendingDispatchJobs()
+                    clearPendingDispatchJobs(DiscardReason.ClearedExplicitly)
                 }
 
                 override suspend fun event(event: E) {
@@ -539,7 +599,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         buildLaunchScope: suspend () -> LS,
         block: suspend LS.() -> Unit,
     ): Job {
-        return stateRuntime.scope.launch(dispatcher ?: EmptyCoroutineContext) {
+        return stateRuntime.scope.launch((dispatcher ?: EmptyCoroutineContext) + launchOrigin()) {
             executeLaunchInStateRuntime(
                 stateRuntime = stateRuntime,
                 dispatcher = dispatcher,
@@ -633,18 +693,27 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             // normally, but never recover it by changing the current request's state.
             val failedJob = currentCoroutineContext()[Job]
             if (failedJob?.isCancelled == true) throw t
-            coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore) {
+            // The recovery is an input of its own: it runs under the lock, after whatever is
+            // being processed now, and may commit through recover {}.
+            val origin = currentCoroutineContext()[InputOrigin]?.input
+            val input = allocateInputId()
+            trace { StoreTrace.InputAccepted(input, InputKind.Recovery(t, origin)) }
+            val queued = QueuedInput(input)
+            coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore + InputOrigin(input)) {
                 mutex.withLock {
-                    if (stateRuntime.scope.isActive && failedJob?.isCancelled != true) {
-                        onErrorOccurred(currentState, t as Exception)
-                    } else {
-                        // The state exited before this report got the lock: there is no state to
-                        // recover into, but the failure is not dropped. Like the failure of a
-                        // launch that was already cancelled, it reaches the exception handler.
-                        throw t
+                    queued.locked = true
+                    process(input) {
+                        if (stateRuntime.scope.isActive && failedJob?.isCancelled != true) {
+                            onErrorOccurred(currentState, t as Exception)
+                        } else {
+                            // The state exited before this report got the lock: there is no state to
+                            // recover into, but the failure is not dropped. Like the failure of a
+                            // launch that was already cancelled, it reaches the exception handler.
+                            throw t
+                        }
                     }
                 }
-            }
+            }.invokeOnCompletion { cause -> queued.traceDiscardIfNeverLocked(cause) }
         }
     }
 
@@ -670,9 +739,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend EnterTransactionScope<S, E, S>.() -> Unit) {
                 checkNotInsideThisStore("transaction")
                 val caller = currentCoroutineContext()[Job]
-                val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore) {
+                val input = acceptTransaction()
+                val queued = QueuedInput(input)
+                val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore + InputOrigin(input)) {
                     mutex.withLock {
-                        if (canRunLaunchOperation(stateScope, caller, owner)) {
+                        queued.locked = true
+                        if (!canRunLaunchOperation(stateScope, caller, owner)) {
+                            trace { StoreTrace.InputDiscarded(input, DiscardReason.LaunchInactive) }
+                            return@withLock
+                        }
+                        process(input) {
                             var newState: S? = null
                             val transactionScope = object : EnterTransactionScope<S, E, S> {
                                 override val state: S = currentState
@@ -682,7 +758,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                 }
 
                                 override fun clearPendingActions() {
-                                    clearPendingDispatchJobs()
+                                    clearPendingDispatchJobs(DiscardReason.ClearedExplicitly)
                                 }
 
                                 override suspend fun event(event: E) {
@@ -694,7 +770,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                             } catch (t: Throwable) {
                                 rethrowIfNonRecoverable(t)
                                 onErrorOccurred(currentState, t as Exception)
-                                return@withLock
+                                return@process
                             }
                             val nextState = newState ?: currentState
                             if (nextState != currentState) {
@@ -703,6 +779,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                         }
                     }
                 }
+                job.invokeOnCompletion { cause -> queued.traceDiscardIfNeverLocked(cause) }
                 job.join()
             }
         }
@@ -721,9 +798,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend ActionTransactionScope<S, A, E, S>.() -> Unit) {
                 checkNotInsideThisStore("transaction")
                 val caller = currentCoroutineContext()[Job]
-                val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore) {
+                val input = acceptTransaction()
+                val queued = QueuedInput(input)
+                val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore + InputOrigin(input)) {
                     mutex.withLock {
-                        if (canRunLaunchOperation(stateScope, caller, owner)) {
+                        queued.locked = true
+                        if (!canRunLaunchOperation(stateScope, caller, owner)) {
+                            trace { StoreTrace.InputDiscarded(input, DiscardReason.LaunchInactive) }
+                            return@withLock
+                        }
+                        process(input) {
                             var newState: S? = null
                             val transactionScope = object : ActionTransactionScope<S, A, E, S> {
                                 override val state: S = currentState
@@ -734,7 +818,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                                 }
 
                                 override fun clearPendingActions() {
-                                    clearPendingDispatchJobs()
+                                    clearPendingDispatchJobs(DiscardReason.ClearedExplicitly)
                                 }
 
                                 override suspend fun event(event: E) {
@@ -746,7 +830,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                             } catch (t: Throwable) {
                                 rethrowIfNonRecoverable(t)
                                 onErrorOccurred(currentState, t as Exception)
-                                return@withLock
+                                return@process
                             }
                             val nextState = newState ?: currentState
                             if (nextState != currentState) {
@@ -755,9 +839,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                         }
                     }
                 }
+                job.invokeOnCompletion { cause -> queued.traceDiscardIfNeverLocked(cause) }
                 job.join()
             }
         }
+    }
+
+    // Accepts a transaction requested from a launched coroutine: its origin is the input whose
+    // handler launched that coroutine.
+    private suspend fun acceptTransaction(): InputId {
+        val origin = currentCoroutineContext()[InputOrigin]?.input
+        val input = allocateInputId()
+        trace { StoreTrace.InputAccepted(input, InputKind.Transaction(origin)) }
+        return input
     }
 
     // If the exit handler throws, the transition is aborted and the Store stays in [state], so its
@@ -768,7 +862,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 override val state = state
 
                 override fun clearPendingActions() {
-                    clearPendingDispatchJobs()
+                    clearPendingDispatchJobs(DiscardReason.ClearedExplicitly)
                 }
 
                 override suspend fun event(event: E) {
@@ -785,6 +879,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     // that state would fail.
     private suspend fun processStateChange(state: S, nextState: S) {
         _state.update { nextState }
+        val current = processing
+        if (current != null) current.commits++
+        val revision = ++stateRevision
+        trace {
+            val input = checkNotNull(current) { "[Koma] A state was committed outside of an input's processing" }.input
+            StoreTrace.StateCommitted(input, revision, state, nextState)
+        }
         try {
             stateSaver.save(nextState)
         } catch (t: Throwable) {
@@ -808,7 +909,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
 
                 override fun clearPendingActions() {
-                    clearPendingDispatchJobs()
+                    clearPendingDispatchJobs(DiscardReason.ClearedExplicitly)
                 }
 
                 override suspend fun event(event: E) {
@@ -822,7 +923,9 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     // The event has already reached its collectors, so a failing plugin hook is reported instead
     // of aborting the handler that emitted it.
     private suspend fun processEventEmit(state: S, event: E) {
+        val input = inputOfCurrentCoroutine()
         _event.emit(event)
+        trace { StoreTrace.EventEmitted(input, event) }
         // Emitted from a launched coroutine, this round runs outside the handler coroutines that
         // carry the marker; it holds the plugin lock, so awaiting the Store from the hook would
         // deadlock just the same.
@@ -837,16 +940,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun clearPendingActionsOnStateExitIfNeeded() {
         if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit && isInitialized) {
-            clearPendingDispatchJobs()
+            clearPendingDispatchJobs(DiscardReason.ClearedOnStateExit)
         }
     }
 
-    private fun clearPendingDispatchJobs() {
+    private fun clearPendingDispatchJobs(reason: DiscardReason) {
         val currentJob = activeDispatchJob
         val dispatchScopeJob = dispatchScope.coroutineContext[Job] ?: return
-        dispatchScopeJob.children
-            .filter { it != currentJob && it.isActive }
-            .forEach { it.cancel() }
+        val pending = dispatchScopeJob.children.filter { it != currentJob && it.isActive }.toList()
+        if (pending.isEmpty()) return
+        // One cause for the whole clear: each queued dispatch finds it in its cancellation and
+        // traces why it was discarded.
+        val cause = PendingDispatchCleared(reason)
+        pending.forEach { it.cancel(cause) }
     }
 
     private suspend fun processPlugins(starting: Boolean = false, block: suspend Plugin<S, A, E>.() -> Unit) {
@@ -902,6 +1008,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         if (t is InternalError && t.reported) throw t
         val original = if (t is InternalError) t.original else t
         rethrowIfNonRecoverable(original)
+        trace { StoreTrace.FailureReported(processing?.input, original) }
         try {
             exceptionHandler.handle(original)
         } catch (handlerError: Throwable) {
@@ -909,10 +1016,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
-    private fun handleException(t: Throwable) {
+    private fun handleException(t: Throwable, input: InputId?) {
         // The handler already saw this one and threw: it is not asked again, the error escapes.
         if (t is InternalError && t.reported) throw t.original
         val handled = if (t is InternalError) t.original else t
+        trace { StoreTrace.FailureReported(input, handled) }
         exceptionHandler.handle(handled)
     }
 
@@ -930,9 +1038,105 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private class InternalError(val original: Throwable, val reported: Boolean = false) : Throwable(original)
 
+    private fun Throwable.unwrapped(): Throwable = if (this is InternalError) original else this
+
     private class InsideStore(val store: Any) : AbstractCoroutineContextElement(InsideStore) {
         companion object Key : CoroutineContext.Key<InsideStore>
     }
+
+    // ---- Probes: identity, ordering and tracing (see StoreProbe) ----
+
+    // Input ids are allocated from any thread; the ordinal, the revision and the current
+    // processing are touched under `mutex` only.
+    private val nextInputId = MutableStateFlow(0L)
+    private val startupInput = MutableStateFlow<InputId?>(null)
+    private var processingOrdinal = 0L
+    private var stateRevision = 0L
+    private var processing: Processing? = null
+
+    private class Processing(val input: InputId, val ordinal: Long) {
+        var commits = 0
+        var ignored = false
+        var recoveredFrom: Throwable? = null
+        var failure: Throwable? = null
+
+        fun outcome(): ProcessingOutcome {
+            failure?.let { return ProcessingOutcome.Failed(it) }
+            recoveredFrom?.let { return ProcessingOutcome.Recovered(it, commits) }
+            return when {
+                ignored -> ProcessingOutcome.Ignored
+                commits == 0 -> ProcessingOutcome.Unchanged
+                else -> ProcessingOutcome.Handled(commits)
+            }
+        }
+    }
+
+    // Runs the processing of [input] under `mutex` and traces its start and its outcome. The
+    // handlers, commits, recovery and reports inside [block] find it in `processing`.
+    private suspend fun process(input: InputId, block: suspend () -> Unit) {
+        val outer = processing
+        val current = Processing(input, ++processingOrdinal)
+        processing = current
+        trace { StoreTrace.ProcessingStarted(current.input, current.ordinal) }
+        var outcome: ProcessingOutcome? = null
+        try {
+            block()
+        } catch (t: Throwable) {
+            val closed = t is CancellationException && !currentCoroutineContext().isActive
+            outcome = if (closed) ProcessingOutcome.Cancelled else ProcessingOutcome.Failed(t.unwrapped())
+            throw t
+        } finally {
+            processing = outer
+            val result = outcome ?: current.outcome()
+            trace { StoreTrace.ProcessingFinished(current.input, current.ordinal, result) }
+        }
+    }
+
+    // The input the current coroutine works for: the one being processed when called from a
+    // handler, hook or transaction (they hold the lock), else the one a launch carries.
+    private suspend fun inputOfCurrentCoroutine(): InputId? {
+        val context = currentCoroutineContext()
+        return if (context[InsideStore]?.store === this) processing?.input else context[InputOrigin]?.input
+    }
+
+    // The origin to give a coroutine launched by the handler or hook running now.
+    private fun launchOrigin(): CoroutineContext = processing?.let { InputOrigin(it.input) } ?: EmptyCoroutineContext
+
+    private inline fun trace(build: () -> StoreTrace<S, A, E>) {
+        if (probes.isEmpty()) return
+        record(build())
+    }
+
+    private fun record(trace: StoreTrace<S, A, E>) {
+        for (probe in probes) {
+            try {
+                probe.record(trace)
+            } catch (e: Exception) {
+                // Reported, never traced: a failing probe cannot recurse, and the boundary proceeds.
+                exceptionHandler.handle(e)
+            }
+        }
+    }
+
+    // A queued input whose coroutine may be cancelled before it gets the lock, by close() or by a
+    // clear of the pending actions. Once the lock is held, the processing traces its own end.
+    private inner class QueuedInput(private val input: InputId) {
+        @Volatile
+        var locked = false
+
+        fun traceDiscardIfNeverLocked(cause: Throwable?) {
+            if (cause !is CancellationException || locked) return
+            trace { StoreTrace.InputDiscarded(input, (cause as? PendingDispatchCleared)?.reason ?: DiscardReason.StoreClosed) }
+        }
+    }
+
+    // The input a coroutine works for: carried by the dispatch, startup, transaction and recovery
+    // coroutines and by the coroutines a handler or a plugin launches.
+    private class InputOrigin(val input: InputId) : AbstractCoroutineContextElement(InputOrigin) {
+        companion object Key : CoroutineContext.Key<InputOrigin>
+    }
+
+    private class PendingDispatchCleared(val reason: DiscardReason) : CancellationException("[Koma] Pending action cleared")
 
     private companion object {
         const val MAX_ENTER_CHAIN = 500

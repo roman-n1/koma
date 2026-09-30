@@ -3,6 +3,8 @@
 This is the place for documents that record the thinking and specifications behind the code.
 It is not documentation for users.
 
+- [Time Travel and structured logging: implementation handoff](./design/2026-09-29-time-travel-logging-handoff.md)
+
 As a policy, the format is kept light. Being able to keep it up takes priority.
 Being able to record things in the first place takes priority over strict classification or inventory.
 
