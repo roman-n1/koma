@@ -4,6 +4,7 @@ import koma.core.Action
 import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import koma.observability.FailureDescriptor
+import koma.observability.StoreInstanceId
 import koma.statechart.StateConfiguration
 import koma.statechart.StateId
 import koma.statechart.machine.AbandonReason
@@ -27,6 +28,7 @@ import koma.statechart.machine.MachineCounters
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MachineTime
+import koma.statechart.machine.MessageId
 import koma.statechart.machine.TimerId
 import koma.statechart.machine.TimerRecord
 import koma.statechart.machine.TimerSchedule
@@ -48,9 +50,10 @@ import kotlin.time.Duration
  * [FormatMigration] or refused, never filled in with defaults.
  *
  * History: 1 began at an `initial` snapshot; 2 begins at a `start` checkpoint of the executor
- * (snapshot, clock, commands running, queued and ending). The codec migrates 1 to 2 itself.
+ * (snapshot, clock, commands running, queued and ending); 3 adds the `bridgeReceived` input
+ * with its message. The codec migrates 1 to 2 and 2 to 3 itself.
  */
-const val RECORDING_FORMAT_VERSION: Int = 2
+const val RECORDING_FORMAT_VERSION: Int = 3
 
 /**
  * Turns the JSON of one format version into the next: an explicit, testable step.
@@ -125,6 +128,12 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
                     put("now", JsonPrimitive("PT0S"))
                 })
                 v1["steps"]?.let { put("steps", it) }
+            }
+        },
+        // Format 3 only adds an input type; a format 2 text is a format 3 text without bridge inputs.
+        FormatMigration(from = 2, to = 3) { v2 ->
+            buildJsonObject {
+                for ((key, value) in v2) put(key, if (key == "formatVersion") JsonPrimitive(3) else value)
             }
         },
     )
@@ -217,6 +226,7 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
     private fun MachineInput<A>.toWire(): InputWire = when (this) {
         is MachineInput.Start -> InputWire("start", now.sinceStart.toIsoString())
         is MachineInput.Dispatch -> InputWire("dispatch", now.sinceStart.toIsoString(), action = json.encodeToJsonElement(this@RecordingCodec.action, action))
+        is MachineInput.BridgeReceived -> InputWire("bridgeReceived", now.sinceStart.toIsoString(), action = json.encodeToJsonElement(this@RecordingCodec.action, action), message = MessageWire(message.from.value, message.effect.value))
         is MachineInput.TimerFired -> InputWire("timerFired", now.sinceStart.toIsoString(), timer = timer.value)
         is MachineInput.CommandResult -> InputWire("commandResult", now.sinceStart.toIsoString(), command = command.value, action = json.encodeToJsonElement(this@RecordingCodec.action, action))
         is MachineInput.CommandCompleted -> InputWire("commandCompleted", now.sinceStart.toIsoString(), command = command.value)
@@ -303,6 +313,11 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         return when (type) {
             "start" -> MachineInput.Start(now)
             "dispatch" -> MachineInput.Dispatch(decodeAction(action, "$at: action"), now)
+            "bridgeReceived" -> MachineInput.BridgeReceived(
+                (message ?: throw DecodeFailure("bridgeReceived without a message", at)).let { MessageId(StoreInstanceId(it.from), EffectId(it.effect)) },
+                decodeAction(action, "$at: action"),
+                now,
+            )
             "timerFired" -> MachineInput.TimerFired(TimerId(timer ?: throw DecodeFailure("timerFired without a timer", at)), now)
             "commandResult" -> MachineInput.CommandResult(CommandId(command ?: throw DecodeFailure("commandResult without a command", at)), decodeAction(action, "$at: result"), now)
             "commandCompleted" -> MachineInput.CommandCompleted(CommandId(command ?: throw DecodeFailure("commandCompleted without a command", at)), now)
@@ -398,7 +413,11 @@ internal class InputWire(
     val timer: Long? = null,
     val failure: FailureWire? = null,
     val reason: String? = null,
+    val message: MessageWire? = null,
 )
+
+@Serializable
+internal class MessageWire(val from: String, val effect: Long)
 
 @Serializable
 internal class DecisionWire(

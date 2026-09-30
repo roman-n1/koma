@@ -28,6 +28,12 @@ sealed interface MachineInput<out A : Action> : Action {
     data class Dispatch<out A : Action>(val action: A, override val now: MachineTime) : MachineInput<A>
 
     /**
+     * The bridge message [message] from another Store of the group, carrying [action]: decided like
+     * a [Dispatch], never refused by admission, and identified so that a replay delivers it once.
+     */
+    data class BridgeReceived<out A : Action>(val message: MessageId, val action: A, override val now: MachineTime) : MachineInput<A>
+
+    /**
      * The timer [timer] is due. The executor sends it; the machine checks that the timer is still
      * scheduled for the current activation of its source before it fires the transition.
      */

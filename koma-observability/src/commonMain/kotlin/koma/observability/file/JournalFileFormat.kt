@@ -15,6 +15,7 @@ import koma.observability.JOURNAL_FORMAT_VERSION
 import koma.observability.JournalEntry
 import koma.observability.JournalRecord
 import koma.observability.MachineGroupId
+import koma.observability.MessageRef
 import koma.observability.OutcomeDescriptor
 import koma.observability.OutcomeKind
 import koma.observability.Payload
@@ -253,6 +254,8 @@ object JournalFileFormat {
         is JournalEntry.DecisionIgnored -> 12
         is JournalEntry.JournalGap -> 13
         JournalEntry.RecordingStopped -> 14
+        is JournalEntry.BridgeSent -> 15
+        is JournalEntry.BridgeReceived -> 16
     }
 
     private fun ByteWriter.entry(entry: JournalEntry<*, *, *>) {
@@ -328,6 +331,16 @@ object JournalFileFormat {
             }
             is JournalEntry.JournalGap -> i64(entry.dropped)
             JournalEntry.RecordingStopped -> Unit
+            is JournalEntry.BridgeSent -> {
+                nullable(entry.input) { i64(it.value) }
+                message(entry.message)
+                string(entry.to.value)
+                bool(entry.delivered)
+            }
+            is JournalEntry.BridgeReceived -> {
+                nullable(entry.input) { i64(it.value) }
+                message(entry.message)
+            }
         }
     }
 
@@ -358,8 +371,17 @@ object JournalFileFormat {
         12 -> JournalEntry.DecisionIgnored(nullable { InputId(i64()) }, string())
         13 -> JournalEntry.JournalGap(i64())
         14 -> JournalEntry.RecordingStopped
+        15 -> JournalEntry.BridgeSent(nullable { InputId(i64()) }, message(), StoreInstanceId(string()), bool())
+        16 -> JournalEntry.BridgeReceived(nullable { InputId(i64()) }, message())
         else -> throw ByteReader.Malformed("unknown entry tag $tag")
     }
+
+    private fun ByteWriter.message(message: MessageRef) {
+        string(message.from.value)
+        i64(message.effect)
+    }
+
+    private fun ByteReader.message(): MessageRef = MessageRef(StoreInstanceId(string()), i64())
 
     private fun ByteWriter.input(kind: InputDescriptor<*>) {
         when (kind) {

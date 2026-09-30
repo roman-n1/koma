@@ -13,8 +13,11 @@ import kotlin.time.Duration
 /**
  * Version of the record model below. Bumped when a field or a variant changes meaning; a reader
  * that meets a higher version must not guess.
+ *
+ * History: 1 had the Store's own entries and the machine's decisions; 2 added the bridge entries
+ * ([JournalEntry.BridgeSent], [JournalEntry.BridgeReceived]).
  */
-const val JOURNAL_FORMAT_VERSION: Int = 1
+const val JOURNAL_FORMAT_VERSION: Int = 2
 
 /**
  * One record of the journal: the envelope every record shares, and the typed [entry].
@@ -133,6 +136,19 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
     data class DecisionIgnored(val input: InputId?, val reason: String) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
+     * A bridge routed an effect of this Store to [to] as the message [message]; [delivered] is
+     * false when [to] was not attached to the bridge, so the message went nowhere and the
+     * group's record is partial.
+     */
+    data class BridgeSent(val input: InputId?, val message: MessageRef, val to: StoreInstanceId, val delivered: Boolean) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /**
+     * This Store decided the bridge message [message] while processing [input]: the
+     * `BridgeReceived` input the message became was handled, ignored or failed.
+     */
+    data class BridgeReceived(val input: InputId?, val message: MessageRef) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /**
      * [dropped] published records before this one never reached the sinks: the writer's queue was
      * full. They may still be in the session's retained records. The gap record has a sequence
      * number of its own, so a sink sees the hole between the previous record and this one, and
@@ -224,3 +240,12 @@ data class CommandRef(val id: Long, val scope: Long, val lane: String?, val poli
  */
 @ExperimentalKomaApi
 data class TimerRef(val id: Long, val transition: Int, val activation: Long, val deadline: Duration)
+
+/**
+ * A bridge message as the journal names it: the Store that sent it and the id of the effect it
+ * was routed from, so the same effect gives the same message in a replay.
+ */
+@ExperimentalKomaApi
+data class MessageRef(val from: StoreInstanceId, val effect: Long) {
+    override fun toString(): String = "${from.value}/e$effect"
+}

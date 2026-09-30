@@ -1,0 +1,207 @@
+package koma.statechart.machine
+
+import koma.core.Action
+import koma.core.Event
+import koma.core.ExperimentalKomaApi
+import koma.core.InputId
+import koma.observability.FailureDescriptor
+import koma.observability.GroupSeq
+import koma.observability.JournalEntry
+import koma.observability.RecordingSession
+import koma.observability.StoreInstanceId
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+
+/**
+ * A bridge message on its way: sent to [to] and not yet decided by it.
+ */
+@ExperimentalKomaApi
+data class BridgeMessage(val id: MessageId, val to: StoreInstanceId)
+
+/**
+ * A consistent cut of a [MachineGroup] (handoff §8.1): every member's [ExecutorCheckpoint],
+ * taken while no member processed anything, the bridge messages in flight at that moment,
+ * how many inputs each member's controlled queue held, and the journal boundary.
+ *
+ * @property members The checkpoint of each member, by id
+ * @property inFlight The messages sent before the cut and not yet decided by their receiver
+ * @property held Inputs accepted into each member's controlled queue during the cut; they were
+ * let in after it, in order, and are the steps after the cut
+ * @property boundary The last record the session had published at the cut, when a session is
+ * attached; the records after it are after the cut
+ */
+@ExperimentalKomaApi
+data class GroupCheckpoint(
+    val members: Map<StoreInstanceId, ExecutorCheckpoint<*, *>>,
+    val inFlight: List<BridgeMessage>,
+    val held: Map<StoreInstanceId, Int>,
+    val boundary: GroupSeq?,
+)
+
+/**
+ * A group of [MachineStore]s that talk to each other through a bridge and can be cut
+ * consistently (handoff §8.1, §10).
+ *
+ * **Bridge.** A [route] turns an effect of one member into an action of another: when the
+ * sender commits a decision, each of its effects that a route maps is delivered to the
+ * receiver as a [MachineInput.BridgeReceived] carrying a [MessageId] of the sender and the
+ * effect, so a replay meets the same ids. A message to a member that is not attached goes
+ * nowhere and is journaled as undelivered: the group's record is then partial. Messages are
+ * [inFlight] from delivery until the receiver decided them.
+ *
+ * **Cut.** [checkpoint] freezes every member's controlled queue (new inputs wait, whatever
+ * their source), waits until each member has finished what it had already accepted, takes
+ * every executor's checkpoint and the messages in flight, and thaws the queues in order. No
+ * Store lock is held while waiting, and no member waits on another's user code; a member that
+ * does not settle within the timeout aborts the cut and the group resumes. A result of a
+ * command that arrives during the cut waits in the queue and is applied once, after it. Never
+ * call [checkpoint] from a handler or a plugin of a member: it would wait for its own
+ * processing to end.
+ *
+ * Members are registered with [member] (the observer to give the store) and [Member.attach]
+ * (the store itself, once built).
+ *
+ * @param session The journal that gets [JournalEntry.BridgeSent] and [JournalEntry.BridgeReceived]
+ */
+@ExperimentalKomaApi
+class MachineGroup(private val session: RecordingSession? = null) {
+    private val lock = Mutex()
+    private val coordinating = Mutex()
+    private val members = linkedMapOf<StoreInstanceId, Member<*, *, *, *>>()
+    private val routeList = mutableListOf<Route>()
+    private val inFlightMessages = linkedMapOf<MessageId, BridgeMessage>()
+
+    /** A route of the bridge: effects of [from] that [map] turns into actions of [to]. */
+    class Route internal constructor(val from: StoreInstanceId, val to: StoreInstanceId, internal val map: (Event) -> Action?) {
+        override fun toString(): String = "$from -> $to"
+    }
+
+    /** The routes, in registration order. */
+    val routes: List<Route> get() = locked { routeList.toList() }
+
+    /** The members, in registration order. */
+    val memberIds: List<StoreInstanceId> get() = locked { members.keys.toList() }
+
+    /** The messages sent and not yet decided by their receiver. */
+    val inFlight: List<BridgeMessage> get() = locked { inFlightMessages.values.toList() }
+
+    /**
+     * Routes the effects of [from] to [to]: each effect [map] returns an action for is delivered;
+     * `null` means the effect is not for [to].
+     */
+    fun <E : Event, A : Action> route(from: StoreInstanceId, to: StoreInstanceId, map: (E) -> A?): Route {
+        require(from != to) { "[Koma] A route goes to another member; $from -> $from" }
+        @Suppress("UNCHECKED_CAST")
+        val route = Route(from, to, map as (Event) -> Action?)
+        locked { routeList += route }
+        return route
+    }
+
+    /**
+     * Registers [id] as a member and returns the observer to give its store; [Member.attach] the
+     * store once it is built.
+     *
+     * @throws IllegalArgumentException if [id] is already a member
+     */
+    fun <C, A : Action, CMD, E : Event> member(id: StoreInstanceId): Member<C, A, CMD, E> {
+        val member = Member<C, A, CMD, E>(id)
+        locked { require(members.put(id, member) == null) { "[Koma] $id is already a member of this group" } }
+        return member
+    }
+
+    /**
+     * A consistent cut of the group, or `null` when a member did not settle within [timeout] or
+     * has closed; see the class documentation.
+     */
+    suspend fun checkpoint(timeout: Duration = 2.seconds): GroupCheckpoint? = coordinating.withLock {
+        val attached = locked { members.values.mapNotNull { member -> member.store?.let { member.id to it } } }
+        for ((_, store) in attached) store.freeze()
+        try {
+            val started = TimeSource.Monotonic.markNow()
+            for ((_, store) in attached) {
+                val remaining = timeout - started.elapsedNow()
+                if (remaining <= Duration.ZERO || !store.awaitIdle(remaining)) return null
+            }
+            val cuts = attached.associate { (id, store) ->
+                id to try {
+                    store.checkpoint()
+                } catch (e: IllegalStateException) {
+                    return null
+                }
+            }
+            val held = attached.associate { (id, store) -> id to store.heldInputs }
+            val messages = locked { inFlightMessages.values.toList() }
+            val boundary = session?.stats?.published?.takeIf { it > 0 }?.let(::GroupSeq)
+            GroupCheckpoint(cuts, messages, held, boundary)
+        } finally {
+            for ((_, store) in attached) store.thaw()
+        }
+    }
+
+    /**
+     * One member: the [DecisionObserver] its store runs with. It sends the store's effects along
+     * the routes and books the bridge messages the store decided.
+     */
+    inner class Member<C, A : Action, CMD, E : Event> internal constructor(val id: StoreInstanceId) : DecisionObserver<C, A, CMD, E> {
+        internal var store: MachineStoreImpl<C, A, CMD, E>? = null
+            private set
+
+        /**
+         * Attaches the store built with this member as an observer, so messages can reach it.
+         *
+         * @throws IllegalArgumentException if [store] is not a store of this library
+         */
+        fun attach(store: MachineStore<C, A, CMD, E>) {
+            require(store is MachineStoreImpl<C, A, CMD, E>) { "[Koma] Only a MachineStore built by MachineStore(...) can join a group" }
+            locked { this.store = store }
+        }
+
+        override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+            decided(input, machineInput)
+            send(input, decision)
+        }
+
+        override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) = decided(input, machineInput)
+
+        override fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) = decided(input, machineInput)
+
+        private fun decided(input: InputId?, machineInput: MachineInput<A>) {
+            if (machineInput !is MachineInput.BridgeReceived) return
+            locked { inFlightMessages.remove(machineInput.message) }
+            session?.publish(id, JournalEntry.BridgeReceived(input, machineInput.message.toRef()))
+        }
+
+        private fun send(input: InputId?, decision: Decision<C, CMD, E>) {
+            if (decision.effects.isEmpty()) return
+            val routes = locked { routeList.filter { it.from == id } }
+            if (routes.isEmpty()) return
+            for (effect in decision.effects) {
+                for (route in routes) {
+                    val action = route.map(effect.event) ?: continue
+                    val message = MessageId(id, effect.id)
+                    val target = locked { members[route.to]?.store }
+                    if (target != null) {
+                        // Booked before delivery, so the receiver's decision finds it in flight.
+                        locked { inFlightMessages[message] = BridgeMessage(message, route.to) }
+                        target.deliverUnchecked(message, action)
+                    }
+                    session?.publish(id, JournalEntry.BridgeSent(input, message.toRef(), route.to, delivered = target != null))
+                }
+            }
+        }
+    }
+
+    private inline fun <T> locked(block: () -> T): T {
+        while (!lock.tryLock()) {
+            // Spin: the holder touches a map.
+        }
+        try {
+            return block()
+        } finally {
+            lock.unlock()
+        }
+    }
+}

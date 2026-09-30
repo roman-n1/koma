@@ -177,6 +177,36 @@ public final class koma/observability/JournalConfig {
 public abstract interface class koma/observability/JournalEntry {
 }
 
+public final class koma/observability/JournalEntry$BridgeReceived : koma/observability/JournalEntry {
+	public synthetic fun <init> (Lkoma/core/InputId;Lkoma/observability/MessageRef;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-hFruGEc ()Lkoma/core/InputId;
+	public final fun component2 ()Lkoma/observability/MessageRef;
+	public final fun copy-cDI26wg (Lkoma/core/InputId;Lkoma/observability/MessageRef;)Lkoma/observability/JournalEntry$BridgeReceived;
+	public static synthetic fun copy-cDI26wg$default (Lkoma/observability/JournalEntry$BridgeReceived;Lkoma/core/InputId;Lkoma/observability/MessageRef;ILjava/lang/Object;)Lkoma/observability/JournalEntry$BridgeReceived;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-hFruGEc ()Lkoma/core/InputId;
+	public final fun getMessage ()Lkoma/observability/MessageRef;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/JournalEntry$BridgeSent : koma/observability/JournalEntry {
+	public synthetic fun <init> (Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-hFruGEc ()Lkoma/core/InputId;
+	public final fun component2 ()Lkoma/observability/MessageRef;
+	public final fun component3-G0_Fx5k ()Ljava/lang/String;
+	public final fun component4 ()Z
+	public final fun copy-2fIcLts (Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;Z)Lkoma/observability/JournalEntry$BridgeSent;
+	public static synthetic fun copy-2fIcLts$default (Lkoma/observability/JournalEntry$BridgeSent;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZILjava/lang/Object;)Lkoma/observability/JournalEntry$BridgeSent;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDelivered ()Z
+	public final fun getInput-hFruGEc ()Lkoma/core/InputId;
+	public final fun getMessage ()Lkoma/observability/MessageRef;
+	public final fun getTo-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/observability/JournalEntry$DecisionCommitted : koma/observability/JournalEntry {
 	public synthetic fun <init> (Lkoma/core/InputId;JLjava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-hFruGEc ()Lkoma/core/InputId;
@@ -479,6 +509,19 @@ public final class koma/observability/MachineGroupId {
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class koma/observability/MessageRef {
+	public synthetic fun <init> (Ljava/lang/String;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-G0_Fx5k ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun copy-oFPGkRc (Ljava/lang/String;J)Lkoma/observability/MessageRef;
+	public static synthetic fun copy-oFPGkRc$default (Lkoma/observability/MessageRef;Ljava/lang/String;JILjava/lang/Object;)Lkoma/observability/MessageRef;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffect ()J
+	public final fun getFrom-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class koma/observability/OutcomeDescriptor {

@@ -47,9 +47,16 @@ Store, in memory.
   attached and matches, and an explicit `Completeness` that names what the journal does not
   hold. `InspectorText` renders it as lines; a debug UI reads the same model.
 
+- **Groups.** `GroupRecorder` records a `MachineGroup` (see the statechart README): each member's
+  recording and the order the decisions were made in across the group. `GroupReplaySession`
+  steps the members in that order, `verify` checks every member and the bridge (a message
+  received before it was sent, sent by nobody, delivered twice or where no route leads is a
+  `GroupMismatch`), `since(cut)` begins at a consistent cut with its messages in flight, and
+  `GroupBranch` continues every member with a local bridge that delivers routed effects as
+  they are decided.
+
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
-Not yet: a Compose timeline over the inspector, a file format for recordings, and group replay
-of several stores.
+Not yet: a Compose timeline over the inspector and a file format for recordings.
 
 ## Dependency
 
@@ -121,6 +128,25 @@ What one position looks like, with a recording attached:
 
 Without a recording the same position shows the commits as the policy kept them (`-` under
 the production policy) and the Store's completeness says `payloads omitted by the policy`.
+
+## Replaying a group
+
+```kotlin
+val group = MachineGroup(session)                       // the live side, see the statechart README
+val recorder = GroupRecorder(group)
+val picker = MachineStore(pickerMachine, PickerCtx(), handler, scope, observers = listOf(group.member(pickerId), recorder.member(pickerId, pickerMachine, PickerCtx())))
+// ... the members run and talk ...
+val recording = recorder.recording()
+
+val session = GroupReplaySession(mapOf(pickerId to pickerMachine, rootId to rootMachine), recording)
+session.verify()                          // [] or the GroupMismatches, in order of position
+session.seek(12); session.snapshotOf(rootId)
+val cut = group.checkpoint()              // a consistent cut of the live group, or null on timeout
+GroupReplaySession(machines, recording.since(cut!!))
+
+val branch = session.branch(routes)       // every member from here, with a local bridge
+branch.dispatch(pickerId, Pick("zed"))    // the pick, the root's apply, the acknowledgement back
+```
 
 ## Serializing a recording
 

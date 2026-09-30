@@ -1,6 +1,8 @@
 package koma.statechart.machine
 
 import koma.core.ExperimentalKomaApi
+import koma.observability.MessageRef
+import koma.observability.StoreInstanceId
 import kotlin.jvm.JvmInline
 import kotlin.time.Duration
 
@@ -113,4 +115,17 @@ value class MachineTime(val sinceStart: Duration) : Comparable<MachineTime> {
     companion object {
         val Zero: MachineTime = MachineTime(Duration.ZERO)
     }
+}
+
+/**
+ * One message a bridge carried from a Store of a group to another: the sender and the effect it
+ * was routed from. The same effect gives the same message in a replay, so the id is a correlation
+ * reference that a replay checks against, never a second live delivery.
+ */
+@ExperimentalKomaApi
+data class MessageId(val from: StoreInstanceId, val effect: EffectId) {
+    /** The journal's form of this id. */
+    fun toRef(): MessageRef = MessageRef(from, effect.value)
+
+    override fun toString(): String = "${from.value}/$effect"
 }

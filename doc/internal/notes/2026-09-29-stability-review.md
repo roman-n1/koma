@@ -596,6 +596,33 @@ Found and settled by them:
   as `Payload.Described`, a new variant, so a record read from a file never claims to hold an
   object. `JournalFormat` prints it as the text.
 
+## Thirteenth round: a group cut under a storm, proven by its recording
+
+Stage 6 ([ADR](../adr/2026-09-30-group-replay.md)) joins machines into a `MachineGroup` with a
+bridge and a consistent cut, and replays a group in the order its decisions were made. The cut
+freezes admission instead of taking locks; whether that is consistent under real
+interleavings is exactly what no hand times.
+
+- `GroupCheckpointStormTest` (timetravel): two members exchanging messages under a four-thread
+  storm on `Dispatchers.Default`, thirty cuts taken meanwhile. Each cut's recording since it
+  (`GroupRecording.since`) must replay without a `GroupMismatch`: every delivery after the cut
+  is of a message sent after it or in flight at it. A message sent before the cut and delivered
+  after it that the cut had not listed as in flight would be `ReceivedBeforeSent`; a member
+  whose checkpoint was not of the run would be refused by `since`. Live went on: every pick
+  reached the root and every acknowledgement the picker; no cut timed out.
+- `MachineGroupTest` (statechart): a result of a command arriving while its member is frozen
+  waits in the controlled queue and is applied once after the cut; a member stuck in a plugin
+  hook makes the cut time out, and the group resumes with the held inputs entering in order.
+
+Found and settled by them:
+
+- A cut with a message in flight is produced by the barrier itself: freezing the receiver
+  while the sender still finishes what it had accepted delivers the message into a frozen
+  queue. The test that first tried to stage it by hand needed the store's internals; the
+  barrier's own timing is the honest way and needs none.
+- A recording since a cut must carry the cut's messages in flight, or their deliveries look
+  unsent. `GroupRecording.inFlight` seeds the causality check.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing

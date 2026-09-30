@@ -350,6 +350,14 @@ What holds:
 - `AdmissionPolicy.Bounded(n)` refuses a dispatched action while `n` accepted actions still wait;
   `store.admit(action)` says whether it was accepted, `dispatch` drops the answer. Inputs the
   machine's own commands and timers send are never refused.
+- A `MachineGroup` joins stores that talk to each other: `route(from, to, map)` delivers a
+  member's effects to another as `MachineInput.BridgeReceived` with a `MessageId` of the sender
+  and the effect, decided like a dispatch and never refused; `group.checkpoint(timeout)` is a
+  consistent cut of the whole group (every member's `ExecutorCheckpoint` and the messages in
+  flight), taken by freezing the members' input queues, waiting for what they had accepted, and
+  letting the held inputs in afterwards, in order; a member that does not settle aborts the cut
+  and the group resumes. Give each member's store `group.member(id)` as an observer and
+  `attach` the store once built. `koma-timetravel` records and replays a group.
 - With `koma-observability`, `recordTo(session, id)` in the configuration journals the store's
   inputs and commits, and `observers = listOf(session.decisionsOf(id))` adds the decisions
   themselves: transitions, activations, commands, timers, ignored inputs with their reason,

@@ -25,11 +25,12 @@ builds the inspector and the replay on; this module is the journal only.
   to a ring of checksummed segment files that survive the process.
 - **Other producers.** `session.publish(store, entry)` publishes an entry a probe cannot see,
   for a Store the session records. `koma-statechart` uses it for the decisions of a replay-ready
-  machine (`DecisionCommitted`, `DecisionIgnored`, `InputRejected`).
+  machine (`DecisionCommitted`, `DecisionIgnored`, `InputRejected`) and for the bridge of a
+  group (`BridgeSent`, `BridgeReceived`, with the message's sender and effect).
 
 Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
 fork [roman-n1/koma](https://github.com/roman-n1/koma). The record model has `JOURNAL_FORMAT_VERSION`
-1, the segment layout `JOURNAL_FILE_FORMAT_VERSION` 1; every recording is `Capability.InspectOnly`
+2, the segment layout `JOURNAL_FILE_FORMAT_VERSION` 1; every recording is `Capability.InspectOnly`
 (the replay recording is `koma-timetravel`'s).
 
 ## Dependency
