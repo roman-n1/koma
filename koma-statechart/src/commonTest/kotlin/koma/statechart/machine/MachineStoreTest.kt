@@ -113,8 +113,8 @@ class MachineStoreTest {
         ),
     )
 
-    private fun listMachine(guardBoom: (MachineSnapshot<ListContext>) -> Boolean = { false }) =
-        Machine<ListContext, ListAction, ListCommand, ListEvent>(DefinitionId("list"), DefinitionVersion("1"), chart) {
+    private fun listMachine(guardBoom: (MachineSnapshot<ListContext>) -> Boolean = { false }, version: String = "1") =
+        Machine<ListContext, ListAction, ListCommand, ListEvent>(DefinitionId("list"), DefinitionVersion(version), chart) {
             guard("canRetry") { snapshot, _ -> snapshot.context.attempts < 3 }
             guard("boom") { snapshot, _ -> guardBoom(snapshot) }
             effect("rememberQuery") { context, action -> context.copy(query = (action as ListAction.Load).query) }
@@ -291,6 +291,129 @@ class MachineStoreTest {
 
         assertEquals(listOf("A"), h.handler.started.map { (it.command as ListCommand.Ping).region })
         assertEquals(setOf(CommandId(1)), h.store.currentState.commands.keys, "the dropped command left the snapshot")
+        h.close()
+    }
+
+    // --- lanes and activations (stabilization round) ---
+
+    /** Regions a and b, plus a region whose node moves on a Refresh; commands are given by [rules]. */
+    private fun threeRegions(rules: MachineBuilder<ListContext, ListAction, ListCommand, ListEvent>.(a: StateId, b: StateId, c1: StateId) -> Unit): Machine<ListContext, ListAction, ListCommand, ListEvent> {
+        val root = StateId("Root")
+        val a = StateId("A")
+        val bRegion = StateId("BRegion")
+        val b = StateId("B")
+        val b2 = StateId("B2")
+        val cRegion = StateId("CRegion")
+        val c0 = StateId("C0")
+        val c1 = StateId("C1")
+        val chart = StateChartDefinition(
+            root,
+            listOf(
+                ParallelState(root),
+                AtomicState(a, parent = root),
+                CompoundState(bRegion, initial = b, parent = root),
+                AtomicState(b, parent = bRegion),
+                AtomicState(b2, parent = bRegion),
+                CompoundState(cRegion, initial = c0, parent = root),
+                AtomicState(c0, parent = cRegion),
+                AtomicState(c1, parent = cRegion),
+            ),
+            listOf(
+                Transition(b, b2, ActionMatcher.of<ListAction.Refresh>("Refresh")),
+                Transition(c0, c1, ActionMatcher.of<ListAction.Boom>("Boom")),
+            ),
+        )
+        return Machine(DefinitionId("three"), DefinitionVersion("1"), chart) { rules(a, b, c1) }
+    }
+
+    @Test
+    fun aQueuedCommand_whoseActivationExited_neverStarts() = runTest {
+        val machine = threeRegions { a, b, _ ->
+            onEnter(a) { command(ListCommand.Ping("A"), net, ConcurrencyPolicy.Sequential) }
+            onEnter(b) { command(ListCommand.Ping("B"), net, ConcurrencyPolicy.Sequential) }
+        }
+        val h = harness(machine)
+        val gate = CompletableDeferred<Unit>()
+        h.handler.behaviour = { command, _ -> if ((command.command as ListCommand.Ping).region == "A") gate.await() else awaitCancellation() }
+        h.inner.startAndAwait()
+        runCurrent()
+        assertEquals(listOf("A"), h.handler.started.map { (it.command as ListCommand.Ping).region }, "B waits in the lane")
+
+        // B's node moves on: the decision deregisters B, and the executor must forget the queued entry.
+        h.store.dispatch(ListAction.Refresh)
+        runCurrent()
+        assertEquals(setOf(CommandId(1)), h.store.currentState.commands.keys)
+        gate.complete(Unit)
+        runCurrent()
+
+        assertEquals(listOf("A"), h.handler.started.map { (it.command as ListCommand.Ping).region }, "a command of an exited activation never starts")
+        h.close()
+    }
+
+    @Test
+    fun laneLatest_supersedesQueuedCommandsToo() = runTest {
+        val machine = threeRegions { a, b, c1 ->
+            onEnter(a) { command(ListCommand.Ping("A"), net, ConcurrencyPolicy.Sequential) }
+            onEnter(b) { command(ListCommand.Ping("B"), net, ConcurrencyPolicy.Sequential) }
+            onEnter(c1) { command(ListCommand.Ping("C"), net, ConcurrencyPolicy.Latest) }
+        }
+        val h = harness(machine)
+        h.inner.startAndAwait()
+        runCurrent()
+        assertEquals(listOf("A"), h.handler.started.map { (it.command as ListCommand.Ping).region })
+
+        h.store.dispatch(ListAction.Boom)
+        runCurrent()
+
+        assertEquals(listOf("A", "C"), h.handler.started.map { (it.command as ListCommand.Ping).region }, "C started at once; B never did")
+        assertEquals(listOf(CommandId(1)), h.handler.cancelled, "A was superseded")
+        assertEquals(setOf(CommandId(3)), h.store.currentState.commands.keys, "A and the queued B were abandoned in the snapshot too")
+        h.close()
+    }
+
+    @Test
+    fun aRestoredSnapshotOfAnotherVersion_startsOver_andIsReported() = runTest {
+        val first = harness(listMachine(version = "1"))
+        first.inner.startAndAwait()
+        first.store.dispatch(ListAction.Load("cats"))
+        runCurrent()
+        val saved = first.store.currentState
+        first.close()
+
+        val second = harness(listMachine(version = "2")) { stateSaver(StateSaver(save = {}, restore = { saved })) }
+        second.inner.startAndAwait()
+        runCurrent()
+
+        val restored = second.store.currentState
+        assertEquals(DefinitionVersion("2"), restored.version)
+        assertEquals(1, restored.revision)
+        assertTrue(restored.isActive(idle))
+        assertEquals(saved.context, restored.context)
+        val reported = assertIs<IllegalStateException>(second.handled.single())
+        assertTrue("version" in reported.message.orEmpty(), reported.message)
+        second.store.dispatch(ListAction.Load("dogs"))
+        runCurrent()
+        assertTrue(second.store.currentState.isActive(loading), "the store works after the reset")
+        second.close()
+    }
+
+    @Test
+    fun handlersFromTheConfiguration_cannotShadowTheMachine() = runTest {
+        val h = harness {
+            state<MachineSnapshot<ListContext>> {
+                enter { nextState { state.copy(revision = 77) } }
+                action<MachineInput<ListAction>> { nextState { state.copy(revision = 88) } }
+            }
+        }
+        h.inner.startAndAwait()
+        runCurrent()
+        assertEquals(1, h.store.currentState.revision, "the machine decided the start, not the configured enter {}")
+
+        h.store.dispatch(ListAction.Load("cats"))
+        runCurrent()
+
+        assertEquals(2, h.store.currentState.revision)
+        assertTrue(h.store.currentState.isActive(loading), "the machine decided the action, not the configured action {}")
         h.close()
     }
 

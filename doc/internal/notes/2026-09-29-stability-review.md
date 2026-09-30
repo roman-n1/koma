@@ -1,6 +1,6 @@
 # Stability review before production use
 
-- Updated: 2026-09-29
+- Updated: 2026-09-30
 
 ## Background
 
@@ -426,6 +426,39 @@ re-sends a message when `MessageDelivered` arrives while Settings is open (the s
 in a region that Settings does not exit); rin drags `compose.ui` 1.6.10 into a consumer's graph,
 so a JS/Wasm consumer needs a newer Compose Multiplatform of its own; `publish.yml` fires on
 pre-releases only and signs only with the Central credentials in the environment.
+
+## Fixed in the ninth round (time-travel foundation: probes, journal, machine, executor)
+
+A fresh-eyes review of what stages 1 to 3 of the
+[Time Travel handoff](../design/2026-09-29-time-travel-logging-handoff.md) added: the core
+probes, `koma-observability`, the pure machine and its executor. Each defect was reproduced with
+a failing test in `MachineStoreTest` before it was fixed, and a multi-threaded soak
+(`MachineStoreSoakTest`: eight threads of superseding loads and transition-less ticks on
+`Dispatchers.Default`) found no lost update, stale result or leaked bookkeeping.
+
+Executor (`koma-statechart`, `koma.statechart.machine`)
+
+- A command waiting in a `Sequential` or `Parallel` lane whose activation exited was still
+  started once the lane freed up: the decision had deregistered it, so its results were ignored
+  as stale, but the work ran. Queued entries of exited activations are now dropped with the
+  decision.
+- `Latest` cancelled the running commands of its lane but left the queued ones, which started
+  later and were still registered in the snapshot. `Latest` now supersedes the queue too, and the
+  machine hears about each queued command as `CommandAbandoned(Superseded)`.
+- `enter {}` and `action {}` handlers registered in the `MachineStore` configuration ran instead
+  of the machine's own (first-match order), so a configured handler could commit a snapshot the
+  machine never decided. The machine's handlers are registered first now; `recover {}` from the
+  configuration still applies and still cannot change the snapshot.
+- A `StateSaver` restoring a snapshot of another machine or version started over silently
+  (because the snapshot was "already started"). It still starts over with the restored context,
+  and the exception handler is told which version was restored into which.
+
+Reviewed and left as is: the journal's critical section spins on `Mutex.tryLock` (no parking
+lock in common code); `records()` copies the retained ring under it, so keep the ring small on
+hot paths; a `RecordingSession.close()` waits for a sink that never returns; `InputId`s from
+concurrent dispatchers are not in processing order (the ordinal is); the executor reports a
+handler failure through `PluginScope.launch`, so the journal attributes it to the input being
+processed when the launch happened.
 
 ## Open questions
 

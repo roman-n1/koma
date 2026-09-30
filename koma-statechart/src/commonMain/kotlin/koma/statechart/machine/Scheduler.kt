@@ -89,6 +89,9 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     private fun carryOut(decision: Decision<C, CMD, E>) {
         val exited = decision.cancelledScopes.toSet()
         for (command in running.values.filter { it.registration.scope in exited }) command.job.cancel()
+        // A command still waiting in its lane belongs to the exited activation too; the decision
+        // already deregistered it, so it is dropped without a report.
+        for (lane in lanes.values) lane.queue.removeAll { it.scope in exited }
         for (timer in decision.timersCancelled) timers.remove(timer)?.cancel()
         for (schedule in decision.timersScheduled) timers[schedule.id] = scope.launch {
             clock.delayUntil(schedule.deadline)
@@ -104,6 +107,10 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
         when (val policy = registration.policy) {
             ConcurrencyPolicy.Latest -> {
                 for (id in lane.running.toList()) abandon(running.getValue(id), AbandonReason.Superseded)
+                // Whatever waited in the lane is superseded as well: it never started, so the
+                // machine hears about it from here.
+                for (queued in lane.queue) feed(MachineInput.CommandAbandoned(queued.id, AbandonReason.Superseded, clock.now()))
+                lane.queue.clear()
                 start(registration)
             }
             ConcurrencyPolicy.Sequential -> if (lane.running.isEmpty()) start(registration) else lane.queue += registration
