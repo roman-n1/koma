@@ -82,6 +82,18 @@ interface EnterScope<S : State, E : Event, S2 : S> : StoreScope {
     fun launch(dispatcher: CoroutineDispatcher? = null, block: suspend EnterLaunchScope<S, E, S2>.() -> Unit)
 
     /**
+     * Starts a state-scoped coroutine that lives as long as this state: a Flow collection, a
+     * socket reader, a poller. It is [launch] in every way but one: a test that waits for the Store
+     * to settle (`awaitIdle` in `koma-test`) does not wait for it, since it never ends on its own.
+     * Use it for what is meant to run until the state exits; use [launch] for work that finishes.
+     *
+     * @param dispatcher Optional CoroutineDispatcher override for this coroutine.
+     * When null, the coroutine inherits the Store's current execution context.
+     * @param block The suspending block of code to execute
+     */
+    fun subscribe(dispatcher: CoroutineDispatcher? = null, block: suspend EnterLaunchScope<S, E, S2>.() -> Unit)
+
+    /**
      * Scope available within a state-scoped coroutine launched from `enter {}`.
      */
     @KomaStoreDsl
@@ -304,6 +316,19 @@ interface ActionScope<S : State, A : Action, E : Event, S2 : S> : StoreScope {
      * @param block The suspending block of code to execute
      */
     fun launch(dispatcher: CoroutineDispatcher? = null, control: LaunchControl = LaunchControl.Untracked, block: suspend ActionLaunchScope<S, A, E, S2>.() -> Unit)
+
+    /**
+     * Starts a state-scoped coroutine that lives as long as this state: a Flow collection, a
+     * socket reader, a poller. It is an untracked [launch] in every way but one: a test that waits
+     * for the Store to settle (`awaitIdle` in `koma-test`) does not wait for it, since it never
+     * ends on its own. Use it for what is meant to run until the state exits; use [launch] for
+     * work that finishes.
+     *
+     * @param dispatcher Optional CoroutineDispatcher override for this coroutine.
+     * When null, the coroutine inherits the Store's current execution context.
+     * @param block The suspending block of code to execute
+     */
+    fun subscribe(dispatcher: CoroutineDispatcher? = null, block: suspend ActionLaunchScope<S, A, E, S2>.() -> Unit)
 
     /**
      * Scope available within a state-scoped coroutine launched from `action {}`.

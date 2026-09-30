@@ -58,8 +58,11 @@ public final class koma/test/StateHandlerDescription {
 }
 
 public final class koma/test/StoreExtensionsKt {
+	public static final fun awaitIdle-8Mi8wO0 (Lkoma/core/Store;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun awaitIdle-8Mi8wO0$default (Lkoma/core/Store;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static final fun dispatchAndAwait (Lkoma/core/Store;Lkoma/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun patch (Lkoma/core/Store;Lkotlin/jvm/functions/Function1;)Lkoma/core/Store;
+	public static final fun pendingWork (Lkoma/core/Store;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun startAndAwait (Lkoma/core/Store;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 

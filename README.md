@@ -1237,3 +1237,24 @@ Inside `patch` block, you can use these APIs:
 - `plugin(...)`
 - `clearPlugins()`
 - `replacePlugins(...)`
+
+To see the side effects of the work a handler started with `launch {}`, wait for the Store to
+settle with `awaitIdle()`: it waits until every dispatched action, transaction and recovery
+finished and every `launch {}` of `enter {}` and `action {}` ended, whatever dispatcher they run
+on, and fails with what is still pending after its timeout. A `subscribe {}` (a Flow collection,
+a socket reader: work that lives as long as its state) is not waited for; use it for what never
+ends on its own, and `launch {}` for what finishes. `pendingWork()` reports the same without
+waiting. Under `runTest` the timeout is virtual, so a Store on a real dispatcher is awaited under
+`withContext(Dispatchers.Default)`.
+
+```kt
+@Test
+fun search_loadsInTheBackground() = runTest {
+    val store = SearchStore(...)                 // launch { repository.search(query) } inside action {}
+
+    store.dispatchAndAwait(SearchAction.Submit("cats"))
+    withContext(Dispatchers.Default) { store.awaitIdle() }   // the launch and what it transacted are done
+
+    assertEquals(SearchState.Results(listOf("cat")), store.currentState)
+}
+```

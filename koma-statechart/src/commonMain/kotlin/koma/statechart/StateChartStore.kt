@@ -371,7 +371,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
     }
 
     private suspend fun EnterScope<ChartState<C>, E, ChartState<C>>.start() {
-        launch { work(this) }
+        subscribe { work(this) }
         val restored = state
         // A restored configuration whose active nodes this chart cannot produce (for example one
         // saved by an older version of the chart) starts over from the initial configuration,
@@ -525,7 +525,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         scope.nextState { next }
     }
 
-    /** The Store-lifetime coroutine that runs [tasks]; launched once from the chart's `enter {}`. */
+    /** The Store-lifetime coroutine that runs [tasks]; subscribed once from the chart's `enter {}`, so a test's `awaitIdle` does not wait for it: activities and timers are the chart's data. */
     private suspend fun work(scope: EnterLaunchScope<ChartState<C>, E, ChartState<C>>) {
         transactor = scope
         supervisorScope {

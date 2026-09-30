@@ -1,5 +1,9 @@
 package koma.core
 
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.flow.first
+import kotlin.time.Duration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -186,7 +190,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private data class StateRuntime(
         val scope: CoroutineScope,
         val actionLaunchJobs: MutableMap<Any, Job> = mutableMapOf(),
+        // Launched with subscribe {}: alive until the state exits, so awaitIdle leaves them out.
+        val subscriptions: MutableSet<Job> = mutableSetOf(),
     )
+
+    // Inputs accepted and not finished or discarded, kept next to the traces that say so: what
+    // awaitIdle waits for before it joins the launches.
+    private val pendingInputs = MutableStateFlow(0)
 
     final override fun dispatch(action: A) {
         launchDispatch(action)
@@ -208,6 +218,43 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     final override suspend fun dispatchAndAwait(action: A) {
         checkNotInsideThisStore("dispatchAndAwait")
         launchDispatch(action).join()
+    }
+
+    final override suspend fun awaitIdle(timeout: Duration): StorePendingWork {
+        checkNotInsideThisStore("awaitIdle")
+        var launchesSeen = 0
+        val settled = withTimeoutOrNull(timeout) {
+            while (true) {
+                pendingInputs.first { it <= 0 }
+                val launches = mutex.withLock { activeLaunches() }
+                launchesSeen = launches.size
+                if (launches.isEmpty()) {
+                    // Nothing was launched meanwhile and nothing is queued: idle. A launch that
+                    // dispatched or transacted before ending queued an input, which the next round sees.
+                    if (pendingInputs.value <= 0) break else continue
+                }
+                launches.joinAll()
+            }
+        }
+        if (settled != null) return StorePendingWork(0, 0)
+        // The report must not wait for the lock: a handler stuck under it is why the Store is not idle.
+        val launches = if (mutex.tryLock()) {
+            try {
+                activeLaunches().size
+            } finally {
+                mutex.unlock()
+            }
+        } else {
+            launchesSeen
+        }
+        return StorePendingWork(pendingInputs.value.coerceAtLeast(0), launches)
+    }
+
+    // The launches of every state runtime still active, subscriptions left out. Read under the
+    // lock, joined outside it. Transactions and recoveries are inputs, counted separately.
+    private fun activeLaunches(): List<Job> = stateRuntimes.values.flatMap { runtime ->
+        val root = runtime.scope.coroutineContext[Job] ?: return@flatMap emptyList()
+        root.children.filter { it.isActive && it !in runtime.subscriptions }.toList()
     }
 
     // Handlers, plugin hooks and transactions run in coroutines that carry this marker. Awaiting
@@ -282,6 +329,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         startupInput.value?.let { return it }
         val candidate = allocateInputId()
         if (startupInput.compareAndSet(null, candidate)) {
+            pendingInputs.update { it + 1 }
             trace { StoreTrace.InputAccepted(candidate, InputKind.Startup) }
             return candidate
         }
@@ -294,6 +342,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         // The startup this dispatch may trigger gets its id before the action.
         requestStartup()
         val input = allocateInputId()
+        pendingInputs.update { it + 1 }
         trace { StoreTrace.InputAccepted(input, InputKind.Dispatch(action)) }
         val previousDone = CompletableDeferred<Job?>()
         // Completed when this dispatch's work under the lock is over (or the dispatch never ran),
@@ -335,16 +384,19 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             // The startup this dispatch triggered failed, so the action is dropped; the next
             // dispatch or start() retries the startup (see initializeIfNeeded).
             val closed = t is CancellationException && !currentCoroutineContext().isActive
+            pendingInputs.update { it - 1 }
             trace { StoreTrace.InputDiscarded(input, if (closed) DiscardReason.StoreClosed else DiscardReason.StartupFailed(t.unwrapped())) }
             throw t
         }
         val valid = try {
             isValid()
         } catch (t: Throwable) {
+            pendingInputs.update { it - 1 }
             trace { StoreTrace.InputDiscarded(input, DiscardReason.Rejected(t)) }
             throw t
         }
         if (!valid) {
+            pendingInputs.update { it - 1 }
             trace { StoreTrace.InputDiscarded(input, DiscardReason.Stale) }
             return
         }
@@ -553,6 +605,17 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                         block = block,
                     )
                 }
+
+                override fun subscribe(dispatcher: CoroutineDispatcher?, block: suspend ActionLaunchScope<S, A, E, S>.() -> Unit) {
+                    val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Koma] State scope is not found"))
+                    val job = launchInStateRuntime(
+                        stateRuntime = stateRuntime,
+                        dispatcher = dispatcher,
+                        buildLaunchScope = { buildActionLaunchScope(stateRuntime.scope, action) },
+                        block = block,
+                    )
+                    stateRuntime.subscriptions += job
+                }
             },
         )
         return newState ?: state
@@ -587,6 +650,16 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                         buildLaunchScope = { buildEnterLaunchScope(stateRuntime.scope) },
                         block = block,
                     )
+                }
+
+                override fun subscribe(dispatcher: CoroutineDispatcher?, block: suspend EnterLaunchScope<S, E, S>.() -> Unit) {
+                    val job = launchInStateRuntime(
+                        stateRuntime = stateRuntime,
+                        dispatcher = dispatcher,
+                        buildLaunchScope = { buildEnterLaunchScope(stateRuntime.scope) },
+                        block = block,
+                    )
+                    stateRuntime.subscriptions += job
                 }
             },
         )
@@ -697,6 +770,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             // being processed now, and may commit through recover {}.
             val origin = currentCoroutineContext()[InputOrigin]?.input
             val input = allocateInputId()
+            pendingInputs.update { it + 1 }
             trace { StoreTrace.InputAccepted(input, InputKind.Recovery(t, origin)) }
             val queued = QueuedInput(input)
             coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore + InputOrigin(input)) {
@@ -745,6 +819,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     mutex.withLock {
                         queued.locked = true
                         if (!canRunLaunchOperation(stateScope, caller, owner)) {
+                            pendingInputs.update { it - 1 }
                             trace { StoreTrace.InputDiscarded(input, DiscardReason.LaunchInactive) }
                             return@withLock
                         }
@@ -804,6 +879,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     mutex.withLock {
                         queued.locked = true
                         if (!canRunLaunchOperation(stateScope, caller, owner)) {
+                            pendingInputs.update { it - 1 }
                             trace { StoreTrace.InputDiscarded(input, DiscardReason.LaunchInactive) }
                             return@withLock
                         }
@@ -850,6 +926,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private suspend fun acceptTransaction(): InputId {
         val origin = currentCoroutineContext()[InputOrigin]?.input
         val input = allocateInputId()
+        pendingInputs.update { it + 1 }
         trace { StoreTrace.InputAccepted(input, InputKind.Transaction(origin)) }
         return input
     }
@@ -1088,6 +1165,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         } finally {
             processing = outer
             val result = outcome ?: current.outcome()
+            pendingInputs.update { it - 1 }
             trace { StoreTrace.ProcessingFinished(current.input, current.ordinal, result) }
         }
     }
@@ -1126,6 +1204,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
         fun traceDiscardIfNeverLocked(cause: Throwable?) {
             if (cause !is CancellationException || locked) return
+            pendingInputs.update { it - 1 }
             trace { StoreTrace.InputDiscarded(input, (cause as? PendingDispatchCleared)?.reason ?: DiscardReason.StoreClosed) }
         }
     }

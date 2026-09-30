@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalKomaApi::class, InternalKomaApi::class)
+@file:OptIn(ExperimentalKomaApi::class)
 
 package koma.timetravel.file
 
@@ -6,9 +6,6 @@ import koma.core.Action
 import koma.core.Event
 import koma.core.ExceptionHandler
 import koma.core.ExperimentalKomaApi
-import koma.core.InternalKomaApi
-import koma.core.StoreProbe
-import koma.core.StoreTrace
 import koma.observability.StoreInstanceId
 import koma.observability.file.InMemorySegmentStorage
 import koma.statechart.ActionMatcher
@@ -24,6 +21,7 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineStore
 import koma.timetravel.MachineRecorder
 import koma.timetravel.RecordingCodec
+import koma.test.awaitIdle
 import koma.timetravel.ReplaySession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,9 +29,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -46,6 +42,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * A recording written to files under a storm on [Dispatchers.Default], with a writer queue too
@@ -54,9 +51,9 @@ import kotlin.time.Duration.Companion.milliseconds
  * the checkpoint the recorder carries there and reaching the run's end unless its last steps
  * were dropped, and it replays.
  *
- * The recorder and the sink are read only once the store has finished every input it
- * accepted: the state settles before the observers of its last commit run, so a snapshot of
- * an observer taken as soon as the state settles may miss the last step.
+ * The recorder and the sink are read only once the store is idle (`awaitIdle` of koma-test):
+ * the state settles before the observers of its last commit run, so a snapshot of an observer
+ * taken as soon as the state settles may miss the last step.
  *
  * ```
  * [*] --> Idle
@@ -121,8 +118,6 @@ class RecordingFileStormTest {
         val codec = RecordingCodec(Ctx.serializer(), Act.serializer(), Fetch.serializer(), Ev.serializer())
         val executionScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val storage = InMemorySegmentStorage()
-        // Inputs the store accepted and has not finished: the observers of a commit run before its input finishes.
-        val unfinished = MutableStateFlow(0)
         val recorder = MachineRecorder(machine, Ctx())
         val sink = RecordingFileSink(store, machine, Ctx(), codec, storage, executionScope, RecordingFileConfig(maxSegmentBytes = 16 * 1024, maxSegments = 4, queueCapacity = 32))
         val machineStore = MachineStore(
@@ -131,18 +126,7 @@ class RecordingFileStormTest {
                 results.result(Act.Loaded(command.command.n))
             },
             executionScope, coroutineContext = Dispatchers.Default, observers = listOf(recorder, sink),
-        ) {
-            exceptionHandler(ExceptionHandler.Ignore)
-            probe(
-                StoreProbe { trace ->
-                    when (trace) {
-                        is StoreTrace.InputAccepted<*> -> unfinished.update { it + 1 }
-                        is StoreTrace.ProcessingFinished, is StoreTrace.InputDiscarded -> unfinished.update { it - 1 }
-                        else -> Unit
-                    }
-                },
-            )
-        }
+        ) { exceptionHandler(ExceptionHandler.Ignore) }
         val ticks = senders * perSender / 2
 
         withContext(Dispatchers.Default) {
@@ -154,7 +138,7 @@ class RecordingFileStormTest {
                 }
             }
             withTimeout(30_000) { machineStore.state.first { it.context.ticks == ticks && it.commands.isEmpty() && it.isActive(idle) } }
-            withTimeout(30_000) { unfinished.first { it == 0 } }
+            machineStore.awaitIdle(timeout = 30.seconds)
         }
         val recording = recorder.recording()
         machineStore.close()

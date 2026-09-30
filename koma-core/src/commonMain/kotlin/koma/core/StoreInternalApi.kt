@@ -1,5 +1,7 @@
 package koma.core
 
+import kotlin.time.Duration
+
 /**
  * Internal bridge API exposed from `:koma-core` so companion modules such as `:koma-test`
  * can provide extensions without depending on internal implementation types.
@@ -30,4 +32,23 @@ interface StoreInternalApi<S : State, A : Action, E : Event> {
      * Returns the declared types of all registered handlers. No handler runs.
      */
     fun handlerMetadata(): StoreHandlerMetadata
+
+    /**
+     * Waits until the Store is idle: no accepted input (a dispatch, the startup, a transaction,
+     * a recovery) is queued or being processed, and no coroutine started with `launch {}` from
+     * `enter {}` or `action {}` is active. A `subscribe {}` is not waited for; a plugin's launch is
+     * not either. Iterates until nothing new appeared, at most [timeout], and returns what is still
+     * pending: both counts zero when idle. Throws [IllegalStateException] from inside a handler,
+     * plugin hook or transaction of the same Store. On a closed Store it returns idle once every
+     * coroutine of the Store has ended.
+     */
+    suspend fun awaitIdle(timeout: Duration): StorePendingWork
+}
+
+/**
+ * What a Store still has to do, as [StoreInternalApi.awaitIdle] found it: [inputs] accepted and
+ * not finished or discarded, [launches] started from `enter {}` or `action {}` and still active.
+ */
+data class StorePendingWork(val inputs: Int, val launches: Int) {
+    val isIdle: Boolean get() = inputs == 0 && launches == 0
 }

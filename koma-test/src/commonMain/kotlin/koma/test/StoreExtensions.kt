@@ -7,6 +7,9 @@ import koma.core.State
 import koma.core.Store
 import koma.core.StoreInternalApi
 import koma.core.StorePatchBuilder
+import koma.core.StorePendingWork
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Starts the Store and suspends until the startup work completes.
@@ -74,6 +77,38 @@ fun <S : State, A : Action, E : Event> Store<S, A, E>.patch(
     val patch = StorePatchBuilder<S, A, E>().apply(builder).build()
     return requireStoreInternalApi().patch(patch)
 }
+
+/**
+ * Waits until the Store is idle: every accepted input (dispatches, the startup, transactions,
+ * recoveries) finished or was discarded, and every coroutine started with `launch {}` from
+ * `enter {}` or `action {}` ended; it iterates until nothing new appeared. A `subscribe {}` is not
+ * waited for: it lives as long as its state. Neither is a plugin's launch. Timers of a
+ * `koma-statechart` machine are data, not launches. Call it after [dispatchAndAwait] to see the
+ * side effects of the work the handler started, however it is dispatched, without a test
+ * dispatcher. Calling it from inside a handler, plugin hook or transaction of the same Store
+ * throws [IllegalStateException]: it would wait for itself. [timeout] runs on the caller's
+ * clock: under `runTest`'s virtual time it expires as soon as the body suspends, so a Store on a
+ * real dispatcher is awaited under `withContext(Dispatchers.Default)`.
+ *
+ * @param timeout How long to wait before failing
+ * @throws IllegalStateException if the Store is not idle after [timeout], with what is pending
+ * @throws IllegalStateException if the Store is not backed by Koma's internal implementation
+ */
+@OptIn(InternalKomaApi::class)
+suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.awaitIdle(timeout: Duration = 10.seconds) {
+    val pending = requireStoreInternalApi().awaitIdle(timeout)
+    check(pending.isIdle) { "[Koma] The Store did not become idle within $timeout: ${pending.inputs} input(s) pending, ${pending.launches} launch(es) running" }
+}
+
+/**
+ * What the Store still has to do now, without waiting: the inputs accepted and not finished, and
+ * the launches from `enter {}` or `action {}` still active. Both zero means [awaitIdle] would
+ * return at once.
+ *
+ * @throws IllegalStateException if the Store is not backed by Koma's internal implementation
+ */
+@OptIn(InternalKomaApi::class)
+suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.pendingWork(): StorePendingWork = requireStoreInternalApi().awaitIdle(Duration.ZERO)
 
 @OptIn(InternalKomaApi::class)
 internal fun <S : State, A : Action, E : Event> Store<S, A, E>.requireStoreInternalApi(): StoreInternalApi<S, A, E> {

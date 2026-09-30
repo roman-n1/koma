@@ -14,8 +14,7 @@ import koma.core.StoreBuilder
 import koma.core.StoreHandlerMetadata
 import koma.core.StoreInternalApi
 import koma.core.StorePatch
-import koma.core.StoreProbe
-import koma.core.StoreTrace
+import koma.core.StorePendingWork
 import koma.core.currentInputId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -191,21 +190,9 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     // executor hands them every effect, since the inner store never sees the effects.
     private val adaptedPlugins = mutableListOf<AdaptedPlugin<C, A, E>>()
 
-    // Inputs the inner store accepted and has not finished or discarded: zero means idle.
-    private val pendingInputs = MutableStateFlow(0)
-
-    /** The underlying Koma Store; tests await it. */
+    /** The underlying Koma Store; the module's own tests feed it raw machine inputs. */
     internal val inner: Store<MachineSnapshot<C>, MachineInput<A>, E> =
         Store(machine.initialSnapshot(context), coroutineContext) {
-            probe(
-                StoreProbe { trace ->
-                    when (trace) {
-                        is StoreTrace.InputAccepted<*> -> pendingInputs.update { it + 1 }
-                        is StoreTrace.ProcessingFinished, is StoreTrace.InputDiscarded -> pendingInputs.update { it - 1 }
-                        else -> Unit
-                    }
-                },
-            )
             // Registered before the configuration, so first-match selection never lets a
             // configured enter {} or action {} run in the machine's place; recover {} handlers
             // configured below still apply.
@@ -368,7 +355,30 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
             return
         }
         frozen.first { !it }
-        pendingInputs.first { it <= 0 }
+        innerApi.awaitIdle(Duration.INFINITE)
+    }
+
+    /**
+     * Idle for a machine: the inner store has no input queued or being processed and the
+     * executor has carried out every decision committed so far, so the results it fed are inputs
+     * already counted; iterated until nothing new appeared. Commands still running, timers
+     * scheduled and effects pending are data ([checkpoint]), not work to wait for. During a cut
+     * the held inputs are outside the inner store, so a frozen store is idle once it drained.
+     */
+    override suspend fun awaitIdle(timeout: Duration): StorePendingWork {
+        val settled = withTimeoutOrNull(timeout) {
+            while (true) {
+                innerApi.awaitIdle(Duration.INFINITE)
+                try {
+                    // The actor answers after every decision queued before: all of them carried out.
+                    scheduler.checkpoint()
+                } catch (e: IllegalStateException) {
+                    break // closed: nothing more will happen
+                }
+                if (innerApi.awaitIdle(Duration.ZERO).isIdle) break
+            }
+        }
+        return if (settled != null) StorePendingWork(0, 0) else innerApi.awaitIdle(Duration.ZERO)
     }
 
     override fun dispatchIf(action: A, isValid: () -> Boolean) {
@@ -455,13 +465,6 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     /** How many inputs the controlled queue holds now. */
     internal val heldInputs: Int
         get() = gated { held.size }
-
-    /**
-     * Waits until the inner store has finished or discarded every input it accepted, at most
-     * [timeout]; `false` on timeout. Meaningful while frozen, when no new input can enter.
-     */
-    internal suspend fun awaitIdle(timeout: Duration): Boolean =
-        withTimeoutOrNull(timeout) { pendingInputs.first { it <= 0 } } != null
 
     private inline fun <T> gated(block: () -> T): T {
         while (!gate.tryLock()) {

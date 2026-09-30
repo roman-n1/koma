@@ -20,12 +20,15 @@ public abstract interface class koma/core/ActionScope : koma/core/StoreScope {
 	public fun nextState (Lkoma/core/State;)V
 	public abstract fun nextState (Lkotlin/jvm/functions/Function0;)V
 	public fun nextStateBy (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun subscribe (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun subscribe$default (Lkoma/core/ActionScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public final class koma/core/ActionScope$DefaultImpls {
 	public static synthetic fun launch$default (Lkoma/core/ActionScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkoma/core/LaunchControl;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 	public static fun nextState (Lkoma/core/ActionScope;Lkoma/core/State;)V
 	public static fun nextStateBy (Lkoma/core/ActionScope;Lkotlin/jvm/functions/Function0;)V
+	public static synthetic fun subscribe$default (Lkoma/core/ActionScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public abstract interface class koma/core/ActionScope$LaunchScope : koma/core/StoreScope {
@@ -132,12 +135,15 @@ public abstract interface class koma/core/EnterScope : koma/core/StoreScope {
 	public fun nextState (Lkoma/core/State;)V
 	public abstract fun nextState (Lkotlin/jvm/functions/Function0;)V
 	public fun nextStateBy (Lkotlin/jvm/functions/Function0;)V
+	public abstract fun subscribe (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun subscribe$default (Lkoma/core/EnterScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public final class koma/core/EnterScope$DefaultImpls {
 	public static synthetic fun launch$default (Lkoma/core/EnterScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 	public static fun nextState (Lkoma/core/EnterScope;Lkoma/core/State;)V
 	public static fun nextStateBy (Lkoma/core/EnterScope;Lkotlin/jvm/functions/Function0;)V
+	public static synthetic fun subscribe$default (Lkoma/core/EnterScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public abstract interface class koma/core/EnterScope$LaunchScope : koma/core/StoreScope {
@@ -568,6 +574,7 @@ public final class koma/core/StoreHandlerMetadata {
 }
 
 public abstract interface class koma/core/StoreInternalApi {
+	public abstract fun awaitIdle-VtjQ1oo (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun dispatchAndAwait (Lkoma/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun dispatchIf (Lkoma/core/Action;Lkotlin/jvm/functions/Function0;)V
 	public abstract fun handlerMetadata ()Lkoma/core/StoreHandlerMetadata;
@@ -619,6 +626,20 @@ public final class koma/core/StorePatchBuilder {
 	public final fun probe (Lkoma/core/StoreProbe;[Lkoma/core/StoreProbe;)V
 	public final fun replacePlugins (Lkoma/core/Plugin;[Lkoma/core/Plugin;)V
 	public final fun stateSaver (Lkoma/core/StateSaver;)V
+}
+
+public final class koma/core/StorePendingWork {
+	public fun <init> (II)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun copy (II)Lkoma/core/StorePendingWork;
+	public static synthetic fun copy$default (Lkoma/core/StorePendingWork;IIILjava/lang/Object;)Lkoma/core/StorePendingWork;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInputs ()I
+	public final fun getLaunches ()I
+	public fun hashCode ()I
+	public final fun isIdle ()Z
+	public fun toString ()Ljava/lang/String;
 }
 
 public abstract interface class koma/core/StoreProbe {
