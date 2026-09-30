@@ -19,8 +19,10 @@ import koma.statechart.machine.DefinitionId
 import koma.statechart.machine.DefinitionVersion
 import koma.statechart.machine.EffectEnvelope
 import koma.statechart.machine.EffectId
+import koma.statechart.machine.ExecutorCheckpoint
 import koma.statechart.machine.IgnoreReason
 import koma.statechart.machine.LaneId
+import koma.statechart.machine.Lanes
 import koma.statechart.machine.MachineCounters
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineSnapshot
@@ -36,16 +38,19 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Duration
 
 /**
  * Version of the JSON form of a [Recording]. Bumped when a field or a value changes meaning; a
  * reader that meets a newer version refuses, an older one is migrated by an explicit
  * [FormatMigration] or refused, never filled in with defaults.
+ *
+ * History: 1 began at an `initial` snapshot; 2 begins at a `start` checkpoint of the executor
+ * (snapshot, clock, commands running, queued and ending). The codec migrates 1 to 2 itself.
  */
-const val RECORDING_FORMAT_VERSION: Int = 1
+const val RECORDING_FORMAT_VERSION: Int = 2
 
 /**
  * Turns the JSON of one format version into the next: an explicit, testable step.
@@ -74,23 +79,23 @@ sealed interface DecodedRecording<C, A : Action, CMD, E : Event> {
 
 /**
  * Encodes a [Recording] as JSON and decodes it back, with the application's serializers for its
- * own types. The structure (snapshots, inputs, decisions, ids, timers, failures) is the codec's
- * and versioned by [RECORDING_FORMAT_VERSION]; the context, actions, commands and events are
- * whatever the serializers write. The output is canonical: fields in a fixed order, maps sorted
- * by key, no defaults, no nulls, durations in ISO-8601, so equal recordings encode to equal
- * text and the text can be a golden fixture.
+ * own types. The structure (the start checkpoint, snapshots, inputs, decisions, ids, timers,
+ * failures) is the codec's and versioned by [RECORDING_FORMAT_VERSION]; the context, actions,
+ * commands and events are whatever the serializers write. The output is canonical: fields in a
+ * fixed order, maps sorted by key, commands sorted by id, no defaults, no nulls, durations in
+ * ISO-8601, so equal recordings encode to equal text and the text can be a golden fixture.
  *
  * A decoded recording equals the encoded one when the serializers round-trip their values; an
- * older format is migrated by the [migrations] that lead to the current version, a newer or an
- * unknown one is [DecodedRecording.Unsupported], a malformed text or a payload the serializers
- * reject is [DecodedRecording.Invalid] with the position.
+ * older format is migrated by the codec's own migrations and the [migrations] given, applied in
+ * sequence until the current version is reached; a newer or an unknown one is
+ * [DecodedRecording.Unsupported]; a malformed text, an inconsistent checkpoint or a payload the
+ * serializers reject is [DecodedRecording.Invalid] with the position.
  *
  * @param context Serializer of the machine's context
  * @param action Serializer of the actions (dispatched and returned by commands)
  * @param command Serializer of the commands
  * @param event Serializer of the events
- * @param migrations Migrations from older format versions, applied in sequence until the
- * current version is reached
+ * @param migrations Migrations from format versions the codec does not migrate itself
  */
 @ExperimentalKomaApi
 class RecordingCodec<C, A : Action, CMD, E : Event>(
@@ -107,6 +112,23 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         ignoreUnknownKeys = false
     }
 
+    // Format 1 had an `initial` snapshot where format 2 has the `start` checkpoint of a run that
+    // has not started: the snapshot, the clock at zero, nothing running.
+    private val builtIn = listOf(
+        FormatMigration(from = 1, to = 2) { v1 ->
+            buildJsonObject {
+                put("formatVersion", JsonPrimitive(2))
+                v1["definition"]?.let { put("definition", it) }
+                v1["version"]?.let { put("version", it) }
+                put("start", buildJsonObject {
+                    v1["initial"]?.let { put("snapshot", it) }
+                    put("now", JsonPrimitive("PT0S"))
+                })
+                v1["steps"]?.let { put("steps", it) }
+            }
+        },
+    )
+
     /**
      * The canonical JSON of [recording].
      */
@@ -115,7 +137,7 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
             formatVersion = RECORDING_FORMAT_VERSION,
             definition = recording.definition.value,
             version = recording.version.value,
-            initial = recording.initial.toWire(),
+            start = recording.start.toWire(),
             steps = recording.steps.map { it.toWire() },
         )
         return json.encodeToString(RecordingWire.serializer(), wire)
@@ -136,7 +158,7 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
             return DecodedRecording.Unsupported(formatVersion, "format $formatVersion is newer than this codec's $RECORDING_FORMAT_VERSION")
         }
         while (formatVersion < RECORDING_FORMAT_VERSION) {
-            val migration = migrations.firstOrNull { it.from == formatVersion }
+            val migration = (builtIn + migrations).firstOrNull { it.from == formatVersion }
                 ?: return DecodedRecording.Unsupported(formatVersion, "no migration from format $formatVersion")
             element = migration.migrate(element)
             formatVersion = migration.to
@@ -152,9 +174,9 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         return try {
             val definition = DefinitionId(wire.definition)
             val version = DefinitionVersion(wire.version)
-            val initial = wire.initial.toSnapshot(definition, version, at = "initial")
+            val start = wire.start.toCheckpoint(definition, version, at = "start")
             val steps = wire.steps.mapIndexed { index, step -> step.toStep(definition, version, at = "step $index") }
-            DecodedRecording.Decoded(Recording(definition, version, initial, steps))
+            DecodedRecording.Decoded(Recording(definition, version, start, steps))
         } catch (e: DecodeFailure) {
             DecodedRecording.Invalid(e.message ?: "invalid", e.at)
         } catch (e: IllegalArgumentException) {
@@ -174,6 +196,17 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         timers = timers.entries.sortedBy { it.key.value }.associate { (id, record) -> id.value.toString() to TimerWire(record.transition.index, record.activation.value, record.deadline.sinceStart.toIsoString()) },
         counters = CountersWire(counters.activations, counters.commands, counters.timers, counters.effects),
     )
+
+    private fun ExecutorCheckpoint<C, CMD>.toWire(): CheckpointWire = CheckpointWire(
+        snapshot = snapshot.toWire(),
+        now = now.sinceStart.toIsoString(),
+        running = lanes.running.values.sortedBy { it.id.value }.map { it.toWire() },
+        queued = lanes.queued.entries.sortedBy { it.key.value }.associate { (lane, waiting) -> lane.value to waiting.map { it.toWire() } },
+        ending = ending.values.sortedBy { it.id.value }.map { it.toWire() },
+    )
+
+    private fun CommandRegistration<CMD>.toWire(): CommandRegistrationWire =
+        CommandRegistrationWire(id.value, json.encodeToJsonElement(this@RecordingCodec.command, command), scope.value, lane?.value, policy?.toWire())
 
     private fun RecordedStep<C, A, CMD, E>.toWire(): StepWire = when (this) {
         is RecordedStep.Committed -> StepWire(input.toWire(), committed = decision.toWire())
@@ -196,9 +229,7 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         transitions = transitions.map { it.index },
         exited = exited.map { ActivationWire(it.node.value, it.id.value) },
         entered = entered.map { ActivationWire(it.node.value, it.id.value) },
-        commands = commands.map {
-            CommandRegistrationWire(it.id.value, json.encodeToJsonElement(command, it.command), it.scope.value, it.lane?.value, it.policy?.toWire())
-        },
+        commands = commands.map { it.toWire() },
         cancelledScopes = cancelledScopes.map { it.value },
         timersScheduled = timersScheduled.map { TimerScheduleWire(it.id.value, it.transition.index, it.activation.value, it.deadline.sinceStart.toIsoString()) },
         timersCancelled = timersCancelled.map { it.value },
@@ -243,6 +274,20 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         counters = MachineCounters(counters.activations, counters.commands, counters.timers, counters.effects),
     )
 
+    private fun CheckpointWire.toCheckpoint(definition: DefinitionId, version: DefinitionVersion, at: String): ExecutorCheckpoint<C, CMD> {
+        val snapshot = snapshot.toSnapshot(definition, version, "$at: snapshot")
+        val now = MachineTime(now.toDuration(at))
+        val running = running.mapIndexed { index, it -> it.toRegistration("$at: running $index") }
+        val queued = queued.entries.associate { (lane, waiting) -> LaneId(lane) to waiting.mapIndexed { index, it -> it.toRegistration("$at: queued in $lane $index") } }
+        val ending = ending.mapIndexed { index, it -> it.toRegistration("$at: ending $index") }
+        // The checkpoint checks itself: commands in one place each, and the snapshot's.
+        return decoding(at) { ExecutorCheckpoint(snapshot, now, Lanes(running.associateBy { it.id }, queued), ending.associateBy { it.id }) }
+    }
+
+    private fun CommandRegistrationWire.toRegistration(at: String): CommandRegistration<CMD> = decoding(at) {
+        CommandRegistration(CommandId(id), json.decodeFromJsonElement(this@RecordingCodec.command, command), ActivationId(scope), lane?.let(::LaneId), policy?.toPolicy(at))
+    }
+
     private fun StepWire.toStep(definition: DefinitionId, version: DefinitionVersion, at: String): RecordedStep<C, A, CMD, E> {
         val input = input.toInput(at)
         return when {
@@ -280,9 +325,7 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         transitions = transitions.map(::TransitionId),
         exited = exited.map { Activation(StateId(it.node), ActivationId(it.id)) },
         entered = entered.map { Activation(StateId(it.node), ActivationId(it.id)) },
-        commands = commands.mapIndexed { index, it ->
-            CommandRegistration(CommandId(it.id), decoding("$at: command $index") { json.decodeFromJsonElement(command, it.command) }, ActivationId(it.scope), it.lane?.let(::LaneId), it.policy?.toPolicy(at))
-        },
+        commands = commands.mapIndexed { index, it -> it.toRegistration("$at: command $index") },
         cancelledScopes = cancelledScopes.map(::ActivationId),
         timersScheduled = timersScheduled.map { TimerSchedule(TimerId(it.id), TransitionId(it.transition), ActivationId(it.activation), MachineTime(it.deadline.toDuration(at))) },
         timersCancelled = timersCancelled.map(::TimerId),
@@ -311,7 +354,16 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
 // The wire model: field order is the canonical order of the JSON.
 
 @Serializable
-internal class RecordingWire(val formatVersion: Int, val definition: String, val version: String, val initial: SnapshotWire, val steps: List<StepWire>)
+internal class RecordingWire(val formatVersion: Int, val definition: String, val version: String, val start: CheckpointWire, val steps: List<StepWire>)
+
+@Serializable
+internal class CheckpointWire(
+    val snapshot: SnapshotWire,
+    val now: String,
+    val running: List<CommandRegistrationWire> = emptyList(),
+    val queued: Map<String, List<CommandRegistrationWire>> = emptyMap(),
+    val ending: List<CommandRegistrationWire> = emptyList(),
+)
 
 @Serializable
 internal class SnapshotWire(

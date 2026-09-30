@@ -172,12 +172,18 @@ sealed interface koma.timetravel/Compatibility { // koma.timetravel/Compatibilit
 }
 
 final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/Branch { // koma.timetravel/Branch|null[0]
+    constructor <init>(koma.statechart.machine/Machine<#A, #B, #C, #D>, koma.statechart.machine/ExecutorCheckpoint<#A, #C>, koma.timetravel/Recording<#A, #B, #C, #D>? = ...) // koma.timetravel/Branch.<init>|<init>(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>;koma.statechart.machine.ExecutorCheckpoint<1:0,1:2>;koma.timetravel.Recording<1:0,1:1,1:2,1:3>?){}[0]
+
     final val awaiting // koma.timetravel/Branch.awaiting|{}awaiting[0]
         final fun <get-awaiting>(): kotlin.collections/List<koma.statechart.machine/CommandRegistration<#C>> // koma.timetravel/Branch.awaiting.<get-awaiting>|<get-awaiting>(){}[0]
+    final val checkpoint // koma.timetravel/Branch.checkpoint|{}checkpoint[0]
+        final fun <get-checkpoint>(): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.timetravel/Branch.checkpoint.<get-checkpoint>|<get-checkpoint>(){}[0]
     final val effects // koma.timetravel/Branch.effects|{}effects[0]
         final fun <get-effects>(): kotlin.collections/List<koma.statechart.machine/EffectEnvelope<#D>> // koma.timetravel/Branch.effects.<get-effects>|<get-effects>(){}[0]
     final val history // koma.timetravel/Branch.history|{}history[0]
         final fun <get-history>(): kotlin.collections/List<koma.statechart.machine/Decision<#A, #C, #D>> // koma.timetravel/Branch.history.<get-history>|<get-history>(){}[0]
+    final val queued // koma.timetravel/Branch.queued|{}queued[0]
+        final fun <get-queued>(): kotlin.collections/Map<koma.statechart.machine/LaneId, kotlin.collections/List<koma.statechart.machine/CommandRegistration<#C>>> // koma.timetravel/Branch.queued.<get-queued>|<get-queued>(){}[0]
 
     final var now // koma.timetravel/Branch.now|{}now[0]
         final fun <get-now>(): koma.statechart.machine/MachineTime // koma.timetravel/Branch.now.<get-now>|<get-now>(){}[0]
@@ -205,6 +211,7 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
 }
 
 final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/Recording { // koma.timetravel/Recording|null[0]
+    constructor <init>(koma.statechart.machine/DefinitionId, koma.statechart.machine/DefinitionVersion, koma.statechart.machine/ExecutorCheckpoint<#A, #C>, kotlin.collections/List<koma.timetravel/RecordedStep<#A, #B, #C, #D>>) // koma.timetravel/Recording.<init>|<init>(koma.statechart.machine.DefinitionId;koma.statechart.machine.DefinitionVersion;koma.statechart.machine.ExecutorCheckpoint<1:0,1:2>;kotlin.collections.List<koma.timetravel.RecordedStep<1:0,1:1,1:2,1:3>>){}[0]
     constructor <init>(koma.statechart.machine/DefinitionId, koma.statechart.machine/DefinitionVersion, koma.statechart.machine/MachineSnapshot<#A>, kotlin.collections/List<koma.timetravel/RecordedStep<#A, #B, #C, #D>>) // koma.timetravel/Recording.<init>|<init>(koma.statechart.machine.DefinitionId;koma.statechart.machine.DefinitionVersion;koma.statechart.machine.MachineSnapshot<1:0>;kotlin.collections.List<koma.timetravel.RecordedStep<1:0,1:1,1:2,1:3>>){}[0]
 
     final val definition // koma.timetravel/Recording.definition|{}definition[0]
@@ -213,12 +220,16 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
         final fun <get-initial>(): koma.statechart.machine/MachineSnapshot<#A> // koma.timetravel/Recording.initial.<get-initial>|<get-initial>(){}[0]
     final val length // koma.timetravel/Recording.length|{}length[0]
         final fun <get-length>(): kotlin/Int // koma.timetravel/Recording.length.<get-length>|<get-length>(){}[0]
+    final val start // koma.timetravel/Recording.start|{}start[0]
+        final fun <get-start>(): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.timetravel/Recording.start.<get-start>|<get-start>(){}[0]
     final val steps // koma.timetravel/Recording.steps|{}steps[0]
         final fun <get-steps>(): kotlin.collections/List<koma.timetravel/RecordedStep<#A, #B, #C, #D>> // koma.timetravel/Recording.steps.<get-steps>|<get-steps>(){}[0]
     final val version // koma.timetravel/Recording.version|{}version[0]
         final fun <get-version>(): koma.statechart.machine/DefinitionVersion // koma.timetravel/Recording.version.<get-version>|<get-version>(){}[0]
 
+    final fun checkpointAt(kotlin/Int): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.timetravel/Recording.checkpointAt|checkpointAt(kotlin.Int){}[0]
     final fun compatibilityWith(koma.statechart.machine/Machine<#A, #B, #C, #D>): koma.timetravel/Compatibility // koma.timetravel/Recording.compatibilityWith|compatibilityWith(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>){}[0]
+    final fun since(koma.statechart.machine/ExecutorCheckpoint<#A, #C>): koma.timetravel/Recording<#A, #B, #C, #D> // koma.timetravel/Recording.since|since(koma.statechart.machine.ExecutorCheckpoint<1:0,1:2>){}[0]
     final fun snapshotAt(kotlin/Int): koma.statechart.machine/MachineSnapshot<#A> // koma.timetravel/Recording.snapshotAt|snapshotAt(kotlin.Int){}[0]
     final fun toString(): kotlin/String // koma.timetravel/Recording.toString|toString(){}[0]
 }
@@ -259,6 +270,8 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
 final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.timetravel/ReplaySession { // koma.timetravel/ReplaySession|null[0]
     constructor <init>(koma.statechart.machine/Machine<#A, #B, #C, #D>, koma.timetravel/Recording<#A, #B, #C, #D>) // koma.timetravel/ReplaySession.<init>|<init>(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>;koma.timetravel.Recording<1:0,1:1,1:2,1:3>){}[0]
 
+    final val checkpoint // koma.timetravel/ReplaySession.checkpoint|{}checkpoint[0]
+        final fun <get-checkpoint>(): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.timetravel/ReplaySession.checkpoint.<get-checkpoint>|<get-checkpoint>(){}[0]
     final val length // koma.timetravel/ReplaySession.length|{}length[0]
         final fun <get-length>(): kotlin/Int // koma.timetravel/ReplaySession.length.<get-length>|<get-length>(){}[0]
     final val machine // koma.timetravel/ReplaySession.machine|{}machine[0]

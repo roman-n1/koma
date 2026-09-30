@@ -1,13 +1,17 @@
 public final class koma/timetravel/Branch {
+	public fun <init> (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/ExecutorCheckpoint;Lkoma/timetravel/Recording;)V
+	public synthetic fun <init> (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/ExecutorCheckpoint;Lkoma/timetravel/Recording;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun advance-LRDsOJo (J)Ljava/util/List;
 	public final fun answer-L4hFu2M (JLkoma/core/Action;)Lkoma/statechart/machine/Decision;
 	public final fun complete-rf9sHPo (J)Lkoma/statechart/machine/Decision;
 	public final fun dispatch (Lkoma/core/Action;)Lkoma/statechart/machine/Decision;
 	public final fun fail-L4hFu2M (JLkoma/observability/FailureDescriptor;)Lkoma/statechart/machine/Decision;
 	public final fun getAwaiting ()Ljava/util/List;
+	public final fun getCheckpoint ()Lkoma/statechart/machine/ExecutorCheckpoint;
 	public final fun getEffects ()Ljava/util/List;
 	public final fun getHistory ()Ljava/util/List;
 	public final fun getNow-cDuxZ3M ()J
+	public final fun getQueued ()Ljava/util/Map;
 	public final fun getSnapshot ()Lkoma/statechart/machine/MachineSnapshot;
 	public final fun reuseRecordedAnswers-rf9sHPo (J)Ljava/util/List;
 }
@@ -146,13 +150,17 @@ public final class koma/timetravel/RecordedStep$Ignored : koma/timetravel/Record
 }
 
 public final class koma/timetravel/Recording {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun checkpointAt (I)Lkoma/statechart/machine/ExecutorCheckpoint;
 	public final fun compatibilityWith (Lkoma/statechart/machine/Machine;)Lkoma/timetravel/Compatibility;
 	public final fun getDefinition-i1OI-TI ()Ljava/lang/String;
 	public final fun getInitial ()Lkoma/statechart/machine/MachineSnapshot;
 	public final fun getLength ()I
+	public final fun getStart ()Lkoma/statechart/machine/ExecutorCheckpoint;
 	public final fun getSteps ()Ljava/util/List;
 	public final fun getVersion-BnUQ-xA ()Ljava/lang/String;
+	public final fun since (Lkoma/statechart/machine/ExecutorCheckpoint;)Lkoma/timetravel/Recording;
 	public final fun snapshotAt (I)Lkoma/statechart/machine/MachineSnapshot;
 	public fun toString ()Ljava/lang/String;
 }
@@ -191,6 +199,7 @@ public final class koma/timetravel/ReplayMismatch {
 public final class koma/timetravel/ReplaySession {
 	public fun <init> (Lkoma/statechart/machine/Machine;Lkoma/timetravel/Recording;)V
 	public final fun branch ()Lkoma/timetravel/Branch;
+	public final fun getCheckpoint ()Lkoma/statechart/machine/ExecutorCheckpoint;
 	public final fun getLength ()I
 	public final fun getMachine ()Lkoma/statechart/machine/Machine;
 	public final fun getNext ()Lkoma/timetravel/RecordedStep;

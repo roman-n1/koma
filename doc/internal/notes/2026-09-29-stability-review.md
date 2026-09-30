@@ -505,6 +505,63 @@ must be relative to its creation when several stores run in one test; a sink tha
 consumes the record it threw on, gap records included, so a journal invariant is about what the
 writer delivered, received or not.
 
+## Eleventh round: the executor as data, checkpointed under a storm
+
+The scheduler's bookkeeping of commands left the actor and became `Lanes`, a pure value with
+the rules of every lane policy; the actor keeps the jobs, the timers, the last snapshot it
+carried out and the commands `ending` (finished here, their last input not yet decided by the
+machine). `MachineStore.checkpoint()` is that state as data (`ExecutorCheckpoint`), taken at a
+message boundary of the actor and checking itself: every command of its snapshot in exactly one
+place. A `koma-timetravel` recording begins at a checkpoint, carries it forward with the same
+`Lanes`, trims itself to a live checkpoint (`since`), and a branch runs the lanes with jobs that
+end when told to. The tests again aim at what no hand times:
+
+- `LanesTest` (statechart): each policy on admission, a lane freeing its place only when the
+  job has ended, an exited activation cancelling the running and dropping the queued.
+- `ExecutorCheckpointTest` (statechart): on a machine that fills every kind of lane on entry,
+  the partition of the snapshot's commands into running, queued and ending; a checkpoint
+  requested behind the decision's turn at the actor, so it still sees the dropped command
+  ending; the lane moving on the moment a job ends; timers' remaining time on the checkpoint's
+  clock; a re-entry; a pending request failed by `close()`.
+- `ExecutorCheckpointStormTest` (statechart): three hundred checkpoints taken while four threads
+  re-enter and exit an activation whose entry registers commands under `Latest`, `Sequential`,
+  `DropIfRunning` and `Parallel(2)`, with handlers ending at random: each a consistent cut, each
+  lane within its policy, nothing queued behind a free lane, revisions never going back, the
+  last one empty, nothing reported.
+- `CheckpointTest` (timetravel): once the executor has settled, its checkpoint equals the one the
+  recording carries forward, after an entry, two completions, a re-entry and an exit; the
+  recording shows a dropped command ending until the step that decides its abandonment; a
+  recording since a live checkpoint replays without a difference, branches with the checkpoint's
+  running and queued commands, and refuses a checkpoint of another run or with forged commands;
+  under a storm on `Dispatchers.Default`, two hundred live checkpoints, each the start of a
+  recording that replays: whatever the actor's lag behind the store, its cut is one of the run.
+
+Found and settled by them:
+
+- `StoreProbeTest.manyThreads_withClearsAndAClose_…` failed once on the Android host job with an
+  accepted input that had no end. A dispatch that arrives after `close()` is discarded from its
+  own cancelled coroutine, which needs a thread; on a loaded runner that comes after
+  `StoreClosed`, and the test drained the channel once at `StoreClosed`. Measured: 200 of 200
+  post-close dispatches trace their discard after `dispatch()` returned. The test now waits until
+  every accepted dispatch has its end, bounded so a real gap still fails by name; the `StoreClosed`
+  KDoc says a post-close dispatch's traces may follow it.
+- A cancelled command holds its place in its lane until its job has ended (the actor promoted
+  the next queued command on `Finished`, never on the cancellation). The pure `Lanes` made the
+  consequence visible: when an activation is re-entered, its `DropIfRunning` commands are dropped
+  because the exited activation's command still occupies the lane. Parity with the actor before
+  this round, kept and documented; changing it would start a `Sequential` successor while the
+  predecessor's `finally` still runs.
+- A branch's `awaiting` includes the commands that are ending, in start order: a live result can
+  arrive before the abandonment the executor fed, so the caller may still answer them.
+
+Test-side lessons: an `async` that fails inside `runTest` fails the test before `assertFailsWith`
+sees it, so a request that is expected to fail is awaited through `runCatching`; "the storm never
+exercised X" is a property of the platform's threads, so it is printed, not asserted (the
+tenth round's lesson, relearned); a golden harvested from a JUnit failure message must be cut at
+the end of the JSON, as the message carries `expected:<…> but was:<…>` on the same line; two
+runs identical in every input give equal checkpoints, as checkpoints are values, not tokens, so
+a "foreign checkpoint" comes from a run that differs.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing
