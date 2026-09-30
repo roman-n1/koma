@@ -21,15 +21,16 @@ builds the inspector and the replay on; this module is the journal only.
   the sinks and writes them in order from one coroutine. Loss is explicit: an overflow of the
   writer's queue is counted and the next record that fits is preceded by a `JournalGap`.
 - **Sinks.** `JournalSink` receives records in order. `koma-logging` ships `LoggerJournalSink`,
-  which writes `JournalFormat.line` to a `Logger`.
+  which writes `JournalFormat.line` to a `Logger`; `JournalFileSink` (below) writes the records
+  to a ring of checksummed segment files that survive the process.
 - **Other producers.** `session.publish(store, entry)` publishes an entry a probe cannot see,
   for a Store the session records. `koma-statechart` uses it for the decisions of a replay-ready
   machine (`DecisionCommitted`, `DecisionIgnored`, `InputRejected`).
 
 Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
 fork [roman-n1/koma](https://github.com/roman-n1/koma). The record model has `JOURNAL_FORMAT_VERSION`
-1 and will grow with commands, timers, effects and checkpoints; there is no file format, export or
-replay yet, and every recording is `Capability.InspectOnly`.
+1, the segment layout `JOURNAL_FILE_FORMAT_VERSION` 1; every recording is `Capability.InspectOnly`
+(the replay recording is `koma-timetravel`'s).
 
 ## Dependency
 
@@ -94,6 +95,36 @@ What one dispatch looks like in the log, with the production policy:
 
 `-` is an omitted payload. With `PayloadPolicy.retainAll()` (tests and local debugging only) the
 objects print their `toString()`.
+
+## Journal files
+
+`JournalFileSink` writes the session's records into segments of a `SegmentStorage`: `KOMAJRNL`,
+a header frame, record frames, an end frame, every frame `[length][crc32][payload]`. Segments
+rotate by size and the oldest are deleted; a reader tells a finished segment from one a crash cut
+short and never throws on damage: it returns the records that held and a mark for the rest.
+
+```kotlin
+val storage = FileSegmentStorage("$filesDir/journal")   // java.io on JVM and Android, POSIX on iOS
+val fileSink = JournalFileSink(storage, JournalFileConfig(maxSegmentBytes = 512 * 1024, maxSegments = 8))
+val session = RecordingSession(appScope, sinks = listOf(fileSink))
+// on background or in a crash hook, from any thread, never waiting for a Store:
+fileSink.flush()
+
+val files = JournalFiles(storage)
+files.sessions()                          // the runs present, oldest first
+val contents = files.read(sessionId)      // records in order, marks where segments or frames are missing or damaged
+contents.isComplete                       // nothing missing or damaged
+files.tail(sessionId, 200)                // for the crash reporter, as the policy left the records
+files.exportLines(sessionId)              // JournalFormat.line per record, "! mark" per mark
+files.prune(maxTotalBytes = 16L * 1024 * 1024)   // the oldest sessions go whole, the newest never
+```
+
+A retained object is written as its `toString()` and reads back as `Payload.Described`; the file
+holds no objects. The marks: `TruncatedTail` (a frame cut short by a crash, dropped), `Unfinished`
+(no end frame, nothing lost), `Corrupt` (checksum or encoding; the rest of the segment skipped),
+`MissingSegments` (rotated, pruned or lost), `SequenceHole` (records absent that no `JournalGap`
+explains), `UnsupportedFormat` (a newer writer). See the
+[ADR](../doc/internal/adr/2026-09-30-journal-file-format.md).
 
 ## Rules
 

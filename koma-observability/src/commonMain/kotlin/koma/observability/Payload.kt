@@ -24,6 +24,13 @@ sealed interface Payload<out T> {
     data class Projected(val label: String, val fields: Map<String, String> = emptyMap()) : Payload<Nothing>
 
     /**
+     * The text of a payload that was retained, as a file or a remote sink keeps it: the object's
+     * `toString()` at the time of writing, never the object. Produced by readers of the journal
+     * file format, not by a policy.
+     */
+    data class Described(val text: String) : Payload<Nothing>
+
+    /**
      * The policy keeps nothing of this payload.
      */
     data object Omitted : Payload<Nothing>

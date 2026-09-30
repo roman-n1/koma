@@ -512,6 +512,17 @@ public final class koma/observability/OutcomeKind : java/lang/Enum {
 public abstract interface class koma/observability/Payload {
 }
 
+public final class koma/observability/Payload$Described : koma/observability/Payload {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lkoma/observability/Payload$Described;
+	public static synthetic fun copy$default (Lkoma/observability/Payload$Described;Ljava/lang/String;ILjava/lang/Object;)Lkoma/observability/Payload$Described;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/observability/Payload$Omitted : koma/observability/Payload {
 	public static final field INSTANCE Lkoma/observability/Payload$Omitted;
 	public fun equals (Ljava/lang/Object;)Z
@@ -648,5 +659,288 @@ public final class koma/observability/TimerRef {
 	public final fun getTransition ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/DecodedSegment {
+	public fun <init> (Lkoma/observability/file/SegmentHeader;Ljava/util/List;Lkoma/observability/file/SegmentMark;Z)V
+	public final fun component1 ()Lkoma/observability/file/SegmentHeader;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Lkoma/observability/file/SegmentMark;
+	public final fun component4 ()Z
+	public final fun copy (Lkoma/observability/file/SegmentHeader;Ljava/util/List;Lkoma/observability/file/SegmentMark;Z)Lkoma/observability/file/DecodedSegment;
+	public static synthetic fun copy$default (Lkoma/observability/file/DecodedSegment;Lkoma/observability/file/SegmentHeader;Ljava/util/List;Lkoma/observability/file/SegmentMark;ZILjava/lang/Object;)Lkoma/observability/file/DecodedSegment;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFinished ()Z
+	public final fun getHeader ()Lkoma/observability/file/SegmentHeader;
+	public final fun getMark ()Lkoma/observability/file/SegmentMark;
+	public final fun getRecords ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/FileSegmentStorage : koma/observability/file/SegmentStorage {
+	public fun <init> (Ljava/lang/String;)V
+	public fun append (Ljava/lang/String;)Lkoma/observability/file/SegmentOutput;
+	public fun delete (Ljava/lang/String;)V
+	public fun list ()Ljava/util/List;
+	public fun read (Ljava/lang/String;)[B
+}
+
+public final class koma/observability/file/InMemorySegmentStorage : koma/observability/file/SegmentStorage {
+	public fun <init> ()V
+	public fun append (Ljava/lang/String;)Lkoma/observability/file/SegmentOutput;
+	public final fun corrupt (Ljava/lang/String;I)V
+	public fun delete (Ljava/lang/String;)V
+	public fun list ()Ljava/util/List;
+	public fun read (Ljava/lang/String;)[B
+	public final fun truncate (Ljava/lang/String;I)V
+}
+
+public final class koma/observability/file/JournalFileConfig {
+	public fun <init> ()V
+	public fun <init> (III)V
+	public synthetic fun <init> (IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (III)Lkoma/observability/file/JournalFileConfig;
+	public static synthetic fun copy$default (Lkoma/observability/file/JournalFileConfig;IIIILjava/lang/Object;)Lkoma/observability/file/JournalFileConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFlushEveryRecords ()I
+	public final fun getMaxSegmentBytes ()I
+	public final fun getMaxSegments ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/JournalFileContents {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lkoma/observability/file/JournalFileContents;
+	public static synthetic fun copy$default (Lkoma/observability/file/JournalFileContents;Ljava/util/List;ILjava/lang/Object;)Lkoma/observability/file/JournalFileContents;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEvents ()Ljava/util/List;
+	public final fun getMarks ()Ljava/util/List;
+	public final fun getRecords ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun isComplete ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/observability/file/JournalFileEvent {
+}
+
+public final class koma/observability/file/JournalFileEvent$Mark : koma/observability/file/JournalFileEvent {
+	public fun <init> (Lkoma/observability/file/SegmentMark;)V
+	public final fun component1 ()Lkoma/observability/file/SegmentMark;
+	public final fun copy (Lkoma/observability/file/SegmentMark;)Lkoma/observability/file/JournalFileEvent$Mark;
+	public static synthetic fun copy$default (Lkoma/observability/file/JournalFileEvent$Mark;Lkoma/observability/file/SegmentMark;ILjava/lang/Object;)Lkoma/observability/file/JournalFileEvent$Mark;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMark ()Lkoma/observability/file/SegmentMark;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/JournalFileEvent$Record : koma/observability/file/JournalFileEvent {
+	public fun <init> (Lkoma/observability/JournalRecord;)V
+	public final fun component1 ()Lkoma/observability/JournalRecord;
+	public final fun copy (Lkoma/observability/JournalRecord;)Lkoma/observability/file/JournalFileEvent$Record;
+	public static synthetic fun copy$default (Lkoma/observability/file/JournalFileEvent$Record;Lkoma/observability/JournalRecord;ILjava/lang/Object;)Lkoma/observability/file/JournalFileEvent$Record;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRecord ()Lkoma/observability/JournalRecord;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/JournalFileFormat {
+	public static final field EXTENSION Ljava/lang/String;
+	public static final field INSTANCE Lkoma/observability/file/JournalFileFormat;
+	public static final field MAX_FRAME_BYTES I
+	public final fun decodeSegment (Ljava/lang/String;[B)Lkoma/observability/file/DecodedSegment;
+	public final fun frame (Lkoma/observability/JournalRecord;)[B
+	public final fun getEND ()[B
+	public final fun getMAGIC ()[B
+	public final fun header-RPWn9Q8 (Ljava/lang/String;Ljava/lang/String;Lkoma/observability/ExecutionMode;I)[B
+	public final fun parseSegmentName (Ljava/lang/String;)Lkotlin/Pair;
+	public final fun segmentName-aydXpko (Ljava/lang/String;I)Ljava/lang/String;
+}
+
+public final class koma/observability/file/JournalFileFormatKt {
+	public static final field JOURNAL_FILE_FORMAT_VERSION I
+}
+
+public final class koma/observability/file/JournalFileSink : koma/observability/JournalSink {
+	public fun <init> (Lkoma/observability/file/SegmentStorage;Lkoma/observability/file/JournalFileConfig;)V
+	public synthetic fun <init> (Lkoma/observability/file/SegmentStorage;Lkoma/observability/file/JournalFileConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun close ()V
+	public final fun flush ()V
+	public final fun getActiveSegment ()Ljava/lang/String;
+	public final fun getSegments ()Ljava/util/List;
+	public fun write (Lkoma/observability/JournalRecord;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class koma/observability/file/JournalFiles {
+	public fun <init> (Lkoma/observability/file/SegmentStorage;)V
+	public final fun exportLines-zYlQ4gA (Ljava/lang/String;)Ljava/util/List;
+	public final fun prune (J)Ljava/util/List;
+	public final fun read-zYlQ4gA (Ljava/lang/String;)Lkoma/observability/file/JournalFileContents;
+	public final fun sessions ()Ljava/util/List;
+	public final fun tail-aydXpko (Ljava/lang/String;I)Ljava/util/List;
+}
+
+public final class koma/observability/file/SegmentHeader {
+	public synthetic fun <init> (IILjava/lang/String;Ljava/lang/String;Lkoma/observability/ExecutionMode;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3-fjGpFrU ()Ljava/lang/String;
+	public final fun component4-qCaNbV4 ()Ljava/lang/String;
+	public final fun component5 ()Lkoma/observability/ExecutionMode;
+	public final fun component6 ()I
+	public final fun copy-WwHKg4M (IILjava/lang/String;Ljava/lang/String;Lkoma/observability/ExecutionMode;I)Lkoma/observability/file/SegmentHeader;
+	public static synthetic fun copy-WwHKg4M$default (Lkoma/observability/file/SegmentHeader;IILjava/lang/String;Ljava/lang/String;Lkoma/observability/ExecutionMode;IILjava/lang/Object;)Lkoma/observability/file/SegmentHeader;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFileFormatVersion ()I
+	public final fun getGroup-qCaNbV4 ()Ljava/lang/String;
+	public final fun getIndex ()I
+	public final fun getMode ()Lkoma/observability/ExecutionMode;
+	public final fun getRecordFormatVersion ()I
+	public final fun getSession-fjGpFrU ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/SegmentInfo {
+	public fun <init> (Ljava/lang/String;JJ)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun component3 ()J
+	public final fun copy (Ljava/lang/String;JJ)Lkoma/observability/file/SegmentInfo;
+	public static synthetic fun copy$default (Lkoma/observability/file/SegmentInfo;Ljava/lang/String;JJILjava/lang/Object;)Lkoma/observability/file/SegmentInfo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getModified ()J
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSize ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/observability/file/SegmentMark {
+}
+
+public final class koma/observability/file/SegmentMark$Corrupt : koma/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;IILjava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;IILjava/lang/String;)Lkoma/observability/file/SegmentMark$Corrupt;
+	public static synthetic fun copy$default (Lkoma/observability/file/SegmentMark$Corrupt;Ljava/lang/String;IILjava/lang/String;ILjava/lang/Object;)Lkoma/observability/file/SegmentMark$Corrupt;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOffset ()I
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getRecordsRead ()I
+	public final fun getSegment ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/SegmentMark$MissingSegments : koma/observability/file/SegmentMark {
+	public synthetic fun <init> (Ljava/lang/String;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-fjGpFrU ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy-YPrdmuE (Ljava/lang/String;II)Lkoma/observability/file/SegmentMark$MissingSegments;
+	public static synthetic fun copy-YPrdmuE$default (Lkoma/observability/file/SegmentMark$MissingSegments;Ljava/lang/String;IIILjava/lang/Object;)Lkoma/observability/file/SegmentMark$MissingSegments;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFromIndex ()I
+	public final fun getSession-fjGpFrU ()Ljava/lang/String;
+	public final fun getToIndex ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/SegmentMark$NotASegment : koma/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Lkoma/observability/file/SegmentMark$NotASegment;
+	public static synthetic fun copy$default (Lkoma/observability/file/SegmentMark$NotASegment;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lkoma/observability/file/SegmentMark$NotASegment;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getSegment ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/SegmentMark$SequenceHole : koma/observability/file/SegmentMark {
+	public synthetic fun <init> (Ljava/lang/String;JJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-fjGpFrU ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun component3 ()J
+	public final fun copy-YPrdmuE (Ljava/lang/String;JJ)Lkoma/observability/file/SegmentMark$SequenceHole;
+	public static synthetic fun copy-YPrdmuE$default (Lkoma/observability/file/SegmentMark$SequenceHole;Ljava/lang/String;JJILjava/lang/Object;)Lkoma/observability/file/SegmentMark$SequenceHole;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfterGroupSeq ()J
+	public final fun getMissing ()J
+	public final fun getNextGroupSeq ()J
+	public final fun getSession-fjGpFrU ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/SegmentMark$TruncatedTail : koma/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;II)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (Ljava/lang/String;II)Lkoma/observability/file/SegmentMark$TruncatedTail;
+	public static synthetic fun copy$default (Lkoma/observability/file/SegmentMark$TruncatedTail;Ljava/lang/String;IIILjava/lang/Object;)Lkoma/observability/file/SegmentMark$TruncatedTail;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRecordsRead ()I
+	public final fun getSegment ()Ljava/lang/String;
+	public final fun getTrailingBytes ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/SegmentMark$Unfinished : koma/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy (Ljava/lang/String;I)Lkoma/observability/file/SegmentMark$Unfinished;
+	public static synthetic fun copy$default (Lkoma/observability/file/SegmentMark$Unfinished;Ljava/lang/String;IILjava/lang/Object;)Lkoma/observability/file/SegmentMark$Unfinished;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRecordsRead ()I
+	public final fun getSegment ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/observability/file/SegmentMark$UnsupportedFormat : koma/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;II)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (Ljava/lang/String;II)Lkoma/observability/file/SegmentMark$UnsupportedFormat;
+	public static synthetic fun copy$default (Lkoma/observability/file/SegmentMark$UnsupportedFormat;Ljava/lang/String;IIILjava/lang/Object;)Lkoma/observability/file/SegmentMark$UnsupportedFormat;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFileFormatVersion ()I
+	public final fun getRecordFormatVersion ()I
+	public final fun getSegment ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/observability/file/SegmentOutput : java/lang/AutoCloseable {
+	public abstract fun close ()V
+	public abstract fun flush ()V
+	public abstract fun write ([B)V
+}
+
+public abstract interface class koma/observability/file/SegmentStorage {
+	public abstract fun append (Ljava/lang/String;)Lkoma/observability/file/SegmentOutput;
+	public abstract fun delete (Ljava/lang/String;)V
+	public abstract fun list ()Ljava/util/List;
+	public abstract fun read (Ljava/lang/String;)[B
 }
 
