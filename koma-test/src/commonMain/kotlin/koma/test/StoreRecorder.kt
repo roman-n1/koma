@@ -14,10 +14,16 @@ import koma.core.Store
  * Records the state at Store startup (which is the [koma.core.StateSaver]-restored value
  * when present, otherwise the Store's initial state), every committed state transition, and every
  * emitted event, in insertion order.
+ *
+ * The events can also be received one by one, in order, with [receiveEvent]: a cursor over
+ * [events] that a test moves as it accounts for each event, so a test that ends with
+ * [assertNoUnconsumedEvents] (or [assertNoPendingWork]) has seen every event the Store emitted
+ * and none it did not expect. [events] keeps every event whether received or not.
  */
 class StoreRecorder<S : State, A : Action, E : Event> internal constructor() : Plugin<S, A, E> {
     private val recordedStates = mutableListOf<S>()
     private val recordedEvents = mutableListOf<E>()
+    private var cursor = 0
 
     /**
      * State snapshots recorded for this Store.
@@ -30,11 +36,65 @@ class StoreRecorder<S : State, A : Action, E : Event> internal constructor() : P
     val events: List<E> = recordedEvents
 
     /**
-     * Clears all recorded history.
+     * The recorded events not yet received with [receiveEvent], in order.
+     */
+    val unconsumedEvents: List<E> get() = recordedEvents.subList(cursor, recordedEvents.size).toList()
+
+    /**
+     * Clears all recorded history and the cursor.
      */
     fun clear() {
         recordedStates.clear()
         recordedEvents.clear()
+        cursor = 0
+    }
+
+    /**
+     * Receives the next unconsumed event, which must be an [E2]: returns it and moves the cursor.
+     *
+     * @throws AssertionError if every recorded event was received already, or the next one is
+     * not an [E2]; the cursor does not move then
+     */
+    inline fun <reified E2 : E> receiveEvent(): E2 {
+        val next = peekUnconsumed("an event of type ${E2::class.simpleName}")
+        if (next !is E2) throw AssertionError("[Koma] Expected an event of type ${E2::class.simpleName}, but the next unconsumed event is $next; unconsumed: $unconsumedEvents")
+        consumeNext()
+        return next
+    }
+
+    /**
+     * Receives the next unconsumed event, which must satisfy [predicate]: returns it and moves
+     * the cursor.
+     *
+     * @throws AssertionError if every recorded event was received already, or the next one does
+     * not satisfy [predicate]; the cursor does not move then
+     */
+    fun receiveEvent(predicate: (E) -> Boolean): E {
+        val next = peekUnconsumed("an event")
+        if (!predicate(next)) throw AssertionError("[Koma] The next unconsumed event $next does not satisfy the predicate; unconsumed: $unconsumedEvents")
+        consumeNext()
+        return next
+    }
+
+    /**
+     * Fails when a recorded event was not received with [receiveEvent].
+     *
+     * @throws AssertionError listing the unconsumed events
+     */
+    fun assertNoUnconsumedEvents() {
+        val left = unconsumedEvents
+        if (left.isNotEmpty()) throw AssertionError("[Koma] ${left.size} recorded event(s) were not received: $left")
+    }
+
+    @PublishedApi
+    internal fun peekUnconsumed(expected: String): E {
+        if (cursor >= recordedEvents.size) throw AssertionError("[Koma] Expected $expected, but every recorded event was received already (${recordedEvents.size} recorded)")
+        return recordedEvents[cursor]
+    }
+
+    @PublishedApi
+    internal fun consumeNext() {
+        cursor++
     }
 
     // The Store this recorder was started on; the lists are plain, so one recorder cannot serve
