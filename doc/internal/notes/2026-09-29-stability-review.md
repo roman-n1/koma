@@ -679,6 +679,20 @@ the dropped one, so the reader sees a hole, not damage, and a range after it. An
 ends in damage at the last segment is still the last range: a first draft of the reader
 forgot it when it stopped continuing.
 
+Found by CI, not locally: the storm read the in-memory recorder as soon as the state settled,
+but a Store publishes a state before its plugins run, and the decision observers run from a
+plugin, so on a two-core runner the recorder's snapshot lacked a step the file sink went on
+to write. A test that compares two observers reads them only once every input the Store
+accepted has finished (`ProcessingFinished`, counted through a probe the way the machine
+store's own idle gate counts); a snapshot taken at the settled state is one decision early.
+Every test task now logs a failed test's assertion and stack, so the next such failure can be
+read from the CI log.
+
+The group's files remember cuts (ADR addendum): `GroupRecordingFilesTest` checks that the run
+since a cut read from the files equals the in-memory recording since the same cut, sources'
+snapshots included, and that a ring which kept only the segments since the cut reads the run
+from it.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing

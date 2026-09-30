@@ -157,6 +157,11 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
         writer.join()
     }
 
+    /** The next step begins a segment: a group's cut is a segment boundary in every file. */
+    internal fun cut() {
+        locked { beginSegment = true }
+    }
+
     private fun record(step: RecordedStep<C, A, CMD, E>) {
         val item = locked {
             if (closed) return

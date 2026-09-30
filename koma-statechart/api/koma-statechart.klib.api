@@ -51,6 +51,10 @@ abstract fun interface <#A: in kotlin/Any?, #B: out koma.core/Action> koma.state
     abstract suspend fun execute(koma.statechart.machine/CommandEnvelope<#A>, koma.statechart.machine/ResultSink<#B>) // koma.statechart.machine/CommandHandler.execute|execute(koma.statechart.machine.CommandEnvelope<1:0>;koma.statechart.machine.ResultSink<1:1>){}[0]
 }
 
+abstract fun interface koma.statechart.machine/CutListener { // koma.statechart.machine/CutListener|null[0]
+    abstract fun onCut(koma.statechart.machine/GroupCheckpoint) // koma.statechart.machine/CutListener.onCut|onCut(koma.statechart.machine.GroupCheckpoint){}[0]
+}
+
 abstract interface <#A: in koma.core/Event> koma.statechart.machine/EffectListener { // koma.statechart.machine/EffectListener|null[0]
     open fun onAcknowledged(koma.statechart.machine/EffectId) // koma.statechart.machine/EffectListener.onAcknowledged|onAcknowledged(koma.statechart.machine.EffectId){}[0]
     open fun onDiscarded(koma.statechart.machine/EffectId, koma.statechart.machine/EffectDiscardReason) // koma.statechart.machine/EffectListener.onDiscarded|onDiscarded(koma.statechart.machine.EffectId;koma.statechart.machine.EffectDiscardReason){}[0]
@@ -1406,6 +1410,8 @@ final class koma.statechart.machine/MachineGroup { // koma.statechart.machine/Ma
 
     final fun <#A1: koma.core/Event, #B1: koma.core/Action> route(koma.observability/StoreInstanceId, koma.observability/StoreInstanceId, kotlin/Function1<#A1, #B1?>): koma.statechart.machine/MachineGroup.Route // koma.statechart.machine/MachineGroup.route|route(koma.observability.StoreInstanceId;koma.observability.StoreInstanceId;kotlin.Function1<0:0,0:1?>){0§<koma.core.Event>;1§<koma.core.Action>}[0]
     final fun <#A1: kotlin/Any?, #B1: koma.core/Action, #C1: kotlin/Any?, #D1: koma.core/Event> member(koma.observability/StoreInstanceId): koma.statechart.machine/MachineGroup.Member<#A1, #B1, #C1, #D1> // koma.statechart.machine/MachineGroup.member|member(koma.observability.StoreInstanceId){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+    final fun onCut(koma.statechart.machine/CutListener) // koma.statechart.machine/MachineGroup.onCut|onCut(koma.statechart.machine.CutListener){}[0]
+    final fun removeCutListener(koma.statechart.machine/CutListener) // koma.statechart.machine/MachineGroup.removeCutListener|removeCutListener(koma.statechart.machine.CutListener){}[0]
     final fun source(koma.statechart.machine/ExternalSource) // koma.statechart.machine/MachineGroup.source|source(koma.statechart.machine.ExternalSource){}[0]
     final suspend fun checkpoint(kotlin.time/Duration = ...): koma.statechart.machine/GroupCheckpoint? // koma.statechart.machine/MachineGroup.checkpoint|checkpoint(kotlin.time.Duration){}[0]
 
