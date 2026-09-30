@@ -1,8 +1,8 @@
 package koma.message
 
 import koma.core.StoreScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 /**
  * Marker interface for process-wide messages sent through Koma's shared message bus.
@@ -11,7 +11,7 @@ interface Message
 
 internal object MessageHub {
     private val _messages = MutableSharedFlow<Message>()
-    val messages: Flow<Message> get() = _messages
+    val messages: SharedFlow<Message> get() = _messages
 
     suspend fun send(message: Message) {
         _messages.emit(message)
