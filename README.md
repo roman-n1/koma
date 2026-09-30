@@ -7,6 +7,16 @@
 > [!IMPORTANT]
 > Artifacts are published under the `io.github.koma-kt` group.
 
+> [!NOTE]
+> This is the fork [roman-n1/koma](https://github.com/roman-n1/koma) of
+> [koma-kt/koma](https://github.com/koma-kt/koma). It publishes every module as
+> `io.github.roman-n1:<module>:5.0.0-alpha.1`, never to be mixed with `io.github.koma-kt` in one
+> project, on the upstream base named by `koma.upstream.base` in `gradle.properties` (4.0.0). It adds
+> the statechart machine, the journal, replay and the Compose inspector (`koma-statechart`,
+> `koma-observability`, `koma-timetravel`, `koma-timetravel-compose`) and changes the upstream modules
+> as listed in the
+> [divergence inventory](doc/internal/design/2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400).
+
 Koma is a state management framework for Kotlin Multiplatform.
 
 Key benefits:

@@ -44,7 +44,7 @@ Not started. Each item is a decision or a piece of wiring in `su.ivcs.messenger`
 
 1. **Dependency.** The messenger does not include koma. Until the fork publishes a release, the
    options are a composite build (`includeBuild` of a koma checkout or a git submodule) or
-   publishing `4.0.0-sc.x` to Maven Central from a pre-release. The modules needed are
+   publishing `5.0.0-alpha.x` to Maven Central from a pre-release. The modules needed are
    `koma-core`, `koma-statechart`, `koma-observability` and, for the log sink, `koma-logging`;
    all have Android targets.
 2. **Where the machine lives.** The chart, the machine and the `UiMapper` are pure Kotlin and

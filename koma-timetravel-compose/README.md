@@ -34,7 +34,7 @@ Not yet: group-wide positions.
 
 ```kotlin
 // debug source set only: this module must not be in a release dependency graph
-implementation("io.github.roman-n1:koma-timetravel-compose:4.0.0-sc.1")
+implementation("io.github.roman-n1:koma-timetravel-compose:5.0.0-alpha.1")
 ```
 
 The library's CI runs `checkDebugGraph`: no production module of koma depends on

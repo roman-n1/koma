@@ -15,16 +15,18 @@ draw it, generate test paths from it, and run it as an ordinary Koma `Store`.
   commands, timers and events as data: the replay-ready path of the time-travel work (see below).
 
 The semantics follow SCXML (Harel statecharts): external transitions, exit innermost first, enter
-outermost first, inner transitions take priority over outer ones. The module uses `koma-core`
-through its `@InternalKomaApi` bridge (`dispatchIf`, `validateRecovery`), so it is built and
-published together with the fork's `koma-core` and is not meant to run against another version.
+outermost first, inner transitions take priority over outer ones. The module uses the fork's
+`koma-core` (`dispatchIf`, `validateRecovery`, `StoreProbe` for `MachineStore`'s idle gate,
+`InputId`, the open `StoreScope`; see the
+[divergence inventory](../doc/internal/design/2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400)),
+so it is built and published together with it and is not meant to run against another version.
 
 Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
 fork [roman-n1/koma](https://github.com/roman-n1/koma), not in upstream Koma.
 
 ## Dependency
 
-The fork publishes every module as `io.github.roman-n1:<module>:4.0.0-sc.1` to Maven Central from
+The fork publishes every module as `io.github.roman-n1:<module>:5.0.0-alpha.1` to Maven Central from
 a GitHub pre-release (`.github/workflows/publish.yml`); until a release is published, include the
 fork as a Gradle composite build (for example as a git submodule), which substitutes the same
 coordinates:
@@ -39,7 +41,7 @@ includeBuild("koma")
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.roman-n1:koma-statechart:4.0.0-sc.1")
+            implementation("io.github.roman-n1:koma-statechart:5.0.0-alpha.1")
         }
     }
     compilerOptions {

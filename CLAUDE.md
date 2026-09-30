@@ -44,3 +44,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Document experimental APIs with @ExperimentalKomaApi
 - Use KDoc comments for public APIs
 - Put internal design/spec notes under `doc/internal/` so they stay separate from user-facing docs
+
+## Fork
+
+- This is the fork `roman-n1/koma` of `koma-kt/koma`, published as `io.github.roman-n1:*` (`koma.fork.version` in `gradle.properties`); `koma.upstream.base` names the upstream release it was last merged with
+- Changes to the modules upstream owns are listed in the divergence inventory of `doc/internal/design/2026-09-28-statechart-roadmap.md`; keep it complete in the same PR as the change
+- `upstream-pr/<topic>` branches are single commits on the upstream tag, prepared per `doc/internal/notes/2026-10-01-upstream-series.md`
+

@@ -100,7 +100,7 @@ LCA) and model-based testing tools. They overlap only in "the transition model a
   with regions, history and timers (connection + chat) — koma-statechart.
 - **Dependencies.** Both pull in `koma-core`: koma-strict — the official `io.github.koma-kt:koma-core`
   (`4.0.0-rc03` in the clone), the fork — its own `koma-core`. The fork now publishes (and, in a
-  composite build, substitutes) every module as `io.github.roman-n1:*:4.0.0-sc.1`, so koma-strict's
+  composite build, substitutes) every module as `io.github.roman-n1:*:5.0.0-alpha.1`, so koma-strict's
   transitive `io.github.koma-kt:koma-core` is **not** substituted: two `koma-core`s with identical
   classes end up on the classpath unless the messenger adds a `dependencySubstitution` rule (or a
   capability) mapping `io.github.koma-kt:koma-core` to the fork's. I did not check API compatibility

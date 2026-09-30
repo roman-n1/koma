@@ -75,7 +75,7 @@ Not yet: group-wide positions in the Compose inspector.
 ## Dependency
 
 ```kotlin
-implementation("io.github.roman-n1:koma-timetravel:4.0.0-sc.1")
+implementation("io.github.roman-n1:koma-timetravel:5.0.0-alpha.1")
 ```
 
 The module brings `koma-statechart` and `koma-observability` with it; see the
