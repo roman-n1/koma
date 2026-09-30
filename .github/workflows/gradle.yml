@@ -10,8 +10,8 @@ name: Java CI with Gradle
 on:
   push:
     branches: [ "main" ]
+  # Every pull request, whatever its base: a PR stacked on another PR's branch is checked too.
   pull_request:
-    branches: [ "main" ]
   workflow_call:
 
 permissions:
