@@ -861,6 +861,10 @@ public final class koma/statechart/machine/ConcurrencyPolicy$Sequential : koma/s
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface class koma/statechart/machine/CutListener {
+	public abstract fun onCut (Lkoma/statechart/machine/GroupCheckpoint;)V
+}
+
 public final class koma/statechart/machine/Decision {
 	public fun <init> (Lkoma/statechart/machine/DecisionOutcome;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
 	public synthetic fun <init> (Lkoma/statechart/machine/DecisionOutcome;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -1294,6 +1298,8 @@ public final class koma/statechart/machine/MachineGroup {
 	public final fun getRoutes ()Ljava/util/List;
 	public final fun getSourceIds ()Ljava/util/List;
 	public final fun member-QV6ywvQ (Ljava/lang/String;)Lkoma/statechart/machine/MachineGroup$Member;
+	public final fun onCut (Lkoma/statechart/machine/CutListener;)V
+	public final fun removeCutListener (Lkoma/statechart/machine/CutListener;)V
 	public final fun route-DtQnzws (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lkoma/statechart/machine/MachineGroup$Route;
 	public final fun source (Lkoma/statechart/machine/ExternalSource;)V
 }

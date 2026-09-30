@@ -64,10 +64,13 @@ Store, in memory.
   returns the last continuous range and marks every hole, which a replay never crosses. A
   step dropped at the very end of a run is absent, and only the sink's `stats` count it.
   `GroupRecordingFileSink` and `GroupRecordingFiles` do the same for a group: the members'
-  files and an order file with the messages in flight at every segment's start.
+  files and an order file with the messages in flight at every segment's start. A cut of the
+  group begins a segment in every file, the order segment's header carrying the sources'
+  snapshots, so the run since a cut (`since(cut)`) knows them like the in-memory one.
+  `RecordingFiles.prune` bounds what all the files take together.
 
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
-Not yet: sources' snapshots in the order file, and a branch panel in the Compose inspector.
+Not yet: a branch panel in the Compose inspector.
 
 ## Dependency
 

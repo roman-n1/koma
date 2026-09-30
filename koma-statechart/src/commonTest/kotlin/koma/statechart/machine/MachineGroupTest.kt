@@ -34,6 +34,7 @@ import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
@@ -289,6 +290,45 @@ class MachineGroupTest {
         assertTrue(f.pickerStore.currentState.context.acks.isNotEmpty(), "the picker finished its processing and got the root's acknowledgements")
         val again = f.group.checkpoint(1.seconds)
         assertTrue(again != null && again.inFlight.isEmpty())
+        f.close()
+    }
+
+    @Test
+    fun aCutListener_seesTheCut_whileTheMembersAreFrozen_andAThrowingOne_failsTheCut_butTheGroupResumes() = runTest {
+        val f = Fixture(this)
+        runCurrent()
+        f.pickerStore.dispatch(PickerAct.Pick("a"))
+        runCurrent()
+        val seen = mutableListOf<GroupCheckpoint>()
+        val heldDuring = mutableListOf<Int>()
+        val pickerImpl = f.pickerStore as MachineStoreImpl<PickerCtx, PickerAct, Fetch, PickerEv>
+        val listener = CutListener { checkpoint ->
+            seen += checkpoint
+            // Inside the cut: an input dispatched now waits in the frozen queue.
+            f.pickerStore.dispatch(PickerAct.Pick("inside"))
+            heldDuring += pickerImpl.heldInputs
+        }
+        f.group.onCut(listener)
+
+        val cut = f.group.checkpoint(1.seconds)
+
+        assertEquals(listOf(cut), seen, "the listener saw the cut the caller got")
+        assertEquals(listOf(1), heldDuring, "the members were frozen while the listener ran")
+        runCurrent()
+        assertEquals("inside", f.pickerStore.currentState.context.last, "what the listener dispatched entered after the thaw")
+
+        f.group.removeCutListener(listener)
+        val failing = CutListener { throw IllegalStateException("the listener failed") }
+        f.group.onCut(failing)
+        val failure = assertFailsWith<IllegalStateException> { f.group.checkpoint(1.seconds) }
+        assertEquals("the listener failed", failure.message)
+        assertEquals(1, seen.size, "a removed listener is not called")
+        f.group.removeCutListener(failing)
+        f.pickerStore.dispatch(PickerAct.Pick("after"))
+        runCurrent()
+        assertEquals("after", f.pickerStore.currentState.context.last, "the group resumed after the failed cut")
+        val again = f.group.checkpoint(1.seconds)
+        assertTrue(again != null, "a cut without listeners succeeds again")
         f.close()
     }
 }

@@ -1260,8 +1260,8 @@ final class koma.timetravel.file/GroupOrderEntry { // koma.timetravel.file/Group
 }
 
 final class koma.timetravel.file/GroupRecordingFileContents { // koma.timetravel.file/GroupRecordingFileContents|null[0]
-    constructor <init>(koma.timetravel/GroupRecording?, kotlin/Int?, kotlin.collections/List<koma.timetravel.file/RecordingFileMark>) // koma.timetravel.file/GroupRecordingFileContents.<init>|<init>(koma.timetravel.GroupRecording?;kotlin.Int?;kotlin.collections.List<koma.timetravel.file.RecordingFileMark>){}[0]
-
+    final val cuts // koma.timetravel.file/GroupRecordingFileContents.cuts|{}cuts[0]
+        final fun <get-cuts>(): kotlin.collections/List<koma.timetravel.file/RecordedCut> // koma.timetravel.file/GroupRecordingFileContents.cuts.<get-cuts>|<get-cuts>(){}[0]
     final val marks // koma.timetravel.file/GroupRecordingFileContents.marks|{}marks[0]
         final fun <get-marks>(): kotlin.collections/List<koma.timetravel.file/RecordingFileMark> // koma.timetravel.file/GroupRecordingFileContents.marks.<get-marks>|<get-marks>(){}[0]
     final val position // koma.timetravel.file/GroupRecordingFileContents.position|{}position[0]
@@ -1269,12 +1269,7 @@ final class koma.timetravel.file/GroupRecordingFileContents { // koma.timetravel
     final val recording // koma.timetravel.file/GroupRecordingFileContents.recording|{}recording[0]
         final fun <get-recording>(): koma.timetravel/GroupRecording? // koma.timetravel.file/GroupRecordingFileContents.recording.<get-recording>|<get-recording>(){}[0]
 
-    final fun component1(): koma.timetravel/GroupRecording? // koma.timetravel.file/GroupRecordingFileContents.component1|component1(){}[0]
-    final fun component2(): kotlin/Int? // koma.timetravel.file/GroupRecordingFileContents.component2|component2(){}[0]
-    final fun component3(): kotlin.collections/List<koma.timetravel.file/RecordingFileMark> // koma.timetravel.file/GroupRecordingFileContents.component3|component3(){}[0]
-    final fun copy(koma.timetravel/GroupRecording? = ..., kotlin/Int? = ..., kotlin.collections/List<koma.timetravel.file/RecordingFileMark> = ...): koma.timetravel.file/GroupRecordingFileContents // koma.timetravel.file/GroupRecordingFileContents.copy|copy(koma.timetravel.GroupRecording?;kotlin.Int?;kotlin.collections.List<koma.timetravel.file.RecordingFileMark>){}[0]
-    final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.file/GroupRecordingFileContents.equals|equals(kotlin.Any?){}[0]
-    final fun hashCode(): kotlin/Int // koma.timetravel.file/GroupRecordingFileContents.hashCode|hashCode(){}[0]
+    final fun since(koma.timetravel.file/RecordedCut): koma.timetravel/GroupRecording // koma.timetravel.file/GroupRecordingFileContents.since|since(koma.timetravel.file.RecordedCut){}[0]
     final fun toString(): kotlin/String // koma.timetravel.file/GroupRecordingFileContents.toString|toString(){}[0]
 }
 
@@ -1283,6 +1278,8 @@ final class koma.timetravel.file/GroupRecordingFileSink { // koma.timetravel.fil
 
     final val dropped // koma.timetravel.file/GroupRecordingFileSink.dropped|{}dropped[0]
         final fun <get-dropped>(): kotlin/Long // koma.timetravel.file/GroupRecordingFileSink.dropped.<get-dropped>|<get-dropped>(){}[0]
+    final val droppedCuts // koma.timetravel.file/GroupRecordingFileSink.droppedCuts|{}droppedCuts[0]
+        final fun <get-droppedCuts>(): kotlin/Long // koma.timetravel.file/GroupRecordingFileSink.droppedCuts.<get-droppedCuts>|<get-droppedCuts>(){}[0]
     final val members // koma.timetravel.file/GroupRecordingFileSink.members|{}members[0]
         final fun <get-members>(): kotlin.collections/Map<koma.observability/StoreInstanceId, koma.timetravel.file/RecordingFileSink<*, *, *, *>> // koma.timetravel.file/GroupRecordingFileSink.members.<get-members>|<get-members>(){}[0]
 
@@ -1298,8 +1295,10 @@ final class koma.timetravel.file/GroupRecordingFiles { // koma.timetravel.file/G
 }
 
 final class koma.timetravel.file/GroupSegmentHeader { // koma.timetravel.file/GroupSegmentHeader|null[0]
-    constructor <init>(kotlin/Int, koma.observability/MachineGroupId, kotlin.collections/List<koma.observability/StoreInstanceId>, kotlin.collections/List<koma.timetravel/GroupRoute>, kotlin.collections/Set<koma.statechart.machine/SourceId>, kotlin/Int, kotlin/Int, kotlin.collections/List<koma.statechart.machine/MessageId>) // koma.timetravel.file/GroupSegmentHeader.<init>|<init>(kotlin.Int;koma.observability.MachineGroupId;kotlin.collections.List<koma.observability.StoreInstanceId>;kotlin.collections.List<koma.timetravel.GroupRoute>;kotlin.collections.Set<koma.statechart.machine.SourceId>;kotlin.Int;kotlin.Int;kotlin.collections.List<koma.statechart.machine.MessageId>){}[0]
+    constructor <init>(kotlin/Int, koma.observability/MachineGroupId, kotlin.collections/List<koma.observability/StoreInstanceId>, kotlin.collections/List<koma.timetravel/GroupRoute>, kotlin.collections/Set<koma.statechart.machine/SourceId>, kotlin/Int, kotlin/Int, kotlin.collections/List<koma.statechart.machine/MessageId>, koma.timetravel.file/RecordedCut? = ...) // koma.timetravel.file/GroupSegmentHeader.<init>|<init>(kotlin.Int;koma.observability.MachineGroupId;kotlin.collections.List<koma.observability.StoreInstanceId>;kotlin.collections.List<koma.timetravel.GroupRoute>;kotlin.collections.Set<koma.statechart.machine.SourceId>;kotlin.Int;kotlin.Int;kotlin.collections.List<koma.statechart.machine.MessageId>;koma.timetravel.file.RecordedCut?){}[0]
 
+    final val cut // koma.timetravel.file/GroupSegmentHeader.cut|{}cut[0]
+        final fun <get-cut>(): koma.timetravel.file/RecordedCut? // koma.timetravel.file/GroupSegmentHeader.cut.<get-cut>|<get-cut>(){}[0]
     final val fileFormatVersion // koma.timetravel.file/GroupSegmentHeader.fileFormatVersion|{}fileFormatVersion[0]
         final fun <get-fileFormatVersion>(): kotlin/Int // koma.timetravel.file/GroupSegmentHeader.fileFormatVersion.<get-fileFormatVersion>|<get-fileFormatVersion>(){}[0]
     final val firstEntry // koma.timetravel.file/GroupSegmentHeader.firstEntry|{}firstEntry[0]
@@ -1325,10 +1324,30 @@ final class koma.timetravel.file/GroupSegmentHeader { // koma.timetravel.file/Gr
     final fun component6(): kotlin/Int // koma.timetravel.file/GroupSegmentHeader.component6|component6(){}[0]
     final fun component7(): kotlin/Int // koma.timetravel.file/GroupSegmentHeader.component7|component7(){}[0]
     final fun component8(): kotlin.collections/List<koma.statechart.machine/MessageId> // koma.timetravel.file/GroupSegmentHeader.component8|component8(){}[0]
-    final fun copy(kotlin/Int = ..., koma.observability/MachineGroupId = ..., kotlin.collections/List<koma.observability/StoreInstanceId> = ..., kotlin.collections/List<koma.timetravel/GroupRoute> = ..., kotlin.collections/Set<koma.statechart.machine/SourceId> = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin.collections/List<koma.statechart.machine/MessageId> = ...): koma.timetravel.file/GroupSegmentHeader // koma.timetravel.file/GroupSegmentHeader.copy|copy(kotlin.Int;koma.observability.MachineGroupId;kotlin.collections.List<koma.observability.StoreInstanceId>;kotlin.collections.List<koma.timetravel.GroupRoute>;kotlin.collections.Set<koma.statechart.machine.SourceId>;kotlin.Int;kotlin.Int;kotlin.collections.List<koma.statechart.machine.MessageId>){}[0]
+    final fun component9(): koma.timetravel.file/RecordedCut? // koma.timetravel.file/GroupSegmentHeader.component9|component9(){}[0]
+    final fun copy(kotlin/Int = ..., koma.observability/MachineGroupId = ..., kotlin.collections/List<koma.observability/StoreInstanceId> = ..., kotlin.collections/List<koma.timetravel/GroupRoute> = ..., kotlin.collections/Set<koma.statechart.machine/SourceId> = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin.collections/List<koma.statechart.machine/MessageId> = ..., koma.timetravel.file/RecordedCut? = ...): koma.timetravel.file/GroupSegmentHeader // koma.timetravel.file/GroupSegmentHeader.copy|copy(kotlin.Int;koma.observability.MachineGroupId;kotlin.collections.List<koma.observability.StoreInstanceId>;kotlin.collections.List<koma.timetravel.GroupRoute>;kotlin.collections.Set<koma.statechart.machine.SourceId>;kotlin.Int;kotlin.Int;kotlin.collections.List<koma.statechart.machine.MessageId>;koma.timetravel.file.RecordedCut?){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.file/GroupSegmentHeader.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // koma.timetravel.file/GroupSegmentHeader.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // koma.timetravel.file/GroupSegmentHeader.toString|toString(){}[0]
+}
+
+final class koma.timetravel.file/RecordedCut { // koma.timetravel.file/RecordedCut|null[0]
+    constructor <init>(kotlin/Int, kotlin.collections/Map<koma.observability/StoreInstanceId, kotlin/Int>, kotlin.collections/Map<koma.statechart.machine/SourceId, koma.statechart.machine/SourceSnapshot>) // koma.timetravel.file/RecordedCut.<init>|<init>(kotlin.Int;kotlin.collections.Map<koma.observability.StoreInstanceId,kotlin.Int>;kotlin.collections.Map<koma.statechart.machine.SourceId,koma.statechart.machine.SourceSnapshot>){}[0]
+
+    final val counts // koma.timetravel.file/RecordedCut.counts|{}counts[0]
+        final fun <get-counts>(): kotlin.collections/Map<koma.observability/StoreInstanceId, kotlin/Int> // koma.timetravel.file/RecordedCut.counts.<get-counts>|<get-counts>(){}[0]
+    final val position // koma.timetravel.file/RecordedCut.position|{}position[0]
+        final fun <get-position>(): kotlin/Int // koma.timetravel.file/RecordedCut.position.<get-position>|<get-position>(){}[0]
+    final val sources // koma.timetravel.file/RecordedCut.sources|{}sources[0]
+        final fun <get-sources>(): kotlin.collections/Map<koma.statechart.machine/SourceId, koma.statechart.machine/SourceSnapshot> // koma.timetravel.file/RecordedCut.sources.<get-sources>|<get-sources>(){}[0]
+
+    final fun component1(): kotlin/Int // koma.timetravel.file/RecordedCut.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Map<koma.observability/StoreInstanceId, kotlin/Int> // koma.timetravel.file/RecordedCut.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/Map<koma.statechart.machine/SourceId, koma.statechart.machine/SourceSnapshot> // koma.timetravel.file/RecordedCut.component3|component3(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin.collections/Map<koma.observability/StoreInstanceId, kotlin/Int> = ..., kotlin.collections/Map<koma.statechart.machine/SourceId, koma.statechart.machine/SourceSnapshot> = ...): koma.timetravel.file/RecordedCut // koma.timetravel.file/RecordedCut.copy|copy(kotlin.Int;kotlin.collections.Map<koma.observability.StoreInstanceId,kotlin.Int>;kotlin.collections.Map<koma.statechart.machine.SourceId,koma.statechart.machine.SourceSnapshot>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.file/RecordedCut.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.timetravel.file/RecordedCut.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.timetravel.file/RecordedCut.toString|toString(){}[0]
 }
 
 final class koma.timetravel.file/RecordingFileConfig { // koma.timetravel.file/RecordingFileConfig|null[0]
@@ -1382,6 +1401,7 @@ final class koma.timetravel.file/RecordingFiles { // koma.timetravel.file/Record
     constructor <init>(koma.observability.file/SegmentStorage) // koma.timetravel.file/RecordingFiles.<init>|<init>(koma.observability.file.SegmentStorage){}[0]
 
     final fun <#A1: kotlin/Any?, #B1: koma.core/Action, #C1: kotlin/Any?, #D1: koma.core/Event> read(koma.observability/StoreInstanceId, koma.timetravel/RecordingCodec<#A1, #B1, #C1, #D1>): koma.timetravel.file/RecordingFileContents<#A1, #B1, #C1, #D1> // koma.timetravel.file/RecordingFiles.read|read(koma.observability.StoreInstanceId;koma.timetravel.RecordingCodec<0:0,0:1,0:2,0:3>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+    final fun prune(kotlin/Long): kotlin.collections/List<kotlin/String> // koma.timetravel.file/RecordingFiles.prune|prune(kotlin.Long){}[0]
     final fun stores(): kotlin.collections/List<koma.observability/StoreInstanceId> // koma.timetravel.file/RecordingFiles.stores|stores(){}[0]
 }
 
@@ -1676,6 +1696,8 @@ final class koma.timetravel/GroupStep { // koma.timetravel/GroupStep|null[0]
 final object koma.timetravel.file/GroupRecordingFileFormat { // koma.timetravel.file/GroupRecordingFileFormat|null[0]
     final const val EXTENSION // koma.timetravel.file/GroupRecordingFileFormat.EXTENSION|{}EXTENSION[0]
         final fun <get-EXTENSION>(): kotlin/String // koma.timetravel.file/GroupRecordingFileFormat.EXTENSION.<get-EXTENSION>|<get-EXTENSION>(){}[0]
+    final const val VERSION // koma.timetravel.file/GroupRecordingFileFormat.VERSION|{}VERSION[0]
+        final fun <get-VERSION>(): kotlin/Int // koma.timetravel.file/GroupRecordingFileFormat.VERSION.<get-VERSION>|<get-VERSION>(){}[0]
 
     final val MAGIC // koma.timetravel.file/GroupRecordingFileFormat.MAGIC|{}MAGIC[0]
         final fun <get-MAGIC>(): kotlin/ByteArray // koma.timetravel.file/GroupRecordingFileFormat.MAGIC.<get-MAGIC>|<get-MAGIC>(){}[0]

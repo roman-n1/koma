@@ -79,9 +79,45 @@ Not adopted:
   (a group read back as the recorder saw it; a ring that dropped early segments yielding the
   range every file covers with its messages in flight; a dropped order entry starting a new
   range; the order segment's round trip and cuts).
-- Left for later: sources' snapshots in the order file (a range since a cut knows them, a file
-  does not yet), pruning across stores by total size (the journal's `prune`), and a device
-  measurement of the write cost.
+- Left for later: a device measurement of the write cost.
+
+## Addendum 2026-09-30: a cut is a segment boundary in every file, and the directory has a budget
+
+The sources' snapshots and the members' step counts belong to a cut, not to a rotation: only a
+cut has the sources paused and the members frozen and idle. So the files remember cuts.
+
+- **A cut begins a segment in every file.** `MachineGroup.checkpoint` now calls its
+  `CutListener`s inside the cut, before the thaw, so a listener sees the cut where the members'
+  observers stand. `GroupRecordingFileSink` registers as one: it marks every member's sink to
+  begin a segment at its next step (the checkpoint before that step is the executor's at the
+  cut) and enqueues the cut for the order writer, which finishes the segment and opens one whose
+  header carries the cut (`RecordedCut`: the members' step counts and the sources' snapshots);
+  the order file's format is 2, a format 1 segment reading as one without cuts. A cut the
+  queue has no room for is counted (`droppedCuts`); the files then have no boundary there and
+  nothing else is lost.
+- **A range since a cut knows the sources.** `GroupRecordingFiles.read` lists the cuts inside
+  the range every file covers (`cuts`, checked against the entries' step counts; one that
+  disagrees is marked and left out) and gives the run from any of them with `since(cut)`, as
+  `GroupRecording.since` does in memory: the sources' snapshots are the cut's, the messages in
+  flight are computed there. A range that begins at a cut, as after a ring kept only the
+  segments since it, carries the snapshots itself.
+- **The directory has a budget.** `RecordingFiles.prune(maxTotalBytes)` deletes the oldest
+  segments of every Store and group, by modification time, until the total fits, never the
+  newest one; what remains of a Store still begins with a checkpoint, and a reader marks the
+  rotation. The journal's `prune` keeps whole sessions; recordings have no session in their
+  names, and a ring's rule already makes any prefix of a Store's segments disposable.
+
+Not adopted: taking the sources' snapshots at every rotation (a rotation has nothing paused,
+so the snapshot would be of a source still feeding); a snapshot frame between entries (a range
+begins at a segment, so a cut that begins a segment is where a reader can start anyway).
+
+Tests: `GroupRecordingFilesTest` (a cut begins a segment in every file and the run since it
+equals the in-memory recording since the same cut, snapshots included, and replays with its
+external inputs; a ring that kept only the segments since the cut reads the run from it with
+the snapshots; pruning deletes the oldest segments first and never the newest, what remains
+still reads; the header round trip with a cut and a format 1 segment read back);
+`MachineGroupTest` (a listener sees the cut while the members are frozen, a throwing one
+fails the cut and the group resumes, a removed one is not called).
 
 ## Related
 

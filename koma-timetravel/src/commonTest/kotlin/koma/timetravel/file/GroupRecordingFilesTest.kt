@@ -18,11 +18,19 @@ import koma.statechart.Transition
 import koma.statechart.machine.CommandHandler
 import koma.statechart.machine.DefinitionId
 import koma.statechart.machine.DefinitionVersion
+import koma.statechart.machine.EffectId
+import koma.statechart.machine.ExternalSource
 import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineGroup
 import koma.statechart.machine.MachineStore
+import koma.statechart.machine.MessageId
+import koma.statechart.machine.SourceId
+import koma.statechart.machine.SourceSnapshot
+import koma.observability.file.Framing
+import koma.observability.file.SegmentMark
 import koma.timetravel.GroupRecorder
 import koma.timetravel.GroupReplaySession
+import koma.timetravel.GroupRoute
 import koma.timetravel.RecordingCodec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,6 +43,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -42,7 +51,9 @@ import kotlin.test.assertTrue
  * A group recorded to files as it runs: the order file and the members' files read back as the
  * in-memory recorder saw the run and replay; a ring that dropped a member's early segments
  * yields the range every file still covers, with the messages in flight at its start; an order
- * entry the writer had no room for starts a new range.
+ * entry the writer had no room for starts a new range; a cut of the group begins a segment in
+ * every file and the range since it knows the sources' snapshots, like the in-memory recording
+ * since the same cut; pruning by total size deletes the oldest segments first.
  *
  * ```
  * ping: [*] --> Idle; Idle --Kick(n) / remember--> Idle     onEnter(Idle): event Ping(last) when there is one;  onAction Acked(n) / acks += n
@@ -116,6 +127,25 @@ class GroupRecordingFilesTest {
     private val codecs: Map<StoreInstanceId, RecordingCodec<*, *, *, *>> = mapOf(pingId to pingCodec, pongId to pongCodec)
     private val machines: Map<StoreInstanceId, Machine<*, *, *, *>> = mapOf(pingId to ping, pongId to pong)
 
+    /** Kicks the ping store from outside: an external source whose snapshot counts what it fed. */
+    private class KickSource(private val store: () -> MachineStore<PingCtx, PingAct, NoCommand, PingEv>) : ExternalSource {
+        override val id = SourceId("kicks:1")
+        override val kind: String get() = "kicks"
+        var fed = 0
+            private set
+
+        fun kick(n: Int) {
+            store().feed(id, PingAct.Kick(n))
+            fed++
+        }
+
+        override suspend fun pause() = Unit
+
+        override fun snapshot(): SourceSnapshot = SourceSnapshot(id, kind, 1, mapOf("fed" to fed.toString()))
+
+        override fun resume() = Unit
+    }
+
     private inner class Live(scope: TestScope, config: RecordingFileConfig = RecordingFileConfig()) {
         val dispatcher = StandardTestDispatcher(scope.testScheduler)
         val executionScope = CoroutineScope(dispatcher + SupervisorJob())
@@ -123,6 +153,7 @@ class GroupRecordingFilesTest {
         val group = MachineGroup()
         val recorder = GroupRecorder(group)
         val files = GroupRecordingFileSink(group, groupId, storage, executionScope, config)
+        val source = KickSource { pingStore }
         val pingMember = group.member<PingCtx, PingAct, NoCommand, PingEv>(pingId)
         val pongMember = group.member<PongCtx, PongAct, NoCommand, PongEv>(pongId)
         val pingStore = MachineStore(ping, PingCtx(), CommandHandler<NoCommand, PingAct> { _, _ -> }, executionScope, coroutineContext = dispatcher, observers = listOf(pingMember, recorder.member(pingId, ping, PingCtx()), files.member(pingId, ping, PingCtx(), pingCodec))) { exceptionHandler(ExceptionHandler.Ignore) }
@@ -133,6 +164,7 @@ class GroupRecordingFilesTest {
             group.route<PongEv, PingAct>(pongId, pingId) { (it as? PongEv.Ack)?.let { a -> PingAct.Acked(a.n) } }
             pingMember.attach(pingStore)
             pongMember.attach(pongStore)
+            group.source(source)
             pingStore.start()
             pongStore.start()
         }
@@ -144,12 +176,23 @@ class GroupRecordingFilesTest {
         }
     }
 
-    private fun TestScope.kicks(live: Live, count: Int) {
+    private fun TestScope.kicks(live: Live, count: Int, from: Int = 1, fed: Boolean = false) {
         runCurrent()
-        for (n in 1..count) {
-            live.pingStore.dispatch(PingAct.Kick(n))
+        for (n in from until from + count) {
+            if (fed) live.source.kick(n) else live.pingStore.dispatch(PingAct.Kick(n))
             runCurrent()
         }
+    }
+
+    private fun assertSameRun(expected: koma.timetravel.GroupRecording, read: koma.timetravel.GroupRecording, what: String) {
+        assertEquals(expected.order, read.order, "$what: the order")
+        for ((member, recording) in expected.members) {
+            assertEquals(recording.steps, read.members.getValue(member).steps, "$what: $member's steps")
+            assertEquals(recording.start.snapshot, read.members.getValue(member).start.snapshot, "$what: $member's start")
+        }
+        assertEquals(expected.inFlight.toSet(), read.inFlight.toSet(), "$what: the messages in flight")
+        assertEquals(expected.sourceIds, read.sourceIds, "$what: the sources")
+        assertEquals(expected.sourceSnapshots, read.sourceSnapshots, "$what: the sources' snapshots")
     }
 
     @Test
@@ -223,16 +266,93 @@ class GroupRecordingFilesTest {
     }
 
     @Test
+    fun aCutOfTheGroup_beginsASegmentInEveryFile_andTheRunSinceIt_isTheInMemoryOne_withTheSourcesSnapshots() = runTest {
+        val live = Live(this)
+        kicks(live, 2, fed = true)
+        val cut = checkNotNull(live.group.checkpoint())
+        runCurrent()
+        kicks(live, 2, from = 3, fed = true)
+        live.close()
+        val whole = live.recorder.recording()
+
+        val contents = GroupRecordingFiles(live.storage).read(groupId, codecs)
+
+        assertTrue(contents.marks.isEmpty(), contents.marks.toString())
+        assertEquals(0L, live.files.droppedCuts)
+        assertEquals(2, RecordingFiles(live.storage).read(pingId, pingCodec).segments.size, "the cut began ping's second segment")
+        assertEquals(2, RecordingFiles(live.storage).read(pongId, pongCodec).segments.size, "the cut began pong's second segment")
+        val recorded = contents.cuts.single()
+        assertEquals(mapOf(live.source.id to SourceSnapshot(live.source.id, "kicks", 1, mapOf("fed" to "2"))), recorded.sources, "the sources' snapshots at the cut")
+        assertEquals(mapOf(pingId to whole.stepsBefore(recorded.position, pingId), pongId to whole.stepsBefore(recorded.position, pongId)), recorded.counts, "the members' step counts at the cut")
+        val read = checkNotNull(contents.recording)
+        assertSameRun(whole, read, "the whole run")
+        assertTrue(read.sourceSnapshots.isEmpty(), "the whole run does not begin at the cut")
+        assertSameRun(whole.since(cut), contents.since(recorded), "the run since the cut")
+        assertEquals(emptyList(), GroupReplaySession(machines, contents.since(recorded)).verify(), "the run since the cut replays, its external inputs from a known source")
+        assertFailsWith<IllegalArgumentException> { contents.since(recorded.copy(position = recorded.position + 1)) }
+    }
+
+    @Test
+    fun aRingThatKeptOnlyTheSegmentsSinceTheCut_readsTheRunFromIt_withTheSourcesSnapshots() = runTest {
+        val live = Live(this, RecordingFileConfig(maxSegments = 1))
+        kicks(live, 3, fed = true)
+        val cut = checkNotNull(live.group.checkpoint())
+        runCurrent()
+        kicks(live, 2, from = 4, fed = true)
+        live.close()
+        val whole = live.recorder.recording()
+
+        val contents = GroupRecordingFiles(live.storage).read(groupId, codecs)
+
+        assertTrue(contents.marks.all { it is RecordingFileMark.MissingSegments }, contents.marks.toString())
+        val recorded = contents.cuts.single()
+        assertEquals(recorded.position, contents.position, "the range begins at the cut")
+        val read = checkNotNull(contents.recording)
+        assertSameRun(whole.since(cut), read, "the range since the cut")
+        assertEquals("3", read.sourceSnapshots.getValue(live.source.id).fields["fed"])
+        assertEquals(emptyList(), GroupReplaySession(machines, read).verify())
+    }
+
+    @Test
+    fun prune_deletesTheOldestSegmentsFirst_neverTheNewest_andWhatRemainsStillReads() = runTest {
+        val live = Live(this, RecordingFileConfig(maxSegmentBytes = 900))
+        kicks(live, 6)
+        live.close()
+        val whole = live.recorder.recording()
+        val files = RecordingFiles(live.storage)
+        val before = live.storage.list().sortedWith(compareBy({ it.modified }, { it.name }))
+        assertTrue(before.size >= 4, "several segments: ${before.map { it.name }}")
+        val total = before.sumOf { it.size }
+
+        val deleted = files.prune(total - before.first().size)
+
+        assertEquals(listOf(before.first().name), deleted, "exactly the oldest segment went")
+        val contents = GroupRecordingFiles(live.storage).read(groupId, codecs)
+        val read = checkNotNull(contents.recording)
+        assertTrue(contents.marks.any { it is RecordingFileMark.MissingSegments }, contents.marks.toString())
+        assertEquals(whole.order.drop(checkNotNull(contents.position)).map { it.store }, read.order.map { it.store })
+        assertEquals(emptyList(), GroupReplaySession(machines, read).verify())
+
+        val rest = files.prune(1)
+        assertEquals(before.drop(1).dropLast(1).map { it.name }, rest, "all but the newest, oldest first")
+        assertEquals(listOf(before.last().name), live.storage.list().map { it.name })
+        assertTrue(files.prune(1).isEmpty())
+    }
+
+    @Test
     fun anOrderSegment_roundTrips_andEveryCutIsAPrefix() {
-        val header = GroupSegmentHeader(RECORDING_FILE_FORMAT_VERSION, groupId, listOf(pingId, pongId), listOf(koma.timetravel.GroupRoute(pingId, pongId)), setOf(koma.statechart.machine.SourceId("paging:x")), 3, 40, listOf(koma.statechart.machine.MessageId(pingId, koma.statechart.machine.EffectId(7))))
+        val header = GroupSegmentHeader(
+            GroupRecordingFileFormat.VERSION, groupId, listOf(pingId, pongId), listOf(GroupRoute(pingId, pongId)), setOf(SourceId("paging:x")), 3, 40, listOf(MessageId(pingId, EffectId(7))),
+            RecordedCut(40, mapOf(pingId to 21, pongId to 19), mapOf(SourceId("paging:x") to SourceSnapshot(SourceId("paging:x"), "paging", 2, mapOf("loaded" to "3", "generation" to "1")))),
+        )
         val entries = listOf(
-            GroupOrderEntry(pingId, 5, listOf(koma.statechart.machine.MessageId(pingId, koma.statechart.machine.EffectId(8)))),
-            GroupOrderEntry(pongId, 4, received = koma.statechart.machine.MessageId(pingId, koma.statechart.machine.EffectId(8))),
+            GroupOrderEntry(pingId, 5, listOf(MessageId(pingId, EffectId(8)))),
+            GroupOrderEntry(pongId, 4, received = MessageId(pingId, EffectId(8))),
             GroupOrderEntry(pingId, 6),
         )
         var bytes = GroupRecordingFileFormat.header(header)
         for (entry in entries) bytes += GroupRecordingFileFormat.entryFrame(entry)
-        bytes += koma.observability.file.Framing.END
+        bytes += Framing.END
 
         val decoded = GroupRecordingFileFormat.decodeSegment("pingpong-000003.group", bytes)
 
@@ -245,6 +365,11 @@ class GroupRecordingFilesTest {
             assertTrue(cut.mark != null, "cut at $length")
         }
         assertEquals(groupId to 3, GroupRecordingFileFormat.parseSegmentName("pingpong-000003.group"))
-        assertIs<koma.observability.file.SegmentMark.UnsupportedFormat>(GroupRecordingFileFormat.decodeSegment("n", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = RECORDING_FILE_FORMAT_VERSION + 1)) + koma.observability.file.Framing.END).mark)
+        assertIs<SegmentMark.UnsupportedFormat>(GroupRecordingFileFormat.decodeSegment("n", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = GroupRecordingFileFormat.VERSION + 1)) + Framing.END).mark)
+        // A format 1 segment, written before cuts existed, reads as one without a cut.
+        val old = GroupRecordingFileFormat.decodeSegment("old", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = 1, cut = null)) + GroupRecordingFileFormat.entryFrame(entries[0]) + Framing.END)
+        assertEquals(header.copy(fileFormatVersion = 1, cut = null), old.header)
+        assertEquals(entries.take(1), old.entries)
+        assertTrue(old.finished && old.mark == null)
     }
 }

@@ -519,23 +519,18 @@ public final class koma/timetravel/file/GroupOrderEntry {
 }
 
 public final class koma/timetravel/file/GroupRecordingFileContents {
-	public fun <init> (Lkoma/timetravel/GroupRecording;Ljava/lang/Integer;Ljava/util/List;)V
-	public final fun component1 ()Lkoma/timetravel/GroupRecording;
-	public final fun component2 ()Ljava/lang/Integer;
-	public final fun component3 ()Ljava/util/List;
-	public final fun copy (Lkoma/timetravel/GroupRecording;Ljava/lang/Integer;Ljava/util/List;)Lkoma/timetravel/file/GroupRecordingFileContents;
-	public static synthetic fun copy$default (Lkoma/timetravel/file/GroupRecordingFileContents;Lkoma/timetravel/GroupRecording;Ljava/lang/Integer;Ljava/util/List;ILjava/lang/Object;)Lkoma/timetravel/file/GroupRecordingFileContents;
-	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCuts ()Ljava/util/List;
 	public final fun getMarks ()Ljava/util/List;
 	public final fun getPosition ()Ljava/lang/Integer;
 	public final fun getRecording ()Lkoma/timetravel/GroupRecording;
-	public fun hashCode ()I
+	public final fun since (Lkoma/timetravel/file/RecordedCut;)Lkoma/timetravel/GroupRecording;
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class koma/timetravel/file/GroupRecordingFileFormat {
 	public static final field EXTENSION Ljava/lang/String;
 	public static final field INSTANCE Lkoma/timetravel/file/GroupRecordingFileFormat;
+	public static final field VERSION I
 	public final fun decodeSegment (Ljava/lang/String;[B)Lkoma/timetravel/file/DecodedGroupSegment;
 	public final fun entryFrame (Lkoma/timetravel/file/GroupOrderEntry;)[B
 	public final fun getMAGIC ()[B
@@ -549,6 +544,7 @@ public final class koma/timetravel/file/GroupRecordingFileSink {
 	public synthetic fun <init> (Lkoma/statechart/machine/MachineGroup;Ljava/lang/String;Lkoma/observability/file/SegmentStorage;Lkotlinx/coroutines/CoroutineScope;Lkoma/timetravel/file/RecordingFileConfig;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun close (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun getDropped ()J
+	public final fun getDroppedCuts ()J
 	public final fun getMembers ()Ljava/util/Map;
 	public final fun member-KGnagKE (Ljava/lang/String;Lkoma/statechart/machine/Machine;Ljava/lang/Object;Lkoma/timetravel/RecordingCodec;)Lkoma/statechart/machine/DecisionObserver;
 }
@@ -560,7 +556,8 @@ public final class koma/timetravel/file/GroupRecordingFiles {
 }
 
 public final class koma/timetravel/file/GroupSegmentHeader {
-	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lkoma/timetravel/file/RecordedCut;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lkoma/timetravel/file/RecordedCut;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component2-qCaNbV4 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/util/List;
@@ -569,9 +566,11 @@ public final class koma/timetravel/file/GroupSegmentHeader {
 	public final fun component6 ()I
 	public final fun component7 ()I
 	public final fun component8 ()Ljava/util/List;
-	public final fun copy-3o_LGLw (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;)Lkoma/timetravel/file/GroupSegmentHeader;
-	public static synthetic fun copy-3o_LGLw$default (Lkoma/timetravel/file/GroupSegmentHeader;ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;ILjava/lang/Object;)Lkoma/timetravel/file/GroupSegmentHeader;
+	public final fun component9 ()Lkoma/timetravel/file/RecordedCut;
+	public final fun copy-q0XAvr8 (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lkoma/timetravel/file/RecordedCut;)Lkoma/timetravel/file/GroupSegmentHeader;
+	public static synthetic fun copy-q0XAvr8$default (Lkoma/timetravel/file/GroupSegmentHeader;ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lkoma/timetravel/file/RecordedCut;ILjava/lang/Object;)Lkoma/timetravel/file/GroupSegmentHeader;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCut ()Lkoma/timetravel/file/RecordedCut;
 	public final fun getFileFormatVersion ()I
 	public final fun getFirstEntry ()I
 	public final fun getGroup-qCaNbV4 ()Ljava/lang/String;
@@ -580,6 +579,21 @@ public final class koma/timetravel/file/GroupSegmentHeader {
 	public final fun getMembers ()Ljava/util/List;
 	public final fun getRoutes ()Ljava/util/List;
 	public final fun getSourceIds ()Ljava/util/Set;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/file/RecordedCut {
+	public fun <init> (ILjava/util/Map;Ljava/util/Map;)V
+	public final fun component1 ()I
+	public final fun component2 ()Ljava/util/Map;
+	public final fun component3 ()Ljava/util/Map;
+	public final fun copy (ILjava/util/Map;Ljava/util/Map;)Lkoma/timetravel/file/RecordedCut;
+	public static synthetic fun copy$default (Lkoma/timetravel/file/RecordedCut;ILjava/util/Map;Ljava/util/Map;ILjava/lang/Object;)Lkoma/timetravel/file/RecordedCut;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCounts ()Ljava/util/Map;
+	public final fun getPosition ()I
+	public final fun getSources ()Ljava/util/Map;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -730,6 +744,7 @@ public final class koma/timetravel/file/RecordingFileStats {
 
 public final class koma/timetravel/file/RecordingFiles {
 	public fun <init> (Lkoma/observability/file/SegmentStorage;)V
+	public final fun prune (J)Ljava/util/List;
 	public final fun read-oFPGkRc (Ljava/lang/String;Lkoma/timetravel/RecordingCodec;)Lkoma/timetravel/file/RecordingFileContents;
 	public final fun stores ()Ljava/util/List;
 }

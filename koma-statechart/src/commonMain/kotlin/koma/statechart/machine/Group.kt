@@ -46,6 +46,18 @@ data class GroupCheckpoint(
 )
 
 /**
+ * Sees every cut a [MachineGroup] makes, from inside it: the sources are paused and the members
+ * frozen and idle, so what a member's observer has seen so far is exactly what the cut holds,
+ * and nothing enters until the listener returns. A recorder uses this to mark the cut's place
+ * in what it records. A listener that throws fails the cut for its caller; the members are
+ * thawed and the sources resumed all the same.
+ */
+@ExperimentalKomaApi
+fun interface CutListener {
+    fun onCut(checkpoint: GroupCheckpoint)
+}
+
+/**
  * A group of [MachineStore]s that talk to each other through a bridge and can be cut
  * consistently (handoff §8.1, §10).
  *
@@ -65,7 +77,8 @@ data class GroupCheckpoint(
  * the group resumes. A result of a command that arrives during the cut waits in the queue and
  * is applied once, after it. Never call [checkpoint] from a handler or a plugin of a member:
  * it would wait for its own processing to end. A successful cut is journaled as
- * [JournalEntry.CheckpointCreated].
+ * [JournalEntry.CheckpointCreated]. A [CutListener] registered with [onCut] sees the cut before
+ * the thaw.
  *
  * Members are registered with [member] (the observer to give the store) and [Member.attach]
  * (the store itself, once built); sources with [source].
@@ -81,6 +94,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
     private val routeList = mutableListOf<Route>()
     private val inFlightMessages = linkedMapOf<MessageId, BridgeMessage>()
     private val sourceList = mutableListOf<ExternalSource>()
+    private val cutListeners = mutableListOf<CutListener>()
 
     /** A route of the bridge: effects of [from] that [map] turns into actions of [to]. */
     class Route internal constructor(val from: StoreInstanceId, val to: StoreInstanceId, internal val map: (Event) -> Action?) {
@@ -112,6 +126,16 @@ class MachineGroup(private val session: RecordingSession? = null) {
             require(sourceList.none { it.id == source.id }) { "[Koma] ${source.id} is already attached to this group" }
             sourceList += source
         }
+    }
+
+    /** Calls [listener] inside every cut from now on; see [CutListener]. */
+    fun onCut(listener: CutListener) {
+        locked { cutListeners += listener }
+    }
+
+    /** Stops calling [listener]; nothing happens when it is not registered. */
+    fun removeCutListener(listener: CutListener) {
+        locked { cutListeners -= listener }
     }
 
     /**
@@ -173,7 +197,10 @@ class MachineGroup(private val session: RecordingSession? = null) {
             val snapshots = sources.associate { it.id to it.snapshot() }
             val boundary = session?.stats?.published?.takeIf { it > 0 }?.let(::GroupSeq)
             session?.publish(JournalEntry.CheckpointCreated(attached.map { it.first }, sources.map { it.id.value }, messages.size))
-            GroupCheckpoint(cuts, messages, held, boundary, snapshots)
+            val checkpoint = GroupCheckpoint(cuts, messages, held, boundary, snapshots)
+            // Still frozen: a listener sees the cut where the members' observers stand.
+            for (listener in locked { cutListeners.toList() }) listener.onCut(checkpoint)
+            checkpoint
         } finally {
             if (frozen) for ((_, store) in attached) store.thaw()
             for (source in paused) source.resume()

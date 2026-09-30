@@ -53,7 +53,7 @@ data class RecordingFileContents<C, A : Action, CMD, E : Event>(
 /**
  * Reads the segments a [RecordingFileSink] wrote: the Stores present and, for a Store, the
  * last continuous range of its run with the marks of everything else. Reading never throws on
- * damage.
+ * damage. [prune] bounds what every Store's and group's files take together.
  */
 @ExperimentalKomaApi
 class RecordingFiles(private val storage: SegmentStorage) {
@@ -118,6 +118,28 @@ class RecordingFiles(private val storage: SegmentStorage) {
         }
         val last = latest ?: return RecordingFileContents(null, null, emptyList(), marks)
         return RecordingFileContents(Recording(last.definition, last.version, last.start, last.steps.toList()), last.firstStep, last.segments.toList(), marks)
+    }
+
+    /**
+     * Deletes the oldest segments of every Store and group in the storage, by modification time,
+     * until the total is within [maxTotalBytes]; the newest segment is never deleted. What
+     * remains of a Store still begins with a checkpoint, and a reader marks what is missing
+     * before it, as after a ring's rotation. Returns the names deleted, oldest first.
+     */
+    fun prune(maxTotalBytes: Long): List<String> {
+        val segments = storage.list().mapNotNull { info ->
+            val index = RecordingFileFormat.parseSegmentName(info.name)?.second ?: GroupRecordingFileFormat.parseSegmentName(info.name)?.second ?: return@mapNotNull null
+            Triple(info, info.modified, index)
+        }.sortedWith(compareBy({ it.second }, { it.third }, { it.first.name }))
+        var total = segments.sumOf { it.first.size }
+        val deleted = mutableListOf<String>()
+        for ((info, _, _) in segments.dropLast(1)) {
+            if (total <= maxTotalBytes) break
+            storage.delete(info.name)
+            total -= info.size
+            deleted += info.name
+        }
+        return deleted
     }
 
     private class Run<C, A : Action, CMD, E : Event>(
