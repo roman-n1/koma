@@ -128,3 +128,19 @@ where the store's trace only says "unchanged"; `InputRejected` records an action
 admission, which never became an input and so has no `InputId`. The input of a decision comes
 from `currentInputId()` of `koma-core`, the id carried by the coroutine that processes it, so the
 imprecision documented there (a startup processed inside the first dispatch) applies.
+
+## Addendum (2026-09-30): budgets from measurements
+
+`JournalBudgetJvmTest` (JVM, Apple Silicon, 2026-09-30) measured the production policy:
+
+| Measure | Value |
+|---|---|
+| Retained record (envelope, entry, descriptors, payloads omitted) | about 117 bytes |
+| One `publish` (ring of 2 000, queue of 4 096, no sinks) | about 0.33 µs, 3 M records/s |
+| Dispatch of a trivial Store, without / with the journal | 10 µs / 11 µs, ratio 1.12; four records per dispatch |
+
+The defaults are now `retainedRecords = 4_000` (about 0.5 MB, the last ~1 000 dispatches of a
+group) and `writerQueueCapacity = 4_096` (about 0.5 MB when full). They replace the placeholders
+of the first version. Still open: the same measurement on Android and iOS devices (the test is
+JVM-only because it reads the JVM heap), and the cost with a retaining policy, which is the
+policy's to bound.

@@ -44,8 +44,15 @@ sealed interface JournalFailure {
 }
 
 /**
- * Budgets of a [RecordingSession]. The defaults are placeholders until they are measured on the
- * target devices; set them explicitly in an application.
+ * Budgets of a [RecordingSession].
+ *
+ * The defaults come from `JournalBudgetJvmTest` (2026-09-30, JVM): a retained record under the
+ * production policy (envelope, entry, descriptors, no payload) costs about 120 bytes, a publish
+ * about 0.3 µs, and a Store's dispatch about 12 % more with the journal than without (it
+ * publishes four records per dispatch). So the default ring of 4 000 records is about 0.5 MB and
+ * holds roughly the last 1 000 dispatches of a group, and a full writer queue of 4 096 records is
+ * about 0.5 MB more. A policy that retains payloads changes the arithmetic; measure with
+ * [JournalStats] on the target devices and set the budgets in the application.
  *
  * @property retainedRecords How many records the session keeps in memory for inspection; the
  * oldest are evicted first, and [JournalStats.evicted] counts them
@@ -57,7 +64,7 @@ sealed interface JournalFailure {
  */
 @ExperimentalKomaApi
 data class JournalConfig(
-    val retainedRecords: Int = 2_000,
+    val retainedRecords: Int = 4_000,
     val writerQueueCapacity: Int = 4_096,
     val onFailure: (JournalFailure) -> Unit = {},
 ) {
