@@ -334,6 +334,13 @@ class Inspector(
                 is JournalEntry.DecisionIgnored -> attach(store, entry.input, record) { ignored = entry.reason }
                 is JournalEntry.BridgeSent -> slots += TimelineItem.Sent(seq, elapsed, checkNotNull(store), entry.input, entry.message, entry.to, entry.delivered)
                 is JournalEntry.BridgeReceived -> attach(store, entry.input, record) { message = entry.message }
+                is JournalEntry.EffectQueued<*> -> {
+                    count(store, entry.event)
+                    slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
+                }
+                is JournalEntry.EffectHandlingStarted -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
+                is JournalEntry.EffectAcknowledged -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
+                is JournalEntry.EffectDiscarded -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
                 is JournalEntry.JournalGap -> slots += TimelineItem.Gap(seq, elapsed, entry.dropped)
                 JournalEntry.RecordingStopped -> slots += TimelineItem.Stopped(seq, elapsed)
             }

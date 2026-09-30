@@ -20,6 +20,7 @@ import koma.statechart.machine.DefinitionId
 import koma.statechart.machine.DefinitionVersion
 import koma.statechart.machine.EffectEnvelope
 import koma.statechart.machine.EffectId
+import koma.statechart.machine.EffectPolicy
 import koma.statechart.machine.ExecutorCheckpoint
 import koma.statechart.machine.IgnoreReason
 import koma.statechart.machine.LaneId
@@ -29,6 +30,7 @@ import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MachineTime
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.PendingEffect
 import koma.statechart.machine.TimerId
 import koma.statechart.machine.TimerRecord
 import koma.statechart.machine.TimerSchedule
@@ -51,9 +53,10 @@ import kotlin.time.Duration
  *
  * History: 1 began at an `initial` snapshot; 2 begins at a `start` checkpoint of the executor
  * (snapshot, clock, commands running, queued and ending); 3 adds the `bridgeReceived` input
- * with its message. The codec migrates 1 to 2 and 2 to 3 itself.
+ * with its message; 4 adds the pending `effects` of the mailbox to the checkpoint. The codec
+ * migrates each version to the next itself.
  */
-const val RECORDING_FORMAT_VERSION: Int = 3
+const val RECORDING_FORMAT_VERSION: Int = 4
 
 /**
  * Turns the JSON of one format version into the next: an explicit, testable step.
@@ -136,6 +139,12 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
                 for ((key, value) in v2) put(key, if (key == "formatVersion") JsonPrimitive(3) else value)
             }
         },
+        // Format 4 only adds the checkpoint's effects; a format 3 text is a format 4 text with none pending.
+        FormatMigration(from = 3, to = 4) { v3 ->
+            buildJsonObject {
+                for ((key, value) in v3) put(key, if (key == "formatVersion") JsonPrimitive(4) else value)
+            }
+        },
     )
 
     /**
@@ -212,7 +221,17 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         running = lanes.running.values.sortedBy { it.id.value }.map { it.toWire() },
         queued = lanes.queued.entries.sortedBy { it.key.value }.associate { (lane, waiting) -> lane.value to waiting.map { it.toWire() } },
         ending = ending.values.sortedBy { it.id.value }.map { it.toWire() },
+        effects = effects.map { pending ->
+            @Suppress("UNCHECKED_CAST")
+            PendingEffectWire(pending.id.value, json.encodeToJsonElement(event, pending.event as E), pending.policy.toWire(), pending.attempts, pending.handling)
+        },
     )
+
+    private fun EffectPolicy.toWire(): EffectPolicyWire = when (this) {
+        EffectPolicy.Transient -> EffectPolicyWire("transient")
+        EffectPolicy.Retained -> EffectPolicyWire("retained")
+        is EffectPolicy.Latest -> EffectPolicyWire("latest", key)
+    }
 
     private fun CommandRegistration<CMD>.toWire(): CommandRegistrationWire =
         CommandRegistrationWire(id.value, json.encodeToJsonElement(this@RecordingCodec.command, command), scope.value, lane?.value, policy?.toWire())
@@ -290,8 +309,18 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         val running = running.mapIndexed { index, it -> it.toRegistration("$at: running $index") }
         val queued = queued.entries.associate { (lane, waiting) -> LaneId(lane) to waiting.mapIndexed { index, it -> it.toRegistration("$at: queued in $lane $index") } }
         val ending = ending.mapIndexed { index, it -> it.toRegistration("$at: ending $index") }
+        val effects = effects.mapIndexed { index, it ->
+            PendingEffect(EffectId(it.id), decoding("$at: effect $index") { json.decodeFromJsonElement(event, it.event) }, it.policy.toPolicy(at), it.attempts, it.handling)
+        }
         // The checkpoint checks itself: commands in one place each, and the snapshot's.
-        return decoding(at) { ExecutorCheckpoint(snapshot, now, Lanes(running.associateBy { it.id }, queued), ending.associateBy { it.id }) }
+        return decoding(at) { ExecutorCheckpoint(snapshot, now, Lanes(running.associateBy { it.id }, queued), ending.associateBy { it.id }, effects) }
+    }
+
+    private fun EffectPolicyWire.toPolicy(at: String): EffectPolicy = when (kind) {
+        "transient" -> EffectPolicy.Transient
+        "retained" -> EffectPolicy.Retained
+        "latest" -> EffectPolicy.Latest(key ?: throw DecodeFailure("latest policy without a key", at))
+        else -> throw DecodeFailure("unknown effect policy '$kind'", at)
     }
 
     private fun CommandRegistrationWire.toRegistration(at: String): CommandRegistration<CMD> = decoding(at) {
@@ -378,7 +407,14 @@ internal class CheckpointWire(
     val running: List<CommandRegistrationWire> = emptyList(),
     val queued: Map<String, List<CommandRegistrationWire>> = emptyMap(),
     val ending: List<CommandRegistrationWire> = emptyList(),
+    val effects: List<PendingEffectWire> = emptyList(),
 )
+
+@Serializable
+internal class PendingEffectWire(val id: Long, val event: JsonElement, val policy: EffectPolicyWire, val attempts: Int, val handling: Boolean)
+
+@Serializable
+internal class EffectPolicyWire(val kind: String, val key: String? = null)
 
 @Serializable
 internal class SnapshotWire(

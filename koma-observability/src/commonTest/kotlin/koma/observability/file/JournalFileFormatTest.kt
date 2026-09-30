@@ -82,7 +82,11 @@ class JournalFileFormatTest {
         record(19, JournalEntry.BridgeSent(InputId(5), MessageRef(store, 1), StoreInstanceId("root-1"), delivered = true)),
         record(20, JournalEntry.BridgeSent(null, MessageRef(store, 2), StoreInstanceId("nobody"), delivered = false)),
         record(21, JournalEntry.BridgeReceived(InputId(6), MessageRef(StoreInstanceId("root-1"), 1))),
-        record(22, JournalEntry.RecordingStopped, store = null, storeSeq = null),
+        record(22, JournalEntry.EffectQueued(InputId(6), 4, "Retained", Payload.Projected("Navigate", mapOf("to" to "chat")))),
+        record(23, JournalEntry.EffectHandlingStarted(4, 2)),
+        record(24, JournalEntry.EffectAcknowledged(4)),
+        record(25, JournalEntry.EffectDiscarded(5, "Superseded")),
+        record(26, JournalEntry.RecordingStopped, store = null, storeSeq = null),
     )
 
     /** What the file keeps of [all]: a retained object becomes its text. */
@@ -191,6 +195,6 @@ class JournalFileFormatTest {
     private fun String.fromHex(): ByteArray = chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     private companion object {
-        const val GOLDEN: String = "4b4f4d414a524e4c0000002013b3c36c0000000001000000020000000273310000000167000000044c69766500000000000000359dc4bb4701010000000773746f72652d61000000000000000101000000000000000100000000000f42400000000b496e73706563744f6e6c790000005c486ce2b508010000000773746f72652d61000000000000000c01000000000000000c0000000000b71b0000000000000000020000000000000001000000095265636f7665726564000000020101000000015800000000000000000000000c63e00000000000000000"
+        const val GOLDEN: String = "4b4f4d414a524e4c000000209296a64b0000000001000000030000000273310000000167000000044c69766500000000000000359dc4bb4701010000000773746f72652d61000000000000000101000000000000000100000000000f42400000000b496e73706563744f6e6c790000005c486ce2b508010000000773746f72652d61000000000000000c01000000000000000c0000000000b71b0000000000000000020000000000000001000000095265636f7665726564000000020101000000015800000000000000000000000c63e00000000000000000"
     }
 }

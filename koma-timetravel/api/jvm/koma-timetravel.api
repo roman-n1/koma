@@ -825,6 +825,28 @@ public final class koma/timetravel/inspect/TimelineItem$Discarded : koma/timetra
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/timetravel/inspect/TimelineItem$Effect : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLjava/lang/String;JLkoma/observability/JournalEntry;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3-G0_Fx5k ()Ljava/lang/String;
+	public final fun component4 ()J
+	public final fun component5 ()Lkoma/observability/JournalEntry;
+	public final fun copy-Yrez7bo (JJLjava/lang/String;JLkoma/observability/JournalEntry;)Lkoma/timetravel/inspect/TimelineItem$Effect;
+	public static synthetic fun copy-Yrez7bo$default (Lkoma/timetravel/inspect/TimelineItem$Effect;JJLjava/lang/String;JLkoma/observability/JournalEntry;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Effect;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffect ()J
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public final fun getEntry ()Lkoma/observability/JournalEntry;
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public synthetic fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/timetravel/inspect/TimelineItem$Gap : koma/timetravel/inspect/TimelineItem {
 	public synthetic fun <init> (JJJLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-vWuHTu4 ()J

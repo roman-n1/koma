@@ -171,6 +171,28 @@ sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out kom
         final fun toString(): kotlin/String // koma.observability/JournalEntry.InputRejected.toString|toString(){}[0]
     }
 
+    final class <#A1: out koma.core/Event> EffectQueued : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, #A1> { // koma.observability/JournalEntry.EffectQueued|null[0]
+        constructor <init>(koma.core/InputId?, kotlin/Long, kotlin/String, koma.observability/Payload<#A1>) // koma.observability/JournalEntry.EffectQueued.<init>|<init>(koma.core.InputId?;kotlin.Long;kotlin.String;koma.observability.Payload<1:0>){}[0]
+
+        final val effect // koma.observability/JournalEntry.EffectQueued.effect|{}effect[0]
+            final fun <get-effect>(): kotlin/Long // koma.observability/JournalEntry.EffectQueued.effect.<get-effect>|<get-effect>(){}[0]
+        final val event // koma.observability/JournalEntry.EffectQueued.event|{}event[0]
+            final fun <get-event>(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.EffectQueued.event.<get-event>|<get-event>(){}[0]
+        final val input // koma.observability/JournalEntry.EffectQueued.input|{}input[0]
+            final fun <get-input>(): koma.core/InputId? // koma.observability/JournalEntry.EffectQueued.input.<get-input>|<get-input>(){}[0]
+        final val policy // koma.observability/JournalEntry.EffectQueued.policy|{}policy[0]
+            final fun <get-policy>(): kotlin/String // koma.observability/JournalEntry.EffectQueued.policy.<get-policy>|<get-policy>(){}[0]
+
+        final fun component1(): koma.core/InputId? // koma.observability/JournalEntry.EffectQueued.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // koma.observability/JournalEntry.EffectQueued.component2|component2(){}[0]
+        final fun component3(): kotlin/String // koma.observability/JournalEntry.EffectQueued.component3|component3(){}[0]
+        final fun component4(): koma.observability/Payload<#A1> // koma.observability/JournalEntry.EffectQueued.component4|component4(){}[0]
+        final fun copy(koma.core/InputId? = ..., kotlin/Long = ..., kotlin/String = ..., koma.observability/Payload<#A1> = ...): koma.observability/JournalEntry.EffectQueued<#A1> // koma.observability/JournalEntry.EffectQueued.copy|copy(koma.core.InputId?;kotlin.Long;kotlin.String;koma.observability.Payload<1:0>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.EffectQueued.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.EffectQueued.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.EffectQueued.toString|toString(){}[0]
+    }
+
     final class <#A1: out koma.core/Event> EventEmitted : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, #A1> { // koma.observability/JournalEntry.EventEmitted|null[0]
         constructor <init>(koma.core/InputId?, koma.observability/Payload<#A1>) // koma.observability/JournalEntry.EventEmitted.<init>|<init>(koma.core.InputId?;koma.observability.Payload<1:0>){}[0]
 
@@ -304,6 +326,51 @@ sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out kom
         final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.DecisionIgnored.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.DecisionIgnored.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // koma.observability/JournalEntry.DecisionIgnored.toString|toString(){}[0]
+    }
+
+    final class EffectAcknowledged : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.EffectAcknowledged|null[0]
+        constructor <init>(kotlin/Long) // koma.observability/JournalEntry.EffectAcknowledged.<init>|<init>(kotlin.Long){}[0]
+
+        final val effect // koma.observability/JournalEntry.EffectAcknowledged.effect|{}effect[0]
+            final fun <get-effect>(): kotlin/Long // koma.observability/JournalEntry.EffectAcknowledged.effect.<get-effect>|<get-effect>(){}[0]
+
+        final fun component1(): kotlin/Long // koma.observability/JournalEntry.EffectAcknowledged.component1|component1(){}[0]
+        final fun copy(kotlin/Long = ...): koma.observability/JournalEntry.EffectAcknowledged // koma.observability/JournalEntry.EffectAcknowledged.copy|copy(kotlin.Long){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.EffectAcknowledged.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.EffectAcknowledged.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.EffectAcknowledged.toString|toString(){}[0]
+    }
+
+    final class EffectDiscarded : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.EffectDiscarded|null[0]
+        constructor <init>(kotlin/Long, kotlin/String) // koma.observability/JournalEntry.EffectDiscarded.<init>|<init>(kotlin.Long;kotlin.String){}[0]
+
+        final val effect // koma.observability/JournalEntry.EffectDiscarded.effect|{}effect[0]
+            final fun <get-effect>(): kotlin/Long // koma.observability/JournalEntry.EffectDiscarded.effect.<get-effect>|<get-effect>(){}[0]
+        final val reason // koma.observability/JournalEntry.EffectDiscarded.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.observability/JournalEntry.EffectDiscarded.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): kotlin/Long // koma.observability/JournalEntry.EffectDiscarded.component1|component1(){}[0]
+        final fun component2(): kotlin/String // koma.observability/JournalEntry.EffectDiscarded.component2|component2(){}[0]
+        final fun copy(kotlin/Long = ..., kotlin/String = ...): koma.observability/JournalEntry.EffectDiscarded // koma.observability/JournalEntry.EffectDiscarded.copy|copy(kotlin.Long;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.EffectDiscarded.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.EffectDiscarded.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.EffectDiscarded.toString|toString(){}[0]
+    }
+
+    final class EffectHandlingStarted : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.EffectHandlingStarted|null[0]
+        constructor <init>(kotlin/Long, kotlin/Int) // koma.observability/JournalEntry.EffectHandlingStarted.<init>|<init>(kotlin.Long;kotlin.Int){}[0]
+
+        final val attempt // koma.observability/JournalEntry.EffectHandlingStarted.attempt|{}attempt[0]
+            final fun <get-attempt>(): kotlin/Int // koma.observability/JournalEntry.EffectHandlingStarted.attempt.<get-attempt>|<get-attempt>(){}[0]
+        final val effect // koma.observability/JournalEntry.EffectHandlingStarted.effect|{}effect[0]
+            final fun <get-effect>(): kotlin/Long // koma.observability/JournalEntry.EffectHandlingStarted.effect.<get-effect>|<get-effect>(){}[0]
+
+        final fun component1(): kotlin/Long // koma.observability/JournalEntry.EffectHandlingStarted.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // koma.observability/JournalEntry.EffectHandlingStarted.component2|component2(){}[0]
+        final fun copy(kotlin/Long = ..., kotlin/Int = ...): koma.observability/JournalEntry.EffectHandlingStarted // koma.observability/JournalEntry.EffectHandlingStarted.copy|copy(kotlin.Long;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.EffectHandlingStarted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.EffectHandlingStarted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.EffectHandlingStarted.toString|toString(){}[0]
     }
 
     final class FailureReported : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.FailureReported|null[0]

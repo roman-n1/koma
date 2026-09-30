@@ -48,6 +48,7 @@ import koma.statechart.machine.MachineClock
 import koma.statechart.machine.MachineStore
 import koma.statechart.machine.MachineTime
 import koma.statechart.machine.decisionsOf
+import koma.statechart.machine.effectsOf
 import koma.timetravel.MachineRecorder
 import koma.timetravel.Recording
 import kotlinx.coroutines.CoroutineScope
@@ -55,6 +56,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
@@ -370,6 +372,34 @@ class InspectorTest {
         assertTrue(inspector.timeline.first() is TimelineItem.Damage)
         val lines = InspectorText.timeline(inspector)
         assertTrue(lines.any { it.startsWith("- ! segments 0..") }, "the sink rotated the first segments away and the test deleted one more: ${lines.take(3).joinToString("\n")}")
+    }
+
+    @Test
+    fun theMailboxsStory_isInTheTimeline() = runTest {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val scope = CoroutineScope(dispatcher + SupervisorJob())
+        val session = RecordingSession(backgroundScope, id = RuntimeSessionId("run-2"), group = MachineGroupId("picker"), timeSource = TestTimeSource())
+        val store = MachineStore(
+            machine, Ctx(), CommandHandler<Fetch, Act> { _, _ -> awaitCancellation() }, scope, TestClock(testScheduler), dispatcher,
+            mailbox = koma.statechart.machine.MailboxConfig({ koma.statechart.machine.EffectPolicy.Retained }, listeners = listOf(session.effectsOf(tab1) { Payload.Projected(it.toString()) })),
+        ) { recordTo(session, tab1, PayloadPolicy.metadataOnly()) }
+        store.start()
+        store.dispatch(Act.Load("cats"))
+        runCurrent()
+        store.dispatch(Act.Loaded(listOf("tom")))
+        runCurrent()
+        val job = scope.launch { store.mailbox.subscribe().collect { it.acknowledge() } }
+        runCurrent()
+        job.cancel()
+        store.close()
+        session.close()
+
+        val inspector = Inspector.of(session)
+        val effects = inspector.timeline.filterIsInstance<TimelineItem.Effect>()
+
+        assertEquals(listOf("EffectQueued", "EffectHandlingStarted", "EffectAcknowledged"), effects.map { it.entry::class.simpleName })
+        assertTrue(effects.all { it.effect == 1L && it.store == tab1 })
+        assertTrue(InspectorText.timeline(inspector).any { "EffectQueued" in it && "Retained" in it && "Shown" in it }, InspectorText.timeline(inspector).joinToString("\n"))
     }
 
     @Test

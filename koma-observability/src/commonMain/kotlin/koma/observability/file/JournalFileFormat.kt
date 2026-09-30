@@ -256,6 +256,10 @@ object JournalFileFormat {
         JournalEntry.RecordingStopped -> 14
         is JournalEntry.BridgeSent -> 15
         is JournalEntry.BridgeReceived -> 16
+        is JournalEntry.EffectQueued -> 17
+        is JournalEntry.EffectHandlingStarted -> 18
+        is JournalEntry.EffectAcknowledged -> 19
+        is JournalEntry.EffectDiscarded -> 20
     }
 
     private fun ByteWriter.entry(entry: JournalEntry<*, *, *>) {
@@ -341,6 +345,21 @@ object JournalFileFormat {
                 nullable(entry.input) { i64(it.value) }
                 message(entry.message)
             }
+            is JournalEntry.EffectQueued -> {
+                nullable(entry.input) { i64(it.value) }
+                i64(entry.effect)
+                string(entry.policy)
+                payload(entry.event)
+            }
+            is JournalEntry.EffectHandlingStarted -> {
+                i64(entry.effect)
+                i32(entry.attempt)
+            }
+            is JournalEntry.EffectAcknowledged -> i64(entry.effect)
+            is JournalEntry.EffectDiscarded -> {
+                i64(entry.effect)
+                string(entry.reason)
+            }
         }
     }
 
@@ -373,6 +392,10 @@ object JournalFileFormat {
         14 -> JournalEntry.RecordingStopped
         15 -> JournalEntry.BridgeSent(nullable { InputId(i64()) }, message(), StoreInstanceId(string()), bool())
         16 -> JournalEntry.BridgeReceived(nullable { InputId(i64()) }, message())
+        17 -> JournalEntry.EffectQueued(nullable { InputId(i64()) }, i64(), string(), payload())
+        18 -> JournalEntry.EffectHandlingStarted(i64(), i32())
+        19 -> JournalEntry.EffectAcknowledged(i64())
+        20 -> JournalEntry.EffectDiscarded(i64(), string())
         else -> throw ByteReader.Malformed("unknown entry tag $tag")
     }
 

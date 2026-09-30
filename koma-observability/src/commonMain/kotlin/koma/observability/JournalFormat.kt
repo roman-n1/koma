@@ -52,6 +52,10 @@ object JournalFormat {
         is JournalEntry.DecisionIgnored -> "DecisionIgnored ${entry.input ?: "?"} ${entry.reason}"
         is JournalEntry.BridgeSent -> "BridgeSent ${entry.input ?: "?"} ${entry.message} -> ${entry.to}${if (entry.delivered) "" else " undelivered"}"
         is JournalEntry.BridgeReceived -> "BridgeReceived ${entry.input ?: "?"} ${entry.message}"
+        is JournalEntry.EffectQueued -> "EffectQueued ${entry.input ?: "?"} e${entry.effect} ${entry.policy} ${payload(entry.event)}"
+        is JournalEntry.EffectHandlingStarted -> "EffectHandlingStarted e${entry.effect} attempt=${entry.attempt}"
+        is JournalEntry.EffectAcknowledged -> "EffectAcknowledged e${entry.effect}"
+        is JournalEntry.EffectDiscarded -> "EffectDiscarded e${entry.effect} ${entry.reason}"
         is JournalEntry.JournalGap -> "JournalGap dropped=${entry.dropped}"
         JournalEntry.RecordingStopped -> "RecordingStopped"
     }
