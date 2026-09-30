@@ -18,6 +18,7 @@ final enum class koma.statechart.machine/AbandonReason : kotlin/Enum<koma.statec
 }
 
 final enum class koma.statechart.machine/EffectDiscardReason : kotlin/Enum<koma.statechart.machine/EffectDiscardReason> { // koma.statechart.machine/EffectDiscardReason|null[0]
+    enum entry Exhausted // koma.statechart.machine/EffectDiscardReason.Exhausted|null[0]
     enum entry Overflow // koma.statechart.machine/EffectDiscardReason.Overflow|null[0]
     enum entry StoreClosed // koma.statechart.machine/EffectDiscardReason.StoreClosed|null[0]
     enum entry Superseded // koma.statechart.machine/EffectDiscardReason.Superseded|null[0]
@@ -86,6 +87,7 @@ abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: koma.core/Event> 
 }
 
 abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/DecisionObserver { // koma.statechart.machine/DecisionObserver|null[0]
+    open fun onClosed(kotlin.collections/List<koma.statechart.machine/CommandId>, kotlin.collections/List<koma.statechart.machine/CommandId>) // koma.statechart.machine/DecisionObserver.onClosed|onClosed(kotlin.collections.List<koma.statechart.machine.CommandId>;kotlin.collections.List<koma.statechart.machine.CommandId>){}[0]
     open fun onCommitted(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/Decision<#A, #C, #D>) // koma.statechart.machine/DecisionObserver.onCommitted|onCommitted(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
     open fun onFailed(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.observability/FailureDescriptor) // koma.statechart.machine/DecisionObserver.onFailed|onFailed(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.observability.FailureDescriptor){}[0]
     open fun onIgnored(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/IgnoreReason) // koma.statechart.machine/DecisionObserver.onIgnored|onIgnored(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.IgnoreReason){}[0]
@@ -472,19 +474,29 @@ sealed interface koma.statechart.machine/EffectPolicy { // koma.statechart.machi
         open fun <get-name>(): kotlin/String // koma.statechart.machine/EffectPolicy.name.<get-name>|<get-name>(){}[0]
 
     final class Latest : koma.statechart.machine/EffectPolicy { // koma.statechart.machine/EffectPolicy.Latest|null[0]
-        constructor <init>(kotlin/String) // koma.statechart.machine/EffectPolicy.Latest.<init>|<init>(kotlin.String){}[0]
+        constructor <init>(kotlin/String, kotlin/Int? = ...) // koma.statechart.machine/EffectPolicy.Latest.<init>|<init>(kotlin.String;kotlin.Int?){}[0]
 
         final val key // koma.statechart.machine/EffectPolicy.Latest.key|{}key[0]
             final fun <get-key>(): kotlin/String // koma.statechart.machine/EffectPolicy.Latest.key.<get-key>|<get-key>(){}[0]
+        final val maxAttempts // koma.statechart.machine/EffectPolicy.Latest.maxAttempts|{}maxAttempts[0]
+            final fun <get-maxAttempts>(): kotlin/Int? // koma.statechart.machine/EffectPolicy.Latest.maxAttempts.<get-maxAttempts>|<get-maxAttempts>(){}[0]
 
         final fun component1(): kotlin/String // koma.statechart.machine/EffectPolicy.Latest.component1|component1(){}[0]
-        final fun copy(kotlin/String = ...): koma.statechart.machine/EffectPolicy.Latest // koma.statechart.machine/EffectPolicy.Latest.copy|copy(kotlin.String){}[0]
+        final fun component2(): kotlin/Int? // koma.statechart.machine/EffectPolicy.Latest.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/Int? = ...): koma.statechart.machine/EffectPolicy.Latest // koma.statechart.machine/EffectPolicy.Latest.copy|copy(kotlin.String;kotlin.Int?){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/EffectPolicy.Latest.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // koma.statechart.machine/EffectPolicy.Latest.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // koma.statechart.machine/EffectPolicy.Latest.toString|toString(){}[0]
     }
 
-    final object Retained : koma.statechart.machine/EffectPolicy { // koma.statechart.machine/EffectPolicy.Retained|null[0]
+    final class Retained : koma.statechart.machine/EffectPolicy { // koma.statechart.machine/EffectPolicy.Retained|null[0]
+        constructor <init>(kotlin/Int? = ...) // koma.statechart.machine/EffectPolicy.Retained.<init>|<init>(kotlin.Int?){}[0]
+
+        final val maxAttempts // koma.statechart.machine/EffectPolicy.Retained.maxAttempts|{}maxAttempts[0]
+            final fun <get-maxAttempts>(): kotlin/Int? // koma.statechart.machine/EffectPolicy.Retained.maxAttempts.<get-maxAttempts>|<get-maxAttempts>(){}[0]
+
+        final fun component1(): kotlin/Int? // koma.statechart.machine/EffectPolicy.Retained.component1|component1(){}[0]
+        final fun copy(kotlin/Int? = ...): koma.statechart.machine/EffectPolicy.Retained // koma.statechart.machine/EffectPolicy.Retained.copy|copy(kotlin.Int?){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/EffectPolicy.Retained.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // koma.statechart.machine/EffectPolicy.Retained.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // koma.statechart.machine/EffectPolicy.Retained.toString|toString(){}[0]

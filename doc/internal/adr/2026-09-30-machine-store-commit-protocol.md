@@ -74,8 +74,7 @@ Not adopted:
 - A lock-based scheduler: the actor gives the same ordering with less to get wrong under the
   store's lock.
 - Bounded admission and an `Abandoned(StoreClosed)` journal record for commands that never
-  started: deferred; Koma's dispatch queue is unbounded, and a closed store discards the inputs
-  the actor would send (the journal shows the discard).
+  started: deferred at first; both are in the addenda below.
 
 ## Notes
 
@@ -147,3 +146,25 @@ Not adopted:
   remaining time, re-entry, close) and `ExecutorCheckpointStormTest` (checkpoints taken while
   four threads re-enter and exit an activation with every lane policy: each a consistent cut,
   lanes within policy, nothing queued behind a free lane, revisions monotonic).
+
+## Addendum (2026-09-30): what the executor had not finished at close is journaled
+
+Handoff §4 wants the commands a close leaves behind told: those registered and never started
+get `Abandoned(StoreClosed)`, those running are cancelled by their policy. The actor knows
+both, and only it: its `finally` runs once the scope is cancelled, reads the lanes (queued and
+running) and drains the decisions it did not get to (their commands never started either), and
+calls `DecisionObserver.onClosed(queued, running)` once, only when there is something to tell.
+`session.decisionsOf(store)` journals it as `JournalEntry.CommandsAbandoned("StoreClosed",
+queued, running)`, record model version 5; the inspector shows it as `TimelineItem.Abandoned`.
+The store's own `StoreClosed` is traced when every coroutine of the core store has ended, so
+the two records may come in either order; the inspector does not merge them.
+
+Not adopted: feeding `MachineInput.CommandAbandoned(StoreClosed)` to the machine, which is
+closed and would discard it; a journal record per command, where one record per close says
+the same with less.
+
+Tests: `MachineJournalTest` (two Fetches in one sequential lane, the store closed with the
+first running and the second waiting: one `CommandsAbandoned` with the second queued and the
+first running, rendered by the text format, next to the store's own `StoreClosed`);
+`JournalFileFormatTest` and `InspectorTest` carry the new record.
+

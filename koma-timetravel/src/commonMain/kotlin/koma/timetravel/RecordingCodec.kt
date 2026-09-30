@@ -57,7 +57,7 @@ import kotlin.time.Duration
  * with its message; 4 adds the pending `effects` of the mailbox to the checkpoint; 5 adds the
  * `external` input with its source. The codec migrates each version to the next itself.
  */
-const val RECORDING_FORMAT_VERSION: Int = 5
+const val RECORDING_FORMAT_VERSION: Int = 6
 
 /**
  * Turns the JSON of one format version into the next: an explicit, testable step.
@@ -150,6 +150,12 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
         FormatMigration(from = 4, to = 5) { v4 ->
             buildJsonObject {
                 for ((key, value) in v4) put(key, if (key == "formatVersion") JsonPrimitive(5) else value)
+            }
+        },
+        // Format 6 only adds an effect policy's optional budget; a format 5 text is a format 6 text whose policies have none.
+        FormatMigration(from = 5, to = 6) { v5 ->
+            buildJsonObject {
+                for ((key, value) in v5) put(key, if (key == "formatVersion") JsonPrimitive(6) else value)
             }
         },
     )
@@ -268,8 +274,8 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
 
     private fun EffectPolicy.toWire(): EffectPolicyWire = when (this) {
         EffectPolicy.Transient -> EffectPolicyWire("transient")
-        EffectPolicy.Retained -> EffectPolicyWire("retained")
-        is EffectPolicy.Latest -> EffectPolicyWire("latest", key)
+        is EffectPolicy.Retained -> EffectPolicyWire("retained", maxAttempts = maxAttempts)
+        is EffectPolicy.Latest -> EffectPolicyWire("latest", key, maxAttempts)
     }
 
     private fun CommandRegistration<CMD>.toWire(): CommandRegistrationWire =
@@ -358,8 +364,8 @@ class RecordingCodec<C, A : Action, CMD, E : Event>(
 
     private fun EffectPolicyWire.toPolicy(at: String): EffectPolicy = when (kind) {
         "transient" -> EffectPolicy.Transient
-        "retained" -> EffectPolicy.Retained
-        "latest" -> EffectPolicy.Latest(key ?: throw DecodeFailure("latest policy without a key", at))
+        "retained" -> EffectPolicy.Retained(maxAttempts)
+        "latest" -> EffectPolicy.Latest(key ?: throw DecodeFailure("latest policy without a key", at), maxAttempts)
         else -> throw DecodeFailure("unknown effect policy '$kind'", at)
     }
 
@@ -455,7 +461,7 @@ internal class CheckpointWire(
 internal class PendingEffectWire(val id: Long, val event: JsonElement, val policy: EffectPolicyWire, val attempts: Int, val handling: Boolean)
 
 @Serializable
-internal class EffectPolicyWire(val kind: String, val key: String? = null)
+internal class EffectPolicyWire(val kind: String, val key: String? = null, val maxAttempts: Int? = null)
 
 @Serializable
 internal class SnapshotWire(

@@ -220,6 +220,7 @@ object JournalFileFormat {
         is JournalEntry.EffectDiscarded -> 20
         is JournalEntry.ExternalReceived -> 21
         is JournalEntry.CheckpointCreated -> 22
+        is JournalEntry.CommandsAbandoned -> 23
     }
 
     private fun ByteWriter.entry(entry: JournalEntry<*, *, *>) {
@@ -324,6 +325,11 @@ object JournalFileFormat {
                 nullable(entry.input) { i64(it.value) }
                 string(entry.source)
             }
+            is JournalEntry.CommandsAbandoned -> {
+                string(entry.reason)
+                list(entry.queued) { i64(it) }
+                list(entry.running) { i64(it) }
+            }
             is JournalEntry.CheckpointCreated -> {
                 list(entry.members) { string(it.value) }
                 list(entry.sources) { string(it) }
@@ -367,6 +373,7 @@ object JournalFileFormat {
         20 -> JournalEntry.EffectDiscarded(i64(), string())
         21 -> JournalEntry.ExternalReceived(nullable { InputId(i64()) }, string())
         22 -> JournalEntry.CheckpointCreated(list { StoreInstanceId(string()) }, list { string() }, i32())
+        23 -> JournalEntry.CommandsAbandoned(string(), list { i64() }, list { i64() })
         else -> throw ByteReader.Malformed("unknown entry tag $tag")
     }
 

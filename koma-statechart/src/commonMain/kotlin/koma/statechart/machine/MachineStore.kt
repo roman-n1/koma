@@ -171,7 +171,10 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     private var pluginScope: PluginScope<MachineSnapshot<C>, MachineInput<A>>? = null
 
-    private val scheduler = CommandScheduler<C, A, CMD, E>(executionScope, machine.initialSnapshot(context), handler, clock, mailboxImpl, feed = ::enqueue, report = ::report)
+    private val scheduler = CommandScheduler<C, A, CMD, E>(
+        executionScope, machine.initialSnapshot(context), handler, clock, mailboxImpl, feed = ::enqueue, report = ::report,
+        onClosed = { queued, running -> observe { it.onClosed(queued, running) } },
+    )
 
     // The controlled queue of a group cut: while frozen, every input (dispatched, delivered, fed
     // by the executor) waits here instead of entering the inner store, in arrival order.

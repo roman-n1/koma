@@ -66,6 +66,7 @@ object InspectorText {
             is TimelineItem.Checkpoint -> append("Checkpoint members=").append(item.members.joinToString(",", "[", "]")).append(" sources=").append(item.sources.joinToString(",", "[", "]")).append(" inFlight=").append(item.inFlight)
             is TimelineItem.Rejected -> append("Rejected ").append(JournalFormat.payload(item.action)).append(' ').append(item.reason)
             is TimelineItem.Closed -> append("Closed")
+            is TimelineItem.Abandoned -> append("Abandoned ").append(item.reason).append(" queued=").append(item.queued.joinToString(",", "[", "]") { "c$it" }).append(" running=").append(item.running.joinToString(",", "[", "]") { "c$it" })
             is TimelineItem.Gap -> append("Gap dropped=").append(item.dropped)
             is TimelineItem.Stopped -> append("Stopped")
             is TimelineItem.Unattributed -> append("Unattributed ").append(JournalFormat.entry(item.entry))

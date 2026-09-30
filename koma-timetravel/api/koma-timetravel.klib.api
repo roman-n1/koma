@@ -451,6 +451,34 @@ sealed interface koma.timetravel.inspect/TimelineItem { // koma.timetravel.inspe
     abstract val store // koma.timetravel.inspect/TimelineItem.store|{}store[0]
         abstract fun <get-store>(): koma.observability/StoreInstanceId? // koma.timetravel.inspect/TimelineItem.store.<get-store>|<get-store>(){}[0]
 
+    final class Abandoned : koma.timetravel.inspect/TimelineItem { // koma.timetravel.inspect/TimelineItem.Abandoned|null[0]
+        constructor <init>(koma.observability/GroupSeq, kotlin.time/Duration, koma.observability/StoreInstanceId, kotlin/String, kotlin.collections/List<kotlin/Long>, kotlin.collections/List<kotlin/Long>) // koma.timetravel.inspect/TimelineItem.Abandoned.<init>|<init>(koma.observability.GroupSeq;kotlin.time.Duration;koma.observability.StoreInstanceId;kotlin.String;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<kotlin.Long>){}[0]
+
+        final val elapsed // koma.timetravel.inspect/TimelineItem.Abandoned.elapsed|{}elapsed[0]
+            final fun <get-elapsed>(): kotlin.time/Duration // koma.timetravel.inspect/TimelineItem.Abandoned.elapsed.<get-elapsed>|<get-elapsed>(){}[0]
+        final val groupSeq // koma.timetravel.inspect/TimelineItem.Abandoned.groupSeq|{}groupSeq[0]
+            final fun <get-groupSeq>(): koma.observability/GroupSeq // koma.timetravel.inspect/TimelineItem.Abandoned.groupSeq.<get-groupSeq>|<get-groupSeq>(){}[0]
+        final val queued // koma.timetravel.inspect/TimelineItem.Abandoned.queued|{}queued[0]
+            final fun <get-queued>(): kotlin.collections/List<kotlin/Long> // koma.timetravel.inspect/TimelineItem.Abandoned.queued.<get-queued>|<get-queued>(){}[0]
+        final val reason // koma.timetravel.inspect/TimelineItem.Abandoned.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.timetravel.inspect/TimelineItem.Abandoned.reason.<get-reason>|<get-reason>(){}[0]
+        final val running // koma.timetravel.inspect/TimelineItem.Abandoned.running|{}running[0]
+            final fun <get-running>(): kotlin.collections/List<kotlin/Long> // koma.timetravel.inspect/TimelineItem.Abandoned.running.<get-running>|<get-running>(){}[0]
+        final val store // koma.timetravel.inspect/TimelineItem.Abandoned.store|{}store[0]
+            final fun <get-store>(): koma.observability/StoreInstanceId // koma.timetravel.inspect/TimelineItem.Abandoned.store.<get-store>|<get-store>(){}[0]
+
+        final fun component1(): koma.observability/GroupSeq // koma.timetravel.inspect/TimelineItem.Abandoned.component1|component1(){}[0]
+        final fun component2(): kotlin.time/Duration // koma.timetravel.inspect/TimelineItem.Abandoned.component2|component2(){}[0]
+        final fun component3(): koma.observability/StoreInstanceId // koma.timetravel.inspect/TimelineItem.Abandoned.component3|component3(){}[0]
+        final fun component4(): kotlin/String // koma.timetravel.inspect/TimelineItem.Abandoned.component4|component4(){}[0]
+        final fun component5(): kotlin.collections/List<kotlin/Long> // koma.timetravel.inspect/TimelineItem.Abandoned.component5|component5(){}[0]
+        final fun component6(): kotlin.collections/List<kotlin/Long> // koma.timetravel.inspect/TimelineItem.Abandoned.component6|component6(){}[0]
+        final fun copy(koma.observability/GroupSeq = ..., kotlin.time/Duration = ..., koma.observability/StoreInstanceId = ..., kotlin/String = ..., kotlin.collections/List<kotlin/Long> = ..., kotlin.collections/List<kotlin/Long> = ...): koma.timetravel.inspect/TimelineItem.Abandoned // koma.timetravel.inspect/TimelineItem.Abandoned.copy|copy(koma.observability.GroupSeq;kotlin.time.Duration;koma.observability.StoreInstanceId;kotlin.String;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<kotlin.Long>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.inspect/TimelineItem.Abandoned.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel.inspect/TimelineItem.Abandoned.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel.inspect/TimelineItem.Abandoned.toString|toString(){}[0]
+    }
+
     final class Checkpoint : koma.timetravel.inspect/TimelineItem { // koma.timetravel.inspect/TimelineItem.Checkpoint|null[0]
         constructor <init>(koma.observability/GroupSeq, kotlin.time/Duration, kotlin.collections/List<koma.observability/StoreInstanceId>, kotlin.collections/List<kotlin/String>, kotlin/Int) // koma.timetravel.inspect/TimelineItem.Checkpoint.<init>|<init>(koma.observability.GroupSeq;kotlin.time.Duration;kotlin.collections.List<koma.observability.StoreInstanceId>;kotlin.collections.List<kotlin.String>;kotlin.Int){}[0]
 

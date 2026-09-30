@@ -249,7 +249,7 @@ private fun itemColor(item: TimelineItem): Color = when (item) {
     is TimelineItem.Discarded, is TimelineItem.Rejected, is TimelineItem.Pending -> Color(0xFFEF6C00)
     is TimelineItem.Gap, is TimelineItem.Damage, is TimelineItem.Stopped, is TimelineItem.Unattributed -> Color(0xFFC62828)
     is TimelineItem.Checkpoint -> Color(0xFF1565C0)
-    is TimelineItem.Effect, is TimelineItem.Sent, is TimelineItem.Registered, is TimelineItem.Closed -> Color(0xFF616161)
+    is TimelineItem.Effect, is TimelineItem.Sent, is TimelineItem.Registered, is TimelineItem.Closed, is TimelineItem.Abandoned -> Color(0xFF616161)
 }
 
 /** For a screen that shows a completeness elsewhere. */

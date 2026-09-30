@@ -344,6 +344,7 @@ class Inspector(
                 is JournalEntry.EffectDiscarded -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
                 is JournalEntry.ExternalReceived -> attach(store, entry.input, record) { source = entry.source }
                 is JournalEntry.CheckpointCreated -> slots += TimelineItem.Checkpoint(seq, elapsed, entry.members, entry.sources, entry.inFlight)
+                is JournalEntry.CommandsAbandoned -> slots += TimelineItem.Abandoned(seq, elapsed, checkNotNull(store), entry.reason, entry.queued, entry.running)
                 is JournalEntry.JournalGap -> slots += TimelineItem.Gap(seq, elapsed, entry.dropped)
                 JournalEntry.RecordingStopped -> slots += TimelineItem.Stopped(seq, elapsed)
             }

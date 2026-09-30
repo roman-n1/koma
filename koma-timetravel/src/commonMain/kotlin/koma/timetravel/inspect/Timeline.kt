@@ -119,6 +119,9 @@ sealed interface TimelineItem {
     /** Every coroutine of the Store has ended. */
     data class Closed(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId) : TimelineItem
 
+    /** The Store closed with commands unfinished, for [reason]: [queued] never started, [running] were cancelled. */
+    data class Abandoned(override val groupSeq: GroupSeq, override val elapsed: Duration, override val store: StoreInstanceId, val reason: String, val queued: List<Long>, val running: List<Long>) : TimelineItem
+
     /** [dropped] records before this position never reached the sinks. */
     data class Gap(override val groupSeq: GroupSeq, override val elapsed: Duration, val dropped: Long) : TimelineItem {
         override val store: StoreInstanceId? get() = null

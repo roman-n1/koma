@@ -315,6 +315,7 @@ public final class koma/timetravel/GroupStep {
 public final class koma/timetravel/MachineRecorder : koma/statechart/machine/DecisionObserver {
 	public fun <init> (Lkoma/statechart/machine/Machine;Ljava/lang/Object;)V
 	public final fun getProblem ()Ljava/lang/String;
+	public fun onClosed (Ljava/util/List;Ljava/util/List;)V
 	public fun onCommitted-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)V
 	public fun onFailed-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)V
 	public fun onIgnored-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;)V
@@ -719,6 +720,7 @@ public final class koma/timetravel/file/RecordingFileSink : koma/statechart/mach
 	public final fun getProblem ()Ljava/lang/String;
 	public final fun getSegments ()Ljava/util/List;
 	public final fun getStats ()Lkoma/timetravel/file/RecordingFileStats;
+	public fun onClosed (Ljava/util/List;Ljava/util/List;)V
 	public fun onCommitted-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)V
 	public fun onFailed-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)V
 	public fun onIgnored-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;)V
@@ -1089,6 +1091,30 @@ public abstract interface class koma/timetravel/inspect/TimelineItem {
 	public abstract fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public abstract fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
 	public abstract fun getStore-BiBoV80 ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/inspect/TimelineItem$Abandoned : koma/timetravel/inspect/TimelineItem {
+	public synthetic fun <init> (JJLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-vWuHTu4 ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3-G0_Fx5k ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/util/List;
+	public final fun component6 ()Ljava/util/List;
+	public final fun copy-DZVC8LA (JJLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)Lkoma/timetravel/inspect/TimelineItem$Abandoned;
+	public static synthetic fun copy-DZVC8LA$default (Lkoma/timetravel/inspect/TimelineItem$Abandoned;JJLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Abandoned;
+	public fun equals (Ljava/lang/Object;)Z
+	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public fun getElapsed-UwyO8pc ()J
+	public fun getGroupSeq-vWuHTu4 ()J
+	public synthetic fun getGroupSeq-xnp4o7c ()Lkoma/observability/GroupSeq;
+	public final fun getQueued ()Ljava/util/List;
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getRunning ()Ljava/util/List;
+	public synthetic fun getStore-BiBoV80 ()Ljava/lang/String;
+	public fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class koma/timetravel/inspect/TimelineItem$Checkpoint : koma/timetravel/inspect/TimelineItem {

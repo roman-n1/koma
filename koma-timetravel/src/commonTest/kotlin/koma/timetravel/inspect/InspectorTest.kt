@@ -381,7 +381,7 @@ class InspectorTest {
         val session = RecordingSession(backgroundScope, id = RuntimeSessionId("run-2"), group = MachineGroupId("picker"), timeSource = TestTimeSource())
         val store = MachineStore(
             machine, Ctx(), CommandHandler<Fetch, Act> { _, _ -> awaitCancellation() }, scope, TestClock(testScheduler), dispatcher,
-            mailbox = koma.statechart.machine.MailboxConfig({ koma.statechart.machine.EffectPolicy.Retained }, listeners = listOf(session.effectsOf(tab1) { Payload.Projected(it.toString()) })),
+            mailbox = koma.statechart.machine.MailboxConfig({ koma.statechart.machine.EffectPolicy.Retained() }, listeners = listOf(session.effectsOf(tab1) { Payload.Projected(it.toString()) })),
         ) { recordTo(session, tab1, PayloadPolicy.metadataOnly()) }
         store.start()
         store.dispatch(Act.Load("cats"))
@@ -421,6 +421,7 @@ class InspectorTest {
             record(JournalEntry.EventEmitted(InputId(9), Payload.Projected("Orphan"))),
             record(JournalEntry.JournalGap(4), forStore = null),
             record(JournalEntry.ProcessingStarted(InputId(3), 2)),
+            record(JournalEntry.CommandsAbandoned("StoreClosed", listOf(3), listOf(2))),
             record(JournalEntry.RecordingStopped, forStore = null),
         )
 
@@ -445,5 +446,8 @@ class InspectorTest {
         assertTrue(InspectorText.overview(inspector).size >= 6)
         assertEquals(items.size, InspectorText.timeline(inspector).size)
         assertTrue(InspectorText.line(pending).endsWith("(no end in the journal)"))
+        val abandoned = items.filterIsInstance<TimelineItem.Abandoned>().single()
+        assertEquals(listOf(3L) to listOf(2L), abandoned.queued to abandoned.running)
+        assertTrue(InspectorText.line(abandoned).endsWith("Abandoned StoreClosed queued=[c3] running=[c2]"), InspectorText.line(abandoned))
     }
 }

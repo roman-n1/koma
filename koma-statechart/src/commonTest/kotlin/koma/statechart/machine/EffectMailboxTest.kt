@@ -71,7 +71,7 @@ class EffectMailboxTest {
     private val policy: (Ev) -> EffectPolicy = { event ->
         when (event) {
             is Ev.Toast -> EffectPolicy.Transient
-            is Ev.Navigate -> EffectPolicy.Retained
+            is Ev.Navigate -> EffectPolicy.Retained()
             is Ev.Badge -> EffectPolicy.Latest("badge")
         }
     }
@@ -129,7 +129,7 @@ class EffectMailboxTest {
 
         val waiting = f.store.mailbox.pending.single()
         assertEquals(Ev.Navigate("chat"), waiting.event)
-        assertEquals(EffectPolicy.Retained, waiting.policy)
+        assertEquals(EffectPolicy.Retained(), waiting.policy)
         assertFalse(waiting.handling)
         assertEquals(0, waiting.attempts)
         assertTrue(f.events.isEmpty(), "not on the event flow")
@@ -175,6 +175,50 @@ class EffectMailboxTest {
         assertTrue(f.store.mailbox.pending.isEmpty())
         assertEquals(listOf(1, 2), f.effectEntries().filterIsInstance<JournalEntry.EffectHandlingStarted>().map { it.attempt })
         second.cancel()
+        f.store.close()
+    }
+
+    @Test
+    fun aPolicyWithABudget_givesTheEffectUpAsExhausted_whenAsManySubscribersWentAwayWithIt() = runTest {
+        val f = Fixture(this, policy = { event ->
+            when (event) {
+                is Ev.Toast -> EffectPolicy.Transient
+                is Ev.Navigate -> EffectPolicy.Retained(maxAttempts = 2)
+                is Ev.Badge -> EffectPolicy.Latest("badge", maxAttempts = 1)
+            }
+        })
+        runCurrent()
+        f.store.dispatch(Act.Navigate("chat"))
+        val first = f.subscribe()
+        runCurrent()
+        first.cancel()
+        runCurrent()
+        assertEquals(listOf(false), f.store.mailbox.pending.map { it.handling }, "one attempt left: it waits for the next subscriber")
+        val second = f.subscribe()
+        runCurrent()
+        second.cancel()
+        runCurrent()
+
+        assertTrue(f.store.mailbox.pending.isEmpty(), "the budget of two is spent")
+        assertEquals(listOf(1, 2), f.deliveries.map { it.attempt })
+        assertEquals(listOf("Exhausted"), f.effectEntries().filterIsInstance<JournalEntry.EffectDiscarded>().map { it.reason })
+        assertEquals("Retained[2]", f.effectEntries().filterIsInstance<JournalEntry.EffectQueued<*>>().single().policy)
+        val third = f.subscribe(ack = true)
+        runCurrent()
+        assertEquals(2, f.deliveries.size, "a later subscriber does not get it")
+        third.cancel()
+        runCurrent()
+
+        // A budget of one: the first subscriber to go away with it is the last.
+        val fourth = f.subscribe()
+        f.store.dispatch(Act.Badge(3))
+        runCurrent()
+        assertEquals(3, f.deliveries.size)
+        fourth.cancel()
+        runCurrent()
+        assertTrue(f.store.mailbox.pending.isEmpty())
+        assertEquals(listOf("Exhausted", "Exhausted"), f.effectEntries().filterIsInstance<JournalEntry.EffectDiscarded>().map { it.reason })
+        assertEquals("Latest(badge)[1]", f.effectEntries().filterIsInstance<JournalEntry.EffectQueued<*>>().last().policy)
         f.store.close()
     }
 

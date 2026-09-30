@@ -36,6 +36,7 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     private val mailbox: MailboxImpl<E>,
     private val feed: (MachineInput<A>) -> Unit,
     private val report: (Throwable) -> Unit,
+    private val onClosed: (queued: List<CommandId>, running: List<CommandId>) -> Unit = { _, _ -> },
 ) {
     private val scope = CoroutineScope(parent.coroutineContext + SupervisorJob(parent.coroutineContext[Job]))
     private val messages = Channel<Message>(Channel.UNLIMITED)
@@ -49,7 +50,19 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     private val ending = mutableMapOf<CommandId, CommandRegistration<CMD>>()
 
     private val actor: Job = scope.launch {
-        for (message in messages) handle(message)
+        try {
+            for (message in messages) handle(message)
+        } finally {
+            // Closed: the commands never started (queued in a lane, or of a decision the actor did
+            // not get to) and those running, cancelled with the scope, are told once.
+            val queued = lanes.queued.values.flatten().map { it.id }.toMutableList()
+            while (true) {
+                val message = messages.tryReceive().getOrNull() ?: break
+                if (message is Message.Apply<*, *, *>) queued += message.decision.commands.map { it.id }
+            }
+            val running = lanes.running.keys.toList()
+            if (queued.isNotEmpty() || running.isNotEmpty()) onClosed(queued, running)
+        }
     }
 
     /**

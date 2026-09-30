@@ -30,23 +30,47 @@ sealed interface EffectPolicy {
      * Kept in the mailbox until a subscriber acknowledges it; when the subscriber handling it goes
      * away without acknowledging, the next subscriber gets it again. A navigation, a one-time
      * dialog that must not be lost across a recreation of the UI.
+     *
+     * @property maxAttempts How many subscribers may take the effect and go away without
+     * acknowledging it before the mailbox gives it up as [EffectDiscardReason.Exhausted]: the
+     * retry budget of the category (handoff §10), against an effect that crashes every
+     * subscriber it reaches; `null` hands it to the next subscriber without limit
      */
-    data object Retained : EffectPolicy
+    data class Retained(val maxAttempts: Int? = null) : EffectPolicy {
+        init {
+            require(maxAttempts == null || maxAttempts >= 1) { "[Koma] maxAttempts must be at least 1" }
+        }
+    }
 
     /**
      * Kept like [Retained], but only the newest effect with [key] waits: an older one still
      * waiting is discarded as superseded when a newer arrives. A badge, a scroll target.
+     *
+     * @property maxAttempts The retry budget, as [Retained.maxAttempts]
      */
-    data class Latest(val key: String) : EffectPolicy
+    data class Latest(val key: String, val maxAttempts: Int? = null) : EffectPolicy {
+        init {
+            require(maxAttempts == null || maxAttempts >= 1) { "[Koma] maxAttempts must be at least 1" }
+        }
+    }
 
-    /** The policy's name, the journal's vocabulary. */
+    /** The policy's name, the journal's vocabulary; a budget follows in brackets. */
     val name: String
         get() = when (this) {
             Transient -> "Transient"
-            Retained -> "Retained"
-            is Latest -> "Latest($key)"
+            is Retained -> "Retained" + budget(maxAttempts)
+            is Latest -> "Latest($key)" + budget(maxAttempts)
         }
+
+    private fun budget(maxAttempts: Int?): String = if (maxAttempts == null) "" else "[$maxAttempts]"
 }
+
+private val EffectPolicy.maxAttempts: Int?
+    get() = when (this) {
+        EffectPolicy.Transient -> null
+        is EffectPolicy.Retained -> maxAttempts
+        is EffectPolicy.Latest -> maxAttempts
+    }
 
 /**
  * Why the mailbox gave up an effect without an acknowledgement.
@@ -61,6 +85,12 @@ enum class EffectDiscardReason {
 
     /** The Store closed with the effect still waiting or being handled. */
     StoreClosed,
+
+    /**
+     * As many subscribers as the policy's budget allows took the effect and went away without
+     * acknowledging it: it is not handed to another.
+     */
+    Exhausted,
 }
 
 /**
@@ -251,8 +281,16 @@ internal class MailboxImpl<E : Event>(
                 emit(Delivery(taken.id, taken.event, taken.attempts) { acknowledge(taken.id) })
             }
         } finally {
-            // The subscriber is gone: what it was handling waits for the next one.
-            val released = locked { entries.filter { it.handler === subscriber }.onEach { it.handler = null }.isNotEmpty() }
+            // The subscriber is gone: what it was handling waits for the next one, unless the
+            // policy's budget of attempts is spent.
+            val (released, exhausted) = locked {
+                val held = entries.filter { it.handler === subscriber }
+                val spent = held.filter { entry -> entry.policy.maxAttempts?.let { entry.attempts >= it } == true }
+                entries.removeAll(spent)
+                for (entry in held) if (entry !in spent) entry.handler = null
+                (held.size > spent.size) to spent
+            }
+            for (entry in exhausted) notify { it.onDiscarded(entry.id, EffectDiscardReason.Exhausted) }
             if (released) ring()
         }
     }

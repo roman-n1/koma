@@ -73,9 +73,29 @@ Not adopted:
   milliseconds each, acknowledging some and dying with the rest in hand: every effect is
   acknowledged exactly once, none is lost or discarded, the journal has one queue and one
   acknowledgement per effect with attempts counting up, the mailbox ends empty).
-- Left for later: a retry budget per policy (after N attempts, discard and journal it), the
-  messenger's categories of effects and their describers, and delivering a `Latest` effect's
-  supersession to a subscriber that is handling the older one.
+- Left for later: the messenger's categories of effects and their describers, and delivering
+  a `Latest` effect's supersession to a subscriber that is handling the older one.
+
+## Addendum 2026-09-30: a retry budget per policy
+
+Handoff §10 fixes the retry or drop behaviour per category of effect; the policy is the
+category, so the budget lives in it: `Retained(maxAttempts)` and `Latest(key, maxAttempts)`.
+When a subscriber goes away with an effect in hand and as many subscribers as the budget
+allows have done so, the mailbox discards it as `EffectDiscardReason.Exhausted` and journals
+it, instead of handing it to the next one: an effect that crashes every subscriber it reaches
+stops after the budget, not never. `null`, the default, keeps the earlier behaviour: handed to
+the next subscriber without limit, which is what the storm test proves at-least-once delivery
+with. The policy's journal name carries the budget in brackets (`Retained[3]`), and the
+recording codec's format 6 carries it as an optional field; a format 5 text migrates by the
+version alone.
+
+Not adopted: a budget on the mailbox as a whole (one number for navigations and badges alike)
+and a budget on the subscriber (the mailbox does not know who a subscriber is, only that one
+went away).
+
+Tests: `EffectMailboxTest` (a `Retained` effect with a budget of two is handed to a second
+subscriber and discarded as exhausted when that one goes away, journaled, and not given to a
+third; a `Latest` effect with a budget of one is discarded after one departure).
 
 ## Related
 
