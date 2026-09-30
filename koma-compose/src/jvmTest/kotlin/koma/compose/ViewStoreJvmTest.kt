@@ -55,6 +55,53 @@ class ViewStoreJvmTest {
     }
 
     @Test
+    fun stateContent_callbackRunAfterStateTypeChanged_readsLastNarrowedState() = runTest(testDispatcher) {
+        val store = TestStore(UiState.Ready(1))
+        lateinit var readValue: () -> Int
+
+        withComposition(
+            content = {
+                rememberViewStore { store }.stateContent<UiState.Ready> {
+                    readValue = { state.value }
+                }
+            },
+            afterSetContent = {
+                assertEquals(1, readValue())
+
+                store.state.value = UiState.Ready(5)
+                testScheduler.runCurrent()
+                assertEquals(5, readValue())
+
+                // A click handler of the Ready content that runs before recomposition removes it.
+                store.state.value = UiState.Loading
+                testScheduler.runCurrent()
+                assertEquals(5, readValue())
+            },
+        )
+    }
+
+    @Test
+    fun stateContent_callbackThatNeverReadStateDuringComposition_readsLastNarrowedState() = runTest(testDispatcher) {
+        val store = TestStore(UiState.Ready(1))
+        lateinit var readValue: () -> Int
+
+        withComposition(
+            content = {
+                rememberViewStore { store }.stateContent<UiState.Ready> {
+                    // Reads state only inside the callback, as a click handler does.
+                    readValue = { state.value }
+                }
+            },
+            afterSetContent = {
+                // A click handler of the Ready content that runs before recomposition removes it.
+                store.state.value = UiState.Loading
+                testScheduler.runCurrent()
+                assertEquals(1, readValue())
+            },
+        )
+    }
+
+    @Test
     fun eventEffect_collectsOnlySpecifiedEventType() = runTest(testDispatcher) {
         val events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 4)
         val handled = mutableListOf<UiEvent.ValueChanged>()
