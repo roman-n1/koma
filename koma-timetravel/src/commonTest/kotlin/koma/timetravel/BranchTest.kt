@@ -1,0 +1,272 @@
+@file:OptIn(ExperimentalKomaApi::class, ExperimentalCoroutinesApi::class, InternalKomaApi::class)
+
+package koma.timetravel
+
+import koma.core.Action
+import koma.core.Event
+import koma.core.ExceptionHandler
+import koma.core.ExperimentalKomaApi
+import koma.core.InternalKomaApi
+import koma.observability.FailureDescriptor
+import koma.statechart.ActionMatcher
+import koma.statechart.AtomicState
+import koma.statechart.CompoundState
+import koma.statechart.ParallelState
+import koma.statechart.StateChartDefinition
+import koma.statechart.StateId
+import koma.statechart.Transition
+import koma.statechart.Trigger
+import koma.statechart.machine.AbandonReason
+import koma.statechart.machine.CommandHandler
+import koma.statechart.machine.CommandId
+import koma.statechart.machine.ConcurrencyPolicy
+import koma.statechart.machine.DefinitionId
+import koma.statechart.machine.DefinitionVersion
+import koma.statechart.machine.LaneId
+import koma.statechart.machine.Machine
+import koma.statechart.machine.MachineClock
+import koma.statechart.machine.MachineInput
+import koma.statechart.machine.MachineStore
+import koma.statechart.machine.MachineTime
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+
+/**
+ * A branch from a recorded position: new inputs decided by the pure machine on a virtual
+ * clock, commands awaiting answers instead of running, recorded answers reused only for an
+ * equal command, timers fired by advancing the clock, the live store untouched.
+ *
+ * ```
+ * [*] --> Idle
+ * Idle --Load(query)--> Loading            onEnter: command Fetch(query); timer 10s to Idle
+ * Loading --Load(query) / remember--> Loading
+ * Loading --Loaded / store--> Content      onEnter: event Shown
+ * Content --Refresh--> Loading
+ * ```
+ */
+class BranchTest {
+
+    data class Ctx(val query: String = "", val items: List<String> = emptyList(), val timeouts: Int = 0)
+
+    sealed interface Act : Action {
+        data class Load(val query: String) : Act
+        data class Loaded(val items: List<String>) : Act
+        data object Refresh : Act
+    }
+
+    sealed interface Ev : Event {
+        data object Shown : Ev
+    }
+
+    data class Fetch(val query: String)
+
+    private val root = StateId("Root")
+    private val idle = StateId("Idle")
+    private val loading = StateId("Loading")
+    private val content = StateId("Content")
+
+    private val chart = StateChartDefinition(
+        root,
+        listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root), AtomicState(content, parent = root)),
+        listOf(
+            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
+            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
+            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
+            Transition(loading, idle, Trigger.After(10.seconds), effect = "timeout"),
+            Transition(content, loading, ActionMatcher.of<Act.Refresh>("Refresh")),
+        ),
+    )
+
+    private val machine = Machine<Ctx, Act, Fetch, Ev>(DefinitionId("branchable"), DefinitionVersion("1"), chart) {
+        effect("remember") { c, a -> c.copy(query = (a as Act.Load).query) }
+        effect("store") { c, a -> c.copy(items = (a as Act.Loaded).items) }
+        effect("timeout") { c, _ -> c.copy(timeouts = c.timeouts + 1) }
+        onEnter(loading) { command(Fetch(context.query)) }
+        onEnter(content) { event(Ev.Shown) }
+    }
+
+    private class TestClock(private val scheduler: TestCoroutineScheduler) : MachineClock {
+        private val origin = scheduler.currentTime
+
+        override fun now(): MachineTime = MachineTime((scheduler.currentTime - origin).milliseconds)
+
+        override suspend fun delayUntil(deadline: MachineTime) {
+            val remaining = deadline - now()
+            if (remaining.isPositive()) delay(remaining)
+        }
+    }
+
+    /** A live run: Load("cats") answered, then Refresh with the answer still pending when recorded. */
+    private class Live(val recording: Recording<Ctx, Act, Fetch, Ev>, val store: MachineStore<Ctx, Act, Ev>, val handlerCalls: () -> Int)
+
+    private suspend fun kotlinx.coroutines.test.TestScope.recordedLive(): Live {
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val scope = CoroutineScope(dispatcher + SupervisorJob())
+        var calls = 0
+        val handler = CommandHandler<Fetch, Act> { command, results ->
+            calls++
+            if (command.command.query == "cats") {
+                delay(100.milliseconds)
+                results.result(Act.Loaded(listOf("tom", "felix")))
+            } else {
+                awaitCancellation()
+            }
+        }
+        val recorder = MachineRecorder(machine, Ctx())
+        val store = MachineStore(machine, Ctx(), handler, scope, TestClock(testScheduler), dispatcher, observers = listOf(recorder)) {
+            exceptionHandler(ExceptionHandler.Ignore)
+        }
+        store.start()
+        runCurrent()
+        store.dispatch(Act.Load("cats"))
+        advanceTimeBy(150.milliseconds); runCurrent()
+        assertTrue(store.currentState.isActive(content))
+        store.dispatch(Act.Refresh) // Fetch("cats") again, never answered by the live handler
+        runCurrent()
+        return Live(recorder.recording(), store, { calls })
+    }
+
+    @Test
+    fun aBranchFromAnEarlierPosition_takesNewInputs_whileTheLiveStoreIsUntouched() = runTest {
+        val live = recordedLive()
+        val liveBefore = live.store.currentState
+        val callsBefore = live.handlerCalls()
+        val session = ReplaySession(machine, live.recording)
+        val afterStart = 1
+        session.seek(afterStart)
+
+        val branch = session.branch()
+        assertTrue(branch.snapshot.isActive(idle))
+        val decision = branch.dispatch(Act.Load("dogs"))
+
+        assertTrue(decision.isHandled && branch.snapshot.isActive(loading))
+        assertEquals(listOf(Fetch("dogs")), branch.awaiting.map { it.command })
+        assertEquals(liveBefore, live.store.currentState, "the live store did not move")
+        assertEquals(callsBefore, live.handlerCalls(), "no handler ran for the branch")
+        // The branch's ids continue the snapshot's counters: no collision with the recorded ones.
+        assertTrue(branch.awaiting.single().id.value > live.recording.snapshotAt(afterStart).counters.commands)
+        live.store.close()
+    }
+
+    @Test
+    fun anAwaitingCommand_isAnsweredByTheCaller_orByAnEqualRecordedCommand() = runTest {
+        val live = recordedLive()
+        val session = ReplaySession(machine, live.recording)
+        session.seek(live.recording.length) // Loading again with Fetch("cats") awaiting, as the live store is
+        val branch = session.branch()
+        val awaiting = branch.awaiting.single()
+        assertEquals(Fetch("cats"), awaiting.command)
+
+        // The recording answered an equal Fetch("cats") from the same node: reusable.
+        val reused = branch.reuseRecordedAnswers(awaiting.id)
+        assertTrue(reused != null && reused.isNotEmpty())
+        assertTrue(branch.snapshot.isActive(content))
+        assertEquals(listOf("tom", "felix"), branch.snapshot.context.items)
+        assertEquals(listOf(Ev.Shown), branch.effects.map { it.event })
+        assertTrue(branch.awaiting.isEmpty(), "the recorded completion was reused as well")
+
+        // A different query has no recorded answer: awaiting, until the caller answers.
+        branch.dispatch(Act.Refresh)
+        branch.dispatch(Act.Load("dogs"))
+        val dogs = branch.awaiting.single()
+        assertEquals(Fetch("dogs"), dogs.command)
+        assertNull(branch.reuseRecordedAnswers(dogs.id), "Fetch(dogs) was never recorded; no fallback to anything")
+        branch.answer(dogs.id, Act.Loaded(listOf("rex")))
+        assertEquals(listOf("rex"), branch.snapshot.context.items)
+        // The answer moved the machine out of Loading, which ends the command's activation: it is
+        // no longer awaiting, as the live executor would have cancelled it, and cannot be completed.
+        assertTrue(branch.awaiting.isEmpty())
+        assertFailsWith<IllegalArgumentException> { branch.complete(dogs.id) }
+        live.store.close()
+    }
+
+    @Test
+    fun timers_fireWhenTheVirtualClockAdvances_pastTheirDeadlines() = runTest {
+        val live = recordedLive()
+        val session = ReplaySession(machine, live.recording)
+        session.seek(live.recording.length)
+        val branch = session.branch()
+        val nowAtBranch = branch.now
+        assertEquals(1, branch.snapshot.timers.size)
+
+        assertTrue(branch.advance(9.seconds).isEmpty(), "not due yet")
+        assertEquals(nowAtBranch + 9.seconds, branch.now)
+        val fired = branch.advance(2.seconds)
+
+        assertEquals(1, fired.size)
+        assertTrue(branch.snapshot.isActive(idle))
+        assertEquals(1, branch.snapshot.context.timeouts)
+        assertTrue(branch.awaiting.isEmpty(), "the awaiting Fetch left with Loading")
+        assertEquals(nowAtBranch + 11.seconds, branch.now)
+        val firedInput = fired.single().let { d -> branch.history.indexOf(d) }
+        assertTrue(firedInput >= 0)
+        assertFailsWith<IllegalArgumentException> { branch.advance((-1).seconds) }
+        live.store.close()
+    }
+
+    @Test
+    fun aFailedCommand_stepsWithCommandFailure_andLeavesAwaiting() = runTest {
+        val live = recordedLive()
+        val session = ReplaySession(machine, live.recording)
+        session.seek(live.recording.length)
+        val branch = session.branch()
+        val awaiting = branch.awaiting.single()
+
+        val decision = branch.fail(awaiting.id, FailureDescriptor(type = "IOException"))
+
+        assertTrue(decision.isHandled)
+        assertTrue(branch.awaiting.isEmpty())
+        assertTrue(branch.snapshot.isActive(loading), "no transition declared for CommandFailure")
+        live.store.close()
+    }
+
+    @Test
+    fun latestLane_supersedesAwaitingCommandsInTheBranch() = runTest {
+        val a = StateId("A")
+        val b = StateId("B")
+        val b0 = StateId("B0")
+        val b1 = StateId("B1")
+        val regions = StateChartDefinition(
+            root,
+            listOf(ParallelState(root), AtomicState(a, parent = root), CompoundState(b, initial = b0, parent = root), AtomicState(b0, parent = b), AtomicState(b1, parent = b)),
+            listOf(Transition(b0, b1, ActionMatcher.of<Act.Refresh>("Refresh"))),
+        )
+        val lanes = Machine<Ctx, Act, Fetch, Ev>(DefinitionId("lanes"), DefinitionVersion("1"), regions) {
+            onEnter(a) { command(Fetch("a"), LaneId("net"), ConcurrencyPolicy.Latest) }
+            onEnter(b1) { command(Fetch("b"), LaneId("net"), ConcurrencyPolicy.Latest) }
+        }
+        val initial = lanes.initialSnapshot(Ctx())
+        val started = lanes.decide(initial, MachineInput.Start(MachineTime.Zero))
+        val recording = Recording<Ctx, Act, Fetch, Ev>(lanes.id, lanes.version, initial, listOf(RecordedStep.Committed<Ctx, Act, Fetch, Ev>(MachineInput.Start(MachineTime.Zero), started)))
+        val session = ReplaySession(lanes, recording)
+        session.seek(1)
+        val branch = session.branch()
+        assertEquals(listOf(Fetch("a")), branch.awaiting.map { it.command })
+
+        branch.dispatch(Act.Refresh)
+
+        assertEquals(listOf(Fetch("b")), branch.awaiting.map { it.command }, "a's command was superseded in the lane")
+        assertTrue(branch.history.any { d -> d.snapshot.commands.keys.none { it == CommandId(1) } })
+        assertTrue(branch.history.size >= 2, "the abandonment was decided as an input, as the live executor would feed it")
+        val abandoned = branch.history.drop(1).firstOrNull()
+        assertTrue(abandoned != null)
+        assertEquals(setOf(CommandId(2)), branch.snapshot.commands.keys)
+        assertEquals(AbandonReason.Superseded, AbandonReason.Superseded)
+    }
+}

@@ -460,6 +460,51 @@ concurrent dispatchers are not in processing order (the ordinal is); the executo
 handler failure through `PluginScope.launch`, so the journal attributes it to the input being
 processed when the launch happened.
 
+## Tenth round: tests for what hands cannot reproduce
+
+Coverage of the time-travel foundation aimed at the scenarios no one reproduces by hand: thread
+interleavings, events on the same instant, faults inside the diagnostics, and a first replay.
+Each test states an invariant and drives the code with a storm, a seed or an exact schedule.
+
+- `ReplayDeterminismTest` (statechart): a `MachineStore` under a six-thread storm of loads,
+  ticks, results and timers on `Dispatchers.Default`, while a `DecisionObserver` records every
+  machine input in processing order with the snapshot it produced (the observer's `onCommitted`
+  now receives the machine input for that purpose). The recording is then decided again from
+  the initial snapshot by the pure machine: every snapshot equal, every ignored input ignored
+  again. The first real replay check; it passed unchanged.
+- `CloseRaceTest` (statechart): `close()` racing a storm, twenty-five times: the snapshot never
+  changes after close, every processing that started finished, every command that started
+  ended, no handler body runs in a cancelled scope, nothing runs after `StoreClosed`.
+- `TimerExitRaceTest` (statechart): a timer due at the very instant a result exits its source,
+  in both orders the scheduler can pick: exactly one wins, the other is ignored with its reason
+  (`UnknownTimer` or `StaleCommand`), and a repeat of either changes nothing.
+- `FaultInjectionTest` (statechart): a probe, a payload policy, a journal sink and a decision
+  observer all throwing at random over three seeds: the committed snapshots equal those of a
+  run without any journal, the faults are counted and reported, nothing else changes.
+- `JournalConcurrencyTest` (observability): eight publishers against a queue of sixteen and a
+  sink that is slow and throws at random: what the writer hands to the sink is in order, every
+  hole is preceded by exactly one gap that explains it, published equals delivered plus dropped.
+- `StoreProbeTest.manyThreads_withClearsAndAClose_…` (core): eight dispatching threads, handlers
+  clearing the queue, a variant change clearing it by policy, a close mid-storm: every accepted
+  input ends exactly once, processed or discarded with a reason.
+
+Found and fixed by them:
+
+- `RecordingSession`: when the gap record did not fit the writer's queue but the writer freed a
+  slot between the two offers, the record itself went out without the gap in front of it, so a
+  sink saw a hole with no explanation until a later record. A record is now dropped together
+  with the gap it could not be preceded by, and `close()` sends the final gap and
+  `RecordingStopped` with the suspending `send`, so they reach the sinks even when the queue is
+  full.
+
+Test-side lessons, recorded so the next tests do not repeat them: wait for the `StoreClosed`
+trace before judging what happened around a close (queued coroutines end asynchronously after
+`close()` returns); a `withTimeout` inside `runTest` measures virtual time, so waits on real
+threads go through `withContext(Dispatchers.Default)`; a test clock over `runTest`'s scheduler
+must be relative to its creation when several stores run in one test; a sink that throws
+consumes the record it threw on, gap records included, so a journal invariant is about what the
+writer delivered, received or not.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing

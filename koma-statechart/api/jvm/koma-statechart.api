@@ -880,13 +880,15 @@ public final class koma/statechart/machine/Decision {
 }
 
 public abstract interface class koma/statechart/machine/DecisionObserver {
-	public fun onCommitted-cDI26wg (Lkoma/core/InputId;Lkoma/statechart/machine/Decision;)V
+	public fun onCommitted-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)V
+	public fun onFailed-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)V
 	public fun onIgnored-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;)V
 	public fun onRejected (Lkoma/core/Action;Lkoma/statechart/machine/Admission$Rejected;)V
 }
 
 public final class koma/statechart/machine/DecisionObserver$DefaultImpls {
-	public static fun onCommitted-cDI26wg (Lkoma/statechart/machine/DecisionObserver;Lkoma/core/InputId;Lkoma/statechart/machine/Decision;)V
+	public static fun onCommitted-3Z6dAtM (Lkoma/statechart/machine/DecisionObserver;Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)V
+	public static fun onFailed-3Z6dAtM (Lkoma/statechart/machine/DecisionObserver;Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)V
 	public static fun onIgnored-3Z6dAtM (Lkoma/statechart/machine/DecisionObserver;Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;)V
 	public static fun onRejected (Lkoma/statechart/machine/DecisionObserver;Lkoma/core/Action;Lkoma/statechart/machine/Admission$Rejected;)V
 }

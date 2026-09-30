@@ -9,6 +9,7 @@ import koma.core.InputId
 import koma.core.InternalKomaApi
 import koma.observability.ActivationRef
 import koma.observability.CommandRef
+import koma.observability.FailureDescriptor
 import koma.observability.JournalEntry
 import koma.observability.Payload
 import koma.observability.RecordingSession
@@ -24,10 +25,12 @@ import koma.observability.TimerRef
 @ExperimentalKomaApi
 interface DecisionObserver<C, A : Action, CMD, E : Event> {
     /**
-     * [decision]'s snapshot was committed while processing [input] (`null` when unknown). The
-     * store's `StateCommitted` trace of the same input and revision precedes this call.
+     * [decision]'s snapshot was committed while processing [input] (`null` when unknown), for
+     * [machineInput]. The store's `StateCommitted` trace of the same input and revision precedes
+     * this call. A recording of the machine inputs in this order, with the snapshots they
+     * produced, is what a replay decides again.
      */
-    fun onCommitted(input: InputId?, decision: Decision<C, CMD, E>) {}
+    fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {}
 
     /**
      * The machine ignored [machineInput] for [reason] while processing [input]; nothing was committed.
@@ -38,6 +41,12 @@ interface DecisionObserver<C, A : Action, CMD, E : Event> {
      * [action] was refused at admission and never became an input.
      */
     fun onRejected(action: A, rejection: Admission.Rejected) {}
+
+    /**
+     * The machine failed to decide [machineInput] while processing [input]: a guard, reducer or
+     * rule threw [failure]. Nothing was committed; the cause reaches the store's exception handler.
+     */
+    fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) {}
 }
 
 /**
@@ -63,7 +72,7 @@ private class DecisionJournal<C, A : Action, CMD, E : Event>(
     private val describeCommand: (CMD) -> Payload<CMD>,
     private val describeAction: (A) -> Payload<A>,
 ) : DecisionObserver<C, A, CMD, E> {
-    override fun onCommitted(input: InputId?, decision: Decision<C, CMD, E>) {
+    override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
         session.publish(
             store,
             JournalEntry.DecisionCommitted(

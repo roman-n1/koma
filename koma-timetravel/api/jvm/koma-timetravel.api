@@ -1,0 +1,174 @@
+public final class koma/timetravel/Branch {
+	public final fun advance-LRDsOJo (J)Ljava/util/List;
+	public final fun answer-L4hFu2M (JLkoma/core/Action;)Lkoma/statechart/machine/Decision;
+	public final fun complete-rf9sHPo (J)Lkoma/statechart/machine/Decision;
+	public final fun dispatch (Lkoma/core/Action;)Lkoma/statechart/machine/Decision;
+	public final fun fail-L4hFu2M (JLkoma/observability/FailureDescriptor;)Lkoma/statechart/machine/Decision;
+	public final fun getAwaiting ()Ljava/util/List;
+	public final fun getEffects ()Ljava/util/List;
+	public final fun getHistory ()Ljava/util/List;
+	public final fun getNow-cDuxZ3M ()J
+	public final fun getSnapshot ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun reuseRecordedAnswers-rf9sHPo (J)Ljava/util/List;
+}
+
+public abstract interface class koma/timetravel/Compatibility {
+}
+
+public final class koma/timetravel/Compatibility$InspectableOnly : koma/timetravel/Compatibility {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lkoma/timetravel/Compatibility$InspectableOnly;
+	public static synthetic fun copy$default (Lkoma/timetravel/Compatibility$InspectableOnly;Ljava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/Compatibility$InspectableOnly;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/Compatibility$Replayable : koma/timetravel/Compatibility {
+	public static final field INSTANCE Lkoma/timetravel/Compatibility$Replayable;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/Compatibility$Unsupported : koma/timetravel/Compatibility {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lkoma/timetravel/Compatibility$Unsupported;
+	public static synthetic fun copy$default (Lkoma/timetravel/Compatibility$Unsupported;Ljava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/Compatibility$Unsupported;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/MachineRecorder : koma/statechart/machine/DecisionObserver {
+	public fun <init> (Lkoma/statechart/machine/Machine;Ljava/lang/Object;)V
+	public final fun getProblem ()Ljava/lang/String;
+	public fun onCommitted-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)V
+	public fun onFailed-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)V
+	public fun onIgnored-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;)V
+	public fun onRejected (Lkoma/core/Action;Lkoma/statechart/machine/Admission$Rejected;)V
+	public final fun recording ()Lkoma/timetravel/Recording;
+}
+
+public abstract interface class koma/timetravel/RecordedStep {
+	public abstract fun getInput ()Lkoma/statechart/machine/MachineInput;
+}
+
+public final class koma/timetravel/RecordedStep$Committed : koma/timetravel/RecordedStep {
+	public fun <init> (Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)V
+	public final fun component1 ()Lkoma/statechart/machine/MachineInput;
+	public final fun component2 ()Lkoma/statechart/machine/Decision;
+	public final fun copy (Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)Lkoma/timetravel/RecordedStep$Committed;
+	public static synthetic fun copy$default (Lkoma/timetravel/RecordedStep$Committed;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;ILjava/lang/Object;)Lkoma/timetravel/RecordedStep$Committed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDecision ()Lkoma/statechart/machine/Decision;
+	public fun getInput ()Lkoma/statechart/machine/MachineInput;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/RecordedStep$Failed : koma/timetravel/RecordedStep {
+	public fun <init> (Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)V
+	public final fun component1 ()Lkoma/statechart/machine/MachineInput;
+	public final fun component2 ()Lkoma/observability/FailureDescriptor;
+	public final fun copy (Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)Lkoma/timetravel/RecordedStep$Failed;
+	public static synthetic fun copy$default (Lkoma/timetravel/RecordedStep$Failed;Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;ILjava/lang/Object;)Lkoma/timetravel/RecordedStep$Failed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFailure ()Lkoma/observability/FailureDescriptor;
+	public fun getInput ()Lkoma/statechart/machine/MachineInput;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/RecordedStep$Ignored : koma/timetravel/RecordedStep {
+	public fun <init> (Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;)V
+	public final fun component1 ()Lkoma/statechart/machine/MachineInput;
+	public final fun component2 ()Lkoma/statechart/machine/IgnoreReason;
+	public final fun copy (Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;)Lkoma/timetravel/RecordedStep$Ignored;
+	public static synthetic fun copy$default (Lkoma/timetravel/RecordedStep$Ignored;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;ILjava/lang/Object;)Lkoma/timetravel/RecordedStep$Ignored;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getInput ()Lkoma/statechart/machine/MachineInput;
+	public final fun getReason ()Lkoma/statechart/machine/IgnoreReason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/Recording {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun compatibilityWith (Lkoma/statechart/machine/Machine;)Lkoma/timetravel/Compatibility;
+	public final fun getDefinition-i1OI-TI ()Ljava/lang/String;
+	public final fun getInitial ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun getLength ()I
+	public final fun getSteps ()Ljava/util/List;
+	public final fun getVersion-BnUQ-xA ()Ljava/lang/String;
+	public final fun snapshotAt (I)Lkoma/statechart/machine/MachineSnapshot;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/ReplayMismatch {
+	public fun <init> (ILkoma/statechart/machine/MachineInput;Lkoma/timetravel/RecordedStep;Lkoma/statechart/machine/Decision;Ljava/util/List;)V
+	public final fun component1 ()I
+	public final fun component2 ()Lkoma/statechart/machine/MachineInput;
+	public final fun component3 ()Lkoma/timetravel/RecordedStep;
+	public final fun component4 ()Lkoma/statechart/machine/Decision;
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy (ILkoma/statechart/machine/MachineInput;Lkoma/timetravel/RecordedStep;Lkoma/statechart/machine/Decision;Ljava/util/List;)Lkoma/timetravel/ReplayMismatch;
+	public static synthetic fun copy$default (Lkoma/timetravel/ReplayMismatch;ILkoma/statechart/machine/MachineInput;Lkoma/timetravel/RecordedStep;Lkoma/statechart/machine/Decision;Ljava/util/List;ILjava/lang/Object;)Lkoma/timetravel/ReplayMismatch;
+	public final fun describe ()Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActual ()Lkoma/statechart/machine/Decision;
+	public final fun getDifferences ()Ljava/util/List;
+	public final fun getExpected ()Lkoma/timetravel/RecordedStep;
+	public final fun getInput ()Lkoma/statechart/machine/MachineInput;
+	public final fun getPosition ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/ReplaySession {
+	public fun <init> (Lkoma/statechart/machine/Machine;Lkoma/timetravel/Recording;)V
+	public final fun branch ()Lkoma/timetravel/Branch;
+	public final fun getLength ()I
+	public final fun getMachine ()Lkoma/statechart/machine/Machine;
+	public final fun getNext ()Lkoma/timetravel/RecordedStep;
+	public final fun getPosition ()I
+	public final fun getRecording ()Lkoma/timetravel/Recording;
+	public final fun getSnapshot ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun seek (I)V
+	public final fun stepBackward ()Z
+	public final fun stepForward ()Lkoma/timetravel/ReplayStep;
+	public final fun verify (II)Lkoma/timetravel/ReplayMismatch;
+	public static synthetic fun verify$default (Lkoma/timetravel/ReplaySession;IIILjava/lang/Object;)Lkoma/timetravel/ReplayMismatch;
+}
+
+public abstract interface class koma/timetravel/ReplayStep {
+}
+
+public final class koma/timetravel/ReplayStep$Diverged : koma/timetravel/ReplayStep {
+	public fun <init> (Lkoma/timetravel/ReplayMismatch;)V
+	public final fun component1 ()Lkoma/timetravel/ReplayMismatch;
+	public final fun copy (Lkoma/timetravel/ReplayMismatch;)Lkoma/timetravel/ReplayStep$Diverged;
+	public static synthetic fun copy$default (Lkoma/timetravel/ReplayStep$Diverged;Lkoma/timetravel/ReplayMismatch;ILjava/lang/Object;)Lkoma/timetravel/ReplayStep$Diverged;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMismatch ()Lkoma/timetravel/ReplayMismatch;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/timetravel/ReplayStep$Matched : koma/timetravel/ReplayStep {
+	public fun <init> (ILkoma/statechart/machine/Decision;)V
+	public final fun component1 ()I
+	public final fun component2 ()Lkoma/statechart/machine/Decision;
+	public final fun copy (ILkoma/statechart/machine/Decision;)Lkoma/timetravel/ReplayStep$Matched;
+	public static synthetic fun copy$default (Lkoma/timetravel/ReplayStep$Matched;ILkoma/statechart/machine/Decision;ILjava/lang/Object;)Lkoma/timetravel/ReplayStep$Matched;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDecision ()Lkoma/statechart/machine/Decision;
+	public final fun getPosition ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+

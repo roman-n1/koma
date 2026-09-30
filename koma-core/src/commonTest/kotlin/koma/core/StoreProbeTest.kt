@@ -7,6 +7,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -17,6 +18,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlin.coroutines.CoroutineContext
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -703,6 +705,96 @@ class StoreProbeTest {
         assertEquals(InputKind.Startup, assertIs<StoreTrace.InputAccepted<AppAction>>(probe.traces.first()).kind)
         assertEquals(ProcessingOutcome.Handled(1), probe.traces.finished(InputId(1)).outcome)
         store.close()
+    }
+
+    // --- many threads with clears and a close ---
+
+    sealed interface StormAction : Action {
+        data class Add(val n: Int) : StormAction
+        data object Clear : StormAction
+        data object Exit : StormAction
+    }
+
+    sealed interface StormState : State {
+        data class Open(val total: Int = 0) : StormState
+        data object Closed : StormState
+    }
+
+    /**
+     * Dispatches from eight threads while handlers clear the pending queue at random and a
+     * variant change clears it by policy, then the Store closes mid-storm. Whatever happened to
+     * each accepted input, the traces account for it: processed to the end, or discarded with
+     * a reason, never both, never neither.
+     */
+    @Test
+    fun manyThreads_withClearsAndAClose_everyAcceptedInputEndsExactlyOnce() = runTest {
+        repeat(6) { iteration ->
+            val recorded = Channel<StoreTrace<StormState, StormAction, Nothing>>(Channel.UNLIMITED)
+            val store: Store<StormState, StormAction, Nothing> = Store(StormState.Open()) {
+                coroutineContext(Dispatchers.Default)
+                probe(StoreProbe { recorded.trySend(it) })
+                state<StormState.Open> {
+                    action<StormAction.Add> { nextState { state.copy(total = state.total + action.n) } }
+                    action<StormAction.Clear> { clearPendingActions() }
+                    action<StormAction.Exit> { nextState { StormState.Closed } }
+                }
+                state<StormState.Closed> {
+                    action<StormAction.Add> { }
+                }
+            }
+            withContext(Dispatchers.Default) {
+                coroutineScope {
+                    repeat(8) { sender ->
+                        launch {
+                            repeat(150) { i ->
+                                store.dispatch(
+                                    when {
+                                        i % 40 == 39 -> StormAction.Clear
+                                        i == 90 && sender == 3 -> StormAction.Exit
+                                        else -> StormAction.Add(1)
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    launch {
+                        delay(Random.nextLong(1, 8))
+                        store.close()
+                    }
+                }
+            }
+            // The queued dispatch coroutines end asynchronously after close(); StoreClosed comes
+            // once every coroutine of the Store has ended, so wait for it before judging.
+            val traces = mutableListOf<StoreTrace<StormState, StormAction, Nothing>>()
+            withContext(Dispatchers.Default) {
+                withTimeout(10_000) {
+                    while (true) {
+                        val trace = recorded.receive()
+                        traces += trace
+                        if (trace === StoreTrace.StoreClosed) break
+                    }
+                }
+            }
+            generateSequence { recorded.tryReceive().getOrNull() }.forEach { traces += it }
+
+            val accepted = traces.filterIsInstance<StoreTrace.InputAccepted<StormAction>>().map { it.input }
+            val finished = traces.filterIsInstance<StoreTrace.ProcessingFinished>().map { it.input }
+            val discarded = traces.filterIsInstance<StoreTrace.InputDiscarded>().map { it.input }
+            val ended = finished + discarded
+            assertEquals(ended.size, ended.toSet().size, "iteration $iteration: an input ended twice")
+            val dispatches = accepted.toSet() - InputId(1)
+            val unaccounted = dispatches - ended.toSet()
+            assertTrue(unaccounted.isEmpty(), "iteration $iteration: accepted inputs without an end: ${unaccounted.take(5)} of ${unaccounted.size}")
+            assertTrue(discarded.isNotEmpty(), "iteration $iteration: nothing was discarded, so the clears and the close did nothing")
+            val reasons = traces.filterIsInstance<StoreTrace.InputDiscarded>().map { it.reason }.toSet()
+            assertTrue(reasons.any { it == DiscardReason.StoreClosed } || reasons.any { it == DiscardReason.ClearedExplicitly } || reasons.any { it == DiscardReason.ClearedOnStateExit }, "iteration $iteration: $reasons")
+            val ordinals = traces.filterIsInstance<StoreTrace.ProcessingStarted>().map { it.ordinal }.sorted()
+            assertEquals((1L..ordinals.size).toList(), ordinals, "iteration $iteration: ordinals are dense")
+            val closedAt = traces.indexOfFirst { it === StoreTrace.StoreClosed }
+            assertTrue(traces.drop(closedAt + 1).none { it is StoreTrace.ProcessingStarted || it is StoreTrace.StateCommitted<*> }, "iteration $iteration: processing after StoreClosed")
+            // Dispatches that arrive after the close are accepted and discarded at once, so they may follow StoreClosed.
+            assertTrue(traces.drop(closedAt + 1).all { it is StoreTrace.InputAccepted<*> || it is StoreTrace.InputDiscarded }, "iteration $iteration: ${traces.drop(closedAt + 1).map { it::class.simpleName }.toSet()}")
+        }
     }
 
     // --- many threads ---
