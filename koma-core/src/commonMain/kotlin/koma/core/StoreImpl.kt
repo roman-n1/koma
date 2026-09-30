@@ -260,20 +260,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             val nextState = processActionDispatch(state, action)
 
-            if (state::class != nextState::class) {
-                processStateExit(state)
-            }
-
-            if (state != nextState) {
-                processStateChange(state, nextState)
-                if (state::class != nextState::class) {
-                    clearPendingActionsOnStateExitIfNeeded()
-                }
-            }
-
-            if (state::class != nextState::class) {
-                onStateEntered(nextState)
-            }
+            commitTransition(state, nextState, inErrorHandling = false)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             onErrorOccurred(currentState, t as Exception)
@@ -282,23 +269,31 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun onStateChanged(state: S, nextState: S) {
         try {
-            if (state::class != nextState::class) {
-                processStateExit(state)
-            }
-
-            if (state != nextState) {
-                processStateChange(state, nextState)
-                if (state::class != nextState::class) {
-                    clearPendingActionsOnStateExitIfNeeded()
-                }
-            }
-
-            if (state::class != nextState::class) {
-                onStateEntered(nextState)
-            }
+            commitTransition(state, nextState, inErrorHandling = false)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             onErrorOccurred(currentState, t as Exception)
+        }
+    }
+
+    // A transition, in this order: the old state's exit {} (which may throw and abort the whole
+    // transition, leaving the old state and its runtime in place), the pending actions cleared
+    // under ClearOnStateExit while the old state is still current, the new state committed, and
+    // the new state's enter {}. Clearing before the commit keeps an action a plugin dispatches from
+    // onState in reaction to the new state.
+    private suspend fun commitTransition(state: S, nextState: S, inErrorHandling: Boolean) {
+        val variantChanged = state::class != nextState::class
+        if (variantChanged) {
+            processStateExit(state)
+            clearPendingActionsOnStateExitIfNeeded()
+        }
+
+        if (state != nextState) {
+            processStateChange(state, nextState)
+        }
+
+        if (variantChanged) {
+            onStateEntered(nextState, inErrorHandling = inErrorHandling)
         }
     }
 
@@ -306,20 +301,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             val nextState = processStateEnter(state)
 
-            if (state::class != nextState::class) {
-                processStateExit(state)
-            }
-
-            if (state != nextState) {
-                processStateChange(state, nextState)
-                if (state::class != nextState::class) {
-                    clearPendingActionsOnStateExitIfNeeded()
-                }
-            }
-
-            if (state::class != nextState::class) {
-                onStateEntered(nextState, inErrorHandling = inErrorHandling)
-            }
+            commitTransition(state, nextState, inErrorHandling = inErrorHandling)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             if (inErrorHandling) {
@@ -333,20 +315,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         try {
             val nextState = processError(state, exception)
 
-            if (state::class != nextState::class) {
-                processStateExit(state)
-            }
-
-            if (state != nextState) {
-                processStateChange(state, nextState)
-                if (state::class != nextState::class) {
-                    clearPendingActionsOnStateExitIfNeeded()
-                }
-            }
-
-            if (state::class != nextState::class) {
-                onStateEntered(nextState, inErrorHandling = true)
-            }
+            commitTransition(state, nextState, inErrorHandling = true)
         } catch (t: Throwable) {
             rethrowIfNonRecoverable(t)
             throw InternalError(t)
@@ -619,25 +588,23 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         }
     }
 
+    // The state's runtime goes only once its exit {} succeeded: a failing exit aborts the transition
+    // and the Store stays in this state, whose launches and cancelLaunch() must keep working.
     private suspend fun processStateExit(state: S) {
-        try {
-            onExit.invoke(
-                object : ExitScope<S, E, S> {
-                    override val state = state
+        onExit.invoke(
+            object : ExitScope<S, E, S> {
+                override val state = state
 
-                    override fun clearPendingActions() {
-                        clearPendingDispatchJobs()
-                    }
+                override fun clearPendingActions() {
+                    clearPendingDispatchJobs()
+                }
 
-                    override suspend fun event(event: E) {
-                        emit(event)
-                    }
-                },
-            )
-        } finally {
-            stateRuntimes[state::class]?.scope?.cancel()
-            stateRuntimes.remove(state::class)
-        }
+                override suspend fun event(event: E) {
+                    emit(event)
+                }
+            },
+        )
+        stateRuntimes.remove(state::class)?.scope?.cancel()
     }
 
     private suspend fun processStateChange(state: S, nextState: S) {
