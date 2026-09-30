@@ -75,6 +75,19 @@ abstract interface <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Eve
     }
 }
 
+abstract interface koma.observability.file/SegmentOutput : kotlin/AutoCloseable { // koma.observability.file/SegmentOutput|null[0]
+    abstract fun close() // koma.observability.file/SegmentOutput.close|close(){}[0]
+    abstract fun flush() // koma.observability.file/SegmentOutput.flush|flush(){}[0]
+    abstract fun write(kotlin/ByteArray) // koma.observability.file/SegmentOutput.write|write(kotlin.ByteArray){}[0]
+}
+
+abstract interface koma.observability.file/SegmentStorage { // koma.observability.file/SegmentStorage|null[0]
+    abstract fun append(kotlin/String): koma.observability.file/SegmentOutput // koma.observability.file/SegmentStorage.append|append(kotlin.String){}[0]
+    abstract fun delete(kotlin/String) // koma.observability.file/SegmentStorage.delete|delete(kotlin.String){}[0]
+    abstract fun list(): kotlin.collections/List<koma.observability.file/SegmentInfo> // koma.observability.file/SegmentStorage.list|list(){}[0]
+    abstract fun read(kotlin/String): kotlin/ByteArray // koma.observability.file/SegmentStorage.read|read(kotlin.String){}[0]
+}
+
 sealed interface <#A: out koma.core/Action> koma.observability/InputDescriptor { // koma.observability/InputDescriptor|null[0]
     final class <#A1: out koma.core/Action> Dispatch : koma.observability/InputDescriptor<#A1> { // koma.observability/InputDescriptor.Dispatch|null[0]
         constructor <init>(koma.observability/Payload<#A1>) // koma.observability/InputDescriptor.Dispatch.<init>|<init>(koma.observability.Payload<1:0>){}[0]
@@ -378,6 +391,19 @@ sealed interface <#A: out kotlin/Any?> koma.observability/Payload { // koma.obse
         final fun toString(): kotlin/String // koma.observability/Payload.Retained.toString|toString(){}[0]
     }
 
+    final class Described : koma.observability/Payload<kotlin/Nothing> { // koma.observability/Payload.Described|null[0]
+        constructor <init>(kotlin/String) // koma.observability/Payload.Described.<init>|<init>(kotlin.String){}[0]
+
+        final val text // koma.observability/Payload.Described.text|{}text[0]
+            final fun <get-text>(): kotlin/String // koma.observability/Payload.Described.text.<get-text>|<get-text>(){}[0]
+
+        final fun component1(): kotlin/String // koma.observability/Payload.Described.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): koma.observability/Payload.Described // koma.observability/Payload.Described.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/Payload.Described.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/Payload.Described.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/Payload.Described.toString|toString(){}[0]
+    }
+
     final class Projected : koma.observability/Payload<kotlin/Nothing> { // koma.observability/Payload.Projected|null[0]
         constructor <init>(kotlin/String, kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // koma.observability/Payload.Projected.<init>|<init>(kotlin.String;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
 
@@ -404,6 +430,168 @@ sealed interface <#A: out kotlin/Any?> koma.observability/Payload { // koma.obse
         final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/Payload.Unavailable.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // koma.observability/Payload.Unavailable.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // koma.observability/Payload.Unavailable.toString|toString(){}[0]
+    }
+}
+
+sealed interface koma.observability.file/JournalFileEvent { // koma.observability.file/JournalFileEvent|null[0]
+    final class Mark : koma.observability.file/JournalFileEvent { // koma.observability.file/JournalFileEvent.Mark|null[0]
+        constructor <init>(koma.observability.file/SegmentMark) // koma.observability.file/JournalFileEvent.Mark.<init>|<init>(koma.observability.file.SegmentMark){}[0]
+
+        final val mark // koma.observability.file/JournalFileEvent.Mark.mark|{}mark[0]
+            final fun <get-mark>(): koma.observability.file/SegmentMark // koma.observability.file/JournalFileEvent.Mark.mark.<get-mark>|<get-mark>(){}[0]
+
+        final fun component1(): koma.observability.file/SegmentMark // koma.observability.file/JournalFileEvent.Mark.component1|component1(){}[0]
+        final fun copy(koma.observability.file/SegmentMark = ...): koma.observability.file/JournalFileEvent.Mark // koma.observability.file/JournalFileEvent.Mark.copy|copy(koma.observability.file.SegmentMark){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/JournalFileEvent.Mark.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability.file/JournalFileEvent.Mark.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability.file/JournalFileEvent.Mark.toString|toString(){}[0]
+    }
+
+    final class Record : koma.observability.file/JournalFileEvent { // koma.observability.file/JournalFileEvent.Record|null[0]
+        constructor <init>(koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>) // koma.observability.file/JournalFileEvent.Record.<init>|<init>(koma.observability.JournalRecord<kotlin.Nothing,kotlin.Nothing,kotlin.Nothing>){}[0]
+
+        final val record // koma.observability.file/JournalFileEvent.Record.record|{}record[0]
+            final fun <get-record>(): koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> // koma.observability.file/JournalFileEvent.Record.record.<get-record>|<get-record>(){}[0]
+
+        final fun component1(): koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> // koma.observability.file/JournalFileEvent.Record.component1|component1(){}[0]
+        final fun copy(koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> = ...): koma.observability.file/JournalFileEvent.Record // koma.observability.file/JournalFileEvent.Record.copy|copy(koma.observability.JournalRecord<kotlin.Nothing,kotlin.Nothing,kotlin.Nothing>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/JournalFileEvent.Record.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability.file/JournalFileEvent.Record.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability.file/JournalFileEvent.Record.toString|toString(){}[0]
+    }
+}
+
+sealed interface koma.observability.file/SegmentMark { // koma.observability.file/SegmentMark|null[0]
+    final class Corrupt : koma.observability.file/SegmentMark { // koma.observability.file/SegmentMark.Corrupt|null[0]
+        constructor <init>(kotlin/String, kotlin/Int, kotlin/Int, kotlin/String) // koma.observability.file/SegmentMark.Corrupt.<init>|<init>(kotlin.String;kotlin.Int;kotlin.Int;kotlin.String){}[0]
+
+        final val offset // koma.observability.file/SegmentMark.Corrupt.offset|{}offset[0]
+            final fun <get-offset>(): kotlin/Int // koma.observability.file/SegmentMark.Corrupt.offset.<get-offset>|<get-offset>(){}[0]
+        final val reason // koma.observability.file/SegmentMark.Corrupt.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.observability.file/SegmentMark.Corrupt.reason.<get-reason>|<get-reason>(){}[0]
+        final val recordsRead // koma.observability.file/SegmentMark.Corrupt.recordsRead|{}recordsRead[0]
+            final fun <get-recordsRead>(): kotlin/Int // koma.observability.file/SegmentMark.Corrupt.recordsRead.<get-recordsRead>|<get-recordsRead>(){}[0]
+        final val segment // koma.observability.file/SegmentMark.Corrupt.segment|{}segment[0]
+            final fun <get-segment>(): kotlin/String // koma.observability.file/SegmentMark.Corrupt.segment.<get-segment>|<get-segment>(){}[0]
+
+        final fun component1(): kotlin/String // koma.observability.file/SegmentMark.Corrupt.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // koma.observability.file/SegmentMark.Corrupt.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // koma.observability.file/SegmentMark.Corrupt.component3|component3(){}[0]
+        final fun component4(): kotlin/String // koma.observability.file/SegmentMark.Corrupt.component4|component4(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/String = ...): koma.observability.file/SegmentMark.Corrupt // koma.observability.file/SegmentMark.Corrupt.copy|copy(kotlin.String;kotlin.Int;kotlin.Int;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/SegmentMark.Corrupt.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability.file/SegmentMark.Corrupt.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability.file/SegmentMark.Corrupt.toString|toString(){}[0]
+    }
+
+    final class MissingSegments : koma.observability.file/SegmentMark { // koma.observability.file/SegmentMark.MissingSegments|null[0]
+        constructor <init>(koma.observability/RuntimeSessionId, kotlin/Int, kotlin/Int) // koma.observability.file/SegmentMark.MissingSegments.<init>|<init>(koma.observability.RuntimeSessionId;kotlin.Int;kotlin.Int){}[0]
+
+        final val fromIndex // koma.observability.file/SegmentMark.MissingSegments.fromIndex|{}fromIndex[0]
+            final fun <get-fromIndex>(): kotlin/Int // koma.observability.file/SegmentMark.MissingSegments.fromIndex.<get-fromIndex>|<get-fromIndex>(){}[0]
+        final val session // koma.observability.file/SegmentMark.MissingSegments.session|{}session[0]
+            final fun <get-session>(): koma.observability/RuntimeSessionId // koma.observability.file/SegmentMark.MissingSegments.session.<get-session>|<get-session>(){}[0]
+        final val toIndex // koma.observability.file/SegmentMark.MissingSegments.toIndex|{}toIndex[0]
+            final fun <get-toIndex>(): kotlin/Int // koma.observability.file/SegmentMark.MissingSegments.toIndex.<get-toIndex>|<get-toIndex>(){}[0]
+
+        final fun component1(): koma.observability/RuntimeSessionId // koma.observability.file/SegmentMark.MissingSegments.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // koma.observability.file/SegmentMark.MissingSegments.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // koma.observability.file/SegmentMark.MissingSegments.component3|component3(){}[0]
+        final fun copy(koma.observability/RuntimeSessionId = ..., kotlin/Int = ..., kotlin/Int = ...): koma.observability.file/SegmentMark.MissingSegments // koma.observability.file/SegmentMark.MissingSegments.copy|copy(koma.observability.RuntimeSessionId;kotlin.Int;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/SegmentMark.MissingSegments.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability.file/SegmentMark.MissingSegments.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability.file/SegmentMark.MissingSegments.toString|toString(){}[0]
+    }
+
+    final class NotASegment : koma.observability.file/SegmentMark { // koma.observability.file/SegmentMark.NotASegment|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // koma.observability.file/SegmentMark.NotASegment.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final val reason // koma.observability.file/SegmentMark.NotASegment.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.observability.file/SegmentMark.NotASegment.reason.<get-reason>|<get-reason>(){}[0]
+        final val segment // koma.observability.file/SegmentMark.NotASegment.segment|{}segment[0]
+            final fun <get-segment>(): kotlin/String // koma.observability.file/SegmentMark.NotASegment.segment.<get-segment>|<get-segment>(){}[0]
+
+        final fun component1(): kotlin/String // koma.observability.file/SegmentMark.NotASegment.component1|component1(){}[0]
+        final fun component2(): kotlin/String // koma.observability.file/SegmentMark.NotASegment.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ...): koma.observability.file/SegmentMark.NotASegment // koma.observability.file/SegmentMark.NotASegment.copy|copy(kotlin.String;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/SegmentMark.NotASegment.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability.file/SegmentMark.NotASegment.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability.file/SegmentMark.NotASegment.toString|toString(){}[0]
+    }
+
+    final class SequenceHole : koma.observability.file/SegmentMark { // koma.observability.file/SegmentMark.SequenceHole|null[0]
+        constructor <init>(koma.observability/RuntimeSessionId, kotlin/Long, kotlin/Long) // koma.observability.file/SegmentMark.SequenceHole.<init>|<init>(koma.observability.RuntimeSessionId;kotlin.Long;kotlin.Long){}[0]
+
+        final val afterGroupSeq // koma.observability.file/SegmentMark.SequenceHole.afterGroupSeq|{}afterGroupSeq[0]
+            final fun <get-afterGroupSeq>(): kotlin/Long // koma.observability.file/SegmentMark.SequenceHole.afterGroupSeq.<get-afterGroupSeq>|<get-afterGroupSeq>(){}[0]
+        final val missing // koma.observability.file/SegmentMark.SequenceHole.missing|{}missing[0]
+            final fun <get-missing>(): kotlin/Long // koma.observability.file/SegmentMark.SequenceHole.missing.<get-missing>|<get-missing>(){}[0]
+        final val nextGroupSeq // koma.observability.file/SegmentMark.SequenceHole.nextGroupSeq|{}nextGroupSeq[0]
+            final fun <get-nextGroupSeq>(): kotlin/Long // koma.observability.file/SegmentMark.SequenceHole.nextGroupSeq.<get-nextGroupSeq>|<get-nextGroupSeq>(){}[0]
+        final val session // koma.observability.file/SegmentMark.SequenceHole.session|{}session[0]
+            final fun <get-session>(): koma.observability/RuntimeSessionId // koma.observability.file/SegmentMark.SequenceHole.session.<get-session>|<get-session>(){}[0]
+
+        final fun component1(): koma.observability/RuntimeSessionId // koma.observability.file/SegmentMark.SequenceHole.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // koma.observability.file/SegmentMark.SequenceHole.component2|component2(){}[0]
+        final fun component3(): kotlin/Long // koma.observability.file/SegmentMark.SequenceHole.component3|component3(){}[0]
+        final fun copy(koma.observability/RuntimeSessionId = ..., kotlin/Long = ..., kotlin/Long = ...): koma.observability.file/SegmentMark.SequenceHole // koma.observability.file/SegmentMark.SequenceHole.copy|copy(koma.observability.RuntimeSessionId;kotlin.Long;kotlin.Long){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/SegmentMark.SequenceHole.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability.file/SegmentMark.SequenceHole.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability.file/SegmentMark.SequenceHole.toString|toString(){}[0]
+    }
+
+    final class TruncatedTail : koma.observability.file/SegmentMark { // koma.observability.file/SegmentMark.TruncatedTail|null[0]
+        constructor <init>(kotlin/String, kotlin/Int, kotlin/Int) // koma.observability.file/SegmentMark.TruncatedTail.<init>|<init>(kotlin.String;kotlin.Int;kotlin.Int){}[0]
+
+        final val recordsRead // koma.observability.file/SegmentMark.TruncatedTail.recordsRead|{}recordsRead[0]
+            final fun <get-recordsRead>(): kotlin/Int // koma.observability.file/SegmentMark.TruncatedTail.recordsRead.<get-recordsRead>|<get-recordsRead>(){}[0]
+        final val segment // koma.observability.file/SegmentMark.TruncatedTail.segment|{}segment[0]
+            final fun <get-segment>(): kotlin/String // koma.observability.file/SegmentMark.TruncatedTail.segment.<get-segment>|<get-segment>(){}[0]
+        final val trailingBytes // koma.observability.file/SegmentMark.TruncatedTail.trailingBytes|{}trailingBytes[0]
+            final fun <get-trailingBytes>(): kotlin/Int // koma.observability.file/SegmentMark.TruncatedTail.trailingBytes.<get-trailingBytes>|<get-trailingBytes>(){}[0]
+
+        final fun component1(): kotlin/String // koma.observability.file/SegmentMark.TruncatedTail.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // koma.observability.file/SegmentMark.TruncatedTail.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // koma.observability.file/SegmentMark.TruncatedTail.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ...): koma.observability.file/SegmentMark.TruncatedTail // koma.observability.file/SegmentMark.TruncatedTail.copy|copy(kotlin.String;kotlin.Int;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/SegmentMark.TruncatedTail.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability.file/SegmentMark.TruncatedTail.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability.file/SegmentMark.TruncatedTail.toString|toString(){}[0]
+    }
+
+    final class Unfinished : koma.observability.file/SegmentMark { // koma.observability.file/SegmentMark.Unfinished|null[0]
+        constructor <init>(kotlin/String, kotlin/Int) // koma.observability.file/SegmentMark.Unfinished.<init>|<init>(kotlin.String;kotlin.Int){}[0]
+
+        final val recordsRead // koma.observability.file/SegmentMark.Unfinished.recordsRead|{}recordsRead[0]
+            final fun <get-recordsRead>(): kotlin/Int // koma.observability.file/SegmentMark.Unfinished.recordsRead.<get-recordsRead>|<get-recordsRead>(){}[0]
+        final val segment // koma.observability.file/SegmentMark.Unfinished.segment|{}segment[0]
+            final fun <get-segment>(): kotlin/String // koma.observability.file/SegmentMark.Unfinished.segment.<get-segment>|<get-segment>(){}[0]
+
+        final fun component1(): kotlin/String // koma.observability.file/SegmentMark.Unfinished.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // koma.observability.file/SegmentMark.Unfinished.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/Int = ...): koma.observability.file/SegmentMark.Unfinished // koma.observability.file/SegmentMark.Unfinished.copy|copy(kotlin.String;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/SegmentMark.Unfinished.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability.file/SegmentMark.Unfinished.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability.file/SegmentMark.Unfinished.toString|toString(){}[0]
+    }
+
+    final class UnsupportedFormat : koma.observability.file/SegmentMark { // koma.observability.file/SegmentMark.UnsupportedFormat|null[0]
+        constructor <init>(kotlin/String, kotlin/Int, kotlin/Int) // koma.observability.file/SegmentMark.UnsupportedFormat.<init>|<init>(kotlin.String;kotlin.Int;kotlin.Int){}[0]
+
+        final val fileFormatVersion // koma.observability.file/SegmentMark.UnsupportedFormat.fileFormatVersion|{}fileFormatVersion[0]
+            final fun <get-fileFormatVersion>(): kotlin/Int // koma.observability.file/SegmentMark.UnsupportedFormat.fileFormatVersion.<get-fileFormatVersion>|<get-fileFormatVersion>(){}[0]
+        final val recordFormatVersion // koma.observability.file/SegmentMark.UnsupportedFormat.recordFormatVersion|{}recordFormatVersion[0]
+            final fun <get-recordFormatVersion>(): kotlin/Int // koma.observability.file/SegmentMark.UnsupportedFormat.recordFormatVersion.<get-recordFormatVersion>|<get-recordFormatVersion>(){}[0]
+        final val segment // koma.observability.file/SegmentMark.UnsupportedFormat.segment|{}segment[0]
+            final fun <get-segment>(): kotlin/String // koma.observability.file/SegmentMark.UnsupportedFormat.segment.<get-segment>|<get-segment>(){}[0]
+
+        final fun component1(): kotlin/String // koma.observability.file/SegmentMark.UnsupportedFormat.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // koma.observability.file/SegmentMark.UnsupportedFormat.component2|component2(){}[0]
+        final fun component3(): kotlin/Int // koma.observability.file/SegmentMark.UnsupportedFormat.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/Int = ..., kotlin/Int = ...): koma.observability.file/SegmentMark.UnsupportedFormat // koma.observability.file/SegmentMark.UnsupportedFormat.copy|copy(kotlin.String;kotlin.Int;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/SegmentMark.UnsupportedFormat.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability.file/SegmentMark.UnsupportedFormat.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability.file/SegmentMark.UnsupportedFormat.toString|toString(){}[0]
     }
 }
 
@@ -476,6 +664,156 @@ final class <#A: out koma.core/State, #B: out koma.core/Action, #C: out koma.cor
     final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalRecord.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // koma.observability/JournalRecord.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // koma.observability/JournalRecord.toString|toString(){}[0]
+}
+
+final class koma.observability.file/DecodedSegment { // koma.observability.file/DecodedSegment|null[0]
+    constructor <init>(koma.observability.file/SegmentHeader?, kotlin.collections/List<koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>>, koma.observability.file/SegmentMark?, kotlin/Boolean) // koma.observability.file/DecodedSegment.<init>|<init>(koma.observability.file.SegmentHeader?;kotlin.collections.List<koma.observability.JournalRecord<kotlin.Nothing,kotlin.Nothing,kotlin.Nothing>>;koma.observability.file.SegmentMark?;kotlin.Boolean){}[0]
+
+    final val finished // koma.observability.file/DecodedSegment.finished|{}finished[0]
+        final fun <get-finished>(): kotlin/Boolean // koma.observability.file/DecodedSegment.finished.<get-finished>|<get-finished>(){}[0]
+    final val header // koma.observability.file/DecodedSegment.header|{}header[0]
+        final fun <get-header>(): koma.observability.file/SegmentHeader? // koma.observability.file/DecodedSegment.header.<get-header>|<get-header>(){}[0]
+    final val mark // koma.observability.file/DecodedSegment.mark|{}mark[0]
+        final fun <get-mark>(): koma.observability.file/SegmentMark? // koma.observability.file/DecodedSegment.mark.<get-mark>|<get-mark>(){}[0]
+    final val records // koma.observability.file/DecodedSegment.records|{}records[0]
+        final fun <get-records>(): kotlin.collections/List<koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> // koma.observability.file/DecodedSegment.records.<get-records>|<get-records>(){}[0]
+
+    final fun component1(): koma.observability.file/SegmentHeader? // koma.observability.file/DecodedSegment.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> // koma.observability.file/DecodedSegment.component2|component2(){}[0]
+    final fun component3(): koma.observability.file/SegmentMark? // koma.observability.file/DecodedSegment.component3|component3(){}[0]
+    final fun component4(): kotlin/Boolean // koma.observability.file/DecodedSegment.component4|component4(){}[0]
+    final fun copy(koma.observability.file/SegmentHeader? = ..., kotlin.collections/List<koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> = ..., koma.observability.file/SegmentMark? = ..., kotlin/Boolean = ...): koma.observability.file/DecodedSegment // koma.observability.file/DecodedSegment.copy|copy(koma.observability.file.SegmentHeader?;kotlin.collections.List<koma.observability.JournalRecord<kotlin.Nothing,kotlin.Nothing,kotlin.Nothing>>;koma.observability.file.SegmentMark?;kotlin.Boolean){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/DecodedSegment.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability.file/DecodedSegment.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability.file/DecodedSegment.toString|toString(){}[0]
+}
+
+final class koma.observability.file/FileSegmentStorage : koma.observability.file/SegmentStorage { // koma.observability.file/FileSegmentStorage|null[0]
+    constructor <init>(kotlin/String) // koma.observability.file/FileSegmentStorage.<init>|<init>(kotlin.String){}[0]
+
+    final fun append(kotlin/String): koma.observability.file/SegmentOutput // koma.observability.file/FileSegmentStorage.append|append(kotlin.String){}[0]
+    final fun delete(kotlin/String) // koma.observability.file/FileSegmentStorage.delete|delete(kotlin.String){}[0]
+    final fun list(): kotlin.collections/List<koma.observability.file/SegmentInfo> // koma.observability.file/FileSegmentStorage.list|list(){}[0]
+    final fun read(kotlin/String): kotlin/ByteArray // koma.observability.file/FileSegmentStorage.read|read(kotlin.String){}[0]
+}
+
+final class koma.observability.file/InMemorySegmentStorage : koma.observability.file/SegmentStorage { // koma.observability.file/InMemorySegmentStorage|null[0]
+    constructor <init>() // koma.observability.file/InMemorySegmentStorage.<init>|<init>(){}[0]
+
+    final fun append(kotlin/String): koma.observability.file/SegmentOutput // koma.observability.file/InMemorySegmentStorage.append|append(kotlin.String){}[0]
+    final fun corrupt(kotlin/String, kotlin/Int) // koma.observability.file/InMemorySegmentStorage.corrupt|corrupt(kotlin.String;kotlin.Int){}[0]
+    final fun delete(kotlin/String) // koma.observability.file/InMemorySegmentStorage.delete|delete(kotlin.String){}[0]
+    final fun list(): kotlin.collections/List<koma.observability.file/SegmentInfo> // koma.observability.file/InMemorySegmentStorage.list|list(){}[0]
+    final fun read(kotlin/String): kotlin/ByteArray // koma.observability.file/InMemorySegmentStorage.read|read(kotlin.String){}[0]
+    final fun truncate(kotlin/String, kotlin/Int) // koma.observability.file/InMemorySegmentStorage.truncate|truncate(kotlin.String;kotlin.Int){}[0]
+}
+
+final class koma.observability.file/JournalFileConfig { // koma.observability.file/JournalFileConfig|null[0]
+    constructor <init>(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...) // koma.observability.file/JournalFileConfig.<init>|<init>(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+
+    final val flushEveryRecords // koma.observability.file/JournalFileConfig.flushEveryRecords|{}flushEveryRecords[0]
+        final fun <get-flushEveryRecords>(): kotlin/Int // koma.observability.file/JournalFileConfig.flushEveryRecords.<get-flushEveryRecords>|<get-flushEveryRecords>(){}[0]
+    final val maxSegmentBytes // koma.observability.file/JournalFileConfig.maxSegmentBytes|{}maxSegmentBytes[0]
+        final fun <get-maxSegmentBytes>(): kotlin/Int // koma.observability.file/JournalFileConfig.maxSegmentBytes.<get-maxSegmentBytes>|<get-maxSegmentBytes>(){}[0]
+    final val maxSegments // koma.observability.file/JournalFileConfig.maxSegments|{}maxSegments[0]
+        final fun <get-maxSegments>(): kotlin/Int // koma.observability.file/JournalFileConfig.maxSegments.<get-maxSegments>|<get-maxSegments>(){}[0]
+
+    final fun component1(): kotlin/Int // koma.observability.file/JournalFileConfig.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // koma.observability.file/JournalFileConfig.component2|component2(){}[0]
+    final fun component3(): kotlin/Int // koma.observability.file/JournalFileConfig.component3|component3(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ...): koma.observability.file/JournalFileConfig // koma.observability.file/JournalFileConfig.copy|copy(kotlin.Int;kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/JournalFileConfig.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability.file/JournalFileConfig.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability.file/JournalFileConfig.toString|toString(){}[0]
+}
+
+final class koma.observability.file/JournalFileContents { // koma.observability.file/JournalFileContents|null[0]
+    constructor <init>(kotlin.collections/List<koma.observability.file/JournalFileEvent>) // koma.observability.file/JournalFileContents.<init>|<init>(kotlin.collections.List<koma.observability.file.JournalFileEvent>){}[0]
+
+    final val events // koma.observability.file/JournalFileContents.events|{}events[0]
+        final fun <get-events>(): kotlin.collections/List<koma.observability.file/JournalFileEvent> // koma.observability.file/JournalFileContents.events.<get-events>|<get-events>(){}[0]
+    final val isComplete // koma.observability.file/JournalFileContents.isComplete|{}isComplete[0]
+        final fun <get-isComplete>(): kotlin/Boolean // koma.observability.file/JournalFileContents.isComplete.<get-isComplete>|<get-isComplete>(){}[0]
+    final val marks // koma.observability.file/JournalFileContents.marks|{}marks[0]
+        final fun <get-marks>(): kotlin.collections/List<koma.observability.file/SegmentMark> // koma.observability.file/JournalFileContents.marks.<get-marks>|<get-marks>(){}[0]
+    final val records // koma.observability.file/JournalFileContents.records|{}records[0]
+        final fun <get-records>(): kotlin.collections/List<koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> // koma.observability.file/JournalFileContents.records.<get-records>|<get-records>(){}[0]
+
+    final fun component1(): kotlin.collections/List<koma.observability.file/JournalFileEvent> // koma.observability.file/JournalFileContents.component1|component1(){}[0]
+    final fun copy(kotlin.collections/List<koma.observability.file/JournalFileEvent> = ...): koma.observability.file/JournalFileContents // koma.observability.file/JournalFileContents.copy|copy(kotlin.collections.List<koma.observability.file.JournalFileEvent>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/JournalFileContents.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability.file/JournalFileContents.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability.file/JournalFileContents.toString|toString(){}[0]
+}
+
+final class koma.observability.file/JournalFileSink : koma.observability/JournalSink { // koma.observability.file/JournalFileSink|null[0]
+    constructor <init>(koma.observability.file/SegmentStorage, koma.observability.file/JournalFileConfig = ...) // koma.observability.file/JournalFileSink.<init>|<init>(koma.observability.file.SegmentStorage;koma.observability.file.JournalFileConfig){}[0]
+
+    final val activeSegment // koma.observability.file/JournalFileSink.activeSegment|{}activeSegment[0]
+        final fun <get-activeSegment>(): kotlin/String? // koma.observability.file/JournalFileSink.activeSegment.<get-activeSegment>|<get-activeSegment>(){}[0]
+    final val segments // koma.observability.file/JournalFileSink.segments|{}segments[0]
+        final fun <get-segments>(): kotlin.collections/List<kotlin/String> // koma.observability.file/JournalFileSink.segments.<get-segments>|<get-segments>(){}[0]
+
+    final fun close() // koma.observability.file/JournalFileSink.close|close(){}[0]
+    final fun flush() // koma.observability.file/JournalFileSink.flush|flush(){}[0]
+    final suspend fun write(koma.observability/JournalRecord<*, *, *>) // koma.observability.file/JournalFileSink.write|write(koma.observability.JournalRecord<*,*,*>){}[0]
+}
+
+final class koma.observability.file/JournalFiles { // koma.observability.file/JournalFiles|null[0]
+    constructor <init>(koma.observability.file/SegmentStorage) // koma.observability.file/JournalFiles.<init>|<init>(koma.observability.file.SegmentStorage){}[0]
+
+    final fun exportLines(koma.observability/RuntimeSessionId): kotlin.collections/List<kotlin/String> // koma.observability.file/JournalFiles.exportLines|exportLines(koma.observability.RuntimeSessionId){}[0]
+    final fun prune(kotlin/Long): kotlin.collections/List<kotlin/String> // koma.observability.file/JournalFiles.prune|prune(kotlin.Long){}[0]
+    final fun read(koma.observability/RuntimeSessionId): koma.observability.file/JournalFileContents // koma.observability.file/JournalFiles.read|read(koma.observability.RuntimeSessionId){}[0]
+    final fun sessions(): kotlin.collections/List<koma.observability/RuntimeSessionId> // koma.observability.file/JournalFiles.sessions|sessions(){}[0]
+    final fun tail(koma.observability/RuntimeSessionId, kotlin/Int): kotlin.collections/List<koma.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> // koma.observability.file/JournalFiles.tail|tail(koma.observability.RuntimeSessionId;kotlin.Int){}[0]
+}
+
+final class koma.observability.file/SegmentHeader { // koma.observability.file/SegmentHeader|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int, koma.observability/RuntimeSessionId, koma.observability/MachineGroupId, koma.observability/ExecutionMode, kotlin/Int) // koma.observability.file/SegmentHeader.<init>|<init>(kotlin.Int;kotlin.Int;koma.observability.RuntimeSessionId;koma.observability.MachineGroupId;koma.observability.ExecutionMode;kotlin.Int){}[0]
+
+    final val fileFormatVersion // koma.observability.file/SegmentHeader.fileFormatVersion|{}fileFormatVersion[0]
+        final fun <get-fileFormatVersion>(): kotlin/Int // koma.observability.file/SegmentHeader.fileFormatVersion.<get-fileFormatVersion>|<get-fileFormatVersion>(){}[0]
+    final val group // koma.observability.file/SegmentHeader.group|{}group[0]
+        final fun <get-group>(): koma.observability/MachineGroupId // koma.observability.file/SegmentHeader.group.<get-group>|<get-group>(){}[0]
+    final val index // koma.observability.file/SegmentHeader.index|{}index[0]
+        final fun <get-index>(): kotlin/Int // koma.observability.file/SegmentHeader.index.<get-index>|<get-index>(){}[0]
+    final val mode // koma.observability.file/SegmentHeader.mode|{}mode[0]
+        final fun <get-mode>(): koma.observability/ExecutionMode // koma.observability.file/SegmentHeader.mode.<get-mode>|<get-mode>(){}[0]
+    final val recordFormatVersion // koma.observability.file/SegmentHeader.recordFormatVersion|{}recordFormatVersion[0]
+        final fun <get-recordFormatVersion>(): kotlin/Int // koma.observability.file/SegmentHeader.recordFormatVersion.<get-recordFormatVersion>|<get-recordFormatVersion>(){}[0]
+    final val session // koma.observability.file/SegmentHeader.session|{}session[0]
+        final fun <get-session>(): koma.observability/RuntimeSessionId // koma.observability.file/SegmentHeader.session.<get-session>|<get-session>(){}[0]
+
+    final fun component1(): kotlin/Int // koma.observability.file/SegmentHeader.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // koma.observability.file/SegmentHeader.component2|component2(){}[0]
+    final fun component3(): koma.observability/RuntimeSessionId // koma.observability.file/SegmentHeader.component3|component3(){}[0]
+    final fun component4(): koma.observability/MachineGroupId // koma.observability.file/SegmentHeader.component4|component4(){}[0]
+    final fun component5(): koma.observability/ExecutionMode // koma.observability.file/SegmentHeader.component5|component5(){}[0]
+    final fun component6(): kotlin/Int // koma.observability.file/SegmentHeader.component6|component6(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ..., koma.observability/RuntimeSessionId = ..., koma.observability/MachineGroupId = ..., koma.observability/ExecutionMode = ..., kotlin/Int = ...): koma.observability.file/SegmentHeader // koma.observability.file/SegmentHeader.copy|copy(kotlin.Int;kotlin.Int;koma.observability.RuntimeSessionId;koma.observability.MachineGroupId;koma.observability.ExecutionMode;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/SegmentHeader.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability.file/SegmentHeader.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability.file/SegmentHeader.toString|toString(){}[0]
+}
+
+final class koma.observability.file/SegmentInfo { // koma.observability.file/SegmentInfo|null[0]
+    constructor <init>(kotlin/String, kotlin/Long, kotlin/Long) // koma.observability.file/SegmentInfo.<init>|<init>(kotlin.String;kotlin.Long;kotlin.Long){}[0]
+
+    final val modified // koma.observability.file/SegmentInfo.modified|{}modified[0]
+        final fun <get-modified>(): kotlin/Long // koma.observability.file/SegmentInfo.modified.<get-modified>|<get-modified>(){}[0]
+    final val name // koma.observability.file/SegmentInfo.name|{}name[0]
+        final fun <get-name>(): kotlin/String // koma.observability.file/SegmentInfo.name.<get-name>|<get-name>(){}[0]
+    final val size // koma.observability.file/SegmentInfo.size|{}size[0]
+        final fun <get-size>(): kotlin/Long // koma.observability.file/SegmentInfo.size.<get-size>|<get-size>(){}[0]
+
+    final fun component1(): kotlin/String // koma.observability.file/SegmentInfo.component1|component1(){}[0]
+    final fun component2(): kotlin/Long // koma.observability.file/SegmentInfo.component2|component2(){}[0]
+    final fun component3(): kotlin/Long // koma.observability.file/SegmentInfo.component3|component3(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Long = ..., kotlin/Long = ...): koma.observability.file/SegmentInfo // koma.observability.file/SegmentInfo.copy|copy(kotlin.String;kotlin.Long;kotlin.Long){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability.file/SegmentInfo.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.observability.file/SegmentInfo.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.observability.file/SegmentInfo.toString|toString(){}[0]
 }
 
 final class koma.observability/ActivationRef { // koma.observability/ActivationRef|null[0]
@@ -732,6 +1070,24 @@ final value class koma.observability/StoreSeq { // koma.observability/StoreSeq|n
     final fun toString(): kotlin/String // koma.observability/StoreSeq.toString|toString(){}[0]
 }
 
+final object koma.observability.file/JournalFileFormat { // koma.observability.file/JournalFileFormat|null[0]
+    final const val EXTENSION // koma.observability.file/JournalFileFormat.EXTENSION|{}EXTENSION[0]
+        final fun <get-EXTENSION>(): kotlin/String // koma.observability.file/JournalFileFormat.EXTENSION.<get-EXTENSION>|<get-EXTENSION>(){}[0]
+    final const val MAX_FRAME_BYTES // koma.observability.file/JournalFileFormat.MAX_FRAME_BYTES|{}MAX_FRAME_BYTES[0]
+        final fun <get-MAX_FRAME_BYTES>(): kotlin/Int // koma.observability.file/JournalFileFormat.MAX_FRAME_BYTES.<get-MAX_FRAME_BYTES>|<get-MAX_FRAME_BYTES>(){}[0]
+
+    final val END // koma.observability.file/JournalFileFormat.END|{}END[0]
+        final fun <get-END>(): kotlin/ByteArray // koma.observability.file/JournalFileFormat.END.<get-END>|<get-END>(){}[0]
+    final val MAGIC // koma.observability.file/JournalFileFormat.MAGIC|{}MAGIC[0]
+        final fun <get-MAGIC>(): kotlin/ByteArray // koma.observability.file/JournalFileFormat.MAGIC.<get-MAGIC>|<get-MAGIC>(){}[0]
+
+    final fun decodeSegment(kotlin/String, kotlin/ByteArray): koma.observability.file/DecodedSegment // koma.observability.file/JournalFileFormat.decodeSegment|decodeSegment(kotlin.String;kotlin.ByteArray){}[0]
+    final fun frame(koma.observability/JournalRecord<*, *, *>): kotlin/ByteArray // koma.observability.file/JournalFileFormat.frame|frame(koma.observability.JournalRecord<*,*,*>){}[0]
+    final fun header(koma.observability/RuntimeSessionId, koma.observability/MachineGroupId, koma.observability/ExecutionMode, kotlin/Int): kotlin/ByteArray // koma.observability.file/JournalFileFormat.header|header(koma.observability.RuntimeSessionId;koma.observability.MachineGroupId;koma.observability.ExecutionMode;kotlin.Int){}[0]
+    final fun parseSegmentName(kotlin/String): kotlin/Pair<koma.observability/RuntimeSessionId, kotlin/Int>? // koma.observability.file/JournalFileFormat.parseSegmentName|parseSegmentName(kotlin.String){}[0]
+    final fun segmentName(koma.observability/RuntimeSessionId, kotlin/Int): kotlin/String // koma.observability.file/JournalFileFormat.segmentName|segmentName(koma.observability.RuntimeSessionId;kotlin.Int){}[0]
+}
+
 final object koma.observability/JournalFormat { // koma.observability/JournalFormat|null[0]
     final fun entry(koma.observability/JournalEntry<*, *, *>): kotlin/String // koma.observability/JournalFormat.entry|entry(koma.observability.JournalEntry<*,*,*>){}[0]
     final fun failure(koma.observability/FailureDescriptor): kotlin/String // koma.observability/JournalFormat.failure|failure(koma.observability.FailureDescriptor){}[0]
@@ -739,6 +1095,8 @@ final object koma.observability/JournalFormat { // koma.observability/JournalFor
     final fun payload(koma.observability/Payload<*>): kotlin/String // koma.observability/JournalFormat.payload|payload(koma.observability.Payload<*>){}[0]
 }
 
+final const val koma.observability.file/JOURNAL_FILE_FORMAT_VERSION // koma.observability.file/JOURNAL_FILE_FORMAT_VERSION|{}JOURNAL_FILE_FORMAT_VERSION[0]
+    final fun <get-JOURNAL_FILE_FORMAT_VERSION>(): kotlin/Int // koma.observability.file/JOURNAL_FILE_FORMAT_VERSION.<get-JOURNAL_FILE_FORMAT_VERSION>|<get-JOURNAL_FILE_FORMAT_VERSION>(){}[0]
 final const val koma.observability/JOURNAL_FORMAT_VERSION // koma.observability/JOURNAL_FORMAT_VERSION|{}JOURNAL_FORMAT_VERSION[0]
     final fun <get-JOURNAL_FORMAT_VERSION>(): kotlin/Int // koma.observability/JOURNAL_FORMAT_VERSION.<get-JOURNAL_FORMAT_VERSION>|<get-JOURNAL_FORMAT_VERSION>(){}[0]
 

@@ -562,6 +562,40 @@ the end of the JSON, as the message carries `expected:<…> but was:<…>` on th
 runs identical in every input give equal checkpoints, as checkpoints are values, not tokens, so
 a "foreign checkpoint" comes from a run that differs.
 
+## Twelfth round: the journal on disk, damaged every way a disk can
+
+`koma-observability` gained its file format ([ADR](../adr/2026-09-30-journal-file-format.md)):
+segments of checksummed frames over a `SegmentStorage` the platform supplies, a sink that
+rotates them, a reader that marks instead of throwing. What hands cannot reproduce here is the
+damage: a process dying at every byte of a write, a disk flipping any bit.
+
+- `JournalFileFormatTest.everyCut_ofASegment_…` (observability): a segment with every entry
+  kind is cut at every length from 0 to its size; each cut decodes to a prefix of the records
+  with a mark, `Unfinished` exactly at the frame boundaries, `TruncatedTail` inside a frame,
+  `NotASegment` before the magic ends; never an exception, never a record that was not written.
+- `JournalFileFormatTest.everyFlippedBit_…` (observability): every bit of the same segment is
+  flipped in turn, eight times the size of the segment decodes; every flip is caught by the
+  checksum, the length check or the magic, except the bits of the end frame's trailing bytes,
+  and no flip ever yields a wrong record.
+- `JournalFileSinkTest` (observability): rotation with the oldest segments deleted and the hole
+  marked, a crash three bytes short of a frame losing that frame only, a crash at a boundary
+  losing nothing, a damaged frame skipping the rest of its segment while the next segment is
+  read with the hole between them marked, a `JournalGap` record explaining a hole and an
+  unexplained one marked, pruning that never touches the newest session.
+- `FileSegmentStorageJvmTest` and `FileSegmentStorageIosTest`: the same over real files, the
+  JVM one with the file cut by `RandomAccessFile.setLength` after a flush.
+
+Found and settled by them:
+
+- A segment cut right after its magic, before the header frame, is a truncation with zero
+  trailing bytes, not a corruption: the header was never written. The mark says so.
+- The reader's notion of "missing" starts at segment 0: a session's first present segment at a
+  higher index means the earlier ones rotated away, which the reader marks; a first draft
+  started counting at the first present segment and hid the rotation.
+- A `Payload.Retained` object cannot cross a file; it is written as its `toString()` and read back
+  as `Payload.Described`, a new variant, so a record read from a file never claims to hold an
+  object. `JournalFormat` prints it as the text.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing

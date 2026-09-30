@@ -10,6 +10,16 @@ group = "io.github.roman-n1"
 version = libs.versions.koma.get()
 
 kotlin {
+    // JVM and Android share the java.io file storage; the default hierarchy adds iosMain for the POSIX one.
+    applyDefaultHierarchyTemplate {
+        common {
+            group("jvmAndroid") {
+                withJvm()
+                withCompilations { it.target.platformType == org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType.androidJvm }
+            }
+        }
+    }
+
     android {
         namespace = "koma.observability"
         compileSdk = libs.versions.android.compileSdk.get().toInt()

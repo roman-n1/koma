@@ -55,11 +55,12 @@ object JournalFormat {
     }
 
     /**
-     * A payload: the retained object's `toString()`, a projection's label and fields, `-` when
-     * omitted, `?` when unavailable.
+     * A payload: the retained object's `toString()` or the text a file kept of it, a projection's
+     * label and fields, `-` when omitted, `?` when unavailable.
      */
     fun payload(payload: Payload<*>): String = when (payload) {
         is Payload.Retained -> payload.value.toString()
+        is Payload.Described -> payload.text
         is Payload.Projected -> if (payload.fields.isEmpty()) payload.label else payload.label + payload.fields.entries.joinToString(prefix = "(", postfix = ")") { "${it.key}=${it.value}" }
         Payload.Omitted -> "-"
         Payload.Unavailable -> "?"
