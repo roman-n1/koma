@@ -18,9 +18,9 @@ import kotlin.time.Duration
  * ([JournalEntry.BridgeSent], [JournalEntry.BridgeReceived]); 3 added the effect mailbox entries
  * ([JournalEntry.EffectQueued], [JournalEntry.EffectHandlingStarted], [JournalEntry.EffectAcknowledged],
  * [JournalEntry.EffectDiscarded]); 4 added [JournalEntry.ExternalReceived] and
- * [JournalEntry.CheckpointCreated].
+ * [JournalEntry.CheckpointCreated]; 5 added [JournalEntry.CommandsAbandoned].
  */
-const val JOURNAL_FORMAT_VERSION: Int = 4
+const val JOURNAL_FORMAT_VERSION: Int = 5
 
 /**
  * One record of the journal: the envelope every record shares, and the typed [entry].
@@ -177,6 +177,13 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
      * session itself, at the boundary the cut was taken at.
      */
     data class CheckpointCreated(val members: List<StoreInstanceId>, val sources: List<String>, val inFlight: Int) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /**
+     * The Store closed with commands its executor had not finished, for [reason] (`StoreClosed`):
+     * [queued] had been registered and never started, [running] were cancelled. Journaled once
+     * by the executor as it stops, which may be before or after the Store's own [StoreClosed].
+     */
+    data class CommandsAbandoned(val reason: String, val queued: List<Long>, val running: List<Long>) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * [dropped] published records before this one never reached the sinks: the writer's queue was

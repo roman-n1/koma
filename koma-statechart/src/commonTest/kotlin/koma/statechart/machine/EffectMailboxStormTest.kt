@@ -73,7 +73,7 @@ class EffectMailboxStormTest {
         val reported = Channel<Throwable>(Channel.UNLIMITED)
         val store = MachineStore(
             machine, Unit, CommandHandler<Nothing, Navigate> { _, _ -> }, executionScope, coroutineContext = Dispatchers.Default,
-            mailbox = MailboxConfig({ EffectPolicy.Retained }, maxRetained = total, listeners = listOf(session.effectsOf(id))),
+            mailbox = MailboxConfig({ EffectPolicy.Retained() }, maxRetained = total, listeners = listOf(session.effectsOf(id))),
         ) { exceptionHandler(ExceptionHandler { reported.trySend(it) }) }
         store.start()
         val acknowledged = Channel<EffectId>(Channel.UNLIMITED)

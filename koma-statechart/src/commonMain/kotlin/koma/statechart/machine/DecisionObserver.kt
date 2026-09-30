@@ -47,14 +47,22 @@ interface DecisionObserver<C, A : Action, CMD, E : Event> {
      * rule threw [failure]. Nothing was committed; the cause reaches the store's exception handler.
      */
     fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) {}
+
+    /**
+     * The store closed with commands its executor had not finished: [queued] had been registered
+     * and never started, [running] were cancelled (handoff §4: `Abandoned(StoreClosed)`). Called
+     * once, on the executor's thread as it stops, only when there is something to tell.
+     */
+    fun onClosed(queued: List<CommandId>, running: List<CommandId>) {}
 }
 
 /**
  * Records the decisions of a [MachineStore] into this session as [JournalEntry.DecisionCommitted],
- * [JournalEntry.DecisionIgnored] and [JournalEntry.InputRejected] entries of [store], next to
- * the inputs and commits `recordTo(session, store)` journals for the same store. Ids, node and
- * lane names are the machine's; of a command or a rejected action the journal keeps what
- * [command] and [action] return, nothing by default.
+ * [JournalEntry.DecisionIgnored], [JournalEntry.InputRejected] and, at close,
+ * [JournalEntry.CommandsAbandoned] entries of [store], next to the inputs and commits
+ * `recordTo(session, store)` journals for the same store. Ids, node and lane names are the
+ * machine's; of a command or a rejected action the journal keeps what [command] and [action]
+ * return, nothing by default.
  *
  * Pass the result to [MachineStore] as one of its observers.
  */
@@ -138,6 +146,10 @@ private class DecisionJournal<C, A : Action, CMD, E : Event>(
 
     override fun onRejected(action: A, rejection: Admission.Rejected) {
         session.publish(store, JournalEntry.InputRejected(guarded { describeAction(action) }, "QueueFull(pending=${rejection.pending}, limit=${rejection.limit})"))
+    }
+
+    override fun onClosed(queued: List<CommandId>, running: List<CommandId>) {
+        session.publish(store, JournalEntry.CommandsAbandoned("StoreClosed", queued.map { it.value }, running.map { it.value }))
     }
 
     private inline fun <T> guarded(describe: () -> Payload<T>): Payload<T> = try {

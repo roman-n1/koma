@@ -288,6 +288,25 @@ sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out kom
         final fun toString(): kotlin/String // koma.observability/JournalEntry.CheckpointCreated.toString|toString(){}[0]
     }
 
+    final class CommandsAbandoned : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.CommandsAbandoned|null[0]
+        constructor <init>(kotlin/String, kotlin.collections/List<kotlin/Long>, kotlin.collections/List<kotlin/Long>) // koma.observability/JournalEntry.CommandsAbandoned.<init>|<init>(kotlin.String;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<kotlin.Long>){}[0]
+
+        final val queued // koma.observability/JournalEntry.CommandsAbandoned.queued|{}queued[0]
+            final fun <get-queued>(): kotlin.collections/List<kotlin/Long> // koma.observability/JournalEntry.CommandsAbandoned.queued.<get-queued>|<get-queued>(){}[0]
+        final val reason // koma.observability/JournalEntry.CommandsAbandoned.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.observability/JournalEntry.CommandsAbandoned.reason.<get-reason>|<get-reason>(){}[0]
+        final val running // koma.observability/JournalEntry.CommandsAbandoned.running|{}running[0]
+            final fun <get-running>(): kotlin.collections/List<kotlin/Long> // koma.observability/JournalEntry.CommandsAbandoned.running.<get-running>|<get-running>(){}[0]
+
+        final fun component1(): kotlin/String // koma.observability/JournalEntry.CommandsAbandoned.component1|component1(){}[0]
+        final fun component2(): kotlin.collections/List<kotlin/Long> // koma.observability/JournalEntry.CommandsAbandoned.component2|component2(){}[0]
+        final fun component3(): kotlin.collections/List<kotlin/Long> // koma.observability/JournalEntry.CommandsAbandoned.component3|component3(){}[0]
+        final fun copy(kotlin/String = ..., kotlin.collections/List<kotlin/Long> = ..., kotlin.collections/List<kotlin/Long> = ...): koma.observability/JournalEntry.CommandsAbandoned // koma.observability/JournalEntry.CommandsAbandoned.copy|copy(kotlin.String;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<kotlin.Long>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.CommandsAbandoned.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.CommandsAbandoned.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.CommandsAbandoned.toString|toString(){}[0]
+    }
+
     final class DecisionCommitted : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.DecisionCommitted|null[0]
         constructor <init>(koma.core/InputId?, kotlin/Long, kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/Int>, kotlin.collections/List<koma.observability/ActivationRef>, kotlin.collections/List<koma.observability/ActivationRef>, kotlin.collections/List<koma.observability/CommandRef>, kotlin.collections/List<kotlin/Long>, kotlin.collections/List<koma.observability/TimerRef>, kotlin.collections/List<kotlin/Long>, kotlin/Int) // koma.observability/JournalEntry.DecisionCommitted.<init>|<init>(koma.core.InputId?;kotlin.Long;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<koma.observability.ActivationRef>;kotlin.collections.List<koma.observability.ActivationRef>;kotlin.collections.List<koma.observability.CommandRef>;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<koma.observability.TimerRef>;kotlin.collections.List<kotlin.Long>;kotlin.Int){}[0]
 

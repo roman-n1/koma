@@ -58,6 +58,7 @@ object JournalFormat {
         is JournalEntry.EffectDiscarded -> "EffectDiscarded e${entry.effect} ${entry.reason}"
         is JournalEntry.ExternalReceived -> "ExternalReceived ${entry.input ?: "?"} from ${entry.source}"
         is JournalEntry.CheckpointCreated -> "CheckpointCreated members=${entry.members.joinToString(",", "[", "]")} sources=${entry.sources.joinToString(",", "[", "]")} inFlight=${entry.inFlight}"
+        is JournalEntry.CommandsAbandoned -> "CommandsAbandoned ${entry.reason} queued=${entry.queued.joinToString(",", "[", "]") { "c$it" }} running=${entry.running.joinToString(",", "[", "]") { "c$it" }}"
         is JournalEntry.JournalGap -> "JournalGap dropped=${entry.dropped}"
         JournalEntry.RecordingStopped -> "RecordingStopped"
     }

@@ -245,6 +245,32 @@ class MachineJournalTest {
     }
 
     @Test
+    fun closing_journalsTheCommandsNeverStarted_andThoseCancelled() = runTest {
+        // Two Fetches in one sequential lane: the first runs, the second waits behind it.
+        val twoInALane = Machine<Unit, Act, Fetch, Nothing>(DefinitionId("journaled"), DefinitionVersion("1"), chart) {
+            onEnter(loading) {
+                command(Fetch, LaneId("load"), ConcurrencyPolicy.Sequential)
+                command(Fetch, LaneId("load"), ConcurrencyPolicy.Sequential)
+            }
+        }
+        val h = Harness(this, twoInALane, AdmissionPolicy.Unbounded, { Payload.Omitted }, null)
+        h.inner.startAndAwait()
+        runCurrent()
+        h.store.dispatch(Act.Load)
+        runCurrent()
+        assertEquals(2, h.store.currentState.commands.size)
+
+        h.store.close()
+        runCurrent()
+
+        val abandoned = h.records().entries().filterIsInstance<JournalEntry.CommandsAbandoned>().single()
+        assertEquals(JournalEntry.CommandsAbandoned("StoreClosed", queued = listOf(2), running = listOf(1)), abandoned)
+        assertTrue(JournalFormat.line(h.records().first { it.entry == abandoned }).endsWith("CommandsAbandoned StoreClosed queued=[c2] running=[c1]"))
+        assertTrue(h.records().entries().any { it == JournalEntry.StoreClosed }, "the store's own close is journaled too")
+        h.executionScope.cancel()
+    }
+
+    @Test
     fun journalFormat_rendersDecisions() = runTest {
         val h = harness()
         h.store.dispatch(Act.Load)

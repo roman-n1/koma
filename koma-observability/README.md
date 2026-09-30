@@ -28,12 +28,13 @@ builds the inspector and the replay on; this module is the journal only.
   machine (`DecisionCommitted`, `DecisionIgnored`, `InputRejected`), for the bridge of a
   group (`BridgeSent`, `BridgeReceived`, with the message's sender and effect), for the
   effect mailbox (`EffectQueued`, `EffectHandlingStarted`, `EffectAcknowledged`, `EffectDiscarded`),
-  for inputs of external sources (`ExternalReceived`) and for a group's cut (`CheckpointCreated`,
-  a record of the session itself through `session.publish(entry)`).
+  for inputs of external sources (`ExternalReceived`), for a group's cut (`CheckpointCreated`,
+  a record of the session itself through `session.publish(entry)`) and for a store closed with
+  commands unfinished (`CommandsAbandoned`).
 
 Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
 fork [roman-n1/koma](https://github.com/roman-n1/koma). The record model has `JOURNAL_FORMAT_VERSION`
-4, the segment layout `JOURNAL_FILE_FORMAT_VERSION` 1; every recording is `Capability.InspectOnly`
+5, the segment layout `JOURNAL_FILE_FORMAT_VERSION` 1; every recording is `Capability.InspectOnly`
 (the replay recording is `koma-timetravel`'s).
 
 ## Dependency

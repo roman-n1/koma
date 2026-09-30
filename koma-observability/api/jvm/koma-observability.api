@@ -222,6 +222,21 @@ public final class koma/observability/JournalEntry$CheckpointCreated : koma/obse
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/observability/JournalEntry$CommandsAbandoned : koma/observability/JournalEntry {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;Ljava/util/List;)Lkoma/observability/JournalEntry$CommandsAbandoned;
+	public static synthetic fun copy$default (Lkoma/observability/JournalEntry$CommandsAbandoned;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lkoma/observability/JournalEntry$CommandsAbandoned;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getQueued ()Ljava/util/List;
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getRunning ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/observability/JournalEntry$DecisionCommitted : koma/observability/JournalEntry {
 	public synthetic fun <init> (Lkoma/core/InputId;JLjava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-hFruGEc ()Lkoma/core/InputId;
