@@ -18,9 +18,11 @@ import kotlin.time.Duration
  * ([JournalEntry.BridgeSent], [JournalEntry.BridgeReceived]); 3 added the effect mailbox entries
  * ([JournalEntry.EffectQueued], [JournalEntry.EffectHandlingStarted], [JournalEntry.EffectAcknowledged],
  * [JournalEntry.EffectDiscarded]); 4 added [JournalEntry.ExternalReceived] and
- * [JournalEntry.CheckpointCreated]; 5 added [JournalEntry.CommandsAbandoned].
+ * [JournalEntry.CheckpointCreated]; 5 added [JournalEntry.CommandsAbandoned]; 6 added
+ * [JournalEntry.BridgeDropped]. New variants only at the end, under new tags; a reader of a
+ * version reads every earlier one.
  */
-const val JOURNAL_FORMAT_VERSION: Int = 5
+const val JOURNAL_FORMAT_VERSION: Int = 6
 
 /**
  * One record of the journal: the envelope every record shares, and the typed [entry].
@@ -150,6 +152,13 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
      * `BridgeReceived` input the message became was handled, ignored or failed.
      */
     data class BridgeReceived(val input: InputId?, val message: MessageRef) : JournalEntry<Nothing, Nothing, Nothing>
+
+    /**
+     * The bridge message [message], delivered to [to] and not yet decided, never will be: the
+     * store it was delivered to closed ([reason] `StoreClosed`). A record of [to]; nothing of
+     * the message was processed, and it is not in flight any more.
+     */
+    data class BridgeDropped(val message: MessageRef, val to: StoreInstanceId, val reason: String) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * The effect [effect] of a decision made while processing [input] entered the Store's

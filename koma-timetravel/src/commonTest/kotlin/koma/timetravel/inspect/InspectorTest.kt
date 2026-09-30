@@ -17,6 +17,7 @@ import koma.observability.JOURNAL_FORMAT_VERSION
 import koma.observability.JournalEntry
 import koma.observability.JournalRecord
 import koma.observability.MachineGroupId
+import koma.observability.MessageRef
 import koma.observability.OutcomeDescriptor
 import koma.observability.OutcomeKind
 import koma.observability.Payload
@@ -412,6 +413,7 @@ class InspectorTest {
             record(JournalEntry.JournalGap(4), forStore = null),
             record(JournalEntry.ProcessingStarted(InputId(3), 2)),
             record(JournalEntry.CommandsAbandoned("StoreClosed", listOf(3), listOf(2))),
+            record(JournalEntry.BridgeDropped(MessageRef(StoreInstanceId("p"), 7), store, "StoreClosed")),
             record(JournalEntry.RecordingStopped, forStore = null),
         )
 
@@ -439,5 +441,9 @@ class InspectorTest {
         val abandoned = items.filterIsInstance<TimelineItem.Abandoned>().single()
         assertEquals(listOf(3L) to listOf(2L), abandoned.queued to abandoned.running)
         assertTrue(InspectorText.line(abandoned).endsWith("Abandoned StoreClosed queued=[c3] running=[c2]"), InspectorText.line(abandoned))
+        val dropped = items.filterIsInstance<TimelineItem.Dropped>().single()
+        assertEquals(MessageRef(StoreInstanceId("p"), 7) to "StoreClosed", dropped.message to dropped.reason)
+        assertTrue(InspectorText.line(dropped).endsWith("Dropped p/e7 StoreClosed"), InspectorText.line(dropped))
+        assertTrue(reasons.none { it is Incompleteness.MessagesUndelivered }, "a drop is a fact of the record, not a hole in it")
     }
 }

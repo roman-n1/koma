@@ -190,6 +190,28 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     // executor hands them every effect, since the inner store never sees the effects.
     private val adaptedPlugins = mutableListOf<AdaptedPlugin<C, A, E>>()
 
+    // Told once, after [close] closed everything: a group drops what is in flight to this store.
+    private val closeListeners = mutableListOf<() -> Unit>()
+
+    @Volatile
+    private var closed = false
+
+    /** Whether [close] was called: nothing enters or is decided any more. */
+    internal val isClosed: Boolean get() = closed
+
+    /** Calls [listener] once when the store closes, after nothing can be decided any more; at once when it has closed already. */
+    internal fun onClose(listener: () -> Unit) {
+        val now = gated {
+            if (closed) {
+                true
+            } else {
+                closeListeners += listener
+                false
+            }
+        }
+        if (now) listener()
+    }
+
     /** The underlying Koma Store; the module's own tests feed it raw machine inputs. */
     internal val inner: Store<MachineSnapshot<C>, MachineInput<A>, E> =
         Store(machine.initialSnapshot(context), coroutineContext) {
@@ -484,9 +506,15 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     }
 
     override fun close() {
+        val listeners = gated {
+            if (closed) return
+            closed = true
+            closeListeners.toList().also { closeListeners.clear() }
+        }
         inner.close()
         scheduler.close()
         mailboxImpl.close()
         executionScope.cancel()
+        for (listener in listeners) listener()
     }
 }

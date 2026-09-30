@@ -23,7 +23,7 @@ import kotlinx.coroutines.sync.Mutex
 @ExperimentalKomaApi
 data class GroupStep(val store: StoreInstanceId, val step: Int)
 
-/** A route of the group's bridge, as a recording remembers it: effects of [from] reach [to]. */
+/** A route of the group's bridge, as a recording remembers it: effects of [from] reached [to] at some time of the run. */
 @ExperimentalKomaApi
 data class GroupRoute(val from: StoreInstanceId, val to: StoreInstanceId)
 
@@ -35,7 +35,8 @@ data class GroupRoute(val from: StoreInstanceId, val to: StoreInstanceId)
  * @property members The recording of each member
  * @property order Every decision of the group, in the order it was made: the member and the
  * index of its step
- * @property routes The routes of the bridge, so a replay can tell a delivery that had no route
+ * @property routes Every route the bridge had during the run, the removed ones included, so a
+ * replay can tell a delivery that never had a route
  * @property inFlight The messages already sent when the run begins, for a run recorded since a
  * cut: their deliveries are expected, their sends are before the run
  * @property sourceIds The external sources the group had attached: an input from any other
@@ -115,16 +116,16 @@ class GroupRecording(
  * decisions across the group, assigned under one lock as they are reported. Give each member's
  * store the observer [member] returns.
  *
- * @param routes The bridge's routes, read when [recording] is taken (a group's routes may be
- * registered after the recorder is created)
+ * @param routes The bridge's routes, every one it had, read when [recording] is taken (a
+ * group's routes may be registered, or removed, after the recorder is created)
  */
 @ExperimentalKomaApi
 class GroupRecorder(
     private val routes: () -> List<GroupRoute> = { emptyList() },
     private val sources: () -> Set<SourceId> = { emptySet() },
 ) {
-    /** Records the group [group] is; its routes and sources are read when the recording is taken. */
-    constructor(group: MachineGroup) : this({ group.routes.map { GroupRoute(it.from, it.to) } }, { group.sourceIds.toSet() })
+    /** Records the group [group] is; its route history and sources are read when the recording is taken. */
+    constructor(group: MachineGroup) : this({ group.routeHistory.map { GroupRoute(it.from, it.to) } }, { group.sourceIds.toSet() })
 
     private val lock = Mutex()
     private val recorders = linkedMapOf<StoreInstanceId, MachineRecorder<*, *, *, *>>()

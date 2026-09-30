@@ -370,7 +370,13 @@ What holds:
   flight), taken by freezing the members' input queues, waiting for what they had accepted, and
   letting the held inputs in afterwards, in order; a member that does not settle aborts the cut
   and the group resumes. Give each member's store `group.member(id)` as an observer and
-  `attach` the store once built. An `ExternalSource` (a pagination engine, a socket reader)
+  `attach` the store once built; `route(fromMember, toMember, map)` checks the receiver's action
+  type where the route is written, `removeRoute(route)` stops a route (`routeHistory` keeps it
+  for a recording). A member whose store closed, or that `detach`ed, gets no more messages: a
+  message sent to it is journaled undelivered and a cut leaves it out; what a store holds when
+  it closes is dropped and journaled as `BridgeDropped` (a detached store still decides what it
+  holds until it closes); `attach` a new store to take part again. An
+  `ExternalSource` (a pagination engine, a socket reader)
   feeds a member with `store.feed(source, action)`, an input the recording knows as the
   source's; attached with `group.source(it)`, it is paused before every cut and its
   `SourceSnapshot` (its own fields: generation, window, load state) taken after the members

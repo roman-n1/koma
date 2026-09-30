@@ -62,6 +62,7 @@ object InspectorText {
             is TimelineItem.Discarded -> append("Discarded ").append(item.input).append(' ').append(item.kind?.let { input(it) } ?: "?").append(" ").append(item.reason.kind).append(item.reason.failure?.let { " " + JournalFormat.failure(it) } ?: "")
             is TimelineItem.Pending -> append("Pending ").append(item.input).append(' ').append(input(item.kind)).append(" (no end in the journal)")
             is TimelineItem.Sent -> append("Sent ").append(item.message).append(" -> ").append(item.to).append(if (item.delivered) "" else " undelivered")
+            is TimelineItem.Dropped -> append("Dropped ").append(item.message).append(' ').append(item.reason)
             is TimelineItem.Effect -> append(JournalFormat.entry(item.entry))
             is TimelineItem.Checkpoint -> append("Checkpoint members=").append(item.members.joinToString(",", "[", "]")).append(" sources=").append(item.sources.joinToString(",", "[", "]")).append(" inFlight=").append(item.inFlight)
             is TimelineItem.Rejected -> append("Rejected ").append(JournalFormat.payload(item.action)).append(' ').append(item.reason)
@@ -137,7 +138,7 @@ object InspectorText {
         is Incompleteness.InputsPending -> "${reason.store}: ${reason.count} inputs accepted without an end in the journal"
         is Incompleteness.Unattributed -> "${reason.store ?: "session"}: ${reason.count} records could not be attributed to a processing"
         is Incompleteness.RecordingMismatch -> "${reason.store}: the attached recording is not this run (${reason.reason})"
-        is Incompleteness.MessagesUndelivered -> "${reason.store}: ${reason.count} bridge messages went to members that were not attached; part of the group is not here"
+        is Incompleteness.MessagesUndelivered -> "${reason.store}: ${reason.count} bridge messages went to members that were not attached, had closed or had left; part of the group is not here"
     }
 
     /** A mark, in words. */

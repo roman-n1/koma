@@ -64,9 +64,14 @@ fun interface CutListener {
  * **Bridge.** A [route] turns an effect of one member into an action of another: when the
  * sender commits a decision, each of its effects that a route maps is delivered to the
  * receiver as a [MachineInput.BridgeReceived] carrying a [MessageId] of the sender and the
- * effect, so a replay meets the same ids. A message to a member that is not attached goes
- * nowhere and is journaled as undelivered: the group's record is then partial. Messages are
- * [inFlight] from delivery until the receiver decided them.
+ * effect, so a replay meets the same ids. A message to a member that is not attached, has
+ * closed or has left goes nowhere and is journaled as undelivered: the group's record is then
+ * partial. Messages are [inFlight] from delivery until the store they were delivered to decided
+ * them or closed; a store that closes with messages in flight to it will never decide them:
+ * they are dropped and journaled as [JournalEntry.BridgeDropped]. A member that leaves with
+ * [Member.detach] gets no more messages; what its store holds is still in flight until the
+ * store decides it or closes. A route can be removed with [removeRoute]; [routeHistory] keeps
+ * every route the bridge had, for a recording.
  *
  * **Cut.** [checkpoint] pauses every attached [ExternalSource], freezes every member's
  * controlled queue (new inputs wait, whatever their source), waits until each member has
@@ -74,8 +79,9 @@ fun interface CutListener {
  * flight and every source's snapshot, then thaws the queues in order and resumes the sources.
  * No Store lock is held while waiting, and no member waits on another's user code; a member
  * that does not settle or a source that does not pause within the timeout aborts the cut and
- * the group resumes. A result of a command that arrives during the cut waits in the queue and
- * is applied once, after it. Never call [checkpoint] from a handler or a plugin of a member:
+ * the group resumes. A member whose store closed, or that left, is not part of the cut. A result of a
+ * command that arrives during the cut waits in the queue and is applied once, after it. Never
+ * call [checkpoint] from a handler or a plugin of a member:
  * it would wait for its own processing to end. A successful cut is journaled as
  * [JournalEntry.CheckpointCreated]. A [CutListener] registered with [onCut] sees the cut before
  * the thaw.
@@ -83,8 +89,8 @@ fun interface CutListener {
  * Members are registered with [member] (the observer to give the store) and [Member.attach]
  * (the store itself, once built); sources with [source].
  *
- * @param session The journal that gets [JournalEntry.BridgeSent], [JournalEntry.BridgeReceived]
- * and [JournalEntry.CheckpointCreated]
+ * @param session The journal that gets [JournalEntry.BridgeSent], [JournalEntry.BridgeReceived],
+ * [JournalEntry.BridgeDropped] and [JournalEntry.CheckpointCreated]
  */
 @ExperimentalKomaApi
 class MachineGroup(private val session: RecordingSession? = null) {
@@ -92,7 +98,12 @@ class MachineGroup(private val session: RecordingSession? = null) {
     private val coordinating = Mutex()
     private val members = linkedMapOf<StoreInstanceId, Member<*, *, *, *>>()
     private val routeList = mutableListOf<Route>()
+    private val routeHistoryList = mutableListOf<Route>()
     private val inFlightMessages = linkedMapOf<MessageId, BridgeMessage>()
+
+    // The store each message in flight was delivered to: dropped when that store closes,
+    // whatever the member attached since.
+    private val inFlightTargets = hashMapOf<MessageId, MachineStoreImpl<*, *, *, *>>()
     private val sourceList = mutableListOf<ExternalSource>()
     private val cutListeners = mutableListOf<CutListener>()
 
@@ -104,8 +115,15 @@ class MachineGroup(private val session: RecordingSession? = null) {
         override fun toString(): String = "$from -> $to"
     }
 
-    /** The routes, in registration order. */
+    /** The routes the bridge carries now, in registration order. */
     val routes: List<Route> get() = locked { routeList.toList() }
+
+    /**
+     * Every route registered since the group was created, in registration order, the removed
+     * ones included: what a recording keeps, so a replay tells a delivery that never had a route
+     * (instances mixed) from one whose route was removed later.
+     */
+    val routeHistory: List<Route> get() = locked { routeHistoryList.toList() }
 
     /** The members, in registration order. */
     val memberIds: List<StoreInstanceId> get() = locked { members.keys.toList() }
@@ -146,9 +164,26 @@ class MachineGroup(private val session: RecordingSession? = null) {
         require(from != to) { "[Koma] A route goes to another member; $from -> $from" }
         @Suppress("UNCHECKED_CAST")
         val route = Route(from, to, map as (Event) -> Action?)
-        locked { routeList += route }
+        locked {
+            routeList += route
+            routeHistoryList += route
+        }
         return route
     }
+
+    /**
+     * Routes the effects of [from] to [to], the receiver's action type checked at compile time:
+     * [map] returns an action [to] accepts, or `null` for an effect that is not for it.
+     */
+    fun <E : Event, A : Action> route(from: Member<*, *, *, E>, to: Member<*, A, *, *>, map: (E) -> A?): Route = route(from.id, to.id, map)
+
+    /**
+     * Stops routing along [route]: the effects decided from now on are not carried by it; the
+     * messages it carried before are in flight until decided. The route stays in [routeHistory].
+     *
+     * @return `false` when [route] is not registered
+     */
+    fun removeRoute(route: Route): Boolean = locked { routeList.remove(route) }
 
     /**
      * Registers [id] as a member and returns the observer to give its store; [Member.attach] the
@@ -167,7 +202,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
      * has closed; see the class documentation.
      */
     suspend fun checkpoint(timeout: Duration = 2.seconds): GroupCheckpoint? = coordinating.withLock {
-        val attached = locked { members.values.mapNotNull { member -> member.store?.let { member.id to it } } }
+        val attached = locked { members.values.mapNotNull { member -> member.store?.takeIf { member.isReachable }?.let { member.id to it } } }
         val sources = locked { sourceList.toList() }
         val started = TimeSource.Monotonic.markNow()
         val paused = mutableListOf<ExternalSource>()
@@ -209,20 +244,51 @@ class MachineGroup(private val session: RecordingSession? = null) {
 
     /**
      * One member: the [DecisionObserver] its store runs with. It sends the store's effects along
-     * the routes and books the bridge messages the store decided.
+     * the routes and books the bridge messages the store decided. It takes part from [attach]
+     * until it [detach]es or its store closes; a message delivered to its store is in flight
+     * until that store decides it or closes, and is dropped then.
      */
     inner class Member<C, A : Action, CMD, E : Event> internal constructor(val id: StoreInstanceId) : DecisionObserver<C, A, CMD, E> {
         internal var store: MachineStoreImpl<C, A, CMD, E>? = null
             private set
 
+        // Under the group's lock: the member left with [detach].
+        private var detached = false
+
+        // Under the lock: a store is attached and open, and the member has not left.
+        internal val isReachable: Boolean get() = store?.isClosed == false && !detached
+
+        /** Whether a message can reach this member now: a store is attached that has not closed, and the member has not left. */
+        val isAttached: Boolean get() = locked { isReachable }
+
         /**
-         * Attaches the store built with this member as an observer, so messages can reach it.
+         * Attaches the store built with this member as an observer, so messages can reach it; a
+         * member that detached, or whose store closed, takes part again with a new store.
          *
          * @throws IllegalArgumentException if [store] is not a store of this library
          */
         fun attach(store: MachineStore<C, A, CMD, E>) {
             require(store is MachineStoreImpl<C, A, CMD, E>) { "[Koma] Only a MachineStore built by MachineStore(...) can join a group" }
-            locked { this.store = store }
+            locked {
+                this.store = store
+                detached = false
+            }
+            // The store says when it closed, after nothing can be decided any more: what was
+            // delivered to it and not decided never will be, whatever the member attached since.
+            store.onClose {
+                val dropped = locked { takeInFlight(store) }
+                for (message in dropped) session?.publish(id, JournalEntry.BridgeDropped(message.id.toRef(), id, "StoreClosed"))
+            }
+        }
+
+        /**
+         * The member leaves the group: its effects are not routed any more, a message sent to it
+         * goes nowhere, and a cut leaves it out. What was delivered to its store before is in
+         * flight until the store decides it or closes; close the store to end that. [attach] a
+         * store to take part again.
+         */
+        fun detach() {
+            locked { detached = true }
         }
 
         override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
@@ -236,28 +302,50 @@ class MachineGroup(private val session: RecordingSession? = null) {
 
         private fun decided(input: InputId?, machineInput: MachineInput<A>) {
             if (machineInput !is MachineInput.BridgeReceived) return
-            locked { inFlightMessages.remove(machineInput.message) }
+            val (wasInFlight, gone) = locked {
+                inFlightTargets.remove(machineInput.message)
+                (inFlightMessages.remove(machineInput.message) != null) to !isReachable
+            }
+            // Dropped already (a closing store decided it all the same) or a member that left: not the group's story.
+            if (!wasInFlight && gone) return
             session?.publish(id, JournalEntry.BridgeReceived(input, machineInput.message.toRef()))
         }
 
         private fun send(input: InputId?, decision: Decision<C, CMD, E>) {
             if (decision.effects.isEmpty()) return
-            val routes = locked { routeList.filter { it.from == id } }
+            val routes = locked { if (detached) emptyList() else routeList.filter { it.from == id } }
             if (routes.isEmpty()) return
             for (effect in decision.effects) {
                 for (route in routes) {
                     val action = route.map(effect.event) ?: continue
                     val message = MessageId(id, effect.id)
-                    val target = locked { members[route.to]?.store }
-                    if (target != null) {
-                        // Booked before delivery, so the receiver's decision finds it in flight.
-                        locked { inFlightMessages[message] = BridgeMessage(message, route.to) }
-                        target.deliverUnchecked(message, action)
+                    // Booked under the lock together with the receiver's reachability: a store
+                    // that closes meanwhile finds the message in flight and drops it, one that
+                    // closed or left already gets nothing, and the receiver's decision finds the
+                    // message in flight.
+                    val target = locked {
+                        val member = members[route.to]
+                        val store = member?.store
+                        if (member == null || store == null || !member.isReachable) {
+                            null
+                        } else {
+                            inFlightMessages[message] = BridgeMessage(message, route.to)
+                            inFlightTargets[message] = store
+                            store
+                        }
                     }
+                    target?.deliverUnchecked(message, action)
                     session?.publish(id, JournalEntry.BridgeSent(input, message.toRef(), route.to, delivered = target != null))
                 }
             }
         }
+    }
+
+    // Under the lock: removes the messages in flight that were delivered to [store] and returns them.
+    private fun takeInFlight(store: MachineStoreImpl<*, *, *, *>): List<BridgeMessage> {
+        val mine = inFlightTargets.filterValues { it === store }.keys.toList()
+        for (id in mine) inFlightTargets.remove(id)
+        return mine.mapNotNull { inFlightMessages.remove(it) }
     }
 
     private inline fun <T> locked(block: () -> T): T {

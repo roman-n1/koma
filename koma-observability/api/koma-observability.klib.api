@@ -231,6 +231,25 @@ sealed interface <#A: out koma.core/State, #B: out koma.core/Action, #C: out kom
         final fun toString(): kotlin/String // koma.observability/JournalEntry.StateCommitted.toString|toString(){}[0]
     }
 
+    final class BridgeDropped : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.BridgeDropped|null[0]
+        constructor <init>(koma.observability/MessageRef, koma.observability/StoreInstanceId, kotlin/String) // koma.observability/JournalEntry.BridgeDropped.<init>|<init>(koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.String){}[0]
+
+        final val message // koma.observability/JournalEntry.BridgeDropped.message|{}message[0]
+            final fun <get-message>(): koma.observability/MessageRef // koma.observability/JournalEntry.BridgeDropped.message.<get-message>|<get-message>(){}[0]
+        final val reason // koma.observability/JournalEntry.BridgeDropped.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.observability/JournalEntry.BridgeDropped.reason.<get-reason>|<get-reason>(){}[0]
+        final val to // koma.observability/JournalEntry.BridgeDropped.to|{}to[0]
+            final fun <get-to>(): koma.observability/StoreInstanceId // koma.observability/JournalEntry.BridgeDropped.to.<get-to>|<get-to>(){}[0]
+
+        final fun component1(): koma.observability/MessageRef // koma.observability/JournalEntry.BridgeDropped.component1|component1(){}[0]
+        final fun component2(): koma.observability/StoreInstanceId // koma.observability/JournalEntry.BridgeDropped.component2|component2(){}[0]
+        final fun component3(): kotlin/String // koma.observability/JournalEntry.BridgeDropped.component3|component3(){}[0]
+        final fun copy(koma.observability/MessageRef = ..., koma.observability/StoreInstanceId = ..., kotlin/String = ...): koma.observability/JournalEntry.BridgeDropped // koma.observability/JournalEntry.BridgeDropped.copy|copy(koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.observability/JournalEntry.BridgeDropped.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.observability/JournalEntry.BridgeDropped.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.observability/JournalEntry.BridgeDropped.toString|toString(){}[0]
+    }
+
     final class BridgeReceived : koma.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // koma.observability/JournalEntry.BridgeReceived|null[0]
         constructor <init>(koma.core/InputId?, koma.observability/MessageRef) // koma.observability/JournalEntry.BridgeReceived.<init>|<init>(koma.core.InputId?;koma.observability.MessageRef){}[0]
 
