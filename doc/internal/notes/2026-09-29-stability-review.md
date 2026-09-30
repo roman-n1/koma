@@ -642,6 +642,23 @@ between the two is not missed and no subscriber waits for an effect that is alre
 subscriber's cancellation releases what it held under the lock and rings, so the next one
 takes it at once.
 
+## Fifteenth round: a source that never stops feeding, cut thirty times
+
+External sources join the cut ([ADR](../adr/2026-09-30-external-sources-in-the-cut.md)): paused
+before the members are frozen, snapshotted after they settle. Whether the pause and the freeze
+line up so that the snapshot is the members' view of the source is a question of interleaving.
+
+- `ExternalSourceCutStormTest` (timetravel): a paged source feeds a member from its own thread
+  while four threads dispatch and thirty cuts are taken. At every cut the source's snapshot
+  (its pages fed) equals the pages the member's snapshot had decided, and the group's
+  recording since the cut replays without a mismatch, `UnknownSource` included. A source
+  mid-feed at the snapshot, or a cut that snapshotted before the members drained what the
+  source had fed, would show as a page counted on one side only.
+
+Settled by it: the order of the cut. Sources pause first; then the members freeze; a source
+paused after the freeze could still have fed into a frozen gate, and its snapshot would count a
+page the member had not decided.
+
 ## Open questions
 
 Known behavior that is by design or needs a decision; take it into account when writing

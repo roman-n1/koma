@@ -36,9 +36,9 @@ Store, in memory.
   application's kotlinx-serialization serializers for its context, actions, commands and events,
   and reads it back. A newer format or an older one without a `FormatMigration` is
   `Unsupported`, never guessed; a payload the serializers reject or an inconsistent checkpoint
-  is `Invalid` at its position. Format 4 begins at the start checkpoint with the executor's
-  lanes and the mailbox's pending effects and carries bridge inputs; the codec migrates every
-  older format itself. Give the application's sealed types explicit `@SerialName`s: the wire
+  is `Invalid` at its position. Format 5 begins at the start checkpoint with the executor's
+  lanes and the mailbox's pending effects and carries bridge and external-source inputs; the
+  codec migrates every older format itself
   must not carry class names.
 
 - **Inspector.** `Inspector` (package `inspect`) is the read model of stage 4: the Stores of a
@@ -52,9 +52,10 @@ Store, in memory.
   recording and the order the decisions were made in across the group. `GroupReplaySession`
   steps the members in that order, `verify` checks every member and the bridge (a message
   received before it was sent, sent by nobody, delivered twice or where no route leads is a
-  `GroupMismatch`), `since(cut)` begins at a consistent cut with its messages in flight, and
+  `GroupMismatch`, as is an input from a source the group had not attached), `since(cut)`
+  begins at a consistent cut with its messages in flight and its sources' snapshots, and
   `GroupBranch` continues every member with a local bridge that delivers routed effects as
-  they are decided.
+  they are decided and `feed(store, source, action)` for the scripted data of a source.
 
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
 Not yet: a Compose timeline over the inspector and a file format for recordings.

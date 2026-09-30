@@ -10,6 +10,8 @@ import koma.statechart.machine.CommandId
 import koma.statechart.machine.Decision
 import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.SourceId
+import koma.statechart.machine.SourceSnapshot
 import kotlin.time.Duration
 
 /**
@@ -18,13 +20,19 @@ import kotlin.time.Duration
  * effects were emitted. Nothing of the live group is touched, and no live bridge is used
  * (handoff §9.2, §10).
  *
+ * External sources are not reached either: [sources] is their state where the branch's
+ * recording began, and [feed] is the caller's scripted data in their place (handoff §10: an
+ * unrecorded range needs scripted data).
+ *
  * @param members The members' branches, from one group position
  * @param routes What the local bridge routes: effects of one member turned into actions of another
+ * @param sources The sources' snapshots the branch starts from, by id
  */
 @ExperimentalKomaApi
 class GroupBranch(
     val members: Map<StoreInstanceId, Branch<*, *, *, *>>,
     private val routes: List<Route>,
+    val sources: Map<SourceId, SourceSnapshot> = emptyMap(),
 ) {
     /** A route of the local bridge: effects of [from] that [map] turns into actions of [to]. */
     class Route(val from: StoreInstanceId, val to: StoreInstanceId, val map: (Event) -> Action?)
@@ -39,6 +47,9 @@ class GroupBranch(
 
     /** Decides [action] on [store]; returns every decision it caused, deliveries included. */
     fun dispatch(store: StoreInstanceId, action: Action): List<Decision<*, *, *>> = produce(store) { it.dispatch(action) }
+
+    /** Feeds [action] to [store] as data of the source [source]; returns every decision it caused, deliveries included. */
+    fun feed(store: StoreInstanceId, source: SourceId, action: Action): List<Decision<*, *, *>> = produce(store) { it.feed(source, action) }
 
     /** Answers the awaiting [command] of [store] with [result]; see [Branch.answer]. */
     fun answer(store: StoreInstanceId, command: CommandId, result: Action): List<Decision<*, *, *>> = produce(store) { it.answer(command, result) }

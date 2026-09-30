@@ -34,6 +34,13 @@ sealed interface MachineInput<out A : Action> : Action {
     data class BridgeReceived<out A : Action>(val message: MessageId, val action: A, override val now: MachineTime) : MachineInput<A>
 
     /**
+     * An input the external source [source] fed (a page loaded, a frame read): decided like a
+     * [Dispatch] and identified, so a replay knows which source the run needed and a branch
+     * scripts the source's data instead of reaching it.
+     */
+    data class External<out A : Action>(val source: SourceId, val action: A, override val now: MachineTime) : MachineInput<A>
+
+    /**
      * The timer [timer] is due. The executor sends it; the machine checks that the timer is still
      * scheduled for the current activation of its source before it fires the transition.
      */

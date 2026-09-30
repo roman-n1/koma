@@ -364,7 +364,11 @@ What holds:
   flight), taken by freezing the members' input queues, waiting for what they had accepted, and
   letting the held inputs in afterwards, in order; a member that does not settle aborts the cut
   and the group resumes. Give each member's store `group.member(id)` as an observer and
-  `attach` the store once built. `koma-timetravel` records and replays a group.
+  `attach` the store once built. An `ExternalSource` (a pagination engine, a socket reader)
+  feeds a member with `store.feed(source, action)`, an input the recording knows as the
+  source's; attached with `group.source(it)`, it is paused before every cut and its
+  `SourceSnapshot` (its own fields: generation, window, load state) taken after the members
+  settle, so a branch can script its next data. `koma-timetravel` records and replays a group.
 - With `koma-observability`, `recordTo(session, id)` in the configuration journals the store's
   inputs and commits, and `observers = listOf(session.decisionsOf(id))` adds the decisions
   themselves: transitions, activations, commands, timers, ignored inputs with their reason,

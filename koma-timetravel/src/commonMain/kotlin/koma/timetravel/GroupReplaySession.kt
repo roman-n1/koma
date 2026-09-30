@@ -10,6 +10,7 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.SourceId
 
 /**
  * Where a group replay differs from its recording: a member's own divergence, or a bridge
@@ -35,6 +36,9 @@ sealed interface GroupMismatch {
 
     /** [store] received [message] although the bridge has no route from its sender to [store]: instances mixed. */
     data class NoRoute(override val position: Int, val store: StoreInstanceId, val message: MessageId) : GroupMismatch
+
+    /** [store] decided an input of the source [source], which the group had not attached: a source the run missed. */
+    data class UnknownSource(override val position: Int, val store: StoreInstanceId, val source: SourceId) : GroupMismatch
 }
 
 /** The result of one forward step of a [GroupReplaySession]. */
@@ -144,6 +148,7 @@ class GroupReplaySession(
                 }
                 received[key] = index
             }
+            if (input is MachineInput.External && input.source !in recording.sourceIds) mismatches += GroupMismatch.UnknownSource(index, step.store, input.source)
             if (recorded is RecordedStep.Committed<*, *, *, *>) for (effect in recorded.decision.effects) sent += MessageId(step.store, effect.id)
         }
         return mismatches.sortedBy { it.position }
@@ -151,10 +156,11 @@ class GroupReplaySession(
 
     /**
      * A branch of the whole group from the current position: every member's [Branch] from its
-     * checkpoint here, joined by a local bridge over [routes].
+     * checkpoint here, joined by a local bridge over [routes], with the sources' snapshots as at
+     * the recording's start for the caller to script their data from.
      */
     fun branch(routes: List<GroupBranch.Route>): GroupBranch =
-        GroupBranch(sessions.mapValues { (_, session) -> session.branch() }, routes)
+        GroupBranch(sessions.mapValues { (_, session) -> session.branch() }, routes, recording.sourceSnapshots)
 
     private fun session(store: StoreInstanceId): ReplaySession<*, *, *, *> = requireNotNull(sessions[store]) { "[Koma] $store is not a member" }
 

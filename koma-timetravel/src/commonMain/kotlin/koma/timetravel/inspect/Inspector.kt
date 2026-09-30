@@ -220,6 +220,7 @@ class Inspector(
         var decision: JournalEntry.DecisionCommitted? = null
         var ignored: String? = null
         var message: koma.observability.MessageRef? = null
+        var source: String? = null
 
         fun build(): TimelineItem.Processing = TimelineItem.Processing(
             groupSeq, elapsed, store, input, kind,
@@ -229,7 +230,7 @@ class Inspector(
                 else -> null
             },
             ordinal = ordinal, outcome = outcome, duration = duration, commits = commits.toList(), events = events.toList(), failures = failures.toList(),
-            decision = decision, ignored = ignored, recorded = null, before = null, after = null, diff = null, message = message,
+            decision = decision, ignored = ignored, recorded = null, before = null, after = null, diff = null, message = message, source = source,
         )
     }
 
@@ -341,6 +342,8 @@ class Inspector(
                 is JournalEntry.EffectHandlingStarted -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
                 is JournalEntry.EffectAcknowledged -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
                 is JournalEntry.EffectDiscarded -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
+                is JournalEntry.ExternalReceived -> attach(store, entry.input, record) { source = entry.source }
+                is JournalEntry.CheckpointCreated -> slots += TimelineItem.Checkpoint(seq, elapsed, entry.members, entry.sources, entry.inFlight)
                 is JournalEntry.JournalGap -> slots += TimelineItem.Gap(seq, elapsed, entry.dropped)
                 JournalEntry.RecordingStopped -> slots += TimelineItem.Stopped(seq, elapsed)
             }

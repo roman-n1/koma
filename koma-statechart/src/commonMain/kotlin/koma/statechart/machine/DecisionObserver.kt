@@ -103,6 +103,7 @@ private class DecisionJournal<C, A : Action, CMD, E : Event>(
     private val describeAction: (A) -> Payload<A>,
 ) : DecisionObserver<C, A, CMD, E> {
     override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+        external(input, machineInput)
         session.publish(
             store,
             JournalEntry.DecisionCommitted(
@@ -122,7 +123,17 @@ private class DecisionJournal<C, A : Action, CMD, E : Event>(
     }
 
     override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) {
+        external(input, machineInput)
         session.publish(store, JournalEntry.DecisionIgnored(input, reason.name))
+    }
+
+    override fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) {
+        external(input, machineInput)
+    }
+
+    // The source an input came from is the journal's business as much as the decision.
+    private fun external(input: InputId?, machineInput: MachineInput<A>) {
+        if (machineInput is MachineInput.External) session.publish(store, JournalEntry.ExternalReceived(input, machineInput.source.value))
     }
 
     override fun onRejected(action: A, rejection: Admission.Rejected) {

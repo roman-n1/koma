@@ -129,3 +129,18 @@ data class MessageId(val from: StoreInstanceId, val effect: EffectId) {
 
     override fun toString(): String = "${from.value}/$effect"
 }
+
+/**
+ * An external source of inputs attached to a group: a pagination engine, a socket reader, a
+ * subscription to a repository. What it feeds is identified by it, and its state is data in a
+ * cut ([ExternalSource]).
+ */
+@ExperimentalKomaApi
+@JvmInline
+value class SourceId(val value: String) {
+    init {
+        require(value.isNotBlank()) { "[Koma] SourceId must not be blank" }
+    }
+
+    override fun toString(): String = value
+}

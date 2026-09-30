@@ -56,6 +56,8 @@ object JournalFormat {
         is JournalEntry.EffectHandlingStarted -> "EffectHandlingStarted e${entry.effect} attempt=${entry.attempt}"
         is JournalEntry.EffectAcknowledged -> "EffectAcknowledged e${entry.effect}"
         is JournalEntry.EffectDiscarded -> "EffectDiscarded e${entry.effect} ${entry.reason}"
+        is JournalEntry.ExternalReceived -> "ExternalReceived ${entry.input ?: "?"} from ${entry.source}"
+        is JournalEntry.CheckpointCreated -> "CheckpointCreated members=${entry.members.joinToString(",", "[", "]")} sources=${entry.sources.joinToString(",", "[", "]")} inFlight=${entry.inFlight}"
         is JournalEntry.JournalGap -> "JournalGap dropped=${entry.dropped}"
         JournalEntry.RecordingStopped -> "RecordingStopped"
     }
