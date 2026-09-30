@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.koma.publish)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 group = "io.github.roman-n1"
@@ -49,6 +50,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":koma-statechart"))
+            api(libs.serialization.json)
         }
         commonTest.dependencies {
             implementation(project(":koma-test"))

@@ -24,9 +24,16 @@ Store, in memory.
   one (same value, same node, same lane). No handler ever runs; a command with no answer stays
   awaiting rather than reaching any network. The live store is untouched.
 
+- **Codec.** `RecordingCodec` writes a recording as canonical JSON (`RECORDING_FORMAT_VERSION`,
+  fields in a fixed order, maps sorted, durations in ISO-8601) with the application's
+  kotlinx-serialization serializers for its context, actions, commands and events, and reads it
+  back. A newer format or an older one without a registered `FormatMigration` is `Unsupported`,
+  never guessed; a payload the serializers reject is `Invalid` at the step. Give the
+  application's sealed types explicit `@SerialName`s: the wire must not carry class names.
+
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
-Not yet: serialized recordings with codecs and versions, checkpoints of the executor's own state
-(running commands, lane queues), and group replay of several stores.
+Not yet: checkpoints of the executor's own state (running commands, lane queues), a file
+format with segments and checksums, and group replay of several stores.
 
 ## Dependency
 
@@ -57,3 +64,20 @@ branch.answer(branch.awaiting.single().id, ListAction.Loaded(listOf("rex")))
 branch.advance(10.seconds)               // fires the timers that come due
 branch.effects                           // the events the branch emitted; shown, never delivered
 ```
+
+## Serializing a recording
+
+```kotlin
+val codec = RecordingCodec(ListContext.serializer(), ListAction.serializer(), ListCommand.serializer(), ListEvent.serializer())
+val text = codec.encode(recording)               // canonical JSON, format RECORDING_FORMAT_VERSION
+
+when (val decoded = codec.decode(text)) {
+    is DecodedRecording.Decoded -> ReplaySession(listMachine, decoded.recording)
+    is DecodedRecording.Unsupported -> log("format ${decoded.formatVersion}: ${decoded.reason}")
+    is DecodedRecording.Invalid -> log("${decoded.reason} at ${decoded.at}")
+}
+```
+
+When the format changes, `RECORDING_FORMAT_VERSION` is bumped and a `FormatMigration(from, to)`
+turns the older JSON into the newer one; `RecordingCodecGoldenTest` holds the golden fixture of
+the current format, so a change of the text is a deliberate change of the version.

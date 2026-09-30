@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.vanniktech.mavenPublish) apply false
     alias(libs.plugins.koma.publish) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.kotlinx.bcv)
 }
 
