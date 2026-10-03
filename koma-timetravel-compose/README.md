@@ -1,5 +1,8 @@
 # koma-timetravel-compose
 
+For a complete runnable recording → disk → replay → experiment workflow, see the
+[Time Travel desktop example](../examples/time-travel/README.md).
+
 A Compose Multiplatform screen over the [koma-timetravel](../koma-timetravel/README.md)
 inspector: the debug UI of the
 [Time Travel handoff](../doc/internal/design/2026-09-29-time-travel-logging-handoff.md) §11, for

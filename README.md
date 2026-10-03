@@ -9,7 +9,7 @@
 
 > [!NOTE]
 > This is the fork [roman-n1/koma](https://github.com/roman-n1/koma) of
-> [koma-kt/koma](https://github.com/koma-kt/koma). It publishes every module as
+> [koma-kt/koma](https://github.com/koma-kt/koma). Its library modules are configured for publication as
 > `io.github.roman-n1:<module>:5.0.0-alpha.1`, never to be mixed with `io.github.koma-kt` in one
 > project, on the upstream base named by `koma.upstream.base` in `gradle.properties` (4.0.0). It adds
 > the statechart machine, the journal, replay, the Compose inspector, the machine's test kit and
@@ -18,6 +18,9 @@
 > upstream modules
 > as listed in the
 > [divergence inventory](doc/internal/design/2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400).
+
+Try the [runnable Time Travel example](examples/time-travel/README.md): record two machines,
+save and reopen their files, find a reducer regression, and experiment from the failing position.
 
 Koma is a state management framework for Kotlin Multiplatform.
 
