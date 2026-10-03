@@ -1203,6 +1203,21 @@ store.record { recorder ->
 }
 ```
 
+To account for the events one by one, receive them from the recorder in order: `receiveEvent<E>()`
+returns the next event, which must be of that type, or `receiveEvent { predicate }` the next one
+that satisfies the predicate; a wrong one fails naming the event and the unconsumed tail. End the
+test with `assertNoPendingWork(recorder)`: it fails when the Store still has inputs queued or
+launches running (call `awaitIdle()` first when it may), or when the recorder holds events the test
+did not receive. `events` keeps every event, received or not.
+
+```kt
+store.record { recorder ->
+    dispatchAndAwait(CounterAction.Increment)
+    assertEquals(CounterEvent.Incremented(count = 1), recorder.receiveEvent<CounterEvent.Incremented>())
+    assertNoPendingWork(recorder)               // nothing running, nothing unreceived
+}
+```
+
 If you need custom recording behavior, implement your own `Plugin` and register it via `patch { plugin(...) }`.
 If your `action {}` or `enter {}` logic launches additional coroutines with `launch {}`, or if you need virtual time control, use test dispatcher and scheduler control separately.
 

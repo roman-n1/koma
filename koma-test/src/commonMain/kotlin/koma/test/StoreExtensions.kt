@@ -110,6 +110,25 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.awaitIdle(timeout:
 @OptIn(InternalKomaApi::class)
 suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.pendingWork(): StorePendingWork = requireStoreInternalApi().awaitIdle(Duration.ZERO)
 
+/**
+ * Fails when the Store still has work to do, or when [recorder] holds events the test did not
+ * receive with [StoreRecorder.receiveEvent]: the end-of-test check of a Store that was driven
+ * step by step. Nothing is waited for; call [awaitIdle] first when launches may still be running.
+ *
+ * @param recorder The recorder whose events must all have been received, if any
+ * @throws AssertionError with what is pending and what was not received
+ * @throws IllegalStateException if the Store is not backed by Koma's internal implementation
+ */
+suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.assertNoPendingWork(recorder: StoreRecorder<S, A, E>? = null) {
+    val pending = pendingWork()
+    val unreceived = recorder?.unconsumedEvents.orEmpty()
+    if (pending.isIdle && unreceived.isEmpty()) return
+    throw AssertionError(
+        "[Koma] The Store has pending work: ${pending.inputs} input(s) pending, ${pending.launches} launch(es) running" +
+            (if (unreceived.isNotEmpty()) ", ${unreceived.size} recorded event(s) not received: $unreceived" else ""),
+    )
+}
+
 @OptIn(InternalKomaApi::class)
 internal fun <S : State, A : Action, E : Event> Store<S, A, E>.requireStoreInternalApi(): StoreInternalApi<S, A, E> {
     @Suppress("UNCHECKED_CAST")

@@ -58,6 +58,8 @@ public final class koma/test/StateHandlerDescription {
 }
 
 public final class koma/test/StoreExtensionsKt {
+	public static final fun assertNoPendingWork (Lkoma/core/Store;Lkoma/test/StoreRecorder;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun assertNoPendingWork$default (Lkoma/core/Store;Lkoma/test/StoreRecorder;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static final fun awaitIdle-8Mi8wO0 (Lkoma/core/Store;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun awaitIdle-8Mi8wO0$default (Lkoma/core/Store;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static final fun dispatchAndAwait (Lkoma/core/Store;Lkoma/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -79,13 +81,18 @@ public final class koma/test/StoreHandlersKt {
 }
 
 public final class koma/test/StoreRecorder : koma/core/Plugin {
+	public final fun assertNoUnconsumedEvents ()V
 	public final fun clear ()V
+	public final fun consumeNext ()V
 	public final fun getEvents ()Ljava/util/List;
 	public final fun getStates ()Ljava/util/List;
+	public final fun getUnconsumedEvents ()Ljava/util/List;
 	public fun onAction (Lkoma/core/PluginScope;Lkoma/core/State;Lkoma/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun onEvent (Lkoma/core/PluginScope;Lkoma/core/State;Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun onStart (Lkoma/core/PluginScope;Lkoma/core/State;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun onState (Lkoma/core/PluginScope;Lkoma/core/State;Lkoma/core/State;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun peekUnconsumed (Ljava/lang/String;)Lkoma/core/Event;
+	public final fun receiveEvent (Lkotlin/jvm/functions/Function1;)Lkoma/core/Event;
 }
 
 public final class koma/test/StoreRecorderKt {
