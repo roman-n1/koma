@@ -414,6 +414,7 @@ class InspectorTest {
             record(JournalEntry.ProcessingStarted(InputId(3), 2)),
             record(JournalEntry.CommandsAbandoned("StoreClosed", listOf(3), listOf(2))),
             record(JournalEntry.BridgeDropped(MessageRef(StoreInstanceId("p"), 7), store, "StoreClosed")),
+            record(JournalEntry.BridgeSent(InputId(1), MessageRef(store, 3), StoreInstanceId("p"), delivered = true, cause = MessageRef(StoreInstanceId("p"), 7))),
             record(JournalEntry.RecordingStopped, forStore = null),
         )
 
@@ -445,5 +446,8 @@ class InspectorTest {
         assertEquals(MessageRef(StoreInstanceId("p"), 7) to "StoreClosed", dropped.message to dropped.reason)
         assertTrue(InspectorText.line(dropped).endsWith("Dropped p/e7 StoreClosed"), InspectorText.line(dropped))
         assertTrue(reasons.none { it is Incompleteness.MessagesUndelivered }, "a drop is a fact of the record, not a hole in it")
+        val sent = items.filterIsInstance<TimelineItem.Sent>().single()
+        assertEquals(MessageRef(StoreInstanceId("p"), 7), sent.cause)
+        assertTrue(InspectorText.line(sent).endsWith("Sent s/e3 -> p reply-to=p/e7"), InspectorText.line(sent))
     }
 }

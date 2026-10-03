@@ -186,6 +186,23 @@ public final class koma/timetravel/GroupMismatch$Replay : koma/timetravel/GroupM
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/timetravel/GroupMismatch$ReplyWithoutRequest : koma/timetravel/GroupMismatch {
+	public synthetic fun <init> (ILjava/lang/String;Lkoma/statechart/machine/MessageId;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2-G0_Fx5k ()Ljava/lang/String;
+	public final fun component3 ()Lkoma/statechart/machine/MessageId;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy-ViYBQMk (ILjava/lang/String;Lkoma/statechart/machine/MessageId;Ljava/lang/String;)Lkoma/timetravel/GroupMismatch$ReplyWithoutRequest;
+	public static synthetic fun copy-ViYBQMk$default (Lkoma/timetravel/GroupMismatch$ReplyWithoutRequest;ILjava/lang/String;Lkoma/statechart/machine/MessageId;Ljava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/GroupMismatch$ReplyWithoutRequest;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMessage ()Lkoma/statechart/machine/MessageId;
+	public final fun getPair ()Ljava/lang/String;
+	public fun getPosition ()I
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/timetravel/GroupMismatch$SentByNobody : koma/timetravel/GroupMismatch {
 	public synthetic fun <init> (ILjava/lang/String;Lkoma/statechart/machine/MessageId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
@@ -287,13 +304,16 @@ public final class koma/timetravel/GroupReplayStep$Matched : koma/timetravel/Gro
 }
 
 public final class koma/timetravel/GroupRoute {
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/RoutePair;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/RoutePair;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-G0_Fx5k ()Ljava/lang/String;
 	public final fun component2-G0_Fx5k ()Ljava/lang/String;
-	public final fun copy-ozKOrDQ (Ljava/lang/String;Ljava/lang/String;)Lkoma/timetravel/GroupRoute;
-	public static synthetic fun copy-ozKOrDQ$default (Lkoma/timetravel/GroupRoute;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lkoma/timetravel/GroupRoute;
+	public final fun component3 ()Lkoma/statechart/machine/RoutePair;
+	public final fun copy-DtQnzws (Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/RoutePair;)Lkoma/timetravel/GroupRoute;
+	public static synthetic fun copy-DtQnzws$default (Lkoma/timetravel/GroupRoute;Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/machine/RoutePair;ILjava/lang/Object;)Lkoma/timetravel/GroupRoute;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getFrom-G0_Fx5k ()Ljava/lang/String;
+	public final fun getPair ()Lkoma/statechart/machine/RoutePair;
 	public final fun getTo-G0_Fx5k ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -1394,7 +1414,8 @@ public final class koma/timetravel/inspect/TimelineItem$Rejected : koma/timetrav
 }
 
 public final class koma/timetravel/inspect/TimelineItem$Sent : koma/timetravel/inspect/TimelineItem {
-	public synthetic fun <init> (JJLjava/lang/String;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JJLjava/lang/String;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkoma/observability/MessageRef;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JJLjava/lang/String;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkoma/observability/MessageRef;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-vWuHTu4 ()J
 	public final fun component2-UwyO8pc ()J
 	public final fun component3-G0_Fx5k ()Ljava/lang/String;
@@ -1402,9 +1423,11 @@ public final class koma/timetravel/inspect/TimelineItem$Sent : koma/timetravel/i
 	public final fun component5 ()Lkoma/observability/MessageRef;
 	public final fun component6-G0_Fx5k ()Ljava/lang/String;
 	public final fun component7 ()Z
-	public final fun copy-QR45fKA (JJLjava/lang/String;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;Z)Lkoma/timetravel/inspect/TimelineItem$Sent;
-	public static synthetic fun copy-QR45fKA$default (Lkoma/timetravel/inspect/TimelineItem$Sent;JJLjava/lang/String;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Sent;
+	public final fun component8 ()Lkoma/observability/MessageRef;
+	public final fun copy-gGjFvD8 (JJLjava/lang/String;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkoma/observability/MessageRef;)Lkoma/timetravel/inspect/TimelineItem$Sent;
+	public static synthetic fun copy-gGjFvD8$default (Lkoma/timetravel/inspect/TimelineItem$Sent;JJLjava/lang/String;Lkoma/core/InputId;Lkoma/observability/MessageRef;Ljava/lang/String;ZLkoma/observability/MessageRef;ILjava/lang/Object;)Lkoma/timetravel/inspect/TimelineItem$Sent;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Lkoma/observability/MessageRef;
 	public final fun getDelivered ()Z
 	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J

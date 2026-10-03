@@ -1315,6 +1315,7 @@ public final class koma/statechart/machine/MachineGroup {
 	public final fun onCut (Lkoma/statechart/machine/CutListener;)V
 	public final fun removeCutListener (Lkoma/statechart/machine/CutListener;)V
 	public final fun removeRoute (Lkoma/statechart/machine/MachineGroup$Route;)Z
+	public final fun requestReply (Lkoma/statechart/machine/MachineGroup$Member;Lkoma/statechart/machine/MachineGroup$Member;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lkoma/statechart/machine/RequestReply;
 	public final fun route (Lkoma/statechart/machine/MachineGroup$Member;Lkoma/statechart/machine/MachineGroup$Member;Lkotlin/jvm/functions/Function1;)Lkoma/statechart/machine/MachineGroup$Route;
 	public final fun route-DtQnzws (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lkoma/statechart/machine/MachineGroup$Route;
 	public final fun source (Lkoma/statechart/machine/ExternalSource;)V
@@ -1333,7 +1334,9 @@ public final class koma/statechart/machine/MachineGroup$Member : koma/statechart
 }
 
 public final class koma/statechart/machine/MachineGroup$Route {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkoma/statechart/machine/RoutePair;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getFrom-G0_Fx5k ()Ljava/lang/String;
+	public final fun getPair ()Lkoma/statechart/machine/RoutePair;
 	public final fun getTo-G0_Fx5k ()Ljava/lang/String;
 	public final fun mapEvent (Lkoma/core/Event;)Lkoma/core/Action;
 	public fun toString ()Ljava/lang/String;
@@ -1568,6 +1571,14 @@ public final class koma/statechart/machine/MessageId {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/statechart/machine/PairRole : java/lang/Enum {
+	public static final field Reply Lkoma/statechart/machine/PairRole;
+	public static final field Request Lkoma/statechart/machine/PairRole;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lkoma/statechart/machine/PairRole;
+	public static fun values ()[Lkoma/statechart/machine/PairRole;
+}
+
 public final class koma/statechart/machine/PendingEffect {
 	public synthetic fun <init> (JLkoma/core/Event;Lkoma/statechart/machine/EffectPolicy;IZLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-q-9P1Rc ()J
@@ -1587,8 +1598,28 @@ public final class koma/statechart/machine/PendingEffect {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/statechart/machine/RequestReply {
+	public fun <init> (Ljava/lang/String;Lkoma/statechart/machine/MachineGroup$Route;Lkoma/statechart/machine/MachineGroup$Route;)V
+	public final fun getName ()Ljava/lang/String;
+	public final fun getReply ()Lkoma/statechart/machine/MachineGroup$Route;
+	public final fun getRequest ()Lkoma/statechart/machine/MachineGroup$Route;
+}
+
 public abstract interface class koma/statechart/machine/ResultSink {
 	public abstract fun result (Lkoma/core/Action;)V
+}
+
+public final class koma/statechart/machine/RoutePair {
+	public fun <init> (Ljava/lang/String;Lkoma/statechart/machine/PairRole;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lkoma/statechart/machine/PairRole;
+	public final fun copy (Ljava/lang/String;Lkoma/statechart/machine/PairRole;)Lkoma/statechart/machine/RoutePair;
+	public static synthetic fun copy$default (Lkoma/statechart/machine/RoutePair;Ljava/lang/String;Lkoma/statechart/machine/PairRole;ILjava/lang/Object;)Lkoma/statechart/machine/RoutePair;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public final fun getRole ()Lkoma/statechart/machine/PairRole;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class koma/statechart/machine/SourceId {

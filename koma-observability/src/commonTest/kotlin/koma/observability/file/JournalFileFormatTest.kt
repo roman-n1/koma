@@ -79,7 +79,7 @@ class JournalFileFormatTest {
         ),
         record(17, JournalEntry.DecisionIgnored(null, "NoTransition")),
         record(18, JournalEntry.JournalGap(3), store = null, storeSeq = null),
-        record(19, JournalEntry.BridgeSent(InputId(5), MessageRef(store, 1), StoreInstanceId("root-1"), delivered = true)),
+        record(19, JournalEntry.BridgeSent(InputId(5), MessageRef(store, 1), StoreInstanceId("root-1"), delivered = true, cause = MessageRef(StoreInstanceId("root-1"), 4))),
         record(20, JournalEntry.BridgeSent(null, MessageRef(store, 2), StoreInstanceId("nobody"), delivered = false)),
         record(21, JournalEntry.BridgeReceived(InputId(6), MessageRef(StoreInstanceId("root-1"), 1))),
         record(22, JournalEntry.EffectQueued(InputId(6), 4, "Retained", Payload.Projected("Navigate", mapOf("to" to "chat")))),
@@ -126,16 +126,19 @@ class JournalFileFormatTest {
 
     @Test
     fun aSegmentOfAnEarlierRecordFormat_stillReads() {
+        // Written by a writer of version 6: BridgeSent without its cause (added in 7).
         val older = ByteWriter().apply {
-            raw(JournalFileFormat.header(session, group, ExecutionMode.Live, 0, recordFormatVersion = JOURNAL_FORMAT_VERSION - 1))
-            raw(JournalFileFormat.frame(all[0]))
+            raw(JournalFileFormat.header(session, group, ExecutionMode.Live, 0, recordFormatVersion = 6))
+            raw(JournalFileFormat.frame(all[0], recordFormatVersion = 6))
+            raw(JournalFileFormat.frame(all[18], recordFormatVersion = 6))
             raw(JournalFileFormat.END)
         }.toByteArray()
 
         val decoded = JournalFileFormat.decodeSegment("older", older)
 
-        assertEquals(JOURNAL_FORMAT_VERSION - 1, decoded.header?.recordFormatVersion)
-        assertEquals(listOf(expected[0].entry), decoded.records.map { it.entry }, "a reader of a version reads every earlier one: variants only grow at the end")
+        assertEquals(6, decoded.header?.recordFormatVersion)
+        val sent = expected[18].entry as JournalEntry.BridgeSent
+        assertEquals(listOf(expected[0].entry, sent.copy(cause = null)), decoded.records.map { it.entry }, "a reader of a version reads every earlier one: variants only grow at the end, fields at the end of a variant")
         assertNull(decoded.mark)
     }
 
@@ -216,6 +219,6 @@ class JournalFileFormatTest {
     private fun String.fromHex(): ByteArray = chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     private companion object {
-        const val GOLDEN: String = "4b4f4d414a524e4c000000207ab55d330000000001000000060000000273310000000167000000044c69766500000000000000359dc4bb4701010000000773746f72652d61000000000000000101000000000000000100000000000f42400000000b496e73706563744f6e6c790000005c486ce2b508010000000773746f72652d61000000000000000c01000000000000000c0000000000b71b0000000000000000020000000000000001000000095265636f7665726564000000020101000000015800000000000000000000000c63e00000000000000000"
+        const val GOLDEN: String = "4b4f4d414a524e4c00000020fb9038140000000001000000070000000273310000000167000000044c69766500000000000000359dc4bb4701010000000773746f72652d61000000000000000101000000000000000100000000000f42400000000b496e73706563744f6e6c790000005c486ce2b508010000000773746f72652d61000000000000000c01000000000000000c0000000000b71b0000000000000000020000000000000001000000095265636f7665726564000000020101000000015800000000000000000000000c63e00000000000000000"
     }
 }

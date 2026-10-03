@@ -813,8 +813,10 @@ sealed interface koma.timetravel.inspect/TimelineItem { // koma.timetravel.inspe
     }
 
     final class Sent : koma.timetravel.inspect/TimelineItem { // koma.timetravel.inspect/TimelineItem.Sent|null[0]
-        constructor <init>(koma.observability/GroupSeq, kotlin.time/Duration, koma.observability/StoreInstanceId, koma.core/InputId?, koma.observability/MessageRef, koma.observability/StoreInstanceId, kotlin/Boolean) // koma.timetravel.inspect/TimelineItem.Sent.<init>|<init>(koma.observability.GroupSeq;kotlin.time.Duration;koma.observability.StoreInstanceId;koma.core.InputId?;koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.Boolean){}[0]
+        constructor <init>(koma.observability/GroupSeq, kotlin.time/Duration, koma.observability/StoreInstanceId, koma.core/InputId?, koma.observability/MessageRef, koma.observability/StoreInstanceId, kotlin/Boolean, koma.observability/MessageRef? = ...) // koma.timetravel.inspect/TimelineItem.Sent.<init>|<init>(koma.observability.GroupSeq;kotlin.time.Duration;koma.observability.StoreInstanceId;koma.core.InputId?;koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.Boolean;koma.observability.MessageRef?){}[0]
 
+        final val cause // koma.timetravel.inspect/TimelineItem.Sent.cause|{}cause[0]
+            final fun <get-cause>(): koma.observability/MessageRef? // koma.timetravel.inspect/TimelineItem.Sent.cause.<get-cause>|<get-cause>(){}[0]
         final val delivered // koma.timetravel.inspect/TimelineItem.Sent.delivered|{}delivered[0]
             final fun <get-delivered>(): kotlin/Boolean // koma.timetravel.inspect/TimelineItem.Sent.delivered.<get-delivered>|<get-delivered>(){}[0]
         final val elapsed // koma.timetravel.inspect/TimelineItem.Sent.elapsed|{}elapsed[0]
@@ -837,7 +839,8 @@ sealed interface koma.timetravel.inspect/TimelineItem { // koma.timetravel.inspe
         final fun component5(): koma.observability/MessageRef // koma.timetravel.inspect/TimelineItem.Sent.component5|component5(){}[0]
         final fun component6(): koma.observability/StoreInstanceId // koma.timetravel.inspect/TimelineItem.Sent.component6|component6(){}[0]
         final fun component7(): kotlin/Boolean // koma.timetravel.inspect/TimelineItem.Sent.component7|component7(){}[0]
-        final fun copy(koma.observability/GroupSeq = ..., kotlin.time/Duration = ..., koma.observability/StoreInstanceId = ..., koma.core/InputId? = ..., koma.observability/MessageRef = ..., koma.observability/StoreInstanceId = ..., kotlin/Boolean = ...): koma.timetravel.inspect/TimelineItem.Sent // koma.timetravel.inspect/TimelineItem.Sent.copy|copy(koma.observability.GroupSeq;kotlin.time.Duration;koma.observability.StoreInstanceId;koma.core.InputId?;koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.Boolean){}[0]
+        final fun component8(): koma.observability/MessageRef? // koma.timetravel.inspect/TimelineItem.Sent.component8|component8(){}[0]
+        final fun copy(koma.observability/GroupSeq = ..., kotlin.time/Duration = ..., koma.observability/StoreInstanceId = ..., koma.core/InputId? = ..., koma.observability/MessageRef = ..., koma.observability/StoreInstanceId = ..., kotlin/Boolean = ..., koma.observability/MessageRef? = ...): koma.timetravel.inspect/TimelineItem.Sent // koma.timetravel.inspect/TimelineItem.Sent.copy|copy(koma.observability.GroupSeq;kotlin.time.Duration;koma.observability.StoreInstanceId;koma.core.InputId?;koma.observability.MessageRef;koma.observability.StoreInstanceId;kotlin.Boolean;koma.observability.MessageRef?){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.inspect/TimelineItem.Sent.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // koma.timetravel.inspect/TimelineItem.Sent.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // koma.timetravel.inspect/TimelineItem.Sent.toString|toString(){}[0]
@@ -999,6 +1002,28 @@ sealed interface koma.timetravel/GroupMismatch { // koma.timetravel/GroupMismatc
         final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/GroupMismatch.Replay.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // koma.timetravel/GroupMismatch.Replay.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // koma.timetravel/GroupMismatch.Replay.toString|toString(){}[0]
+    }
+
+    final class ReplyWithoutRequest : koma.timetravel/GroupMismatch { // koma.timetravel/GroupMismatch.ReplyWithoutRequest|null[0]
+        constructor <init>(kotlin/Int, koma.observability/StoreInstanceId, koma.statechart.machine/MessageId, kotlin/String) // koma.timetravel/GroupMismatch.ReplyWithoutRequest.<init>|<init>(kotlin.Int;koma.observability.StoreInstanceId;koma.statechart.machine.MessageId;kotlin.String){}[0]
+
+        final val message // koma.timetravel/GroupMismatch.ReplyWithoutRequest.message|{}message[0]
+            final fun <get-message>(): koma.statechart.machine/MessageId // koma.timetravel/GroupMismatch.ReplyWithoutRequest.message.<get-message>|<get-message>(){}[0]
+        final val pair // koma.timetravel/GroupMismatch.ReplyWithoutRequest.pair|{}pair[0]
+            final fun <get-pair>(): kotlin/String // koma.timetravel/GroupMismatch.ReplyWithoutRequest.pair.<get-pair>|<get-pair>(){}[0]
+        final val position // koma.timetravel/GroupMismatch.ReplyWithoutRequest.position|{}position[0]
+            final fun <get-position>(): kotlin/Int // koma.timetravel/GroupMismatch.ReplyWithoutRequest.position.<get-position>|<get-position>(){}[0]
+        final val store // koma.timetravel/GroupMismatch.ReplyWithoutRequest.store|{}store[0]
+            final fun <get-store>(): koma.observability/StoreInstanceId // koma.timetravel/GroupMismatch.ReplyWithoutRequest.store.<get-store>|<get-store>(){}[0]
+
+        final fun component1(): kotlin/Int // koma.timetravel/GroupMismatch.ReplyWithoutRequest.component1|component1(){}[0]
+        final fun component2(): koma.observability/StoreInstanceId // koma.timetravel/GroupMismatch.ReplyWithoutRequest.component2|component2(){}[0]
+        final fun component3(): koma.statechart.machine/MessageId // koma.timetravel/GroupMismatch.ReplyWithoutRequest.component3|component3(){}[0]
+        final fun component4(): kotlin/String // koma.timetravel/GroupMismatch.ReplyWithoutRequest.component4|component4(){}[0]
+        final fun copy(kotlin/Int = ..., koma.observability/StoreInstanceId = ..., koma.statechart.machine/MessageId = ..., kotlin/String = ...): koma.timetravel/GroupMismatch.ReplyWithoutRequest // koma.timetravel/GroupMismatch.ReplyWithoutRequest.copy|copy(kotlin.Int;koma.observability.StoreInstanceId;koma.statechart.machine.MessageId;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/GroupMismatch.ReplyWithoutRequest.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel/GroupMismatch.ReplyWithoutRequest.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel/GroupMismatch.ReplyWithoutRequest.toString|toString(){}[0]
     }
 
     final class SentByNobody : koma.timetravel/GroupMismatch { // koma.timetravel/GroupMismatch.SentByNobody|null[0]
@@ -1715,16 +1740,19 @@ final class koma.timetravel/GroupReplaySession { // koma.timetravel/GroupReplayS
 }
 
 final class koma.timetravel/GroupRoute { // koma.timetravel/GroupRoute|null[0]
-    constructor <init>(koma.observability/StoreInstanceId, koma.observability/StoreInstanceId) // koma.timetravel/GroupRoute.<init>|<init>(koma.observability.StoreInstanceId;koma.observability.StoreInstanceId){}[0]
+    constructor <init>(koma.observability/StoreInstanceId, koma.observability/StoreInstanceId, koma.statechart.machine/RoutePair? = ...) // koma.timetravel/GroupRoute.<init>|<init>(koma.observability.StoreInstanceId;koma.observability.StoreInstanceId;koma.statechart.machine.RoutePair?){}[0]
 
     final val from // koma.timetravel/GroupRoute.from|{}from[0]
         final fun <get-from>(): koma.observability/StoreInstanceId // koma.timetravel/GroupRoute.from.<get-from>|<get-from>(){}[0]
+    final val pair // koma.timetravel/GroupRoute.pair|{}pair[0]
+        final fun <get-pair>(): koma.statechart.machine/RoutePair? // koma.timetravel/GroupRoute.pair.<get-pair>|<get-pair>(){}[0]
     final val to // koma.timetravel/GroupRoute.to|{}to[0]
         final fun <get-to>(): koma.observability/StoreInstanceId // koma.timetravel/GroupRoute.to.<get-to>|<get-to>(){}[0]
 
     final fun component1(): koma.observability/StoreInstanceId // koma.timetravel/GroupRoute.component1|component1(){}[0]
     final fun component2(): koma.observability/StoreInstanceId // koma.timetravel/GroupRoute.component2|component2(){}[0]
-    final fun copy(koma.observability/StoreInstanceId = ..., koma.observability/StoreInstanceId = ...): koma.timetravel/GroupRoute // koma.timetravel/GroupRoute.copy|copy(koma.observability.StoreInstanceId;koma.observability.StoreInstanceId){}[0]
+    final fun component3(): koma.statechart.machine/RoutePair? // koma.timetravel/GroupRoute.component3|component3(){}[0]
+    final fun copy(koma.observability/StoreInstanceId = ..., koma.observability/StoreInstanceId = ..., koma.statechart.machine/RoutePair? = ...): koma.timetravel/GroupRoute // koma.timetravel/GroupRoute.copy|copy(koma.observability.StoreInstanceId;koma.observability.StoreInstanceId;koma.statechart.machine.RoutePair?){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel/GroupRoute.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // koma.timetravel/GroupRoute.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // koma.timetravel/GroupRoute.toString|toString(){}[0]

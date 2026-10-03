@@ -372,7 +372,10 @@ What holds:
   and the group resumes. Give each member's store `group.member(id)` as an observer and
   `attach` the store once built; `route(fromMember, toMember, map)` checks the receiver's action
   type where the route is written, `removeRoute(route)` stops a route (`routeHistory` keeps it
-  for a recording). A member whose store closed, or that `detach`ed, gets no more messages: a
+  for a recording); `requestReply(requester, responder, name, request, reply)` registers a
+  request route and a reply route as a named pair: a reply decided in the same step as the
+  request names it in the journal (`BridgeSent.cause`), and a replay reports a reply whose
+  sender had received no request of the pair (`ReplyWithoutRequest`). A member whose store closed, or that `detach`ed, gets no more messages: a
   message sent to it is journaled undelivered and a cut leaves it out; what a store holds when
   it closes is dropped and journaled as `BridgeDropped` (a detached store still decides what it
   holds until it closes); `attach` a new store to take part again. An

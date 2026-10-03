@@ -15,6 +15,7 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineGroup
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.RoutePair
 import koma.statechart.machine.SourceId
 import koma.statechart.machine.SourceSnapshot
 import kotlinx.coroutines.sync.Mutex
@@ -23,9 +24,12 @@ import kotlinx.coroutines.sync.Mutex
 @ExperimentalKomaApi
 data class GroupStep(val store: StoreInstanceId, val step: Int)
 
-/** A route of the group's bridge, as a recording remembers it: effects of [from] reached [to] at some time of the run. */
+/**
+ * A route of the group's bridge, as a recording remembers it: effects of [from] reached [to] at
+ * some time of the run; [pair] is its place in a request/reply pair, when it has one.
+ */
 @ExperimentalKomaApi
-data class GroupRoute(val from: StoreInstanceId, val to: StoreInstanceId)
+data class GroupRoute(val from: StoreInstanceId, val to: StoreInstanceId, val pair: RoutePair? = null)
 
 /**
  * A run of a [MachineGroup]: each member's [Recording] and the order the members' decisions were
@@ -125,7 +129,7 @@ class GroupRecorder(
     private val sources: () -> Set<SourceId> = { emptySet() },
 ) {
     /** Records the group [group] is; its route history and sources are read when the recording is taken. */
-    constructor(group: MachineGroup) : this({ group.routeHistory.map { GroupRoute(it.from, it.to) } }, { group.sourceIds.toSet() })
+    constructor(group: MachineGroup) : this({ group.routeHistory.map { GroupRoute(it.from, it.to, it.pair) } }, { group.sourceIds.toSet() })
 
     private val lock = Mutex()
     private val recorders = linkedMapOf<StoreInstanceId, MachineRecorder<*, *, *, *>>()

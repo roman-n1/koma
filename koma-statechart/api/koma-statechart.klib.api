@@ -44,6 +44,17 @@ final enum class koma.statechart.machine/IgnoreReason : kotlin/Enum<koma.statech
     final fun values(): kotlin/Array<koma.statechart.machine/IgnoreReason> // koma.statechart.machine/IgnoreReason.values|values#static(){}[0]
 }
 
+final enum class koma.statechart.machine/PairRole : kotlin/Enum<koma.statechart.machine/PairRole> { // koma.statechart.machine/PairRole|null[0]
+    enum entry Reply // koma.statechart.machine/PairRole.Reply|null[0]
+    enum entry Request // koma.statechart.machine/PairRole.Request|null[0]
+
+    final val entries // koma.statechart.machine/PairRole.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.statechart.machine/PairRole> // koma.statechart.machine/PairRole.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.statechart.machine/PairRole // koma.statechart.machine/PairRole.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.statechart.machine/PairRole> // koma.statechart.machine/PairRole.values|values#static(){}[0]
+}
+
 abstract fun interface <#A: in koma.core/Action> koma.statechart.machine/ResultSink { // koma.statechart.machine/ResultSink|null[0]
     abstract fun result(#A) // koma.statechart.machine/ResultSink.result|result(1:0){}[0]
 }
@@ -1422,6 +1433,7 @@ final class koma.statechart.machine/MachineGroup { // koma.statechart.machine/Ma
     final val sourceIds // koma.statechart.machine/MachineGroup.sourceIds|{}sourceIds[0]
         final fun <get-sourceIds>(): kotlin.collections/List<koma.statechart.machine/SourceId> // koma.statechart.machine/MachineGroup.sourceIds.<get-sourceIds>|<get-sourceIds>(){}[0]
 
+    final fun <#A1: koma.core/Event, #B1: koma.core/Action, #C1: koma.core/Event, #D1: koma.core/Action> requestReply(koma.statechart.machine/MachineGroup.Member<*, #D1, *, #A1>, koma.statechart.machine/MachineGroup.Member<*, #B1, *, #C1>, kotlin/String, kotlin/Function1<#A1, #B1?>, kotlin/Function1<#C1, #D1?>): koma.statechart.machine/RequestReply // koma.statechart.machine/MachineGroup.requestReply|requestReply(koma.statechart.machine.MachineGroup.Member<*,0:3,*,0:0>;koma.statechart.machine.MachineGroup.Member<*,0:1,*,0:2>;kotlin.String;kotlin.Function1<0:0,0:1?>;kotlin.Function1<0:2,0:3?>){0§<koma.core.Event>;1§<koma.core.Action>;2§<koma.core.Event>;3§<koma.core.Action>}[0]
     final fun <#A1: koma.core/Event, #B1: koma.core/Action> route(koma.observability/StoreInstanceId, koma.observability/StoreInstanceId, kotlin/Function1<#A1, #B1?>): koma.statechart.machine/MachineGroup.Route // koma.statechart.machine/MachineGroup.route|route(koma.observability.StoreInstanceId;koma.observability.StoreInstanceId;kotlin.Function1<0:0,0:1?>){0§<koma.core.Event>;1§<koma.core.Action>}[0]
     final fun <#A1: koma.core/Event, #B1: koma.core/Action> route(koma.statechart.machine/MachineGroup.Member<*, *, *, #A1>, koma.statechart.machine/MachineGroup.Member<*, #B1, *, *>, kotlin/Function1<#A1, #B1?>): koma.statechart.machine/MachineGroup.Route // koma.statechart.machine/MachineGroup.route|route(koma.statechart.machine.MachineGroup.Member<*,*,*,0:0>;koma.statechart.machine.MachineGroup.Member<*,0:1,*,*>;kotlin.Function1<0:0,0:1?>){0§<koma.core.Event>;1§<koma.core.Action>}[0]
     final fun <#A1: kotlin/Any?, #B1: koma.core/Action, #C1: kotlin/Any?, #D1: koma.core/Event> member(koma.observability/StoreInstanceId): koma.statechart.machine/MachineGroup.Member<#A1, #B1, #C1, #D1> // koma.statechart.machine/MachineGroup.member|member(koma.observability.StoreInstanceId){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
@@ -1434,6 +1446,8 @@ final class koma.statechart.machine/MachineGroup { // koma.statechart.machine/Ma
     final class Route { // koma.statechart.machine/MachineGroup.Route|null[0]
         final val from // koma.statechart.machine/MachineGroup.Route.from|{}from[0]
             final fun <get-from>(): koma.observability/StoreInstanceId // koma.statechart.machine/MachineGroup.Route.from.<get-from>|<get-from>(){}[0]
+        final val pair // koma.statechart.machine/MachineGroup.Route.pair|{}pair[0]
+            final fun <get-pair>(): koma.statechart.machine/RoutePair? // koma.statechart.machine/MachineGroup.Route.pair.<get-pair>|<get-pair>(){}[0]
         final val to // koma.statechart.machine/MachineGroup.Route.to|{}to[0]
             final fun <get-to>(): koma.observability/StoreInstanceId // koma.statechart.machine/MachineGroup.Route.to.<get-to>|<get-to>(){}[0]
 
@@ -1470,6 +1484,33 @@ final class koma.statechart.machine/MessageId { // koma.statechart.machine/Messa
     final fun hashCode(): kotlin/Int // koma.statechart.machine/MessageId.hashCode|hashCode(){}[0]
     final fun toRef(): koma.observability/MessageRef // koma.statechart.machine/MessageId.toRef|toRef(){}[0]
     final fun toString(): kotlin/String // koma.statechart.machine/MessageId.toString|toString(){}[0]
+}
+
+final class koma.statechart.machine/RequestReply { // koma.statechart.machine/RequestReply|null[0]
+    constructor <init>(kotlin/String, koma.statechart.machine/MachineGroup.Route, koma.statechart.machine/MachineGroup.Route) // koma.statechart.machine/RequestReply.<init>|<init>(kotlin.String;koma.statechart.machine.MachineGroup.Route;koma.statechart.machine.MachineGroup.Route){}[0]
+
+    final val name // koma.statechart.machine/RequestReply.name|{}name[0]
+        final fun <get-name>(): kotlin/String // koma.statechart.machine/RequestReply.name.<get-name>|<get-name>(){}[0]
+    final val reply // koma.statechart.machine/RequestReply.reply|{}reply[0]
+        final fun <get-reply>(): koma.statechart.machine/MachineGroup.Route // koma.statechart.machine/RequestReply.reply.<get-reply>|<get-reply>(){}[0]
+    final val request // koma.statechart.machine/RequestReply.request|{}request[0]
+        final fun <get-request>(): koma.statechart.machine/MachineGroup.Route // koma.statechart.machine/RequestReply.request.<get-request>|<get-request>(){}[0]
+}
+
+final class koma.statechart.machine/RoutePair { // koma.statechart.machine/RoutePair|null[0]
+    constructor <init>(kotlin/String, koma.statechart.machine/PairRole) // koma.statechart.machine/RoutePair.<init>|<init>(kotlin.String;koma.statechart.machine.PairRole){}[0]
+
+    final val name // koma.statechart.machine/RoutePair.name|{}name[0]
+        final fun <get-name>(): kotlin/String // koma.statechart.machine/RoutePair.name.<get-name>|<get-name>(){}[0]
+    final val role // koma.statechart.machine/RoutePair.role|{}role[0]
+        final fun <get-role>(): koma.statechart.machine/PairRole // koma.statechart.machine/RoutePair.role.<get-role>|<get-role>(){}[0]
+
+    final fun component1(): kotlin/String // koma.statechart.machine/RoutePair.component1|component1(){}[0]
+    final fun component2(): koma.statechart.machine/PairRole // koma.statechart.machine/RoutePair.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., koma.statechart.machine/PairRole = ...): koma.statechart.machine/RoutePair // koma.statechart.machine/RoutePair.copy|copy(kotlin.String;koma.statechart.machine.PairRole){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/RoutePair.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.machine/RoutePair.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.machine/RoutePair.toString|toString(){}[0]
 }
 
 final class koma.statechart.machine/SourceSnapshot { // koma.statechart.machine/SourceSnapshot|null[0]

@@ -10,6 +10,7 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MessageId
+import koma.statechart.machine.PairRole
 import koma.statechart.machine.SourceId
 
 /**
@@ -39,6 +40,14 @@ sealed interface GroupMismatch {
 
     /** [store] decided an input of the source [source], which the group had not attached: a source the run missed. */
     data class UnknownSource(override val position: Int, val store: StoreInstanceId, val source: SourceId) : GroupMismatch
+
+    /**
+     * [store] received [message] over the reply route of the pair [pair], but its sender had
+     * received no request of the pair from [store] when it emitted it: a reply to nothing. A
+     * run since a cut cannot see what came before it: a member that starts at a checkpoint
+     * counts as having heard from everyone, and a message in flight at the start is not checked.
+     */
+    data class ReplyWithoutRequest(override val position: Int, val store: StoreInstanceId, val message: MessageId, val pair: String) : GroupMismatch
 }
 
 /** The result of one forward step of a [GroupReplaySession]. */
@@ -125,7 +134,8 @@ class GroupReplaySession(
     /**
      * Every mismatch of the group, in order of position: each member's first divergence, and
      * every bridge delivery that was received before it was sent, sent by nobody, delivered
-     * twice, or delivered where no route leads. Does not move.
+     * twice, delivered where no route leads, or a reply whose sender had received no request of
+     * the pair from the receiver. Does not move.
      */
     fun verify(): List<GroupMismatch> {
         val mismatches = mutableListOf<GroupMismatch>()
@@ -134,22 +144,43 @@ class GroupReplaySession(
         }
         val sent = recording.inFlight.toMutableSet()
         val received = mutableMapOf<Pair<StoreInstanceId, MessageId>, Int>()
+        // The requesters each member has received a request from so far, and, per message, the
+        // requesters its sender had heard from when it emitted the message. A member whose
+        // recording begins at a checkpoint (a run since a cut) may have heard from anyone before
+        // it: it counts as having heard from every member, and a message in flight at the start
+        // was emitted before it and is not checked.
+        val requestersHeard = mutableMapOf<StoreInstanceId, MutableSet<StoreInstanceId>>()
+        for ((id, member) in recording.members) if (member.start.snapshot.revision > 0) requestersHeard[id] = (recording.members.keys - id).toMutableSet()
+        val heardAtEmit = mutableMapOf<MessageId, Set<StoreInstanceId>>()
         for ((index, step) in recording.order.withIndex()) {
             val recorded = recording.members.getValue(step.store).steps[step.step]
             val input = recorded.input
             if (input is MachineInput.BridgeReceived) {
                 val message = input.message
                 val key = step.store to message
+                val routes = recording.routes.filter { it.from == message.from && it.to == step.store }
                 when {
                     key in received -> mismatches += GroupMismatch.DeliveredTwice(index, step.store, message, received.getValue(key))
                     message.from !in recording.members -> mismatches += GroupMismatch.SentByNobody(index, step.store, message)
                     message !in sent -> mismatches += GroupMismatch.ReceivedBeforeSent(index, step.store, message)
-                    recording.routes.none { it.from == message.from && it.to == step.store } -> mismatches += GroupMismatch.NoRoute(index, step.store, message)
+                    routes.isEmpty() -> mismatches += GroupMismatch.NoRoute(index, step.store, message)
+                    else -> {
+                        val reply = routes.firstNotNullOfOrNull { route -> route.pair?.takeIf { it.role == PairRole.Reply } }
+                        if (reply != null && message !in recording.inFlight && step.store !in heardAtEmit[message].orEmpty()) mismatches += GroupMismatch.ReplyWithoutRequest(index, step.store, message, reply.name)
+                        if (routes.any { it.pair?.role == PairRole.Request }) requestersHeard.getOrPut(step.store) { mutableSetOf() } += message.from
+                    }
                 }
                 received[key] = index
             }
             if (input is MachineInput.External && input.source !in recording.sourceIds) mismatches += GroupMismatch.UnknownSource(index, step.store, input.source)
-            if (recorded is RecordedStep.Committed<*, *, *, *>) for (effect in recorded.decision.effects) sent += MessageId(step.store, effect.id)
+            if (recorded is RecordedStep.Committed<*, *, *, *>) {
+                val heard = requestersHeard[step.store].orEmpty().toSet()
+                for (effect in recorded.decision.effects) {
+                    val message = MessageId(step.store, effect.id)
+                    sent += message
+                    heardAtEmit[message] = heard
+                }
+            }
         }
         return mismatches.sortedBy { it.position }
     }

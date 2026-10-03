@@ -45,6 +45,18 @@ data class GroupCheckpoint(
     val sources: Map<SourceId, SourceSnapshot> = emptyMap(),
 )
 
+/** The role of a route in a request/reply pair; see [MachineGroup.requestReply]. */
+@ExperimentalKomaApi
+enum class PairRole { Request, Reply }
+
+/** A route's place in the request/reply pair named [name]; see [MachineGroup.requestReply]. */
+@ExperimentalKomaApi
+data class RoutePair(val name: String, val role: PairRole)
+
+/** The two routes of a request/reply pair named [name]; see [MachineGroup.requestReply]. */
+@ExperimentalKomaApi
+class RequestReply(val name: String, val request: MachineGroup.Route, val reply: MachineGroup.Route)
+
 /**
  * Sees every cut a [MachineGroup] makes, from inside it: the sources are paused and the members
  * frozen and idle, so what a member's observer has seen so far is exactly what the cut holds,
@@ -71,7 +83,10 @@ fun interface CutListener {
  * they are dropped and journaled as [JournalEntry.BridgeDropped]. A member that leaves with
  * [Member.detach] gets no more messages; what its store holds is still in flight until the
  * store decides it or closes. A route can be removed with [removeRoute]; [routeHistory] keeps
- * every route the bridge had, for a recording.
+ * every route the bridge had, for a recording. [requestReply] registers a request route and a
+ * reply route as a named pair: a reply decided in the same step as the request names the
+ * request in the journal (`BridgeSent.cause`), and a replay checks that a reply follows a
+ * request of the pair.
  *
  * **Cut.** [checkpoint] pauses every attached [ExternalSource], freezes every member's
  * controlled queue (new inputs wait, whatever their source), waits until each member has
@@ -105,12 +120,15 @@ class MachineGroup(private val session: RecordingSession? = null) {
     private val sourceList = mutableListOf<ExternalSource>()
     private val cutListeners = mutableListOf<CutListener>()
 
-    /** A route of the bridge: effects of [from] that [map] turns into actions of [to]. */
-    class Route internal constructor(val from: StoreInstanceId, val to: StoreInstanceId, internal val map: (Event) -> Action?) {
+    /**
+     * A route of the bridge: effects of [from] that [map] turns into actions of [to]; [pair] is
+     * its place in a request/reply pair, when it has one.
+     */
+    class Route internal constructor(val from: StoreInstanceId, val to: StoreInstanceId, internal val map: (Event) -> Action?, val pair: RoutePair? = null) {
         /** The action [event] becomes for [to], or `null` when the route does not carry it. */
         fun mapEvent(event: Event): Action? = map(event)
 
-        override fun toString(): String = "$from -> $to"
+        override fun toString(): String = "$from -> $to" + (pair?.let { " (${it.name} ${it.role})" } ?: "")
     }
 
     /** The routes the bridge carries now, in registration order. */
@@ -158,10 +176,36 @@ class MachineGroup(private val session: RecordingSession? = null) {
      * Routes the effects of [from] to [to]: each effect [map] returns an action for is delivered;
      * `null` means the effect is not for [to].
      */
-    fun <E : Event, A : Action> route(from: StoreInstanceId, to: StoreInstanceId, map: (E) -> A?): Route {
+    fun <E : Event, A : Action> route(from: StoreInstanceId, to: StoreInstanceId, map: (E) -> A?): Route = register(from, to, map, pair = null)
+
+    /**
+     * A request and its reply as a pair of routes named [name]: the effects of [requester] that
+     * [request] maps go to [responder], the effects of [responder] that [reply] maps go back to
+     * [requester]. Asynchronous by construction: the requester waits in a state of its own, with
+     * a timer if it must, and correlates by what the actions carry. The pair adds the causality:
+     * a reply the responder decides in the same step as the request names the request in the
+     * journal ([JournalEntry.BridgeSent.cause]), and a replay checks that every reply follows a
+     * request of the pair. Between two members, a pair's direction should carry the pair alone:
+     * a replay tells a reply by its direction.
+     *
+     * @throws IllegalArgumentException if [requester] and [responder] are the same member
+     */
+    fun <RQ : Event, RA : Action, RP : Event, PA : Action> requestReply(
+        requester: Member<*, PA, *, RQ>,
+        responder: Member<*, RA, *, RP>,
+        name: String,
+        request: (RQ) -> RA?,
+        reply: (RP) -> PA?,
+    ): RequestReply {
+        val requestRoute = register(requester.id, responder.id, request, RoutePair(name, PairRole.Request))
+        val replyRoute = register(responder.id, requester.id, reply, RoutePair(name, PairRole.Reply))
+        return RequestReply(name, requestRoute, replyRoute)
+    }
+
+    private fun <E : Event, A : Action> register(from: StoreInstanceId, to: StoreInstanceId, map: (E) -> A?, pair: RoutePair?): Route {
         require(from != to) { "[Koma] A route goes to another member; $from -> $from" }
         @Suppress("UNCHECKED_CAST")
-        val route = Route(from, to, map as (Event) -> Action?)
+        val route = Route(from, to, map as (Event) -> Action?, pair)
         locked {
             routeList += route
             routeHistoryList += route
@@ -312,6 +356,8 @@ class MachineGroup(private val session: RecordingSession? = null) {
             if (decision.effects.isEmpty()) return
             val routes = locked { if (detached) emptyList() else routeList.filter { it.from == id } }
             if (routes.isEmpty()) return
+            // The bridge message this step decided, if it was one: what a reply replies to.
+            val cause = (machineInput as? MachineInput.BridgeReceived)?.message?.toRef()
             for (effect in decision.effects) {
                 for (route in routes) {
                     val action = route.map(effect.event) ?: continue
@@ -330,7 +376,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
                             store
                         }
                         // Publish before delivery and before a close listener can drop it.
-                        session?.publish(id, JournalEntry.BridgeSent(input, message.toRef(), route.to, delivered = target != null))
+                        session?.publish(id, JournalEntry.BridgeSent(input, message.toRef(), route.to, delivered = target != null, cause = cause))
                         target
                     }
                     target?.deliverUnchecked(message, action)

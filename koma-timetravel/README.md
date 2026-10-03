@@ -52,9 +52,10 @@ Store, in memory.
 - **Groups.** `GroupRecorder` records a `MachineGroup` (see the statechart README): each member's
   recording and the order the decisions were made in across the group. `GroupReplaySession`
   steps the members in that order, `verify` checks every member and the bridge (a message
-  received before it was sent, sent by nobody, delivered twice or where no route ever led is a
+  received before it was sent, sent by nobody, delivered twice, where no route ever led, or over
+  the reply route of a pair whose sender had received no request from the receiver is a
   `GroupMismatch`, as is an input from a source the group had not attached; the recording keeps
-  every route the bridge had, removed ones included), `since(cut)`
+  every route the bridge had, removed ones included, with its request/reply pair), `since(cut)`
   begins at a consistent cut with its messages in flight and its sources' snapshots, and
   `GroupBranch` continues every member with a local bridge that delivers routed effects as
   they are decided and `feed(store, source, action)` for the scripted data of a source.
