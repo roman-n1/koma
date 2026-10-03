@@ -107,6 +107,45 @@ class ViewStoreJvmTest {
     }
 
     @Test
+    fun select_derivesFromTheState_andItsReadersRecomposeOnlyWhenTheDerivedValueChanges() = runTest(testDispatcher) {
+        val store = TestStore(UiState.Ready(1))
+        val buckets = mutableListOf<Int>()
+        val parents = mutableListOf<Int>()
+        withNodeComposition(TestNode(), content = {
+            val viewStore = rememberViewStore(store)
+            parents += 1
+            BucketReader(viewStore, buckets)
+        }, afterSetContent = { pumpFrame ->
+            store.state.value = UiState.Ready(2)
+            repeat(2) { pumpFrame() }
+            store.state.value = UiState.Ready(12)
+            repeat(2) { pumpFrame() }
+            store.state.value = UiState.Ready(15)
+            repeat(2) { pumpFrame() }
+        })
+
+        assertEquals(listOf(0, 1), buckets, "the reader recomposed once for 1 -> 12 (a new bucket) and not for 1 -> 2 or 12 -> 15 (the same bucket)")
+        assertEquals(1, parents.size, "the parent did not read the state, so it never recomposed")
+    }
+
+    @Test
+    fun select_usesTheLatestMapper() = runTest(testDispatcher) {
+        val store = TestStore(UiState.Ready(3))
+        val factor = mutableStateOf(1)
+        val seen = mutableListOf<Int>()
+        withNodeComposition(TestNode(), content = {
+            val viewStore = rememberViewStore(store)
+            val multiplier = factor.value
+            seen += viewStore.select { (it as UiState.Ready).value * multiplier }
+        }, afterSetContent = { pumpFrame ->
+            factor.value = 10
+            repeat(2) { pumpFrame() }
+        })
+
+        assertEquals(listOf(3, 30), seen)
+    }
+
+    @Test
     fun stateContent_callsBlockOnlyForMatchingState() = runTest(testDispatcher) {
         val renderedValues = mutableListOf<Int>()
 
@@ -866,6 +905,12 @@ private class TestStore(
     override fun close() {
         closeCount++
     }
+}
+
+@Composable
+private fun BucketReader(viewStore: ViewStore<UiState, UiAction, UiEvent>, log: MutableList<Int>) {
+    val bucket = viewStore.select { (it as UiState.Ready).value / 10 }
+    log += bucket
 }
 
 @Composable

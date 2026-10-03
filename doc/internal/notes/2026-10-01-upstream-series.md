@@ -47,6 +47,7 @@ Companion fixes first (cheap, away from `StoreImpl.kt`, independent of each othe
 | C2 | `upstream-pr/message-subscription-before-start` | `koma-message`: `onStart` waits for the subscription; a throwing receive block is reported and the subscription continues (the 64 buffer is mentioned, not proposed) | `MessageDeliveryTest.message_sentFromTheReceiversOwnStartup_isReceivedOnAMultiThreadedDispatcher`, `message_receiverKeepsItsSubscriptionAfterItsBlockThrows` | d5 |
 | C3 | `upstream-pr/logging-inline-entries` | `koma-logging`: log from the hook when no dispatcher is given; a throwing logger is reported | `LoggingOutputTest` | d3 |
 | C4 | `upstream-pr/companion-api-deps` | `api` instead of `implementation` for `koma-core` in the companion modules | — | d6 |
+| C5 | issue, then `upstream-pr/viewstore-select` | `koma-compose`: `ViewStore.select(mapper)` (#189 item 3, derived state); a feature, so an issue first, after C1 lands | `ViewStoreJvmTest.select_*` | d8 |
 
 Then the stability fixes, one by one:
 

@@ -5,6 +5,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +54,26 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
 
     val state: S
         get() = stateRef.value
+
+    /**
+     * Derives a value from the [state] for this composition: [mapper] runs again when the state
+     * changes, and what reads the result recomposes only when the derived value changed
+     * (structural equality). A UI model projected from a large state, a field several states
+     * share, a flag computed from a few of them.
+     *
+     * The derivation is remembered per call site for this [ViewStore]; the latest [mapper] is
+     * used. The mapper must be pure: it runs during composition and again when the state
+     * changes, on the snapshot's thread.
+     *
+     * @param mapper The projection of the state
+     * @return The derived value, read from Compose state
+     */
+    @Composable
+    fun <T> select(mapper: (S) -> T): T {
+        val currentMapper = rememberUpdatedState(mapper)
+        val derived = remember(this) { derivedStateOf { currentMapper.value(stateRef.value) } }
+        return derived.value
+    }
 
     /**
      * Invokes [block] only when the current [state] is of type [S2].
