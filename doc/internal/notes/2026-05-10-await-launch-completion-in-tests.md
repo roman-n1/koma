@@ -1,6 +1,11 @@
 # Proposal for a test API that waits for launches inside enter / action to complete
 
 - Updated: 2026-05-10
+- Decided in the fork on 2026-10-01: [ADR](../adr/2026-10-01-await-idle-and-subscriptions.md).
+  `StoreInternalApi.awaitIdle(timeout)` joins the state runtimes' launches and waits for queued
+  inputs until stable; `subscribe {}` is the separate DSL for long-lived launches (the first
+  option below); `koma-test` exposes `awaitIdle()` and `pendingWork()`. Proposed upstream as one
+  change (`notes/2026-10-01-upstream-series.md`).
 
 ## Background
 

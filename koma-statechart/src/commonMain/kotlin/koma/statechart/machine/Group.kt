@@ -183,7 +183,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
             frozen = true
             for ((_, store) in attached) {
                 val remaining = timeout - started.elapsedNow()
-                if (remaining <= Duration.ZERO || !store.awaitIdle(remaining)) return null
+                if (remaining <= Duration.ZERO || !store.awaitIdle(remaining).isIdle) return null
             }
             val cuts = attached.associate { (id, store) ->
                 id to try {

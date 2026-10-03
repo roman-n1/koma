@@ -384,9 +384,11 @@ What holds:
 A `MachineStore` is a Store koma-test can drive: `startAndAwait()` starts it, `dispatchAndAwait(action)`
 admits the action like `dispatch` and returns once the machine decided it (the commit and the
 observers, not the commands the decision started; a rejected action throws, and during a group cut
-the call returns after the thaw), `patch {}` before the start sets the exception handler, the saver
-or the policies and appends plugins, and `createRecorder()` records the initial snapshot, every
-commit and every effect the decisions emitted, transient and retained alike. A plugin appended
+the call returns after the thaw), `awaitIdle()` waits until the executor carried out every
+decision and every result it fed was decided (a command still running, a timer, a pending effect
+are data of `checkpoint()`, not work to wait for), `patch {}` before the start sets the exception
+handler, the saver or the policies and appends plugins, and `createRecorder()` records the initial
+snapshot, every commit and every effect the decisions emitted, transient and retained alike. A plugin appended
 this way sees the callers' actions (dispatched, fed, delivered), not the executor's inputs; its
 `dispatch` goes through admission. Replacing or clearing the plugins and probing through a patch are
 refused; `dispatchIf` is not supported.
@@ -501,3 +503,6 @@ provided the chart does not rely on them either:
   `PendingActionPolicy.ClearOnStateExit` does not apply to chart steps.
 - In a hook, `context` is the hook's value; do not name a surrounding parameter `context`, or it
   shadows it.
+- A chart store's activities and timers run in a task runner subscribed from the chart's
+  `enter {}`, so koma-test's `awaitIdle()` returns while an activity awaits its node's exit and
+  while a timer waits: they are the chart's data, not launches to wait for.

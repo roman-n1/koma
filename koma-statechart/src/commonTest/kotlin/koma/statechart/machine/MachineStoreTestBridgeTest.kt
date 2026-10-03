@@ -18,14 +18,17 @@ import koma.statechart.CompoundState
 import koma.statechart.StateChartDefinition
 import koma.statechart.StateId
 import koma.statechart.Transition
+import koma.test.awaitIdle
 import koma.test.createRecorder
 import koma.test.dispatchAndAwait
 import koma.test.patch
+import koma.test.pendingWork
 import koma.test.startAndAwait
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -111,7 +114,7 @@ class MachineStoreTestBridgeTest {
         }
     }
 
-    private inner class Harness(scope: TestScope, admission: AdmissionPolicy = AdmissionPolicy.Unbounded) {
+    private inner class Harness(scope: TestScope, admission: AdmissionPolicy = AdmissionPolicy.Unbounded, answers: Boolean = true) {
         val dispatcher = StandardTestDispatcher(scope.testScheduler)
         val executionScope = CoroutineScope(dispatcher + SupervisorJob())
         val started = mutableListOf<CommandId>()
@@ -119,7 +122,7 @@ class MachineStoreTestBridgeTest {
         val store = MachineStore(
             machine, Ctx(), CommandHandler<Fetch, Act> { command, results ->
                 started += command.id
-                results.result(Act.Loaded)
+                if (answers) results.result(Act.Loaded) else awaitCancellation()
             },
             executionScope, TestClock(scope.testScheduler), dispatcher, admission = admission, mailbox = MailboxConfig(policy),
         ) { exceptionHandler(ExceptionHandler { handled += it }) }
@@ -262,6 +265,30 @@ class MachineStoreTestBridgeTest {
         assertTrue(awaiting.isCompleted, "returned after the thaw")
         assertEquals(1, h.store.currentState.context.ticks, "decided once")
         h.close()
+    }
+
+    @Test
+    fun awaitIdle_waitsForTheExecutorsResultsToBeDecided_andLeavesARunningCommandAsData() = runTest {
+        val answering = Harness(this)
+        answering.store.startAndAwait()
+        answering.store.dispatchAndAwait(Act.Load)
+
+        answering.store.awaitIdle()
+
+        assertTrue(answering.store.currentState.isActive(content), "the command's answer was fed and decided before awaitIdle returned")
+        assertEquals(1, answering.store.currentState.context.loaded)
+        answering.close()
+
+        val hanging = Harness(this, answers = false)
+        hanging.store.startAndAwait()
+        hanging.store.dispatchAndAwait(Act.Load)
+
+        hanging.store.awaitIdle()
+
+        assertTrue(hanging.store.currentState.isActive(loading), "a command that never answers is not waited for")
+        assertEquals(listOf(CommandId(1)), hanging.store.checkpoint().lanes.running.keys.toList(), "it is data in the checkpoint")
+        assertTrue(hanging.store.pendingWork().isIdle)
+        hanging.close()
     }
 
     @Test
