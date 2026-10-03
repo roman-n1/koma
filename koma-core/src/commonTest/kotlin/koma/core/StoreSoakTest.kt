@@ -1,3 +1,5 @@
+@file:OptIn(InternalKomaApi::class)
+
 package koma.core
 
 import kotlinx.coroutines.CompletableDeferred
@@ -44,8 +46,9 @@ class StoreSoakTest {
 
     data object Ev : Event
 
-    private fun soakStore(handled: MutableList<Throwable>, policy: PendingActionPolicy, processed: MutableStateFlow<Int>? = null): Store<S, A, Ev> = Store(S.Idle()) {
+    private fun soakStore(handled: MutableList<Throwable>, policy: PendingActionPolicy, processed: MutableStateFlow<Int>? = null, closed: CompletableDeferred<Unit>? = null): Store<S, A, Ev> = Store(S.Idle()) {
         coroutineContext(Dispatchers.Default)
+        if (closed != null) probe(StoreProbe { if (it === StoreTrace.StoreClosed) closed.complete(Unit) })
         pendingActionPolicy(policy)
         exceptionHandler(ExceptionHandler { handled += it })
         plugin(Plugin(onAction = { _, _ -> processed?.update { it + 1 } }, onState = { _, _ -> }, onEvent = { _, _ -> }))
@@ -138,7 +141,8 @@ class StoreSoakTest {
     fun soak_closeMidWork_stopsEverything() = runTest {
         val handled = mutableListOf<Throwable>()
         val processed = MutableStateFlow(0)
-        val store = soakStore(handled, PendingActionPolicy.ClearOnStateExit, processed)
+        val closed = CompletableDeferred<Unit>()
+        val store = soakStore(handled, PendingActionPolicy.ClearOnStateExit, processed, closed)
         try {
             withContext(Dispatchers.Default) {
                 withTimeout(30_000) {
@@ -166,6 +170,8 @@ class StoreSoakTest {
                         store.close()
                         storm.cancelAndJoin()
                     }
+                    // close() requests cancellation; StoreClosed marks its completion.
+                    closed.await()
                     val frozen = store.currentState
                     delay(100)
                     assertEquals(frozen, store.currentState)

@@ -120,7 +120,7 @@ object GroupFixture {
     )
 
     /** A live, journaled, recorded group on a test dispatcher; [paired] routes as a request/reply pair. */
-    class Live(scope: TestScope, paired: Boolean = false) {
+    class Live(scope: TestScope, paired: Boolean = false, rootContext: kotlin.coroutines.CoroutineContext? = null) {
         val dispatcher = StandardTestDispatcher(scope.testScheduler)
         val executionScope = CoroutineScope(dispatcher + SupervisorJob())
         val session = RecordingSession(scope.backgroundScope, id = RuntimeSessionId("g"), group = MachineGroupId("picker"), timeSource = TestTimeSource())
@@ -136,7 +136,7 @@ object GroupFixture {
             executionScope, VirtualMachineClock(scope.testScheduler), dispatcher, observers = listOf(pickerMember, recorder.member(pickerId, picker, PickerCtx())),
         ) { exceptionHandler(ExceptionHandler.Ignore) }
         val rootStore: MachineStore<RootCtx, RootAct, Nothing, RootEv> = MachineStore(
-            rootMachine, RootCtx(), CommandHandler<Nothing, RootAct> { _, _ -> }, executionScope, VirtualMachineClock(scope.testScheduler), dispatcher,
+            rootMachine, RootCtx(), CommandHandler<Nothing, RootAct> { _, _ -> }, executionScope, VirtualMachineClock(scope.testScheduler), rootContext ?: dispatcher,
             observers = listOf(rootMember, recorder.member(rootId, rootMachine, RootCtx())),
         ) { exceptionHandler(ExceptionHandler.Ignore) }
 
