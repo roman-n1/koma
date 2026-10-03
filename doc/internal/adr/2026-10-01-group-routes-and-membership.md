@@ -90,3 +90,19 @@ Not adopted, on purpose:
 - [Group replay](./2026-09-30-group-replay.md)
 - [The inspector is a read model](./2026-09-30-inspector-read-model.md)
 - [Time Travel and structured logging handoff](../design/2026-09-29-time-travel-logging-handoff.md), §8.1, §10
+
+## Review corrections on 2026-10-03
+
+`close()` requests cancellation; a committed non-suspending observer can still finish after it
+returns. The member stops accepting deliveries immediately, but its remaining in-flight
+messages become dropped only at the inner Store's `StoreClosed` trace. This avoids classifying
+a committed delivery as both received and dropped when the same member attaches another store.
+
+An in-flight delivery is keyed by both the sender's effect id and its destination. One effect
+routed to two members has two independently completed deliveries. The actual receiving store
+is retained in the key's value, so reattachment does not change which close drops a delivery.
+
+Every sending decision reaches all observers before the bridge delivers its effects. The
+`BridgeSent` record is published while booking the delivery and before passing it to the
+receiver. Both the group recording and the journal therefore place a send before an immediate
+receive, regardless of observer registration order.
