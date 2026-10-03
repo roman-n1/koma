@@ -7,7 +7,6 @@ import koma.core.ExperimentalKomaApi
  * own work sends (results, completions, timers) are never refused: refusing them would leave
  * the machine waiting for a command that already answered.
  */
-@ExperimentalKomaApi
 sealed interface AdmissionPolicy {
     /** Every action is accepted; the queue grows without limit. */
     data object Unbounded : AdmissionPolicy
@@ -24,7 +23,6 @@ sealed interface AdmissionPolicy {
  * The outcome of offering an action to a [MachineStore]. `dispatch` returning does not mean
  * the action was accepted; [MachineStore.admit] says.
  */
-@ExperimentalKomaApi
 sealed interface Admission {
     /** The action waits for processing. */
     data object Accepted : Admission

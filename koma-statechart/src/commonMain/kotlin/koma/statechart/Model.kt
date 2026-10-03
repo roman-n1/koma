@@ -11,7 +11,6 @@ import kotlin.time.Duration
  *
  * @property value The identifier text; must not be blank
  */
-@ExperimentalKomaApi
 @JvmInline
 value class StateId(val value: String) {
     init {
@@ -27,7 +26,6 @@ value class StateId(val value: String) {
  * The hierarchy is given by [parent] links, so a definition stays a flat list of nodes. More
  * kinds of nodes may be added, so code that matches on this type should expect more cases.
  */
-@ExperimentalKomaApi
 sealed interface StateNode {
     /**
      * The identifier of this node.
@@ -46,7 +44,6 @@ sealed interface StateNode {
  * @property parent The compound or parallel state that contains this state, or `null` for a
  * top-level state
  */
-@ExperimentalKomaApi
 data class AtomicState(
     override val id: StateId,
     override val parent: StateId? = null,
@@ -62,7 +59,6 @@ data class AtomicState(
  * @property parent The compound or parallel state that contains this state, or `null` for a
  * top-level state
  */
-@ExperimentalKomaApi
 data class CompoundState(
     override val id: StateId,
     val initial: StateId,
@@ -87,7 +83,6 @@ data class CompoundState(
  * @property parent The compound or parallel state that contains this state, or `null` for a
  * top-level state
  */
-@ExperimentalKomaApi
 data class ParallelState(
     override val id: StateId,
     override val parent: StateId? = null,
@@ -121,7 +116,6 @@ data class ParallelState(
  * @property default Entered while nothing is remembered: a child of [parent] for a shallow history,
  * any proper descendant of [parent] for a deep one; `null` means the initial child of [parent]
  */
-@ExperimentalKomaApi
 data class HistoryState(
     override val id: StateId,
     override val parent: StateId,
@@ -136,7 +130,6 @@ data class HistoryState(
  * the matcher recognizes actions when [type] is null (see [matches]).
  * @property type The action type, when the matcher was created from one
  */
-@ExperimentalKomaApi
 data class ActionMatcher(
     val name: String,
     val type: KClass<out Action>? = null,
@@ -176,7 +169,6 @@ data class ActionMatcher(
  *
  * More kinds of triggers may be added, so code that matches on this type should expect more cases.
  */
-@ExperimentalKomaApi
 sealed interface Trigger {
     /**
      * The transition fires when an action matching [matcher] arrives (see [StateChartRuntime.step]).
@@ -214,7 +206,6 @@ sealed interface Trigger {
  * @property effect Optional label of what the transition does, such as updating data; the model
  * only records the label, and the runtime ignores it
  */
-@ExperimentalKomaApi
 data class Transition(
     val source: StateId,
     val target: StateId,
@@ -265,7 +256,6 @@ data class Transition(
  * @property states All state nodes, in declaration order
  * @property transitions All transitions, in declaration order
  */
-@ExperimentalKomaApi
 data class StateChartDefinition(
     val initial: StateId,
     val states: List<StateNode>,
@@ -329,7 +319,6 @@ data class StateChartDefinition(
 /**
  * Lookup tables for one definition, built on first use.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal class HierarchyIndex(definition: StateChartDefinition) {
     val nodes: Map<StateId, StateNode> = buildMap { definition.states.forEach { if (it.id !in this) put(it.id, it) } }
     val children: Map<StateId?, List<StateNode>> = nodes.values.groupBy { it.parent }

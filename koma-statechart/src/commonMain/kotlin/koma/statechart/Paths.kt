@@ -33,7 +33,6 @@ import koma.core.ExperimentalKomaApi
  * @property activeLeaves All active leaves after each transition, in declaration order; as many
  * as [transitions]
  */
-@ExperimentalKomaApi
 data class StateChartPath(
     val start: StateId,
     val transitions: List<Transition>,
@@ -75,7 +74,6 @@ data class StateChartPath(
     val triggers: List<Trigger> get() = transitions.map { it.trigger }
 }
 
-@OptIn(ExperimentalKomaApi::class)
 private fun requireConnected(start: StateId, transitions: List<Transition>): List<Transition> {
     transitions.fold(start) { current, transition ->
         require(transition.source == current) {
@@ -104,7 +102,6 @@ private fun requireConnected(start: StateId, transitions: List<Transition>): Lis
  * Among paths of equal length, the one found first by following transitions in declaration order
  * is returned, so the result is stable for a given definition.
  */
-@ExperimentalKomaApi
 fun StateChartDefinition.shortestPathTo(target: StateId): StateChartPath? {
     val graph = configurationGraph
     return graph.firstReaching[target]?.let { graph.pathTo(it) }
@@ -121,7 +118,6 @@ fun StateChartDefinition.shortestPathTo(target: StateId): StateChartPath? {
  * longer path covers it. Paths come in the declaration order of the transition they were built
  * for.
  */
-@ExperimentalKomaApi
 fun StateChartDefinition.transitionCoveragePaths(): List<StateChartPath> {
     val graph = configurationGraph
     val candidates = transitions.mapNotNull { transition ->
@@ -138,7 +134,6 @@ fun StateChartDefinition.transitionCoveragePaths(): List<StateChartPath> {
 /**
  * A configuration found by [configurationGraph] with the first-found shortest path to it.
  */
-@OptIn(ExperimentalKomaApi::class)
 internal class ReachedConfiguration(
     val configuration: StateConfiguration,
     val transitions: List<Transition>,
@@ -153,7 +148,6 @@ internal class ReachedConfiguration(
  * with it active, in the order found
  * @property reachable Every configuration found, the initial one first, then in the order found
  */
-@OptIn(ExperimentalKomaApi::class)
 internal class ConfigurationGraph(
     val startLeaves: List<StateId>,
     val firstReaching: Map<StateId, ReachedConfiguration>,
@@ -167,7 +161,6 @@ internal class ConfigurationGraph(
  * Breadth-first search over configurations from the initial one. In each configuration every
  * transition whose source is active is followed, in declaration order, as a [graphStep].
  */
-@OptIn(ExperimentalKomaApi::class)
 internal fun StateChartDefinition.buildConfigurationGraph(): ConfigurationGraph {
     val initialConfiguration = initialConfiguration()
     val startLeaves = activeLeaves(initialConfiguration).ifEmpty { listOf(initial) }

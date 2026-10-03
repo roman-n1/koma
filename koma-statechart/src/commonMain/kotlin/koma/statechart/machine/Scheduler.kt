@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
  * [checkpoint] needs. Commands and timers run as children of [parent] in a scope of their own,
  * cancelled by [close].
  */
-@OptIn(ExperimentalKomaApi::class)
 internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     parent: CoroutineScope,
     initial: MachineSnapshot<C>,

@@ -10,7 +10,6 @@ import kotlin.time.TimeSource
  * on. Live, it is monotonic elapsed time since the store was created; a replay gives the machine
  * a virtual one.
  */
-@ExperimentalKomaApi
 interface MachineClock {
     /** The current machine time. */
     fun now(): MachineTime
@@ -44,7 +43,6 @@ interface MachineClock {
  * @property scope The activation the command belongs to; the handler is cancelled when it exits
  * @property lane The lane, when the command runs under a [ConcurrencyPolicy]
  */
-@ExperimentalKomaApi
 data class CommandEnvelope<out CMD>(val id: CommandId, val command: CMD, val scope: ActivationId, val lane: LaneId?)
 
 /**
@@ -52,7 +50,6 @@ data class CommandEnvelope<out CMD>(val id: CommandId, val command: CMD, val sco
  * [MachineInput.CommandResult] in the store's input queue, in the order sent; a result of a
  * command the machine no longer holds is ignored as stale.
  */
-@ExperimentalKomaApi
 fun interface ResultSink<in A : Action> {
     fun result(action: A)
 }
@@ -72,7 +69,6 @@ fun interface ResultSink<in A : Action> {
  *
  * The handler never sets a state: it returns inputs, and the machine decides.
  */
-@ExperimentalKomaApi
 fun interface CommandHandler<in CMD, out A : Action> {
     suspend fun execute(command: CommandEnvelope<CMD>, results: ResultSink<A>)
 }

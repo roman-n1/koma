@@ -41,7 +41,6 @@ import kotlin.time.Duration
  * by the machine, and the decisions' commands, timers and events are carried out after each
  * commit. See [MachineStore] (the factory) for the protocol.
  */
-@ExperimentalKomaApi
 interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>, A, E> {
     /**
      * Offers [action] and says whether it was accepted, according to the [AdmissionPolicy].
@@ -54,6 +53,7 @@ interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>
      * like a dispatch: a source that is refused decides itself whether to retry or drop. The
      * input is a [MachineInput.External], so a recording knows where it came from.
      */
+    @ExperimentalKomaApi
     fun feed(source: SourceId, action: A): Admission
 
     /**
@@ -127,7 +127,6 @@ interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>
  * @param builder Store configuration: plugins, exception handler, state saver, journal
  * @throws IllegalArgumentException if [scope] uses [Dispatchers.Unconfined]
  */
-@ExperimentalKomaApi
 fun <C, A : Action, CMD, E : Event> MachineStore(
     machine: Machine<C, A, CMD, E>,
     context: C,
@@ -141,7 +140,7 @@ fun <C, A : Action, CMD, E : Event> MachineStore(
     builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit = {},
 ): MachineStore<C, A, CMD, E> = MachineStoreImpl(machine, context, handler, scope, clock, coroutineContext, admission, observers, mailbox, builder)
 
-@OptIn(ExperimentalKomaApi::class, InternalKomaApi::class)
+@OptIn(InternalKomaApi::class)
 internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     private val machine: Machine<C, A, CMD, E>,
     context: C,
@@ -343,6 +342,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     override fun admit(action: A): Admission = admitting(action) { MachineInput.Dispatch(action, clock.now()) }
 
+    @ExperimentalKomaApi
     override fun feed(source: SourceId, action: A): Admission = admitting(action) { MachineInput.External(source, action, clock.now()) }
 
     private inline fun admitting(action: A, input: () -> MachineInput<A>): Admission {

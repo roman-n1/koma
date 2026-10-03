@@ -60,7 +60,6 @@ private fun mermaidText(value: String): String = value.replace(mermaidLineBreak,
  *
  * The output is built from the model only; nothing runs and no reflection is used.
  */
-@ExperimentalKomaApi
 fun StateChartDefinition.toMermaid(): String = toMermaid(emptySet())
 
 /**
@@ -69,7 +68,6 @@ fun StateChartDefinition.toMermaid(): String = toMermaid(emptySet())
  * one) close the diagram, so a snapshot's configuration can be drawn on the chart. Ids that
  * are not in the chart are ignored; an empty [active] gives the plain diagram.
  */
-@ExperimentalKomaApi
 fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
     val compoundInitials = hierarchy.nodes.values.filterIsInstance<CompoundState>().map { it.initial }
     val histories = hierarchy.nodes.values.filterIsInstance<HistoryState>()
@@ -171,7 +169,6 @@ fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
  * parallel state drawn itself, otherwise the top level (`null`, absent from the map). States left over by a
  * parent cycle are drawn from the top, starting with the first declared one.
  */
-@OptIn(ExperimentalKomaApi::class)
 private fun StateChartDefinition.mermaidContainers(): Map<StateId, StateId> {
     val placed = mutableSetOf<StateId>()
     val containers = mutableMapOf<StateId, StateId>()

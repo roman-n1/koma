@@ -10,7 +10,6 @@ import koma.core.State
 /**
  * A place where a running Store did something its [StateChartDefinition] does not declare.
  */
-@ExperimentalKomaApi
 sealed interface ConformanceViolation {
     /**
      * The Store entered [id], which the chart does not declare.
@@ -134,7 +133,6 @@ sealed interface ConformanceViolation {
  * @param stateIdOf Maps a Koma state to its active leaf; for charts with parallel states use
  * [withActiveLeaves]
  */
-@ExperimentalKomaApi
 class StateChartConformance<S : State, A : Action, E : Event> private constructor(
     val definition: StateChartDefinition,
     private val mapping: LeafMapping<S>,

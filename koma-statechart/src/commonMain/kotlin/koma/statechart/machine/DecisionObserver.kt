@@ -22,7 +22,6 @@ import koma.observability.TimerRef
  * them short and never call back into the store. An exception thrown by a callback is reported
  * to the store's exception handler; the store continues.
  */
-@ExperimentalKomaApi
 interface DecisionObserver<C, A : Action, CMD, E : Event> {
     /**
      * [decision]'s snapshot was committed while processing [input] (`null` when unknown), for
@@ -66,7 +65,6 @@ interface DecisionObserver<C, A : Action, CMD, E : Event> {
  *
  * Pass the result to [MachineStore] as one of its observers.
  */
-@ExperimentalKomaApi
 fun <C, A : Action, CMD, E : Event> RecordingSession.decisionsOf(
     store: StoreInstanceId,
     command: (CMD) -> Payload<CMD> = { Payload.Omitted },
@@ -79,7 +77,6 @@ fun <C, A : Action, CMD, E : Event> RecordingSession.decisionsOf(
  * [JournalEntry.EffectAcknowledged] and [JournalEntry.EffectDiscarded]. Pass the result to
  * [MailboxConfig.listeners].
  */
-@ExperimentalKomaApi
 fun <E : Event> RecordingSession.effectsOf(store: StoreInstanceId, describe: (E) -> Payload<E> = { Payload.Omitted }): EffectListener<E> = object : EffectListener<E> {
     override fun onQueued(input: InputId?, effect: PendingEffect<E>) {
         val payload = try {
@@ -103,7 +100,6 @@ fun <E : Event> RecordingSession.effectsOf(store: StoreInstanceId, describe: (E)
     }
 }
 
-@OptIn(ExperimentalKomaApi::class)
 private class DecisionJournal<C, A : Action, CMD, E : Event>(
     private val session: RecordingSession,
     private val store: StoreInstanceId,

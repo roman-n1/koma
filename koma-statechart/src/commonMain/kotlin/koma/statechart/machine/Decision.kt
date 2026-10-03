@@ -20,7 +20,6 @@ import koma.observability.FailureDescriptor
  * @property timersCancelled The timers to cancel, including a fired one
  * @property effects The events to deliver, in the order the hooks emitted them
  */
-@ExperimentalKomaApi
 data class Decision<C, out CMD, out E : Event>(
     val outcome: DecisionOutcome,
     val snapshot: MachineSnapshot<C>,
@@ -42,7 +41,6 @@ data class Decision<C, out CMD, out E : Event>(
 /**
  * How an input was decided.
  */
-@ExperimentalKomaApi
 sealed interface DecisionOutcome {
     /**
      * The input was accepted: the snapshot advanced by one revision, also when nothing but the
@@ -67,7 +65,6 @@ sealed interface DecisionOutcome {
 /**
  * Why an input was ignored.
  */
-@ExperimentalKomaApi
 enum class IgnoreReason {
     /** An input other than [MachineInput.Start] before the start. */
     NotStarted,
@@ -88,7 +85,6 @@ enum class IgnoreReason {
 /**
  * How commands in one [LaneId] relate.
  */
-@ExperimentalKomaApi
 sealed interface ConcurrencyPolicy {
     /** A new command cancels the running one in the lane. */
     data object Latest : ConcurrencyPolicy
@@ -111,7 +107,6 @@ sealed interface ConcurrencyPolicy {
  * A command to register: what to run, for which activation, and how it relates to other commands
  * of its lane. A command without a lane runs on its own.
  */
-@ExperimentalKomaApi
 data class CommandRegistration<out CMD>(
     val id: CommandId,
     val command: CMD,
@@ -128,11 +123,9 @@ data class CommandRegistration<out CMD>(
  * A timer to schedule: fire [MachineInput.TimerFired] with [id] when the clock reaches
  * [deadline], unless it was cancelled first.
  */
-@ExperimentalKomaApi
 data class TimerSchedule(val id: TimerId, val transition: TransitionId, val activation: ActivationId, val deadline: MachineTime)
 
 /**
  * An event to deliver, with an identity of its own.
  */
-@ExperimentalKomaApi
 data class EffectEnvelope<out E : Event>(val id: EffectId, val event: E)

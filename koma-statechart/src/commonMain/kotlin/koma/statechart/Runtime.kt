@@ -7,7 +7,6 @@ import koma.core.State
 /**
  * Outcome of [StateChartRuntime.step] and [StateChartRuntime.fire].
  */
-@ExperimentalKomaApi
 sealed interface StepResult {
     /**
      * [transitions] were taken: [exited] were left, then [entered] were entered, and the chart is
@@ -91,7 +90,6 @@ sealed interface StepResult {
  *
  * @property timer The timer that fired
  */
-@ExperimentalKomaApi
 data class TimerFired(val timer: Transition) : Action
 
 /**
@@ -156,7 +154,6 @@ data class TimerFired(val timer: Transition) : Action
  * state without children or whose initial state is not its child, a history state as an initial
  * state, or an invalid history default (see [validate])
  */
-@ExperimentalKomaApi
 class StateChartRuntime<S : State>(
     val definition: StateChartDefinition,
     private val stateIdOf: (S) -> StateId,

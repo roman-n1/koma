@@ -10,7 +10,6 @@ import koma.observability.FailureDescriptor
  *
  * More kinds of input may be added, so code that matches on this type should expect more cases.
  */
-@ExperimentalKomaApi
 sealed interface MachineInput<out A : Action> : Action {
     /**
      * The machine's clock when the input was accepted.
@@ -78,13 +77,11 @@ sealed interface MachineInput<out A : Action> : Action {
  * `ActionMatcher.of<CommandFailure>("CommandFailure")` on a transition to react to it; without
  * one the command is only deregistered.
  */
-@ExperimentalKomaApi
 data class CommandFailure(val command: CommandId, val failure: FailureDescriptor) : Action
 
 /**
  * Why the executor abandoned a command; see [MachineInput.CommandAbandoned].
  */
-@ExperimentalKomaApi
 enum class AbandonReason {
     /** A newer command in the same lane under [ConcurrencyPolicy.Latest] cancelled it. */
     Superseded,

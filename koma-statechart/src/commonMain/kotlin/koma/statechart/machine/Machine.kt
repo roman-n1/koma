@@ -25,7 +25,6 @@ import koma.statechart.instantTimerCycles
  * register [command]s and emit [event]s. No clock, no random, no repository: whatever the hook
  * needs that is not here belongs in the input or the context.
  */
-@ExperimentalKomaApi
 @KomaStoreDsl
 interface MachineEnterScope<C, out A : Action, in CMD, in E : Event> {
     /** The node being entered. */
@@ -68,7 +67,6 @@ interface MachineEnterScope<C, out A : Action, in CMD, in E : Event> {
 /**
  * What an exit hook of a [Machine] sees and may do; pure like [MachineEnterScope].
  */
-@ExperimentalKomaApi
 @KomaStoreDsl
 interface MachineExitScope<C, out A : Action, in E : Event> {
     /** The node being exited. */
@@ -100,7 +98,6 @@ interface MachineExitScope<C, out A : Action, in E : Event> {
  * for an action that no transition takes while [node] is active: the configuration stays, the
  * activation stays, and commands registered here belong to that activation.
  */
-@ExperimentalKomaApi
 @KomaStoreDsl
 interface MachineActionScope<C, out A : Action, in CMD, in E : Event> {
     /** The node whose handler runs. */
@@ -135,7 +132,6 @@ interface MachineActionScope<C, out A : Action, in CMD, in E : Event> {
  * Builder of a [Machine]: the implementations of the chart's guard and effect labels, the enter
  * and exit rules of its nodes and the action handlers of its nodes, all pure.
  */
-@ExperimentalKomaApi
 @KomaStoreDsl
 class MachineBuilder<C, A : Action, CMD, E : Event> internal constructor() {
     internal val guards = mutableMapOf<String, (MachineSnapshot<C>, Action) -> Boolean>()
@@ -203,7 +199,6 @@ class MachineBuilder<C, A : Action, CMD, E : Event> internal constructor() {
  * implemented twice, if the hierarchy of [chart] is malformed or refers to undeclared states, or
  * if timers without a positive delay restart each other in a loop
  */
-@ExperimentalKomaApi
 fun <C, A : Action, CMD, E : Event> Machine(
     id: DefinitionId,
     version: DefinitionVersion,
@@ -235,7 +230,6 @@ fun <C, A : Action, CMD, E : Event> Machine(
  * A [MachineInput.CommandResult] whose command is not registered any more is ignored as stale;
  * that is how a late result of a cancelled load cannot complete a newer one.
  */
-@ExperimentalKomaApi
 class Machine<C, A : Action, CMD, E : Event> internal constructor(
     val id: DefinitionId,
     val version: DefinitionVersion,
