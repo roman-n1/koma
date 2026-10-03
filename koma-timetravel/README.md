@@ -1,5 +1,14 @@
 # koma-timetravel
 
+Use this module to **reproduce a recorded Machine decision**, find the first difference and
+try another input from its historical checkpoint. A replay is an offline computation, not a
+live Store rewound in place. Ordinary Store logging alone cannot supply a replay recording.
+
+New here? Run the [disk-to-inspector example](../examples/time-travel/README.md) before
+integrating the APIs below. It closes its live Stores, loads real files, compares reducers,
+and experiments without re-running the command handler. See [installation](../README.md#installation)
+for dependency setup and current release availability.
+
 Replay for [Koma](../README.md)'s replay-ready machines: record a run of a `MachineStore`, decide
 it again step by step with the pure machine, move back and forward over it, and branch off any
 position with new inputs on a virtual clock. Stage 5 of the

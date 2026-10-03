@@ -1,5 +1,57 @@
 # koma-statechart
 
+## First: a phase is different from its data
+
+A search screen can be **Loading** while its context contains a query and selected contacts.
+Loading is a node because it owns a request and accepts particular actions. The query and
+selection are ordinary context fields, not extra nodes. The runtime combines active nodes
+with context into `ChartState<C>` or `MachineSnapshot<C>` for the UI.
+
+| Shape | Behaviour | Example |
+|---|---|---|
+| `AtomicState` | No children | Loading, Content, Error |
+| `CompoundState` | Exactly one child active while the parent is active | Connected contains Idle or ChatOpen |
+| `ParallelState` | All child regions active, each with its own configuration | Connection and upload progress |
+| `HistoryState` | A transition target that restores remembered children, not a lasting active phase | Resume a paused editor; shallow restores one level, deep restores nested levels |
+| `Trigger.After` | A timed transition while its source is active | Debouncing → Searching after 350 ms |
+
+Start with a flat chart. Introduce hierarchy when children share a lifetime, parallel regions
+when concerns really evolve independently, and history when resuming matters. See
+[hierarchy/history/parallel examples](#hierarchy-history-parallel-regions-timers).
+
+## A chart is transition data
+
+```kotlin
+import koma.core.Action
+import koma.statechart.*
+
+data object ToggleDoor : Action
+val closed = StateId("Closed")
+val open = StateId("Open")
+val doorChart = StateChartDefinition(
+    initial = closed,
+    states = listOf(AtomicState(closed), AtomicState(open)),
+    transitions = listOf(
+        Transition(closed, open, ActionMatcher.of<ToggleDoor>("Toggle")),
+        Transition(open, closed, ActionMatcher.of<ToggleDoor>("Toggle")),
+    ),
+)
+val diagram = doorChart.toMermaid()
+```
+
+Creating a definition does not start a coroutine or open a door. It gives the validator,
+diagram exporter and runtime the same transition model. A **guard** decides whether a
+transition may fire; an **effect** changes context or describes work. Their labels are in the
+model and their functions are supplied to its executor.
+
+Choose `StateChartStore` for coroutine hooks/activities, or the
+[pure Machine path](#replay-ready-machine) for explicit commands and deterministic replay.
+The [loading/retry example below](#quick-start) shows the adapter. The
+[root counter](../README.md#3-a-machine-makes-decisions-io-runs-afterward) shows a pure decision;
+the [desktop example](../examples/time-travel/README.md) completes recording and replay.
+
+## Module overview
+
 Statecharts for [Koma](../README.md): describe a screen's behaviour as plain data, check it,
 draw it, generate test paths from it, and run it as an ordinary Koma `Store`.
 
