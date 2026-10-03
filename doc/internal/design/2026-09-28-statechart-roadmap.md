@@ -1,6 +1,6 @@
 # Statechart layer on top of Koma: roadmap
 
-- Updated: 2026-09-28 (phase status after wave 6; fork divergence table; remaining work)
+- Updated: 2026-10-01 (plan B dropped; full divergence inventory vs 4.0.0; version 5.0 decision; 2026-09-28: phase status after wave 6)
 
 ## Background
 
@@ -209,21 +209,23 @@ Notes on risks:
 - The upstream issue numbers (#175, #176, #189) are taken from the handoff and the author's
   notes and were not verified in this session.
 
-### Plan B: if the author does not accept our path
+### Plan B (dropped 2026-10-01)
 
-Roman's decision (2026-09-28): for now only the request for step 1 is sent
-upstream; the next ones are designed in the fork several steps ahead.
+Roman's decision (2026-09-28) was to send only the request for step 1 upstream and to keep
+`koma-statechart` on the public API of Koma 4.0.0, so that the layer would work on unmodified
+Koma. Dropped on 2026-10-01: the layer requires the fork's `koma-core`. It uses the
+`@InternalKomaApi` bridge (`StoreInternalApi.dispatchIf`, `StoreBuilder.validateRecovery`), the
+`StoreProbe` that `MachineStore`'s idle gate and `koma-observability` are built on, the public
+`InputId`, and `StoreScope` opened for the chart scopes; `koma-logging` depends on
+`koma-observability`. So the fork is published as one set of modules under `io.github.roman-n1`,
+and the way back to upstream is per row of the divergence inventory below, not per module.
 
-Therefore the `koma-statechart` module must not depend on the core changes from steps
-1–4. It relies only on the public API of `koma-core` (marker interfaces,
-`Store`, DSL, `Plugin`) and must work with unmodified Koma 4.0.0. Steps 1–3
-in the fork are useful on their own (diagnostics in tests), but the statechart layer does not
-require them. If some step requires a core change (for example step 7), the fork
-first does a variant inside the module, and the core change remains a separate
-proposal.
+Order of work (2026-10-01): messenger-facing changes first; upstream changes are prepared in
+parallel as small steps and sent without waiting for the author's answer to earlier ones.
 
 Draft of the first feature request (step 1):
-[`notes/2026-09-28-upstream-fr-handler-matcher-metadata.md`](../notes/2026-09-28-upstream-fr-handler-matcher-metadata.md).
+[`notes/2026-09-28-upstream-fr-handler-matcher-metadata.md`](../notes/2026-09-28-upstream-fr-handler-matcher-metadata.md);
+the series that follows it: [`notes/2026-10-01-upstream-series.md`](../notes/2026-10-01-upstream-series.md).
 
 ## Using the fork in the messenger and the way back to upstream
 
@@ -233,44 +235,100 @@ follow from this.
 
 ### Rules for the fork
 
-- **Minimal divergence in the core.** `koma-core` changes in the fork are
-  small, additive, one step per PR, each in its own commits. They
-  can be discarded when moving to an upstream version where the same change already
-  exists.
-- **The statechart layer only in its own module.** `koma-statechart` depends only
-  on the public API of `koma-core` (see plan B) and must build on top of
-  official Koma without the core fork.
-- **Tracking divergence.** The table below is the only list of core changes in the
-  fork. Each row is removed when upstream releases the same thing or
-  when we abandon the change.
+- **Additive, one step per PR.** `koma-core` changes in the fork are additive and each is its own
+  commit, so a row of the inventory can be replaced by upstream's version of the same change or
+  dropped on its own.
+- **The statechart layer only in its own modules.** `koma-statechart`, `koma-observability`,
+  `koma-timetravel`, `koma-timetravel-compose` and the planned `koma-statechart-test` and
+  `koma-statechart-compose` are additive modules; they are not divergence, and they are built and
+  published only with the fork's `koma-core`.
+- **The inventory is complete.** The tables below are the complete list of what the fork changed in
+  the modules upstream owns. A row leaves when upstream ships the same change (on the next tag
+  merge) or when the fork removes it; both happen in the PR that does the merge or the removal.
+- **Fork-only means fork-only.** A row marked `fork-only by design` is not proposed upstream; its
+  "removable when" names the alternative that would let the fork drop it.
 
-| Step | What it changes in the core | Fork PR | Status in upstream |
-|---|---|---|---|
-| 1 | Matcher metadata in the `StoreBuilder` registry (internal) | #2 | prepared for upstream: branch `upstream-pr/handler-matcher-metadata` (one commit on top of upstream 4.0.0) |
-| 2 | `StoreInternalApi.matchActionHandlers` (`@InternalKomaApi`) + `diagnoseActionMatches` in `koma-test` | #3 | fork only; depends on step 1 |
-| 3 | `StoreInternalApi.handlerMetadata` (`@InternalKomaApi`) + `describeHandlers` in `koma-test` | #4 | fork only; depends on step 1 |
+### Divergence inventory vs upstream 4.0.0
 
-Divergence by group:
+Columns: what changed; where (files, symbols); since (stability-review round, commit); the
+regression tests that pin it; upstream status (`not proposed`, `prepared: upstream-pr/<topic>`,
+`issue #N`, `PR #N`, `merged in <tag>`, `declined`, `fork-only by design`); removable when.
+The rounds are sections of the [stability review](../notes/2026-09-29-stability-review.md); the upstream series and its
+status live in [`notes/2026-10-01-upstream-series.md`](../notes/2026-10-01-upstream-series.md).
 
-- **Fork only, core.** Steps 1–3 above: internal changes to `koma-core` and new functions in
-  `koma-test`. Nothing else in `koma-core` was changed in the fork (except the Mocha timeout in tests, #11).
-- **Depends on the step 1 request.** Steps 2 and 3 read the matcher metadata of step 1. If upstream
-  accepts step 1, row 1 goes away on synchronization, and steps 2–3 can be proposed next; if it
-  declines, steps 2–3 stay in the fork or are discarded; the statechart layer does not depend on them.
-- **Public API only (superseded).** `koma-statechart` (#5, #7–#14 and wave 6) was designed against
-  the public API of `koma-core` 4.0.0 (`Store`, DSL, `Plugin`, `StateSaver`) and on `koma-test` only
-  in tests (plan B). Since the stability review's sixth round it also uses the `@InternalKomaApi`
-  bridge (`StoreInternalApi.dispatchIf`, `StoreBuilder.validateRecovery`), so it is built with the
-  fork's `koma-core`, and it does not go into this table.
+#### (a) Stability fixes in `koma-core`
+
+Tests are in `koma-core/src/commonTest/kotlin/koma/core/` unless marked JVM (`src/jvmTest`).
+KDoc that documents these contracts (`Plugin.kt`, `Store.kt`, `StateSaver.kt`, `ExceptionHandler.kt`,
+`StoreScope.kt`) travels with the row it belongs to.
+
+| # | Change | Where | Since | Regression tests | Upstream status | Removable when |
+|---|---|---|---|---|---|---|
+| a1 | `state.first()` / `take(n)` no longer hang: collected in the caller's coroutine, startup requested after the first value | `StoreImpl.state.collect` | [round 1](../notes/2026-09-29-stability-review.md#fixed), 80b2018 | `StoreRegressionTest.stateFirst_returnsOnceThePredicateMatches` | planned: `upstream-pr/state-first-hang` (U1) | merged |
+| a2 | A throwing `exit {}` keeps the state's runtime; `ClearOnStateExit` clears pending actions before the commit | `processStateExit`, `commitTransition` | round 1, 80b2018 | `StoreRegressionTest.exitException_recoveredInPlace_keepsTheStateRuntimeUsable`, `clearOnStateExit_keepsActionsDispatchedByPluginsForTheNewState` | planned: `upstream-pr/exit-failure-keeps-runtime` (U2) | merged |
+| a3 | Actions are processed in dispatch order on multi-threaded dispatchers; a handler leaving a child coroutine behind does not stall later dispatches | `launchDispatch`, `lastDispatchDone`; `Store.dispatch` KDoc | [round 2](../notes/2026-09-29-stability-review.md#fixed-in-the-second-round), 4d4edcd; [round 5](../notes/2026-09-29-stability-review.md#fixed-in-the-fifth-round), 4e92b04 | `StoreMultiThreadedTest.dispatches_areProcessedInDispatchOrder`, `StoreRegressionTest.aHandlerLeavingAChildCoroutineBehind_doesNotStallLaterDispatches`, `StoreSoakJvmTest.dispatchJobs_areNotRetainedThroughTheOrderingChain` (JVM) | planned: `upstream-pr/dispatch-order` (U4) | merged |
+| a4 | A cancelled launch never commits, emits or recovers, also from `NonCancellable` cleanup; nested transactions are rejected | `canRunLaunchOperation`, both launch scopes' `transaction`/`event` | round 2, 4d4edcd; [round 7](../notes/2026-09-29-stability-review.md#fixed-in-seventh-round-second-stability-review-wave), f08dcd4 | `StoreRegressionTest.cancelPrevious_skipsATransactionQueuedByTheCancelledLaunch`, `StoreLaunchCancellationTest` (five tests) | planned: `upstream-pr/cancelled-launch-transaction` (U5) | merged |
+| a5 | A failing `StateSaver.save`, `onState` or `onEvent` is reported and the transition finishes | `processStateChange`, `processEventEmit`, `reportWithoutAborting` | round 2, 4d4edcd; round 5, 4e92b04 | `StoreRegressionTest.stateSaverException_onVariantChange_stillEntersTheNewState`, `pluginOnStateException_onVariantChange_stillEntersTheNewState`, `pluginOnEventException_doesNotAbortTheEmittingHandler` | planned: `upstream-pr/observer-failure-continues-transition` (U7) | merged |
+| a6 | Plugins' `onStart` runs once, only failed hooks retry; completed launches release their lanes | `processPlugins(starting)`, `startedPluginIndices`, `trackActionLaunch` | round 2, 54b1ed6; [round 6](../notes/2026-09-29-stability-review.md#fixed-in-the-sixth-round), 90cafce | `StorePluginExceptionTest.pluginOnStartException_retriesInitializationOnNextDispatch`, `StoreLaunchRetentionJvmTest` (JVM) | not proposed | merged or declined |
+| a7 | A `CancellationException` from an expired timeout is a handler failure; a failing initial `enter {}` counts as started; `recover {}` keeps the original error as suppressed; an enter chain longer than 500 states fails instead of looping | `rethrowIfNonRecoverable`, `onErrorOccurred`, `MAX_ENTER_CHAIN` | [round 3](../notes/2026-09-29-stability-review.md#fixed-in-the-third-round), 5366bd9; round 5, 4e92b04 | `StoreRegressionTest.expiredWithTimeout_*`, `failedInitialEnter_isReportedOnceAndTheStoreProcessesActions`, `recoverThatThrows_keepsTheOriginalErrorAsSuppressed`, `enterLoop_failsWithAnErrorInsteadOfOverflowingTheStack`, `enterLoopGuard_leavesTheStoreInAUsableState`, `aFailingEnterOfTheRecoveredToState_keepsTheOriginalErrorAsSuppressed`, `pluginHookTimingOut_failsTheActionUnderBothPolicies` | planned as an issue only (U8: a semantic choice) | merged or declined |
+| a8 | Plugin hook rounds never overlap; fast path for zero or one plugin | `pluginMutex` | round 3, 3dbaf71 | `StoreMultiThreadedTest.pluginHookRounds_neverOverlap_evenForEventsEmittedFromLaunches` | planned: `upstream-pr/serialized-plugin-rounds` (U6) | merged |
+| a9 | Every plugin sees every round even when one fails; a fatal error stays fatal | `hookFailure` | [round 4](../notes/2026-09-29-stability-review.md#fixed-in-the-fourth-round), 916c19c; round 5, 4e92b04 | `StoreRegressionTest.aFailingPluginHook_doesNotHideTheRoundFromOtherPlugins`, `aFatalErrorFromASecondPlugin_staysFatal` | planned: `upstream-pr/every-plugin-every-round` (U6b) | merged |
+| a10 | `dispatchAndAwait` / `startAndAwait` from inside the Store's own handler or `onEvent` round fail fast instead of deadlocking | `InsideStore` context element, `checkNotInsideThisStore` | round 4, 26832ec; round 5, 4e92b04 | `StoreRegressionTest.awaitingTheStoreFromInsideItsOwnHandler_failsFastInsteadOfDeadlocking`, `awaitingTheStoreFromAnOnEventRoundOfALaunchedEvent_failsFast` | planned with the `awaitIdle` issue | merged |
+| a11 | Nothing commits after `close()`; `recover {}` does not run after close; an exit failing after close does not recover | `commitTransition` (`ensureActive`), `onErrorOccurred` | round 4, 916c19c; round 6, 90cafce; [round 8](../notes/2026-09-29-stability-review.md#fixed-in-the-eighth-round-whole-project-review-after-the-sixth-and-seventh), ff28f1c | `StoreCloseJvmTest.nothingCommitsAfterClose` (JVM), `StoreShutdownRegressionTest.closeDuringNonCancellableExitDoesNotCommitOrSaveTheTransition`, `StoreRegressionTest.anExitFailingAfterClose_doesNotRunRecover` | planned: `upstream-pr/no-commit-after-close` (U3) | merged |
+| a12 | `patch {}` is rejected once startup is requested; the exception handler is not called twice for one error | `isStartupRequested`, `InternalError.reported` | round 6, 90cafce | `StoreStartupRegressionTest.patchIsRejectedAsSoonAsStartupIsRequested`, `patchIsRejectedAfterPartialPluginStartup`, `StoreStartupExceptionJvmTest` (JVM) | not proposed | merged or declined |
+| a13 | A launch failing while its state exits reaches the `ExceptionHandler` | `executeLaunchInStateRuntime` | round 8, ff28f1c | `StoreRegressionTest.aLaunchFailingWhileItsStateExits_reachesTheExceptionHandler` | not proposed (may join U5) | merged or declined |
+| a14 | Soak tests that back the fixes above without mapping to one | — | round 5 | `StoreSoakTest`, `StoreSoakJvmTest` (JVM) | travel with the rows | — |
+
+#### (b) Observation hooks in `koma-core` (all `@InternalKomaApi`)
+
+| # | Change | Where | Since | Regression tests | Upstream status | Removable when |
+|---|---|---|---|---|---|---|
+| b1 | `StoreProbe`: every accepted, discarded and processed input with its outcome, commits, events and failures; `currentInputId()`; input ids carried in the coroutine context | `StoreProbe.kt` (`StoreProbe`, `StoreTrace`, `InputKind`, `DiscardReason`, `ProcessingOutcome`), `InputOrigin` in `StoreImpl.kt`, `StoreBuilder.probe`, `StorePatchBuilder.probe`, `StorePatch.probes` | [round 9](../notes/2026-09-29-stability-review.md#fixed-in-the-ninth-round-time-travel-foundation-probes-journal-machine-executor), ccc1c1e, 2e1331a, 90a7e02, 1ccdabd | `StoreProbeTest` | planned: issue "StoreProbe", then `upstream-pr/store-probe` (a) and `upstream-pr/store-probe-correlation` (b) | merged; used by `koma-observability` (journal) and `MachineStore`'s idle gate |
+| b2 | Matcher metadata next to the handler predicates; the old-signature constructors of `StateHandler` and `ThreadedHandler` stay public so inline code compiled against 4.0.0 keeps working | `HandlerMatcher.kt`, `StoreBuilder.StateHandler.matcher`, `ThreadedHandler.inputType` | ae8f313 (roadmap step 1) | `StoreHandlerRegistryTest`, `StoreHandlerRegistryPropertyTest` | issue koma-kt/koma#280 (open, no answer); prepared: `upstream-pr/handler-matcher-metadata` | merged |
+| b3 | `StoreInternalApi.matchActionHandlers` and `diagnoseActionMatches` in `koma-test` | `StoreInternalApi.kt`, `koma-test/ActionMatchDiagnostics.kt` | 8a03bda (step 2) | `ActionMatchDiagnosticsTest` | not proposed until #280 lands | merged or declined |
+| b4 | `StoreInternalApi.handlerMetadata` and `describeHandlers` in `koma-test` | `StoreInternalApi.kt`, `koma-test/StoreHandlers.kt` | 48af6ac (step 3) | `StoreHandlersTest` | not proposed until #280 lands | merged or declined |
+| b5 | `StoreInternalApi.dispatchIf(action, isValid)`: the predicate runs under the lock before `onAction`, so an activity's action queued while its node exited is discarded as stale | `StoreInternalApi.kt`, `StoreImpl.kt`; used at `StateChartStore.kt` (`ChartLaunchScope.dispatch`) | round 6, 90cafce | `StoreProbeTest.dispatchIf_withAFalsePredicate_isDiscardedAsStale_andConsumesNoOrdinal`, `StateChartActivityDispatchTest` | fork-only by design | an `ActivityDispatch(action, activation)` envelope through plain `dispatch()`, unwrapped by the chart's `action<Action>` handler, replaces it |
+| b6 | `StoreBuilder.validateRecovery {}`: a `recover {}` from `store {}` blocks may not change the chart's configuration or timers, nor a machine's snapshot | `StoreBuilder.kt`, `StoreImpl.validateRecoveredState`; used at `StateChartStore.kt` and `MachineStore.kt` | round 6, 90cafce | `StateChartRecoveryRegressionTest.recoveryCannot*` (no core test) | fork-only by design | a chart-level `recover<T> { context { … } }` replaces raw `store {}` blocks and `MachineStore` stops exposing `recover` |
+
+#### (c) Public API of the modules upstream owns
+
+| # | Change | Where | Since | Regression tests | Upstream status | Removable when |
+|---|---|---|---|---|---|---|
+| c1 | `InputId` (`@ExperimentalKomaApi`), the id every journal record and decision observer carries | `StoreProbe.kt` | round 9, 90a7e02 | `StoreProbeTest` | proposed with b1 (as `@InternalKomaApi`) | merged |
+| c2 | `StoreScope` changed from `sealed` to open, so `ChartHookScope` and `ChartLaunchScope` can be `StoreScope`s for `koma-message`'s `message()` | `StoreScope.kt` | round 4, 916c19c | — | fork-only by design | the chart scopes expose `val store: StoreScope` and delegate instead of extending |
+| c3 | `StorePatch.probes`: a new property, so the data class's constructor and `copy` changed | `StorePatch.kt` | round 9, ccc1c1e | `StoreProbeTest` | with b1 | merged |
+| c4 | New abstract members of `StoreInternalApi` (`dispatchIf`, `matchActionHandlers`, `handlerMetadata`): a binary change for implementors of the internal interface | `StoreInternalApi.kt` | rounds 6, 9 | — | with their rows | with their rows |
+| c5 | Documented guarantee: actions are processed in dispatch order | `Store.dispatch` KDoc | round 2 | a3 | with a3 | merged |
+| c6 | `api/` dumps and `apiCheck` in CI; `checkDebugGraph`; CI for every pull request; `iosArm64` compiled in the macOS job; every test task logs failed assertions | root `build.gradle.kts`, `.github/workflows/gradle.yml` | fork build | — | fork-only by design | never |
+
+#### (d) Companion modules upstream owns
+
+| # | Change | Where | Since | Regression tests | Upstream status | Removable when |
+|---|---|---|---|---|---|---|
+| d1 | `koma-compose`: the narrowed `ViewStore` of `stateContent` keeps the last `S2`, so a callback after the state's type changed does not throw | `ViewStore.kt` (`NarrowedState`, `narrow`) | 84b0000, 54b1ed6 | `ViewStoreJvmTest.stateContent_callback*` (JVM) | planned: `upstream-pr/compose-state-content-narrowing` (C1) | merged |
+| d2 | `koma-test`: `diagnoseActionMatches`, `describeHandlers`; `StoreRecorder` refuses a second Store; a clearer error from `createRecorder()` after startup; fail-fast documented | `ActionMatchDiagnostics.kt`, `StoreHandlers.kt`, `StoreRecorder.kt`, `StoreExtensions.kt` | 8a03bda, 48af6ac, 26832ec, 4b15358 | `StoreRecorderTest`, b3/b4 tests | b3/b4 after #280; the recorder fixes with a10 | merged or declined |
+| d3 | `koma-logging`: `simpleLogging` logs from the hook when no dispatcher is given, so entries stay in order; a throwing logger is reported instead of aborting the action | `Plugin.kt` | bbcc6e6, 54b1ed6 | `LoggingOutputTest` | planned: `upstream-pr/logging-inline-entries` (C3) | merged |
+| d4 | `koma-logging`: `LoggerJournalSink`, and with it a dependency on `koma-observability` (and so on b1) | `JournalSink.kt`, `koma-logging/build.gradle.kts` | round 9, 2e1331a | `LoggerJournalSinkTest` | fork-only by design | `LoggerJournalSink` moves to a `koma-observability-logging` module |
+| d5 | `koma-message`: the subscription is registered before `onStart` returns; a throwing receive block is reported and the subscription continues; `extraBufferCapacity = 64` and the hub exposed as a `SharedFlow` | `Plugin.kt`, `Message.kt` | c9a11d0, 4e92b04, cb525ea | `MessageDeliveryTest` | planned: `upstream-pr/message-subscription-before-start` (C2); the buffer size is mentioned, not proposed | merged (the buffer stays fork-only) |
+| d6 | Build: `api` instead of `implementation` for `koma-core` in the companion modules; Mocha timeouts for JS and Wasm on Node; the publish convention for `io.github.roman-n1` | `*/build.gradle.kts`, `build-logic` | fork build | — | `api` planned as `upstream-pr/companion-api-deps` (C4); the rest fork-only | C4 merged; the rest never |
 
 ### Synchronization with upstream
 
-- The fork's `main` = upstream + our merged PRs.
+- The fork's `main` = upstream + our merged PRs. The upstream base is recorded in
+  `gradle.properties` (`koma.upstream.base`), not in the fork's version.
 - On every upstream release: `git fetch upstream --tags`, then merge the release tag
   into the fork's `main` **with a merge commit** (no rebase, so as not to break
-  branches and clones). Conflicts in the core are resolved in favor of the upstream version if it
-  covers our step; the row in the table is removed.
-- After the merge: the fork's CI is green on all platforms, then a new fork version.
+  branches and clones). Before the merge, read `git diff <base>..<tag> -- koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt`
+  in full and sort its hunks against the inventory: where upstream covers a row, take upstream's
+  version and keep our test; the row leaves in the same PR. The fork's tests are the oracle of the
+  merge (`:koma-core:jvmTest`, `StoreProbeTest`, the statechart tests, `apiCheck`), not the shape of
+  our code.
+- Practice for `StoreImpl.kt`: our additions stay in cohesive blocks at the end of the class, the
+  boundary calls are one-liners (`trace { … }`), upstream code and KDoc are not reformatted;
+  `git config rerere.enabled true` and `merge.conflictStyle zdiff3` in the checkout; unmerged
+  `upstream-pr/*` branches are re-created on the new tag.
+- After the merge: `apiDump`, `koma.upstream.base` updated, the fork's CI green on all platforms,
+  then a new fork version.
 
 ### How the messenger connects the fork
 
@@ -284,8 +342,8 @@ Divergence by group:
    Maven repository. Reading requires a token with `read:packages`.
    - Coordinates: a separate group `io.github.roman-n1`, so that the fork's artifacts
      are never confused with the official `io.github.koma-kt`.
-   - Version: the base upstream version plus a fork suffix, for example
-     `4.0.0-sc.1`, `4.0.0-sc.2`; after synchronizing with 4.1.0 — `4.1.0-sc.1`.
+   - Version: the fork's own line, `5.0.0-alpha.N` from 2026-10-01 (decision below); the upstream
+     base it was merged with is `koma.upstream.base` in `gradle.properties`, not part of the version.
    - The official `koma-core` and the fork's must not be mixed in one project:
      the classes are the same, the groups differ. Koma's group and version are set in the
      messenger's version catalog in one place.
@@ -296,14 +354,26 @@ Divergence by group:
    that the messenger needs: in the messenger's version catalog the group of
    `koma-core`/`koma-compose`/`koma-test` changes to `io.github.koma-kt`, and the
    version to the official one. `koma-statechart` remains our artifact (or
-   moves to upstream through the RFC, step 9) and works on top of the official
-   `koma-core`. If upstream did not accept some core step, the messenger
-   stays on the fork only for that step, or the layer does without it (plan B).
+   moves to upstream through the RFC, step 9). Until every inventory row the layer needs is
+   `merged` or removed, the messenger stays on the fork's `koma-core` (plan B is dropped).
+
+### Version 5.0 (decision 2026-10-01)
+
+The fork is its own line: `5.0.0-alpha.1` from this decision on (`koma.fork.version`). The number
+says what the inventory says, that the modules are not "4.0.0 plus patches": `StoreScope` is open,
+`StorePatch`'s constructor changed, `InputId` is new, and the statechart, journal and replay modules
+are the product. `alpha` says what is still true: most of that API is `@ExperimentalKomaApi` and the
+on-disk formats moved with every stage. `5.0.0` without a suffix requires: (1) `@ExperimentalKomaApi`
+removed from the core of the machine and the journal (`Machine`, `MachineStore`, `Lanes`,
+`ExecutorCheckpoint`, `MachineGroup`, `RecordingSession`, `JournalEntry`, `JournalFiles`,
+`RecordingCodec`, `RecordingFiles`), held by `apiCheck`; (2) the formats frozen under a migration
+policy: a version bump only with a migration or a reader of the old version and a golden of it.
+The messenger pilot, device measurements and publishing remain work, not conditions of the number.
 
 ## Remaining work
 
 1. **Publishing.** Set up: `.github/workflows/publish.yml` publishes every module to Maven Central
-   as `io.github.roman-n1:<module>:4.0.0-sc.1` from a GitHub pre-release, and the publish convention
+   as `io.github.roman-n1:<module>:5.0.0-alpha.1` from a GitHub pre-release, and the publish convention
    sets each project's group and version to the same coordinates, so a composite build
    (`includeBuild`) substitutes them (the build files keep `io.github.koma-kt` to stay close to
    upstream). No release has been published yet, so the messenger still connects the fork with a
@@ -328,7 +398,7 @@ Divergence by group:
    debug timeline (the data is already there: `StepResult`, `ChartState`).
 5. **Bridge to koma-strict** — optional, as a separate module; design in
    [`2026-09-28-koma-strict-comparison.md`](./2026-09-28-koma-strict-comparison.md).
-6. **Upstream.** The author's answer on step 1; then a decision on steps 2–3 and the RFC (step 9).
+6. **Upstream.** The series in [`notes/2026-10-01-upstream-series.md`](../notes/2026-10-01-upstream-series.md): companion fixes, the stability fixes one by one, the `awaitIdle` and `StoreProbe` proposals; steps 2–3 and the RFC (step 9) after the author's answer on #280.
 
 ## Notes
 

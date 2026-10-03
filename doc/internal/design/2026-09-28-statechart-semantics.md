@@ -4,10 +4,11 @@
 
 This document fixes the semantics of phases 4–7 from the
 [roadmap](2026-09-28-statechart-roadmap.md) ahead of the code. Everything lives in the
-`koma-statechart` module. It was written for the public API of `koma-core` only (plan B); since
-the stability review's sixth round the adapter also uses the `@InternalKomaApi` bridge
-(`StoreInternalApi.dispatchIf`, `StoreBuilder.validateRecovery`), see the
-[stability review](../notes/2026-09-29-stability-review.md). All new public types are marked
+`koma-statechart` module. It was written for the public API of `koma-core` only (plan B, dropped
+on 2026-10-01); the adapter uses the fork's `koma-core` (`StoreInternalApi.dispatchIf`,
+`StoreBuilder.validateRecovery`, `StoreProbe`, `InputId`, the open `StoreScope`), see the
+[divergence inventory](2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400) and
+the [stability review](../notes/2026-09-29-stability-review.md). All new public types are marked
 `@ExperimentalKomaApi`.
 
 ## Model

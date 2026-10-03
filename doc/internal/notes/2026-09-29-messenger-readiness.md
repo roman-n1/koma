@@ -24,7 +24,7 @@
    activity dispatched is tied to its activation, so a heartbeat self-loop timer on the same node
    discards it. Either keep heartbeats in their own region (current rule) or change the gate to
    "node still active".
-4. **Publish a first pre-release** (`publish.yml`, coordinates `io.github.roman-n1:*:4.0.0-sc.1`)
+4. **Publish a first pre-release** (`publish.yml`, coordinates `io.github.roman-n1:*:5.0.0-alpha.1`)
    before the messenger depends on artifacts; until then use the composite build.
 5. **Fix the duplicate send in the messenger example before copying it.** `MessengerChart`
    cancels the pending `send` when Settings opens; the request may already be on the wire. On

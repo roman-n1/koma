@@ -44,8 +44,8 @@ fork [roman-n1/koma](https://github.com/roman-n1/koma). The record model has `JO
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.roman-n1:koma-observability:4.0.0-sc.1")
-            implementation("io.github.roman-n1:koma-logging:4.0.0-sc.1") // LoggerJournalSink
+            implementation("io.github.roman-n1:koma-observability:5.0.0-alpha.1")
+            implementation("io.github.roman-n1:koma-logging:5.0.0-alpha.1") // LoggerJournalSink
         }
     }
     compilerOptions {
