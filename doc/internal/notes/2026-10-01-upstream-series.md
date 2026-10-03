@@ -16,9 +16,10 @@ way back is per row: each row is a small change the author can take on its own.
 
 ## Conventions
 
-- A branch `upstream-pr/<topic>` is exactly one commit on tag `4.0.0` (`ae1a8da`), like the
-  existing `upstream-pr/handler-matcher-metadata`; never stacked. Two branches that touch the same
-  function say so in the second PR, which is rebased after the first merges.
+- Each upstream PR contains one topic. Independent branches start directly on tag `4.0.0`
+  (`ae1a8da`), like `upstream-pr/handler-matcher-metadata`. U3 currently depends on U2 and
+  contains both commits; send it only after U2 merges, then rebase it so its PR contains only
+  the U3 change. Two branches that touch the same function state the dependency explicitly.
 - No cherry-picks: the fork's fixes came in round-based commits that bundle several changes. For
   each item: copy the named regression tests into a new small test file on the branch, run
   `./gradlew :koma-core:jvmTest --tests 'koma.core.<Test>'` on 4.0.0 and see them fail, port the
@@ -39,8 +40,9 @@ way back is per row: each row is a small change the author can take on its own.
 
 ## Prepared (2026-10-01)
 
-Branches on tag `4.0.0`, pushed to roman-n1/koma, each with what its "before" run on 4.0.0
-showed (the conventions below ask for it):
+Seven prepared branches pushed to roman-n1/koma. Six start directly on tag `4.0.0`;
+U3 is stacked on U2. The table records the reported before/after checks; preparing a branch
+is separate from submitting an upstream PR:
 
 | Item | Branch @ commit | Before the port, on 4.0.0 | After | Note |
 |---|---|---|---|---|

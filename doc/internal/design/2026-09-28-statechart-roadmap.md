@@ -89,7 +89,7 @@ All phases 0–7 are done in the fork; phase 8 partially. Numbers are PRs in `ro
 | 6 | Parallel regions — wave 3 | #12 | merged |
 | — | Timers `Trigger.After` — wave 4 (there was no phase for it in the original plan) | #13 | merged |
 | 4 | `StateChartStore` adapter — wave 5 | #14 | merged |
-| — | "Messenger" example as a test, `koma-statechart/README.md`, comparison with koma-strict — wave 6 | branch `feature/statechart-finish` | PR not opened |
+| — | "Messenger" example as a test, `koma-statechart/README.md`, comparison with koma-strict — wave 6 | #15 | merged |
 
 Core steps 1–3 from the upstream strategy are #2, #3, #4 (merged into the fork). The semantics and decisions of each
 wave are in [`2026-09-28-statechart-semantics.md`](./2026-09-28-statechart-semantics.md), sections
@@ -283,7 +283,7 @@ KDoc that documents these contracts (`Plugin.kt`, `Store.kt`, `StateSaver.kt`, `
 
 | # | Change | Where | Since | Regression tests | Upstream status | Removable when |
 |---|---|---|---|---|---|---|
-| b1 | `StoreProbe`: every accepted, discarded and processed input with its outcome, commits, events and failures; `currentInputId()`; input ids carried in the coroutine context | `StoreProbe.kt` (`StoreProbe`, `StoreTrace`, `InputKind`, `DiscardReason`, `ProcessingOutcome`), `InputOrigin` in `StoreImpl.kt`, `StoreBuilder.probe`, `StorePatchBuilder.probe`, `StorePatch.probes` | [round 9](../notes/2026-09-29-stability-review.md#fixed-in-the-ninth-round-time-travel-foundation-probes-journal-machine-executor), ccc1c1e, 2e1331a, 90a7e02, 1ccdabd | `StoreProbeTest` | planned: issue "StoreProbe", then `upstream-pr/store-probe` (a) and `upstream-pr/store-probe-correlation` (b) | merged; used by `koma-observability` (journal); `MachineStore` stopped using it on 2026-10-01 (`awaitIdle`) |
+| b1 | `StoreProbe`: every accepted, discarded and processed input with its outcome, commits, events and failures; `currentInputId()`; input ids carried in the coroutine context | `StoreProbe.kt` (`StoreProbe`, `StoreTrace`, `InputKind`, `DiscardReason`, `ProcessingOutcome`), `InputOrigin` in `StoreImpl.kt`, `StoreBuilder.probe`, `StorePatchBuilder.probe`, `StorePatch.probes` | [round 9](../notes/2026-09-29-stability-review.md#fixed-in-the-ninth-round-time-travel-foundation-probes-journal-machine-executor), ccc1c1e, 2e1331a, 90a7e02, 1ccdabd | `StoreProbeTest` | planned: issue "StoreProbe", then `upstream-pr/store-probe` (a) and `upstream-pr/store-probe-correlation` (b) | merged; used by `koma-observability` (journal); `MachineStore` uses it only for the completion of close, not for `awaitIdle` |
 | b2 | Matcher metadata next to the handler predicates; the old-signature constructors of `StateHandler` and `ThreadedHandler` stay public so inline code compiled against 4.0.0 keeps working | `HandlerMatcher.kt`, `StoreBuilder.StateHandler.matcher`, `ThreadedHandler.inputType` | ae8f313 (roadmap step 1) | `StoreHandlerRegistryTest`, `StoreHandlerRegistryPropertyTest` | issue koma-kt/koma#280 (open, no answer); prepared: `upstream-pr/handler-matcher-metadata` | merged |
 | b3 | `StoreInternalApi.matchActionHandlers` and `diagnoseActionMatches` in `koma-test` | `StoreInternalApi.kt`, `koma-test/ActionMatchDiagnostics.kt` | 8a03bda (step 2) | `ActionMatchDiagnosticsTest` | not proposed until #280 lands | merged or declined |
 | b4 | `StoreInternalApi.handlerMetadata` and `describeHandlers` in `koma-test` | `StoreInternalApi.kt`, `koma-test/StoreHandlers.kt` | 48af6ac (step 3) | `StoreHandlersTest` | not proposed until #280 lands | merged or declined |
