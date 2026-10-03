@@ -1,5 +1,15 @@
 # koma-observability
 
+Use this module to answer **which Store processed which input, in what order, and what
+happened afterward**. It records diagnostic boundaries for ordinary Stores and richer
+decisions for Machines; it does not replay them.
+
+Start with the [root concepts](../README.md), follow this module's quick start, and use
+[Time Travel](../koma-timetravel/README.md) when typed snapshots and re-deciding inputs are
+needed. The [desktop example](../examples/time-travel/README.md) writes both a journal and
+replay recordings, showing why these are separate files. Dependency availability and
+composite-build setup follow [installation](../README.md#installation).
+
 A structured journal for [Koma](../README.md) Stores: what each Store accepted, dropped,
 processed, committed, emitted and failed, as records with stable identity and order, kept in a
 bounded in-memory buffer and handed to sinks by one writer. It is the diagnostic layer the

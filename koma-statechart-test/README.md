@@ -1,5 +1,15 @@
 # koma-statechart-test
 
+Use this to test **what a Machine decides** when commands complete or virtual time advances.
+The test supplies command answers instead of calling a real repository. Start with the
+[pure Machine example](../README.md#3-a-machine-makes-decisions-io-runs-afterward); for an
+ordinary Store, [koma-test](../koma-test/README.md) is sufficient. Dependency availability
+and composite-build setup follow [installation](../README.md#installation).
+
+The driver owns a Store on your `TestScope` scheduler. `send` supplies an action, `answer`
+supplies a command result, and `advanceBy` moves virtual time. Assertions check context,
+active nodes and leftover work rather than waiting for real wall-clock delays.
+
 Test support for [koma-statechart](../koma-statechart/README.md)'s `MachineStore`, on top of
 [koma-test](../koma-test): the TestStore-like API of the upstream roadmap (koma-kt/koma#189, item 2)
 with the machine's meaning.
