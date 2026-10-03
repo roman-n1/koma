@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.koma.publish)
-    alias(libs.plugins.kotlin.serialization)
 }
 
 group = "io.github.roman-n1"
@@ -12,7 +11,7 @@ version = libs.versions.koma.get()
 
 kotlin {
     android {
-        namespace = "koma.timetravel"
+        namespace = "koma.statechart.test"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
@@ -50,17 +49,15 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":koma-statechart"))
-            api(libs.serialization.json)
+            api(project(":koma-test"))
+            api(libs.coroutines.test)
         }
         commonTest.dependencies {
-            implementation(project(":koma-test"))
-            implementation(project(":koma-statechart-test"))
             implementation(libs.kotlin.test)
-            implementation(libs.coroutines.test)
         }
     }
 }
 
 publishConvention {
-    artifactId = "koma-timetravel"
+    artifactId = "koma-statechart-test"
 }

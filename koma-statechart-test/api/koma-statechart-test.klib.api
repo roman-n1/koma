@@ -1,0 +1,105 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:koma-statechart-test>
+final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.test/MachineTestDriver { // koma.statechart.test/MachineTestDriver|null[0]
+    constructor <init>(koma.statechart.machine/Machine<#A, #B, #C, #D>, #A, kotlinx.coroutines.test/TestScope, koma.statechart.test/ScriptedCommandHandler<#C, #B> = ..., koma.statechart.machine/AdmissionPolicy = ..., koma.statechart.machine/MailboxConfig<#D> = ..., kotlin/Function1<koma.core/StoreBuilder<koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.machine/MachineInput<#B>, #D>, kotlin/Unit> = ...) // koma.statechart.test/MachineTestDriver.<init>|<init>(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>;1:0;kotlinx.coroutines.test.TestScope;koma.statechart.test.ScriptedCommandHandler<1:2,1:1>;koma.statechart.machine.AdmissionPolicy;koma.statechart.machine.MailboxConfig<1:3>;kotlin.Function1<koma.core.StoreBuilder<koma.statechart.machine.MachineSnapshot<1:0>,koma.statechart.machine.MachineInput<1:1>,1:3>,kotlin.Unit>){}[0]
+
+    final val failures // koma.statechart.test/MachineTestDriver.failures|{}failures[0]
+        final fun <get-failures>(): kotlin.collections/List<kotlin/Throwable> // koma.statechart.test/MachineTestDriver.failures.<get-failures>|<get-failures>(){}[0]
+    final val handler // koma.statechart.test/MachineTestDriver.handler|{}handler[0]
+        final fun <get-handler>(): koma.statechart.test/ScriptedCommandHandler<#C, #B> // koma.statechart.test/MachineTestDriver.handler.<get-handler>|<get-handler>(){}[0]
+    final val machine // koma.statechart.test/MachineTestDriver.machine|{}machine[0]
+        final fun <get-machine>(): koma.statechart.machine/Machine<#A, #B, #C, #D> // koma.statechart.test/MachineTestDriver.machine.<get-machine>|<get-machine>(){}[0]
+    final val pendingEffects // koma.statechart.test/MachineTestDriver.pendingEffects|{}pendingEffects[0]
+        final fun <get-pendingEffects>(): kotlin.collections/List<koma.statechart.machine/PendingEffect<#D>> // koma.statechart.test/MachineTestDriver.pendingEffects.<get-pendingEffects>|<get-pendingEffects>(){}[0]
+    final val recorder // koma.statechart.test/MachineTestDriver.recorder|{}recorder[0]
+        final fun <get-recorder>(): koma.test/StoreRecorder<koma.statechart.machine/MachineSnapshot<#A>, #B, #D> // koma.statechart.test/MachineTestDriver.recorder.<get-recorder>|<get-recorder>(){}[0]
+    final val runningCommands // koma.statechart.test/MachineTestDriver.runningCommands|{}runningCommands[0]
+        final fun <get-runningCommands>(): kotlin.collections/List<koma.statechart.machine/CommandEnvelope<#C>> // koma.statechart.test/MachineTestDriver.runningCommands.<get-runningCommands>|<get-runningCommands>(){}[0]
+    final val snapshot // koma.statechart.test/MachineTestDriver.snapshot|{}snapshot[0]
+        final fun <get-snapshot>(): koma.statechart.machine/MachineSnapshot<#A> // koma.statechart.test/MachineTestDriver.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
+    final val store // koma.statechart.test/MachineTestDriver.store|{}store[0]
+        final fun <get-store>(): koma.statechart.machine/MachineStore<#A, #B, #C, #D> // koma.statechart.test/MachineTestDriver.store.<get-store>|<get-store>(){}[0]
+
+    final fun acknowledge(koma.statechart.machine/EffectId): kotlin/Boolean // koma.statechart.test/MachineTestDriver.acknowledge|acknowledge(koma.statechart.machine.EffectId){}[0]
+    final fun assertActive(koma.statechart/StateId, kotlin/Array<out kotlin/String>...) // koma.statechart.test/MachineTestDriver.assertActive|assertActive(koma.statechart.StateId;kotlin.Array<out|kotlin.String>...){}[0]
+    final fun assertActive(kotlin.collections/Set<koma.statechart/StateId>) // koma.statechart.test/MachineTestDriver.assertActive|assertActive(kotlin.collections.Set<koma.statechart.StateId>){}[0]
+    final fun assertContext(#A) // koma.statechart.test/MachineTestDriver.assertContext|assertContext(1:0){}[0]
+    final fun close() // koma.statechart.test/MachineTestDriver.close|close(){}[0]
+    final fun receiveEvent(kotlin/Function1<#D, kotlin/Boolean>): #D // koma.statechart.test/MachineTestDriver.receiveEvent|receiveEvent(kotlin.Function1<1:3,kotlin.Boolean>){}[0]
+    final fun sendLater(#B): koma.statechart.machine/Admission // koma.statechart.test/MachineTestDriver.sendLater|sendLater(1:1){}[0]
+    final inline fun <#A1: reified #D> receiveEvent(): #A1 // koma.statechart.test/MachineTestDriver.receiveEvent|receiveEvent(){0§<1:3>}[0]
+    final suspend fun advanceBy(kotlin.time/Duration): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.test/MachineTestDriver.advanceBy|advanceBy(kotlin.time.Duration){}[0]
+    final suspend fun advanceUntilIdle(): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.test/MachineTestDriver.advanceUntilIdle|advanceUntilIdle(){}[0]
+    final suspend fun answer(koma.statechart.machine/CommandId, #B): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.test/MachineTestDriver.answer|answer(koma.statechart.machine.CommandId;1:1){}[0]
+    final suspend fun assertNoPendingWork() // koma.statechart.test/MachineTestDriver.assertNoPendingWork|assertNoPendingWork(){}[0]
+    final suspend fun complete(koma.statechart.machine/CommandId): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.test/MachineTestDriver.complete|complete(koma.statechart.machine.CommandId){}[0]
+    final suspend fun fail(koma.statechart.machine/CommandId, kotlin/Throwable = ...): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.test/MachineTestDriver.fail|fail(koma.statechart.machine.CommandId;kotlin.Throwable){}[0]
+    final suspend fun send(#B): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.test/MachineTestDriver.send|send(1:1){}[0]
+    final suspend fun settle(kotlin.time/Duration = ...): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.test/MachineTestDriver.settle|settle(kotlin.time.Duration){}[0]
+    final suspend fun start(): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.test/MachineTestDriver.start|start(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action> koma.statechart.test/ScriptedCommandHandler : koma.statechart.machine/CommandHandler<#A, #B> { // koma.statechart.test/ScriptedCommandHandler|null[0]
+    constructor <init>() // koma.statechart.test/ScriptedCommandHandler.<init>|<init>(){}[0]
+
+    final val cancelled // koma.statechart.test/ScriptedCommandHandler.cancelled|{}cancelled[0]
+        final fun <get-cancelled>(): kotlin.collections/List<koma.statechart.machine/CommandId> // koma.statechart.test/ScriptedCommandHandler.cancelled.<get-cancelled>|<get-cancelled>(){}[0]
+    final val running // koma.statechart.test/ScriptedCommandHandler.running|{}running[0]
+        final fun <get-running>(): kotlin.collections/List<koma.statechart.machine/CommandEnvelope<#A>> // koma.statechart.test/ScriptedCommandHandler.running.<get-running>|<get-running>(){}[0]
+    final val started // koma.statechart.test/ScriptedCommandHandler.started|{}started[0]
+        final fun <get-started>(): kotlin.collections/List<koma.statechart.machine/CommandEnvelope<#A>> // koma.statechart.test/ScriptedCommandHandler.started.<get-started>|<get-started>(){}[0]
+
+    final fun answer(koma.statechart.machine/CommandId, #B) // koma.statechart.test/ScriptedCommandHandler.answer|answer(koma.statechart.machine.CommandId;1:1){}[0]
+    final fun complete(koma.statechart.machine/CommandId) // koma.statechart.test/ScriptedCommandHandler.complete|complete(koma.statechart.machine.CommandId){}[0]
+    final fun fail(koma.statechart.machine/CommandId, kotlin/Throwable = ...) // koma.statechart.test/ScriptedCommandHandler.fail|fail(koma.statechart.machine.CommandId;kotlin.Throwable){}[0]
+    final suspend fun execute(koma.statechart.machine/CommandEnvelope<#A>, koma.statechart.machine/ResultSink<#B>) // koma.statechart.test/ScriptedCommandHandler.execute|execute(koma.statechart.machine.CommandEnvelope<1:0>;koma.statechart.machine.ResultSink<1:1>){}[0]
+}
+
+final class <#A: kotlin/Any?> koma.statechart.test/MachinePendingWork { // koma.statechart.test/MachinePendingWork|null[0]
+    constructor <init>(kotlin.collections/List<koma.statechart.machine/CommandRegistration<#A>>, kotlin.collections/List<koma.statechart.machine/CommandRegistration<#A>>, kotlin.collections/List<koma.statechart.machine/CommandId>, kotlin.collections/Map<koma.statechart.machine/TimerId, kotlin.time/Duration>, kotlin.collections/List<koma.statechart.machine/PendingEffect<*>>) // koma.statechart.test/MachinePendingWork.<init>|<init>(kotlin.collections.List<koma.statechart.machine.CommandRegistration<1:0>>;kotlin.collections.List<koma.statechart.machine.CommandRegistration<1:0>>;kotlin.collections.List<koma.statechart.machine.CommandId>;kotlin.collections.Map<koma.statechart.machine.TimerId,kotlin.time.Duration>;kotlin.collections.List<koma.statechart.machine.PendingEffect<*>>){}[0]
+
+    final val effects // koma.statechart.test/MachinePendingWork.effects|{}effects[0]
+        final fun <get-effects>(): kotlin.collections/List<koma.statechart.machine/PendingEffect<*>> // koma.statechart.test/MachinePendingWork.effects.<get-effects>|<get-effects>(){}[0]
+    final val ending // koma.statechart.test/MachinePendingWork.ending|{}ending[0]
+        final fun <get-ending>(): kotlin.collections/List<koma.statechart.machine/CommandId> // koma.statechart.test/MachinePendingWork.ending.<get-ending>|<get-ending>(){}[0]
+    final val isIdle // koma.statechart.test/MachinePendingWork.isIdle|{}isIdle[0]
+        final fun <get-isIdle>(): kotlin/Boolean // koma.statechart.test/MachinePendingWork.isIdle.<get-isIdle>|<get-isIdle>(){}[0]
+    final val queued // koma.statechart.test/MachinePendingWork.queued|{}queued[0]
+        final fun <get-queued>(): kotlin.collections/List<koma.statechart.machine/CommandRegistration<#A>> // koma.statechart.test/MachinePendingWork.queued.<get-queued>|<get-queued>(){}[0]
+    final val running // koma.statechart.test/MachinePendingWork.running|{}running[0]
+        final fun <get-running>(): kotlin.collections/List<koma.statechart.machine/CommandRegistration<#A>> // koma.statechart.test/MachinePendingWork.running.<get-running>|<get-running>(){}[0]
+    final val timers // koma.statechart.test/MachinePendingWork.timers|{}timers[0]
+        final fun <get-timers>(): kotlin.collections/Map<koma.statechart.machine/TimerId, kotlin.time/Duration> // koma.statechart.test/MachinePendingWork.timers.<get-timers>|<get-timers>(){}[0]
+
+    final fun component1(): kotlin.collections/List<koma.statechart.machine/CommandRegistration<#A>> // koma.statechart.test/MachinePendingWork.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<koma.statechart.machine/CommandRegistration<#A>> // koma.statechart.test/MachinePendingWork.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<koma.statechart.machine/CommandId> // koma.statechart.test/MachinePendingWork.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/Map<koma.statechart.machine/TimerId, kotlin.time/Duration> // koma.statechart.test/MachinePendingWork.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/List<koma.statechart.machine/PendingEffect<*>> // koma.statechart.test/MachinePendingWork.component5|component5(){}[0]
+    final fun copy(kotlin.collections/List<koma.statechart.machine/CommandRegistration<#A>> = ..., kotlin.collections/List<koma.statechart.machine/CommandRegistration<#A>> = ..., kotlin.collections/List<koma.statechart.machine/CommandId> = ..., kotlin.collections/Map<koma.statechart.machine/TimerId, kotlin.time/Duration> = ..., kotlin.collections/List<koma.statechart.machine/PendingEffect<*>> = ...): koma.statechart.test/MachinePendingWork<#A> // koma.statechart.test/MachinePendingWork.copy|copy(kotlin.collections.List<koma.statechart.machine.CommandRegistration<1:0>>;kotlin.collections.List<koma.statechart.machine.CommandRegistration<1:0>>;kotlin.collections.List<koma.statechart.machine.CommandId>;kotlin.collections.Map<koma.statechart.machine.TimerId,kotlin.time.Duration>;kotlin.collections.List<koma.statechart.machine.PendingEffect<*>>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/MachinePendingWork.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.test/MachinePendingWork.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.test/MachinePendingWork.toString|toString(){}[0]
+}
+
+final class koma.statechart.test/VirtualMachineClock : koma.statechart.machine/MachineClock { // koma.statechart.test/VirtualMachineClock|null[0]
+    constructor <init>(kotlinx.coroutines.test/TestCoroutineScheduler, kotlin/Long = ...) // koma.statechart.test/VirtualMachineClock.<init>|<init>(kotlinx.coroutines.test.TestCoroutineScheduler;kotlin.Long){}[0]
+
+    final fun now(): koma.statechart.machine/MachineTime // koma.statechart.test/VirtualMachineClock.now|now(){}[0]
+    final suspend fun delayUntil(koma.statechart.machine/MachineTime) // koma.statechart.test/VirtualMachineClock.delayUntil|delayUntil(koma.statechart.machine.MachineTime){}[0]
+
+    final object Companion { // koma.statechart.test/VirtualMachineClock.Companion|null[0]
+        final fun startingNow(kotlinx.coroutines.test/TestCoroutineScheduler): koma.statechart.test/VirtualMachineClock // koma.statechart.test/VirtualMachineClock.Companion.startingNow|startingNow(kotlinx.coroutines.test.TestCoroutineScheduler){}[0]
+    }
+}
+
+final fun (kotlinx.coroutines.test/TestScope).koma.statechart.test/machineClock(): koma.statechart.test/VirtualMachineClock // koma.statechart.test/machineClock|machineClock@kotlinx.coroutines.test.TestScope(){}[0]
+final fun <#A: kotlin/Any?, #B: kotlin/Any?> (koma.statechart.machine/ExecutorCheckpoint<#A, #B>).koma.statechart.test/pendingWork(): koma.statechart.test/MachinePendingWork<#B> // koma.statechart.test/pendingWork|pendingWork@koma.statechart.machine.ExecutorCheckpoint<0:0,0:1>(){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
+final suspend fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/MachineStore<#A, #B, #C, #D>).koma.statechart.test/assertNoPendingWork(koma.test/StoreRecorder<koma.statechart.machine/MachineSnapshot<#A>, #B, #D>? = ...) // koma.statechart.test/assertNoPendingWork|assertNoPendingWork@koma.statechart.machine.MachineStore<0:0,0:1,0:2,0:3>(koma.test.StoreRecorder<koma.statechart.machine.MachineSnapshot<0:0>,0:1,0:3>?){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final suspend fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/MachineStore<#A, #B, #C, #D>).koma.statechart.test/settle(kotlin.time/Duration = ...): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.test/settle|settle@koma.statechart.machine.MachineStore<0:0,0:1,0:2,0:3>(kotlin.time.Duration){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]

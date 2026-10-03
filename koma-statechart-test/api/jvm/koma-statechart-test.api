@@ -1,0 +1,87 @@
+public final class koma/statechart/test/MachinePendingWork {
+	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/Map;
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;Ljava/util/List;)Lkoma/statechart/test/MachinePendingWork;
+	public static synthetic fun copy$default (Lkoma/statechart/test/MachinePendingWork;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;Ljava/util/List;ILjava/lang/Object;)Lkoma/statechart/test/MachinePendingWork;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffects ()Ljava/util/List;
+	public final fun getEnding ()Ljava/util/List;
+	public final fun getQueued ()Ljava/util/List;
+	public final fun getRunning ()Ljava/util/List;
+	public final fun getTimers ()Ljava/util/Map;
+	public fun hashCode ()I
+	public final fun isIdle ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/test/MachineTestDriver {
+	public fun <init> (Lkoma/statechart/machine/Machine;Ljava/lang/Object;Lkotlinx/coroutines/test/TestScope;Lkoma/statechart/test/ScriptedCommandHandler;Lkoma/statechart/machine/AdmissionPolicy;Lkoma/statechart/machine/MailboxConfig;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Lkoma/statechart/machine/Machine;Ljava/lang/Object;Lkotlinx/coroutines/test/TestScope;Lkoma/statechart/test/ScriptedCommandHandler;Lkoma/statechart/machine/AdmissionPolicy;Lkoma/statechart/machine/MailboxConfig;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun acknowledge-1-md-jg (J)Z
+	public final fun advanceBy-VtjQ1oo (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun advanceUntilIdle (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun answer-DKLyleI (JLkoma/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun assertActive (Ljava/util/Set;)V
+	public final fun assertActive-VJ8MipU (Ljava/lang/String;[Ljava/lang/String;)V
+	public final fun assertContext (Ljava/lang/Object;)V
+	public final fun assertNoPendingWork (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun close ()V
+	public final fun complete-L4hFu2M (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun fail-DKLyleI (JLjava/lang/Throwable;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun fail-DKLyleI$default (Lkoma/statechart/test/MachineTestDriver;JLjava/lang/Throwable;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun getFailures ()Ljava/util/List;
+	public final fun getHandler ()Lkoma/statechart/test/ScriptedCommandHandler;
+	public final fun getMachine ()Lkoma/statechart/machine/Machine;
+	public final fun getPendingEffects ()Ljava/util/List;
+	public final fun getRecorder ()Lkoma/test/StoreRecorder;
+	public final fun getRunningCommands ()Ljava/util/List;
+	public final fun getSnapshot ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun getStore ()Lkoma/statechart/machine/MachineStore;
+	public final fun receiveEvent (Lkotlin/jvm/functions/Function1;)Lkoma/core/Event;
+	public final fun send (Lkoma/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun sendLater (Lkoma/core/Action;)Lkoma/statechart/machine/Admission;
+	public final fun settle-VtjQ1oo (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun settle-VtjQ1oo$default (Lkoma/statechart/test/MachineTestDriver;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun start (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class koma/statechart/test/ScriptedCommandHandler : koma/statechart/machine/CommandHandler {
+	public fun <init> ()V
+	public final fun answer-L4hFu2M (JLkoma/core/Action;)V
+	public final fun complete-rf9sHPo (J)V
+	public fun execute (Lkoma/statechart/machine/CommandEnvelope;Lkoma/statechart/machine/ResultSink;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun fail-L4hFu2M (JLjava/lang/Throwable;)V
+	public static synthetic fun fail-L4hFu2M$default (Lkoma/statechart/test/ScriptedCommandHandler;JLjava/lang/Throwable;ILjava/lang/Object;)V
+	public final fun getCancelled ()Ljava/util/List;
+	public final fun getRunning ()Ljava/util/List;
+	public final fun getStarted ()Ljava/util/List;
+}
+
+public final class koma/statechart/test/SettleKt {
+	public static final fun assertNoPendingWork (Lkoma/statechart/machine/MachineStore;Lkoma/test/StoreRecorder;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun assertNoPendingWork$default (Lkoma/statechart/machine/MachineStore;Lkoma/test/StoreRecorder;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static final fun pendingWork (Lkoma/statechart/machine/ExecutorCheckpoint;)Lkoma/statechart/test/MachinePendingWork;
+	public static final fun settle-8Mi8wO0 (Lkoma/statechart/machine/MachineStore;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun settle-8Mi8wO0$default (Lkoma/statechart/machine/MachineStore;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class koma/statechart/test/VirtualMachineClock : koma/statechart/machine/MachineClock {
+	public static final field Companion Lkoma/statechart/test/VirtualMachineClock$Companion;
+	public fun <init> (Lkotlinx/coroutines/test/TestCoroutineScheduler;J)V
+	public synthetic fun <init> (Lkotlinx/coroutines/test/TestCoroutineScheduler;JILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun delayUntil-tNtYl1c (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun now-cDuxZ3M ()J
+}
+
+public final class koma/statechart/test/VirtualMachineClock$Companion {
+	public final fun startingNow (Lkotlinx/coroutines/test/TestCoroutineScheduler;)Lkoma/statechart/test/VirtualMachineClock;
+}
+
+public final class koma/statechart/test/VirtualMachineClockKt {
+	public static final fun machineClock (Lkotlinx/coroutines/test/TestScope;)Lkoma/statechart/test/VirtualMachineClock;
+}
+

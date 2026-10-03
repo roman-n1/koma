@@ -31,6 +31,7 @@ import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MachineStore
 import koma.statechart.machine.MachineTime
 import koma.statechart.machine.TimerId
+import koma.statechart.test.VirtualMachineClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
@@ -111,17 +112,6 @@ class ReplaySessionTest {
             tweak()
         }
 
-    private class TestClock(private val scheduler: TestCoroutineScheduler) : MachineClock {
-        private val origin = scheduler.currentTime
-
-        override fun now(): MachineTime = MachineTime((scheduler.currentTime - origin).milliseconds)
-
-        override suspend fun delayUntil(deadline: MachineTime) {
-            val remaining = deadline - now()
-            if (remaining.isPositive()) delay(remaining)
-        }
-    }
-
     /** Records a live run: a load, a stale answer, a refresh, a timeout, a failing guard. */
     private class Run(val recording: Recording<Ctx, Act, Fetch, Ev>, val final: MachineSnapshot<Ctx>, val handlerCalls: Int)
 
@@ -142,7 +132,7 @@ class ReplaySessionTest {
             }
         }
         val recorder = MachineRecorder(machine, Ctx())
-        val store = MachineStore(machine, Ctx(), handler, scope, TestClock(testScheduler), dispatcher, observers = listOf(recorder)) {
+        val store = MachineStore(machine, Ctx(), handler, scope, VirtualMachineClock(testScheduler), dispatcher, observers = listOf(recorder)) {
             exceptionHandler(ExceptionHandler.Ignore)
         }
         store.start()

@@ -22,6 +22,7 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineClock
 import koma.statechart.machine.MachineStore
 import koma.statechart.machine.MachineTime
+import koma.statechart.test.VirtualMachineClock
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -99,15 +100,6 @@ class CheckpointTest {
         }
     }
 
-    private class TestClock(private val scheduler: TestCoroutineScheduler) : MachineClock {
-        override fun now(): MachineTime = MachineTime(scheduler.currentTime.milliseconds)
-
-        override suspend fun delayUntil(deadline: MachineTime) {
-            val remaining = deadline - now()
-            if (remaining.isPositive()) delay(remaining)
-        }
-    }
-
     /** A recorded store whose commands complete when their gate opens. */
     private inner class Gated(scope: TestScope) {
         val dispatcher = StandardTestDispatcher(scope.testScheduler)
@@ -116,7 +108,7 @@ class CheckpointTest {
         val executionScope = CoroutineScope(dispatcher + SupervisorJob())
         val store = MachineStore(
             machine, Unit, CommandHandler<Cmd, Act> { command, _ -> gates.getOrPut(command.command) { CompletableDeferred() }.await() },
-            executionScope, TestClock(scope.testScheduler), dispatcher, observers = listOf(recorder),
+            executionScope, VirtualMachineClock(scope.testScheduler), dispatcher, observers = listOf(recorder),
         ) { exceptionHandler(ExceptionHandler.Ignore) }
 
         fun open(command: Cmd) {
