@@ -12,9 +12,10 @@
 > [koma-kt/koma](https://github.com/koma-kt/koma). It publishes every module as
 > `io.github.roman-n1:<module>:5.0.0-alpha.1`, never to be mixed with `io.github.koma-kt` in one
 > project, on the upstream base named by `koma.upstream.base` in `gradle.properties` (4.0.0). It adds
-> the statechart machine, the journal, replay, the Compose inspector and the machine's test kit
-> (`koma-statechart`, `koma-observability`, `koma-timetravel`, `koma-timetravel-compose`,
-> `koma-statechart-test`) and changes the upstream modules
+> the statechart machine, the journal, replay, the Compose inspector, the machine's test kit and
+> its Compose helpers (`koma-statechart`, `koma-observability`, `koma-timetravel`,
+> `koma-timetravel-compose`, `koma-statechart-test`, `koma-statechart-compose`) and changes the
+> upstream modules
 > as listed in the
 > [divergence inventory](doc/internal/design/2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400).
 

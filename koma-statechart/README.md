@@ -359,7 +359,8 @@ What holds:
   was handling to the next one, up to the policy's `maxAttempts` (then the effect is discarded
   as `Exhausted`), `Latest` keeps only the newest of its key, the mailbox is bounded, and the
   pending effects are in the checkpoint. `session.effectsOf(id)` journals what the mailbox
-  does. See the [ADR](../doc/internal/adr/2026-09-30-effect-mailbox.md).
+  does. See the [ADR](../doc/internal/adr/2026-09-30-effect-mailbox.md); in Compose, the
+  subscription is `MailboxEffect` (below).
 - Closing a store with commands unfinished tells its observers once (`onClosed`): which never
   started and which were cancelled; `session.decisionsOf(id)` journals it as `CommandsAbandoned`.
 - A `MachineGroup` joins stores that talk to each other: `route(from, to, map)` delivers a
@@ -378,6 +379,32 @@ What holds:
   inputs and commits, and `observers = listOf(session.decisionsOf(id))` adds the decisions
   themselves: transitions, activations, commands, timers, ignored inputs with their reason,
   refused actions. Commands and refused actions carry only what the describers you pass keep.
+
+### Effects in Compose
+
+[koma-statechart-compose](../koma-statechart-compose/README.md) subscribes a composition to the
+mailbox: `MailboxEffect(store.mailbox) { delivery -> … }` runs the block for each `Delivery`, one
+at a time, oldest first, and the block acknowledges it once the UI did what the effect asked. The
+subscription lives as long as the composition: what was queued before it entered is delivered
+when it enters; what it was handling when it left, unacknowledged, comes back to the next
+subscriber with `attempt + 1`, up to the policy's budget. One `MailboxEffect` per mailbox at a
+time, at the screen that owns the store, handling every kind of retained effect with a `when`.
+The UI model is `viewStore.select { it.toUiModel() }` from `koma-compose`.
+
+```kotlin
+@Composable
+fun ChatScreen(store: MachineStore<ChatContext, ChatAction, ChatCommand, ChatEffect>, navigator: Navigator) {
+    val viewStore = rememberViewStore(store)
+    val uiModel = viewStore.select { it.toUiModel() }
+    MailboxEffect(store.mailbox) { delivery ->
+        when (val effect = delivery.event) {
+            is ChatEffect.OpenThread -> navigator.open(effect.threadId)
+        }
+        delivery.acknowledge()
+    }
+    ChatContent(uiModel, onSend = { viewStore.dispatch(ChatAction.Send(it)) })
+}
+```
 
 ### Testing a machine
 
