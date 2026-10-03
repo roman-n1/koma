@@ -5,7 +5,7 @@
 [![Java CI with Gradle](https://github.com/koma-kt/koma/actions/workflows/gradle.yml/badge.svg)](https://github.com/koma-kt/koma/actions/workflows/gradle.yml)
 
 > [!IMPORTANT]
-> Artifacts are published under the `io.github.koma-kt` group.
+> The original Koma artifacts use the `io.github.koma-kt` group. This fork uses `io.github.roman-n1`.
 
 > [!NOTE]
 > This is the fork [roman-n1/koma](https://github.com/roman-n1/koma) of

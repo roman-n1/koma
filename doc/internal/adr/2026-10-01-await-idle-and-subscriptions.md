@@ -38,7 +38,9 @@ observer as soon as the state settled was one decision early on the CI runner (#
   before it, so every result it fed is an input already counted), then inner idle again. Commands
   still running, timers scheduled and effects pending are data of the checkpoint, not work to
   wait for. The group cut uses it instead of the probe counter, which is gone: `MachineStore`
-  no longer needs `StoreProbe`.
+  no longer uses `StoreProbe` to count inputs. A lifecycle probe still waits for
+  `StoreClosed` before group close listeners classify undecided bridge deliveries as dropped;
+  `close()` requests cancellation and may return before a committed observer finishes.
 - **koma-test**: `Store.awaitIdle(timeout = 10.seconds)` throws with the counts when the Store
   is not idle in time; `Store.pendingWork()` reports without waiting. The timeout runs on the
   caller's clock: under `runTest`'s virtual time it expires as soon as the body suspends, so a
