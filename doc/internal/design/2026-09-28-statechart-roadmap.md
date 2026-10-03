@@ -96,8 +96,9 @@ wave are in [`2026-09-28-statechart-semantics.md`](./2026-09-28-statechart-seman
 "Wave 1–5 decisions". Phase 4 was done last rather than fourth: the adapter is easier to write once the
 semantics of hierarchy, regions, history and timers are already fixed.
 
-Not done from phase 8: invariant checking, shrinking of a failing sequence, debug
-timeline (see "Remaining work").
+Not done from phase 8: invariant checking and shrinking of a failing sequence.
+The debug timeline, group replay and replay/experiment workflow are implemented, with a
+[runnable disk-to-inspector example](../../../examples/time-travel/README.md) added on 2026-10-03.
 
 ### Phase 0 — architectural contract
 
@@ -406,8 +407,10 @@ The messenger pilot, device measurements and publishing remain work, not conditi
 3. **Model.** No eventless (completion) transitions, final states, internal
    transitions or `invoke`. The first candidate is completion transitions: with them "the work
    is finished" is described without an artificial action.
-4. **Phase 8.** Invariant checking on paths, shrinking of a failing action sequence,
-   debug timeline (the data is already there: `StepResult`, `ChartState`).
+4. **Phase 8.** Invariant checking on paths and shrinking of a failing action sequence.
+   The debug timeline and group replay/experiment inspector are implemented; the
+   [desktop example](../../../examples/time-travel/README.md) demonstrates the complete file
+   workflow. Real messenger wiring and device measurements remain separate work.
 5. **Bridge to koma-strict** — optional, as a separate module; design in
    [`2026-09-28-koma-strict-comparison.md`](./2026-09-28-koma-strict-comparison.md).
 6. **Upstream.** The series in [`notes/2026-10-01-upstream-series.md`](../notes/2026-10-01-upstream-series.md): companion fixes, the stability fixes one by one, the `awaitIdle` and `StoreProbe` proposals; steps 2–3 and the RFC (step 9) after the author's answer on #280.

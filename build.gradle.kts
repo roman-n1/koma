@@ -17,6 +17,7 @@ plugins {
 // change of the public surface is a deliberate `apiDump` in the same change.
 @OptIn(kotlinx.validation.ExperimentalBCVApi::class)
 apiValidation {
+    ignoredProjects += "time-travel-example" // runnable debug application, not a published API
     klib {
         enabled = true
     }
@@ -25,7 +26,7 @@ apiValidation {
 // The time-travel modules are debug tooling (handoff §11, §12): no production module may depend
 // on them, so an app that keeps them in a debug source set keeps them out of its release graph.
 // `checkDebugGraph` fails on a dependency in the wrong direction; CI runs it next to `apiCheck`.
-val debugModules = setOf(":koma-timetravel", ":koma-timetravel-compose")
+val debugModules = setOf(":koma-timetravel", ":koma-timetravel-compose", ":time-travel-example")
 // Collected once every project is evaluated, at configuration time, so the task's action holds
 // plain strings and the configuration cache can keep it.
 val debugGraphOffenders = mutableListOf<String>()
