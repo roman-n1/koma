@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalKomaApi::class)
+
 package koma.statechart
 
 import koma.core.Action
@@ -77,6 +79,7 @@ data class ChartTimers(
  * [StateChartStoreBuilder.onEnter] hook.
  */
 @KomaStoreDsl
+@ExperimentalKomaApi
 interface ChartHookScope<C, E : Event> : StoreScope {
     /**
      * The node being exited or entered.
@@ -105,6 +108,7 @@ interface ChartHookScope<C, E : Event> : StoreScope {
  * Scope of an [StateChartStoreBuilder.onEnter] hook.
  */
 @KomaStoreDsl
+@ExperimentalKomaApi
 interface ChartEnterScope<C, A : Action, E : Event> : ChartHookScope<C, E> {
     /**
      * Starts work that lives while [node] stays active: it is cancelled when [node] is exited (or
@@ -122,6 +126,7 @@ interface ChartEnterScope<C, A : Action, E : Event> : ChartHookScope<C, E> {
  * `recover {}` handlers, otherwise by its exception handler.
  */
 @KomaStoreDsl
+@ExperimentalKomaApi
 interface ChartLaunchScope<C, A : Action, E : Event> : StoreScope {
     /**
      * The node this work belongs to.
@@ -193,6 +198,7 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * work that lives while [id] is active. It is not run again for a configuration restored by a
      * [koma.core.StateSaver]; use [activity] for work that must run then too.
      */
+    @ExperimentalKomaApi
     fun onEnter(id: StateId, hook: suspend ChartEnterScope<C, A, E>.() -> Unit) {
         enterHooks.getOrPut(id) { mutableListOf() } += hook
     }
@@ -202,6 +208,7 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * order added. It can update the context and emit events. Work launched for [id] is cancelled
      * right after the step that exits it.
      */
+    @ExperimentalKomaApi
     fun onExit(id: StateId, hook: suspend ChartHookScope<C, E>.() -> Unit) {
         exitHooks.getOrPut(id) { mutableListOf() } += hook
     }
@@ -211,6 +218,7 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * the step's hooks), when the Store starts in a configuration where [id] is active, restored
      * or not, and it is cancelled when [id] is exited.
      */
+    @ExperimentalKomaApi
     fun activity(id: StateId, block: suspend ChartLaunchScope<C, A, E>.() -> Unit) {
         activities.getOrPut(id) { mutableListOf() } += block
     }
@@ -224,6 +232,7 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * timer bookkeeping. Dispatch a declared chart action to change nodes, so hooks, activities,
      * history and timers participate in the transition.
      */
+    @ExperimentalKomaApi
     fun store(block: StoreBuilder<ChartState<C>, A, E>.() -> Unit) {
         storeBlocks += block
     }

@@ -21,10 +21,14 @@ outermost first, inner transitions take priority over outer ones. The module use
 [divergence inventory](../doc/internal/design/2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400)),
 so it is built and published together with it and is not meant to run against another version.
 
-Status: **stable in the fork** since 5.0-3 (2026-10-01): the chart model and the machine package
-are not `@ExperimentalKomaApi` any more and `apiCheck` holds their API; only `ExternalSource`, the
-contract an adapter of an external source implements, and the two operations that take one
-(`MachineStore.feed`, `MachineGroup.source`) keep the marker. The module lives in the fork
+Status: the **pure chart/machine model, snapshots, decisions and checkpoints are stable in the
+fork**, held by `apiCheck`. The Store adapter scopes (`ChartHookScope`, `ChartEnterScope`,
+`ChartLaunchScope`) and the methods exposing them, raw `StateChartStoreBuilder.store`
+configuration and the `MachineStore` factory remain `@ExperimentalKomaApi` while their planned
+configuration changes are resolved. The `MachineStore` interface is stable. `ExternalSource`,
+`MachineStore.feed` and `MachineGroup.source` also remain experimental; see the
+[stable core boundary](../doc/internal/adr/2026-10-01-stable-core.md#store-adapter-boundary-2026-10-03-review).
+The module lives in the fork
 [roman-n1/koma](https://github.com/roman-n1/koma), not in upstream Koma.
 
 ## Dependency

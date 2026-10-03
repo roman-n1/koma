@@ -127,6 +127,7 @@ interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>
  * @param builder Store configuration: plugins, exception handler, state saver, journal
  * @throws IllegalArgumentException if [scope] uses [Dispatchers.Unconfined]
  */
+@ExperimentalKomaApi
 fun <C, A : Action, CMD, E : Event> MachineStore(
     machine: Machine<C, A, CMD, E>,
     context: C,

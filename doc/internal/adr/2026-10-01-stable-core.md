@@ -1,6 +1,6 @@
 # The core of the journal and of the machine is stable API: the experimental marker comes off, module by module
 
-- Updated: 2026-10-01
+- Updated: 2026-10-03
 
 ## Background
 
@@ -37,6 +37,25 @@ and `apiCheck` holds each module's surface from then on:
 What stays experimental keeps the marker on the declaration, not on the file, so the boundary
 is readable in the source. A marker on a function is enough where a type must be stable but
 one operation on it is not (`MachineStore.feed`).
+
+### Store adapter boundary (2026-10-03 review)
+
+The pure chart/machine model, snapshots, decisions, executor checkpoints and journal remain
+stable. The live Store adapters have two planned changes in the divergence inventory:
+ChartHookScope/ChartLaunchScope will delegate to StoreScope instead of inheriting it (c2),
+and raw StoreBuilder recovery configuration will be replaced by a constrained chart/machine
+configuration (b6). Removing the marker from those declarations would promise compatibility
+for an API already scheduled to change.
+
+Keep ChartHookScope, ChartEnterScope and ChartLaunchScope experimental, together with the
+onEnter, onExit and activity methods that expose them. StateChartStoreBuilder.store and the
+MachineStore factory remain experimental because they expose the raw StoreBuilder contract.
+The MachineStore interface itself is stable; feed and external sources keep their existing
+markers. Guards, pure effects, the chart definition and the recording formats remain stable.
+
+This boundary adds no runtime behavior or wire-format change. Promote an adapter only after
+its planned configuration is resolved and the compatibility decision is documented. A green
+apiCheck alone is not evidence for removing an opt-in: its dumps do not carry these markers.
 
 Not adopted:
 

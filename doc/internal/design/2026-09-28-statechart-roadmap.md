@@ -374,9 +374,11 @@ removed from the core of the machine and the journal (`Machine`, `MachineStore`,
 policy: a version bump only with a migration or a reader of the old version and a golden of it.
 Both are in place since 2026-10-01: (2) the [format freeze policy](../adr/2026-10-01-format-freeze-policy.md)
 and `FormatVersionsTest`, which pins the five versions and names the checklist on a bump; (1) per
-the [stable core ADR](../adr/2026-10-01-stable-core.md): `InputId`, every declaration of
-`koma-observability`, every declaration of `koma-statechart` but the sources' contract, and the
-recording formats of `koma-timetravel` (replay, branches and the inspector stay experimental).
+the [stable core ADR](../adr/2026-10-01-stable-core.md): `InputId`, the journal, the pure chart
+and machine models, their snapshots/decisions/checkpoints, and the recording formats of
+`koma-timetravel`. The sources' contract, evolving Store adapter scopes and raw StoreBuilder
+configuration remain experimental; so do replay, branches and the inspector. The c2/b6
+adapter changes below must resolve their public contract before those markers come off.
 What remains for `5.0.0` is the tag (5.0-4).
 The messenger pilot, device measurements and publishing remain work, not conditions of the number.
 
