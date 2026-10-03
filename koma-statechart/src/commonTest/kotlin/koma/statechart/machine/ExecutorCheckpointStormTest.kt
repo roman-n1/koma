@@ -12,6 +12,7 @@ import koma.statechart.CompoundState
 import koma.statechart.StateChartDefinition
 import koma.statechart.StateId
 import koma.statechart.Transition
+import koma.test.dispatchAndAwait
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -116,7 +117,9 @@ class ExecutorCheckpointStormTest {
                 }
             }
             withTimeout(20_000) {
-                store.dispatch(Act.Done)
+                // An earlier Idle snapshot can satisfy first() while storm inputs are queued.
+                // Observe Idle only after the final Done has committed behind all senders.
+                store.dispatchAndAwait(Act.Done)
                 store.state.first { it.commands.isEmpty() && it.isActive(idle) }
             }
             checkpoints += store.checkpoint()
