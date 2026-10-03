@@ -48,6 +48,18 @@ class GroupReplaySessionTest {
     }
 
     @Test
+    fun anImmediateReply_isRecordedAfterItsRequest_evenWhenTheBridgeObserverIsFirst() = runTest {
+        val live = GroupFixture.Live(this, paired = true, rootContext = kotlinx.coroutines.Dispatchers.Unconfined)
+        try {
+            script(live)
+            assertEquals(emptyList(), GroupReplaySession(machines, live.recorder.recording()).verify())
+            assertEquals(listOf(1, 2), live.pickerStore.currentState.context.acks)
+        } finally {
+            live.close()
+        }
+    }
+
+    @Test
     fun aRecordedGroupRun_replaysInItsOrder_withoutAMismatch() = runTest {
         val live = GroupFixture.Live(this)
         script(live)
