@@ -1308,18 +1308,23 @@ public final class koma/statechart/machine/MachineGroup {
 	public static synthetic fun checkpoint-VtjQ1oo$default (Lkoma/statechart/machine/MachineGroup;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public final fun getInFlight ()Ljava/util/List;
 	public final fun getMemberIds ()Ljava/util/List;
+	public final fun getRouteHistory ()Ljava/util/List;
 	public final fun getRoutes ()Ljava/util/List;
 	public final fun getSourceIds ()Ljava/util/List;
 	public final fun member-QV6ywvQ (Ljava/lang/String;)Lkoma/statechart/machine/MachineGroup$Member;
 	public final fun onCut (Lkoma/statechart/machine/CutListener;)V
 	public final fun removeCutListener (Lkoma/statechart/machine/CutListener;)V
+	public final fun removeRoute (Lkoma/statechart/machine/MachineGroup$Route;)Z
+	public final fun route (Lkoma/statechart/machine/MachineGroup$Member;Lkoma/statechart/machine/MachineGroup$Member;Lkotlin/jvm/functions/Function1;)Lkoma/statechart/machine/MachineGroup$Route;
 	public final fun route-DtQnzws (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;)Lkoma/statechart/machine/MachineGroup$Route;
 	public final fun source (Lkoma/statechart/machine/ExternalSource;)V
 }
 
 public final class koma/statechart/machine/MachineGroup$Member : koma/statechart/machine/DecisionObserver {
 	public final fun attach (Lkoma/statechart/machine/MachineStore;)V
+	public final fun detach ()V
 	public final fun getId-G0_Fx5k ()Ljava/lang/String;
+	public final fun isAttached ()Z
 	public fun onClosed (Ljava/util/List;Ljava/util/List;)V
 	public fun onCommitted-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)V
 	public fun onFailed-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)V

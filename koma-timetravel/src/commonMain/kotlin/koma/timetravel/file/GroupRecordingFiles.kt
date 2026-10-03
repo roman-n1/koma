@@ -225,7 +225,7 @@ data class DecodedGroupSegment(val header: GroupSegmentHeader?, val entries: Lis
  * at a cut knows them; the sink registers itself as the group's [CutListener] and unregisters
  * on [close].
  *
- * @param group The group; its routes and sources are read when segments begin
+ * @param group The group; its route history and sources are read when segments begin
  * @param id The group's name in the storage
  * @param storage Where the segments go
  * @param scope Runs the writers
@@ -382,7 +382,7 @@ class GroupRecordingFileSink(
     private fun open(item: Item) {
         segmentIndex = if (segmentIndex < 0) nextIndex() else segmentIndex + 1
         val header = GroupRecordingFileFormat.header(
-            GroupSegmentHeader(GroupRecordingFileFormat.VERSION, id, locked { sinks.keys.toList() }, group.routes.map { GroupRoute(it.from, it.to) }, group.sourceIds.toSet(), segmentIndex, item.index, item.inFlight, item.cut),
+            GroupSegmentHeader(GroupRecordingFileFormat.VERSION, id, locked { sinks.keys.toList() }, group.routeHistory.map { GroupRoute(it.from, it.to) }, group.sourceIds.toSet(), segmentIndex, item.index, item.inFlight, item.cut),
         )
         val output = storage.append(GroupRecordingFileFormat.segmentName(id, segmentIndex))
         output.write(header)

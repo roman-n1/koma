@@ -127,6 +127,23 @@ class GroupReplaySessionTest {
     }
 
     @Test
+    fun aRouteRemovedDuringTheRun_staysInTheRecording_soWhatItCarried_verifies() = runTest {
+        val live = GroupFixture.Live(this)
+        script(live)
+        val toRoot = live.group.routes.first { it.from == pickerId }
+        assertTrue(live.group.removeRoute(toRoot))
+        live.pickerStore.dispatch(PickerAct.Pick("bob"))
+        runCurrent()
+        assertEquals(listOf("tom", "ann"), live.rootStore.currentState.context.names, "bob was not carried")
+
+        val recording = live.recorder.recording()
+
+        assertEquals(setOf(GroupRoute(pickerId, rootId), GroupRoute(rootId, pickerId)), recording.routes.toSet(), "the removed route is remembered")
+        assertEquals(emptyList(), GroupReplaySession(machines, recording).verify(), "the deliveries the route carried had a route")
+        live.close()
+    }
+
+    @Test
     fun aGroupRecordingSinceACut_replaysFromIt_withItsInFlightMessagesExpected() = runTest {
         val live = GroupFixture.Live(this)
         runCurrent()

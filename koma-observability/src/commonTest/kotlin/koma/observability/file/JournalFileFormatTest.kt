@@ -90,6 +90,7 @@ class JournalFileFormatTest {
         record(27, JournalEntry.CheckpointCreated(listOf(store, StoreInstanceId("root-1")), listOf("paging:chat-1"), 1), store = null, storeSeq = null),
         record(28, JournalEntry.RecordingStopped, store = null, storeSeq = null),
         record(29, JournalEntry.CommandsAbandoned("StoreClosed", listOf(3, 4), listOf(2))),
+        record(30, JournalEntry.BridgeDropped(MessageRef(StoreInstanceId("root-1"), 3), store, "StoreClosed")),
     )
 
     /** What the file keeps of [all]: a retained object becomes its text. */
@@ -121,6 +122,21 @@ class JournalFileFormatTest {
 
         assertEquals(GOLDEN, bytes.toHex(), "the segment layout changed; if intended, bump JOURNAL_FILE_FORMAT_VERSION.\nACTUAL:\n${bytes.toHex()}")
         assertEquals(listOf(expected[0], expected[11]), JournalFileFormat.decodeSegment("golden", GOLDEN.fromHex()).records)
+    }
+
+    @Test
+    fun aSegmentOfAnEarlierRecordFormat_stillReads() {
+        val older = ByteWriter().apply {
+            raw(JournalFileFormat.header(session, group, ExecutionMode.Live, 0, recordFormatVersion = JOURNAL_FORMAT_VERSION - 1))
+            raw(JournalFileFormat.frame(all[0]))
+            raw(JournalFileFormat.END)
+        }.toByteArray()
+
+        val decoded = JournalFileFormat.decodeSegment("older", older)
+
+        assertEquals(JOURNAL_FORMAT_VERSION - 1, decoded.header?.recordFormatVersion)
+        assertEquals(listOf(expected[0].entry), decoded.records.map { it.entry }, "a reader of a version reads every earlier one: variants only grow at the end")
+        assertNull(decoded.mark)
     }
 
     @Test
@@ -200,6 +216,6 @@ class JournalFileFormatTest {
     private fun String.fromHex(): ByteArray = chunked(2).map { it.toInt(16).toByte() }.toByteArray()
 
     private companion object {
-        const val GOLDEN: String = "4b4f4d414a524e4c0000002022abf41b0000000001000000050000000273310000000167000000044c69766500000000000000359dc4bb4701010000000773746f72652d61000000000000000101000000000000000100000000000f42400000000b496e73706563744f6e6c790000005c486ce2b508010000000773746f72652d61000000000000000c01000000000000000c0000000000b71b0000000000000000020000000000000001000000095265636f7665726564000000020101000000015800000000000000000000000c63e00000000000000000"
+        const val GOLDEN: String = "4b4f4d414a524e4c000000207ab55d330000000001000000060000000273310000000167000000044c69766500000000000000359dc4bb4701010000000773746f72652d61000000000000000101000000000000000100000000000f42400000000b496e73706563744f6e6c790000005c486ce2b508010000000773746f72652d61000000000000000c01000000000000000c0000000000b71b0000000000000000020000000000000001000000095265636f7665726564000000020101000000015800000000000000000000000c63e00000000000000000"
     }
 }

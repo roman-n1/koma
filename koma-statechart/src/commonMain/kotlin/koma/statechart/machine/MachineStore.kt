@@ -14,6 +14,8 @@ import koma.core.StoreBuilder
 import koma.core.StoreHandlerMetadata
 import koma.core.StoreInternalApi
 import koma.core.StorePatch
+import koma.core.StoreProbe
+import koma.core.StoreTrace
 import koma.core.StorePendingWork
 import koma.core.currentInputId
 import kotlinx.coroutines.CoroutineScope
@@ -190,6 +192,29 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     // executor hands them every effect, since the inner store never sees the effects.
     private val adaptedPlugins = mutableListOf<AdaptedPlugin<C, A, E>>()
 
+    // Told once, after StoreClosed: a group drops only what processing never decided.
+    private val closeListeners = mutableListOf<() -> Unit>()
+    private var processingEnded = false
+
+    @Volatile
+    private var closed = false
+
+    /** Whether [close] was called: nothing enters or is decided any more. */
+    internal val isClosed: Boolean get() = closed
+
+    /** Calls [listener] once when the store closes, after nothing can be decided any more; at once when it has closed already. */
+    internal fun onClose(listener: () -> Unit) {
+        val now = gated {
+            if (processingEnded) {
+                true
+            } else {
+                closeListeners += listener
+                false
+            }
+        }
+        if (now) listener()
+    }
+
     /** The underlying Koma Store; the module's own tests feed it raw machine inputs. */
     internal val inner: Store<MachineSnapshot<C>, MachineInput<A>, E> =
         Store(machine.initialSnapshot(context), coroutineContext) {
@@ -219,6 +244,15 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
                     decide(state, action, currentInputId()) { nextState { it } }
                 }
             }
+            probe(StoreProbe { trace ->
+                if (trace === StoreTrace.StoreClosed) {
+                    val listeners = gated {
+                        processingEnded = true
+                        closeListeners.toList().also { closeListeners.clear() }
+                    }
+                    for (listener in listeners) listener()
+                }
+            })
             builder()
             plugin(Executor())
             validateRecovery { previous, recovered ->
@@ -273,6 +307,12 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
             pending = null
             scheduler.apply(decision, committed.input)
             observe { it.onCommitted(committed.input, committed.machineInput, decision) }
+            observe { observer ->
+                if (observer is MachineGroup.Member<*, *, *, *>) {
+                    @Suppress("UNCHECKED_CAST")
+                    (observer as MachineGroup.Member<C, A, CMD, E>).send(committed.input, committed.machineInput, decision)
+                }
+            }
             if (adaptedPlugins.isNotEmpty()) {
                 for (effect in decision.effects) {
                     for (plugin in adaptedPlugins) {
@@ -484,9 +524,15 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     }
 
     override fun close() {
-        inner.close()
+        gated {
+            if (closed) return
+            closed = true
+        }
         scheduler.close()
         mailboxImpl.close()
         executionScope.cancel()
+        // Cancellation may return while a non-suspending observer finishes. The StoreClosed
+        // probe notifies listeners only after all inner processing has actually ended.
+        inner.close()
     }
 }

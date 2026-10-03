@@ -591,6 +591,31 @@ sealed interface koma.timetravel.inspect/TimelineItem { // koma.timetravel.inspe
         final fun toString(): kotlin/String // koma.timetravel.inspect/TimelineItem.Discarded.toString|toString(){}[0]
     }
 
+    final class Dropped : koma.timetravel.inspect/TimelineItem { // koma.timetravel.inspect/TimelineItem.Dropped|null[0]
+        constructor <init>(koma.observability/GroupSeq, kotlin.time/Duration, koma.observability/StoreInstanceId, koma.observability/MessageRef, kotlin/String) // koma.timetravel.inspect/TimelineItem.Dropped.<init>|<init>(koma.observability.GroupSeq;kotlin.time.Duration;koma.observability.StoreInstanceId;koma.observability.MessageRef;kotlin.String){}[0]
+
+        final val elapsed // koma.timetravel.inspect/TimelineItem.Dropped.elapsed|{}elapsed[0]
+            final fun <get-elapsed>(): kotlin.time/Duration // koma.timetravel.inspect/TimelineItem.Dropped.elapsed.<get-elapsed>|<get-elapsed>(){}[0]
+        final val groupSeq // koma.timetravel.inspect/TimelineItem.Dropped.groupSeq|{}groupSeq[0]
+            final fun <get-groupSeq>(): koma.observability/GroupSeq // koma.timetravel.inspect/TimelineItem.Dropped.groupSeq.<get-groupSeq>|<get-groupSeq>(){}[0]
+        final val message // koma.timetravel.inspect/TimelineItem.Dropped.message|{}message[0]
+            final fun <get-message>(): koma.observability/MessageRef // koma.timetravel.inspect/TimelineItem.Dropped.message.<get-message>|<get-message>(){}[0]
+        final val reason // koma.timetravel.inspect/TimelineItem.Dropped.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // koma.timetravel.inspect/TimelineItem.Dropped.reason.<get-reason>|<get-reason>(){}[0]
+        final val store // koma.timetravel.inspect/TimelineItem.Dropped.store|{}store[0]
+            final fun <get-store>(): koma.observability/StoreInstanceId // koma.timetravel.inspect/TimelineItem.Dropped.store.<get-store>|<get-store>(){}[0]
+
+        final fun component1(): koma.observability/GroupSeq // koma.timetravel.inspect/TimelineItem.Dropped.component1|component1(){}[0]
+        final fun component2(): kotlin.time/Duration // koma.timetravel.inspect/TimelineItem.Dropped.component2|component2(){}[0]
+        final fun component3(): koma.observability/StoreInstanceId // koma.timetravel.inspect/TimelineItem.Dropped.component3|component3(){}[0]
+        final fun component4(): koma.observability/MessageRef // koma.timetravel.inspect/TimelineItem.Dropped.component4|component4(){}[0]
+        final fun component5(): kotlin/String // koma.timetravel.inspect/TimelineItem.Dropped.component5|component5(){}[0]
+        final fun copy(koma.observability/GroupSeq = ..., kotlin.time/Duration = ..., koma.observability/StoreInstanceId = ..., koma.observability/MessageRef = ..., kotlin/String = ...): koma.timetravel.inspect/TimelineItem.Dropped // koma.timetravel.inspect/TimelineItem.Dropped.copy|copy(koma.observability.GroupSeq;kotlin.time.Duration;koma.observability.StoreInstanceId;koma.observability.MessageRef;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.timetravel.inspect/TimelineItem.Dropped.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.timetravel.inspect/TimelineItem.Dropped.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.timetravel.inspect/TimelineItem.Dropped.toString|toString(){}[0]
+    }
+
     final class Effect : koma.timetravel.inspect/TimelineItem { // koma.timetravel.inspect/TimelineItem.Effect|null[0]
         constructor <init>(koma.observability/GroupSeq, kotlin.time/Duration, koma.observability/StoreInstanceId, kotlin/Long, koma.observability/JournalEntry<*, *, *>) // koma.timetravel.inspect/TimelineItem.Effect.<init>|<init>(koma.observability.GroupSeq;kotlin.time.Duration;koma.observability.StoreInstanceId;kotlin.Long;koma.observability.JournalEntry<*,*,*>){}[0]
 
