@@ -20,6 +20,12 @@ Store and reaches no network.
   disabled button says why (the end of the recording, a divergence). The position panel then
   shows the machine's definition as Mermaid with the replay's active states highlighted
   (`toMermaid(active)`), selectable for pasting into a renderer.
+- **`GroupReplayControls(session)`**: one cursor for all recorded machines, with back,
+  forward, seek and group verification. The timeline follows `GroupRecording.order`;
+  filtering by Store only changes the displayed rows. The detail panel shows the selected
+  input's recorded before/after snapshots and every member's current snapshot, executor
+  checkpoint and active states. A divergence identifies the failing input and member and
+  stops forward movement before changing their state.
 - **`BranchControls(branch, machines, inputs)`** and the branch panel: every member's
   snapshot, clock, awaiting and queued commands with buttons to complete, fail or answer
   them, the scripted `BranchInput`s the application allows (a `Dispatch`, a `Feed`, an
@@ -28,7 +34,6 @@ Store and reaches no network.
   nothing runs.
 
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
-Not yet: group-wide positions.
 
 ## Dependency
 
@@ -57,9 +62,23 @@ fun ReplayOf(recording: Recording<Ctx, Act, Cmd, Ev>, journal: JournalFileConten
 }
 
 @Composable
+fun ReplayGroup(recording: GroupRecording, machines: Map<StoreInstanceId, Machine<*, *, *, *>>, journal: JournalFileContents) {
+    val state = rememberInspectorState(Inspector(journal.events, recording.members), InspectorMode.Replay)
+    val controls = remember(recording, machines) { GroupReplayControls(GroupReplaySession(machines, recording)) }
+    InspectorScreen(state, groupReplay = controls)
+}
+
+@Composable
 fun BranchOf(session: GroupReplaySession, machines: Map<StoreInstanceId, Machine<*, *, *, *>>) {
     val branch = remember { BranchControls(session.branch(routes), machines, listOf(BranchInput.Dispatch(storeId, "Load", Act.Load))) }
     InspectorScreen(state, branch = branch)                       // mode Branch: the panel decides what the buttons send
 }
 ```
 
+Group replay requires a recording and a matching machine definition/version for each member.
+Its cursor counts inputs in the group recording, independently of the diagnostic journal:
+partial journals and Store filters do not change those positions. Seeking and going back
+restore recorded checkpoints without verifying skipped inputs. Forward re-decides the next
+input and checks bridge/source causality; Verify checks the whole group without moving the
+cursor. Timers, command queues and pending effects are displayed as recorded state; replay
+does not start command handlers, timers or network requests.

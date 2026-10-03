@@ -141,6 +141,27 @@ class GroupReplaySessionTest {
     }
 
     @Test
+    fun aForwardStepRefusesAnUnsentBridge_withoutMovingAnyMember() = runTest {
+        val live = GroupFixture.Live(this)
+        script(live)
+        val recording = live.recorder.recording()
+        val early = GroupRecording(recording.members, recording.order.filter { it.store == rootId } + recording.order.filter { it.store == pickerId }, recording.routes)
+        val session = GroupReplaySession(machines, early)
+        val mismatch = assertIs<GroupMismatch.ReceivedBeforeSent>(session.verify().first())
+        session.seek(mismatch.position)
+        val before = session.members.mapValues { it.value.snapshot }
+        val positions = session.members.mapValues { it.value.position }
+
+        val step = assertIs<GroupReplayStep.Diverged>(session.stepForward())
+
+        assertEquals(mismatch, step.mismatch)
+        assertEquals(mismatch.position, session.position)
+        assertEquals(before, session.members.mapValues { it.value.snapshot })
+        assertEquals(positions, session.members.mapValues { it.value.position })
+        live.close()
+    }
+
+    @Test
     fun aRouteRemovedDuringTheRun_staysInTheRecording_soWhatItCarried_verifies() = runTest {
         val live = GroupFixture.Live(this)
         script(live)

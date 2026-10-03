@@ -104,6 +104,14 @@ public final class koma/timetravel/compose/BranchText {
 	public final fun line (Lkoma/timetravel/compose/BranchDecision;)Ljava/lang/String;
 }
 
+public final class koma/timetravel/compose/ComposableSingletons$GroupReplayPanelsKt {
+	public static final field INSTANCE Lkoma/timetravel/compose/ComposableSingletons$GroupReplayPanelsKt;
+	public fun <init> ()V
+	public final fun getLambda$-562698773$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-989968502$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$1057652610$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+}
+
 public final class koma/timetravel/compose/ComposableSingletons$InspectorScreenKt {
 	public static final field INSTANCE Lkoma/timetravel/compose/ComposableSingletons$InspectorScreenKt;
 	public fun <init> ()V
@@ -113,6 +121,59 @@ public final class koma/timetravel/compose/ComposableSingletons$InspectorScreenK
 	public final fun getLambda$-307027532$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
 	public final fun getLambda$-703792646$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
 	public final fun getLambda$1584814289$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class koma/timetravel/compose/GroupReplayControls {
+	public static final field $stable I
+	public fun <init> (Lkoma/timetravel/GroupReplaySession;)V
+	public final fun at (I)Lkoma/timetravel/compose/GroupReplayPosition;
+	public final fun checkpoint-QV6ywvQ (Ljava/lang/String;)Lkoma/statechart/machine/ExecutorCheckpoint;
+	public final fun getCanStepBackward ()Z
+	public final fun getCanStepForward ()Z
+	public final fun getDivergence ()Lkoma/timetravel/GroupMismatch;
+	public final fun getForwardUnavailable ()Ljava/lang/String;
+	public final fun getLength ()I
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getPosition ()I
+	public final fun getSelected ()Lkoma/timetravel/compose/GroupReplayPosition;
+	public final fun getSession ()Lkoma/timetravel/GroupReplaySession;
+	public final fun getVerification ()Ljava/util/List;
+	public final fun mermaid-QV6ywvQ (Ljava/lang/String;)Ljava/lang/String;
+	public final fun seek (I)V
+	public final fun snapshot-QV6ywvQ (Ljava/lang/String;)Lkoma/statechart/machine/MachineSnapshot;
+	public final fun stepBackward ()V
+	public final fun stepForward ()V
+	public final fun verify ()V
+}
+
+public final class koma/timetravel/compose/GroupReplayPanelsKt {
+	public static final fun GroupPositionPanel (Lkoma/timetravel/compose/GroupReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun GroupReplayBar (Lkoma/timetravel/compose/GroupReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun GroupTimelinePanel-2WGFYj8 (Lkoma/timetravel/compose/GroupReplayControls;Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class koma/timetravel/compose/GroupReplayPosition {
+	public static final field $stable I
+	public synthetic fun <init> (ILjava/lang/String;ILkoma/timetravel/RecordedStep;Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/machine/MachineSnapshot;Lkoma/timetravel/inspect/SnapshotDiff;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2-G0_Fx5k ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun component4 ()Lkoma/timetravel/RecordedStep;
+	public final fun component5 ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun component6 ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun component7 ()Lkoma/timetravel/inspect/SnapshotDiff;
+	public final fun copy-TaDmf-Y (ILjava/lang/String;ILkoma/timetravel/RecordedStep;Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/machine/MachineSnapshot;Lkoma/timetravel/inspect/SnapshotDiff;)Lkoma/timetravel/compose/GroupReplayPosition;
+	public static synthetic fun copy-TaDmf-Y$default (Lkoma/timetravel/compose/GroupReplayPosition;ILjava/lang/String;ILkoma/timetravel/RecordedStep;Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/machine/MachineSnapshot;Lkoma/timetravel/inspect/SnapshotDiff;ILjava/lang/Object;)Lkoma/timetravel/compose/GroupReplayPosition;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfter ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun getBefore ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun getDiff ()Lkoma/timetravel/inspect/SnapshotDiff;
+	public final fun getIndex ()I
+	public final fun getMemberStep ()I
+	public final fun getRecorded ()Lkoma/timetravel/RecordedStep;
+	public final fun getStore-G0_Fx5k ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class koma/timetravel/compose/InspectorMode : java/lang/Enum {
@@ -128,6 +189,7 @@ public final class koma/timetravel/compose/InspectorMode : java/lang/Enum {
 public final class koma/timetravel/compose/InspectorScreenKt {
 	public static final fun BranchPanel (Lkoma/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun DefinitionPanel (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun InspectorScreen (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/GroupReplayControls;Lkoma/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun InspectorScreen (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/ReplayControls;Lkoma/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun ModeBar (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun PositionPanel (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/ReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
