@@ -198,7 +198,7 @@ class MachineStoreTest {
         val h = harness()
         h.handler.behaviour = { _, _ -> h.handler.snapshotSeen = h.store.currentState; awaitCancellation() }
 
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         assertTrue(h.handler.started.isEmpty(), "nothing runs under the lock; the scheduler has not had its turn")
         runCurrent()
 
@@ -217,7 +217,7 @@ class MachineStoreTest {
                 else -> awaitCancellation()
             }
         }
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
 
         h.store.dispatch(ListAction.Load("cats"))
@@ -237,7 +237,7 @@ class MachineStoreTest {
     @Test
     fun exitingTheActivation_cancelsItsCommand() = runTest {
         val h = harness()
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         h.store.dispatch(ListAction.Load("cats"))
         runCurrent()
         assertEquals(2, h.handler.started.size)
@@ -256,7 +256,7 @@ class MachineStoreTest {
     @Test
     fun laneLatest_supersedesTheRunningCommand() = runTest {
         val h = harness(regionsMachine(ConcurrencyPolicy.Latest))
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
 
         // Both are admitted in one turn: B supersedes A before A ever ran.
@@ -271,7 +271,7 @@ class MachineStoreTest {
         val h = harness(regionsMachine(ConcurrencyPolicy.Sequential))
         val gate = CompletableDeferred<Unit>()
         h.handler.behaviour = { command, _ -> if ((command.command as ListCommand.Ping).region == "A") gate.await() else awaitCancellation() }
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
 
         assertEquals(listOf("A"), h.handler.started.map { (it.command as ListCommand.Ping).region }, "B waits for A")
@@ -286,7 +286,7 @@ class MachineStoreTest {
     @Test
     fun laneDropIfRunning_dropsTheSecondCommand() = runTest {
         val h = harness(regionsMachine(ConcurrencyPolicy.DropIfRunning))
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
 
         assertEquals(listOf("A"), h.handler.started.map { (it.command as ListCommand.Ping).region })
@@ -335,7 +335,7 @@ class MachineStoreTest {
         val h = harness(machine)
         val gate = CompletableDeferred<Unit>()
         h.handler.behaviour = { command, _ -> if ((command.command as ListCommand.Ping).region == "A") gate.await() else awaitCancellation() }
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
         assertEquals(listOf("A"), h.handler.started.map { (it.command as ListCommand.Ping).region }, "B waits in the lane")
 
@@ -358,7 +358,7 @@ class MachineStoreTest {
             onEnter(c1) { command(ListCommand.Ping("C"), net, ConcurrencyPolicy.Latest) }
         }
         val h = harness(machine)
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
         assertEquals(listOf("A"), h.handler.started.map { (it.command as ListCommand.Ping).region })
 
@@ -374,14 +374,14 @@ class MachineStoreTest {
     @Test
     fun aRestoredSnapshotOfAnotherVersion_startsOver_andIsReported() = runTest {
         val first = harness(listMachine(version = "1"))
-        first.inner.startAndAwait()
+        first.store.startAndAwait()
         first.store.dispatch(ListAction.Load("cats"))
         runCurrent()
         val saved = first.store.currentState
         first.close()
 
         val second = harness(listMachine(version = "2")) { stateSaver(StateSaver(save = {}, restore = { saved })) }
-        second.inner.startAndAwait()
+        second.store.startAndAwait()
         runCurrent()
 
         val restored = second.store.currentState
@@ -405,7 +405,7 @@ class MachineStoreTest {
                 action<MachineInput<ListAction>> { nextState { state.copy(revision = 88) } }
             }
         }
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
         assertEquals(1, h.store.currentState.revision, "the machine decided the start, not the configured enter {}")
 
@@ -422,7 +422,7 @@ class MachineStoreTest {
     @Test
     fun timer_firesThroughTheClock_andIsCancelledWhenItsSourceExits() = runTest {
         val h = harness()
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         h.store.dispatch(ListAction.Load("cats"))
         runCurrent()
         assertEquals(1, h.store.currentState.timers.size)
@@ -455,7 +455,7 @@ class MachineStoreTest {
         val h = harness()
         val boom = IllegalStateException("socket")
         h.handler.behaviour = { command, _ -> if (command.command is ListCommand.Fetch) throw boom else awaitCancellation() }
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         h.store.dispatch(ListAction.Load("cats"))
         runCurrent()
 
@@ -469,7 +469,7 @@ class MachineStoreTest {
     fun failedDecision_commitsNothing_reportsTheCause_andLeavesRunningCommandsAlone() = runTest {
         val boom = IllegalArgumentException("guard")
         val h = harness(listMachine(guardBoom = { throw boom }))
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
         val before = h.store.currentState
 
@@ -490,7 +490,7 @@ class MachineStoreTest {
                 recover<IllegalArgumentException> { nextState { state.copy(revision = 99) } }
             }
         }
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
 
         h.store.dispatch(ListAction.Boom)
@@ -512,7 +512,7 @@ class MachineStoreTest {
             pluginExecutionPolicy(PluginExecutionPolicy.InRegistrationOrder)
             plugin(Plugin(onState = { _, state -> if (state.revision == 2L) h.store.close() }))
         }
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
         assertEquals(1, h.handler.started.size)
 
@@ -533,7 +533,7 @@ class MachineStoreTest {
         h.handler.behaviour = { command, results ->
             if (command.command is ListCommand.Fetch) results.result(ListAction.Loaded(listOf("x"))) else awaitCancellation()
         }
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         h.store.dispatch(ListAction.Load("cats"))
         runCurrent()
         h.store.dispatch(ListAction.Refresh)
@@ -551,7 +551,7 @@ class MachineStoreTest {
         h.handler.behaviour = { command, results ->
             if (command.command is ListCommand.Fetch) results.result(ListAction.Loaded(listOf("first"))) else awaitCancellation()
         }
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         h.store.dispatch(ListAction.Load("cats"))
         runCurrent()
         val settled = h.store.currentState
@@ -569,7 +569,7 @@ class MachineStoreTest {
     @Test
     fun aRestoredStartedSnapshot_startsOverWithItsContext() = runTest {
         val first = harness()
-        first.inner.startAndAwait()
+        first.store.startAndAwait()
         first.store.dispatch(ListAction.Load("cats"))
         runCurrent()
         val saved = first.store.currentState
@@ -577,7 +577,7 @@ class MachineStoreTest {
         first.close()
 
         val second = harness { stateSaver(StateSaver(save = {}, restore = { saved })) }
-        second.inner.startAndAwait()
+        second.store.startAndAwait()
         runCurrent()
 
         val restored = second.store.currentState
@@ -606,7 +606,7 @@ class MachineStoreTest {
         val h = harness(machine)
         h.handler.behaviour = { _, _ -> throw IllegalStateException("down") }
 
-        h.inner.startAndAwait()
+        h.store.startAndAwait()
         runCurrent()
 
         assertTrue(h.store.currentState.isActive(b))

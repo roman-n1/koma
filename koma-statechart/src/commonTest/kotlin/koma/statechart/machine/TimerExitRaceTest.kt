@@ -103,7 +103,7 @@ class TimerExitRaceTest {
                 }
             }),
         ) { exceptionHandler(ExceptionHandler { handled += it }) }
-        (store as MachineStoreImpl<Unit, Act, Fetch, Nothing>).inner.startAndAwait()
+        store.startAndAwait()
         store.dispatch(Act.Load)
         runCurrent()
         val timer = store.currentState.timers.keys.single()
@@ -129,8 +129,8 @@ class TimerExitRaceTest {
         val reason = ignored.single().second
         assertEquals(if (resultFirst) IgnoreReason.UnknownTimer else IgnoreReason.StaleCommand, reason)
         // A second firing of the same timer, or a second result, changes nothing more.
-        store.inner.dispatch(MachineInput.TimerFired(timer, MachineTime(100.milliseconds)))
-        store.inner.dispatch(MachineInput.CommandResult(command, Act.Loaded, MachineTime(100.milliseconds)))
+        (store as MachineStoreImpl<Unit, Act, Fetch, Nothing>).inner.dispatch(MachineInput.TimerFired(timer, MachineTime(100.milliseconds)))
+        (store as MachineStoreImpl<Unit, Act, Fetch, Nothing>).inner.dispatch(MachineInput.CommandResult(command, Act.Loaded, MachineTime(100.milliseconds)))
         runCurrent()
         assertEquals(snapshot, store.currentState)
         assertTrue(handled.isEmpty())
