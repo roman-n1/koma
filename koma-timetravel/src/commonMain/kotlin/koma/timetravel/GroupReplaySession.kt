@@ -91,6 +91,9 @@ class GroupReplaySession(
     /** The members' sessions, each at its own position for the group's. */
     val members: Map<StoreInstanceId, ReplaySession<*, *, *, *>> get() = sessions
 
+    // The recording's bridge/source relationships do not depend on the replay cursor.
+    private val bridgeMismatches by lazy { verifyBridge() }
+
     /** The snapshot of [store] at the group's position. */
     fun snapshotOf(store: StoreInstanceId): MachineSnapshot<*> = session(store).snapshot
 
@@ -98,11 +101,13 @@ class GroupReplaySession(
     fun checkpointOf(store: StoreInstanceId): ExecutorCheckpoint<*, *> = session(store).checkpoint
 
     /**
-     * Decides the next step of the group on its member and compares with the recording; advances
-     * on a match, stays on a divergence. `null` at the end.
+     * Checks the next input's bridge/source causality, decides it on its member and compares
+     * with the recording. Advances on a match; a divergence leaves every member and the group
+     * cursor unchanged. `null` at the end.
      */
     fun stepForward(): GroupReplayStep? {
         val step = next ?: return null
+        bridgeMismatches.firstOrNull { it.position == position }?.let { return GroupReplayStep.Diverged(it) }
         return when (val result = session(step.store).stepForward()) {
             null -> null
             is ReplayStep.Matched<*, *, *, *> -> {
@@ -142,6 +147,12 @@ class GroupReplaySession(
         for ((id, session) in sessions) {
             session.verify()?.let { mismatch -> mismatches += GroupMismatch.Replay(positionOf(id, mismatch.position), id, mismatch) }
         }
+        mismatches += bridgeMismatches
+        return mismatches.sortedBy { it.position }
+    }
+
+    private fun verifyBridge(): List<GroupMismatch> {
+        val mismatches = mutableListOf<GroupMismatch>()
         val sent = recording.inFlight.toMutableSet()
         val received = mutableMapOf<Pair<StoreInstanceId, MessageId>, Int>()
         // The requesters each member has received a request from so far, and, per message, the

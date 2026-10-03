@@ -154,6 +154,44 @@ class InspectorScreenTest {
     }
 
     @Test
+    fun theGroupReplay_restoresEveryMember_evenWhenTheTimelineIsFiltered() = runComposeUiTest {
+        val controls = GroupReplayFixture.controls()
+        val recording = controls.session.recording
+        val state = InspectorState(Inspector.of(GroupReplayFixture.journal(recording), recording.members), InspectorMode.Replay)
+        setContent { InspectorScreen(state, groupReplay = controls) }
+        onNodeWithTag("group-replay-position").assertTextContains("0 / 6", substring = true)
+        onNodeWithTag("group-replay-back").assertIsNotEnabled()
+        onNodeWithTag("store-chat-7").performClick()
+        onNodeWithTag("group-step-1").assertDoesNotExist()
+        repeat(4) { onNodeWithTag("group-replay-forward").performClick() }
+        onNodeWithTag("group-replay-position").assertTextContains("4 / 6", substring = true)
+        onNodeWithTag("group-member-chat-7").assertTextContains("Ctx(n=1)", substring = true)
+        onNodeWithTag("group-member-root-2").assertTextContains("Ctx(n=11)", substring = true)
+        onNodeWithTag("group-step-4").performClick()
+        onNodeWithTag("group-replay-position").assertTextContains("5 / 6", substring = true)
+        onNodeWithTag("group-position").assertTextContains("recorded after: Ctx(n=2)", substring = true)
+        onNodeWithTag("group-replay-verify").performClick()
+        onNodeWithTag("group-replay-verdict").assertTextContains("no divergence in 6 group steps", substring = true)
+        onNodeWithTag("group-definition-root-2").assertTextContains("stateDiagram-v2", substring = true)
+    }
+
+    @Test
+    fun aGroupDivergence_disablesForward_andShowsTheFailingInput() = runComposeUiTest {
+        val controls = GroupReplayFixture.controls(changed = true)
+        val recording = controls.session.recording
+        val state = InspectorState(Inspector.of(GroupReplayFixture.journal(recording), recording.members), InspectorMode.Replay)
+        setContent { InspectorScreen(state, groupReplay = controls) }
+        repeat(4) { onNodeWithTag("group-replay-forward").performClick() }
+        onNodeWithTag("group-replay-forward").assertIsNotEnabled()
+        onNodeWithTag("group-replay-position").assertTextContains("3 / 6", substring = true)
+        onNodeWithTag("group-replay-why").assertTextContains("root-2", substring = true)
+        onNodeWithTag("group-replay-why").assertTextContains("context", substring = true)
+        onNodeWithTag("group-position").assertTextContains("#3 root-2", substring = true)
+        onNodeWithTag("group-replay-back").performClick()
+        onNodeWithTag("group-replay-forward").assertIsEnabled()
+    }
+
+    @Test
     fun theBranchPanel_decidesAScriptedInput_andDrawsTheDefinition() = runComposeUiTest {
         val recording = recording()
         val session = ReplaySession(machine, recording).also { it.seek(1) }

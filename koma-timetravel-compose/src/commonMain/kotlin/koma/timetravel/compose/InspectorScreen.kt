@@ -63,26 +63,44 @@ import kotlin.time.Duration.Companion.seconds
 @ExperimentalKomaApi
 @Composable
 fun InspectorScreen(state: InspectorState, replay: ReplayControls<*, *, *, *>? = null, branch: BranchControls? = null, modifier: Modifier = Modifier) {
+    InspectorScreenContent(state, replay, null, branch, modifier)
+}
+
+/** A group's recording on one cursor; all members are restored at the same global position. */
+@ExperimentalKomaApi
+@Composable
+fun InspectorScreen(state: InspectorState, groupReplay: GroupReplayControls, branch: BranchControls? = null, modifier: Modifier = Modifier) {
+    InspectorScreenContent(state, null, groupReplay, branch, modifier)
+}
+
+@OptIn(ExperimentalKomaApi::class)
+@Composable
+private fun InspectorScreenContent(state: InspectorState, replay: ReplayControls<*, *, *, *>?, groupReplay: GroupReplayControls?, branch: BranchControls?, modifier: Modifier) {
     Surface(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             ModeBar(state)
             if (replay != null) ReplayBar(replay, state)
+            if (groupReplay != null) GroupReplayBar(groupReplay)
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 if (maxWidth >= 900.dp) {
                     Row(modifier = Modifier.fillMaxSize()) {
                         StoresPanel(state, modifier = Modifier.weight(1f).fillMaxSize())
                         VerticalRule()
-                        TimelinePanel(state, modifier = Modifier.weight(2f).fillMaxSize())
+                        if (groupReplay != null) GroupTimelinePanel(groupReplay, state.storeFilter, modifier = Modifier.weight(2f).fillMaxSize()) else TimelinePanel(state, modifier = Modifier.weight(2f).fillMaxSize())
                         VerticalRule()
-                        if (branch != null) BranchPanel(branch, modifier = Modifier.weight(2f).fillMaxSize()) else PositionPanel(state, replay, modifier = Modifier.weight(2f).fillMaxSize())
+                        when {
+                            branch != null -> BranchPanel(branch, modifier = Modifier.weight(2f).fillMaxSize())
+                            groupReplay != null -> GroupPositionPanel(groupReplay, modifier = Modifier.weight(2f).fillMaxSize())
+                            else -> PositionPanel(state, replay, modifier = Modifier.weight(2f).fillMaxSize())
+                        }
                     }
                 } else {
                     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         StoresPanel(state, modifier = Modifier.fillMaxWidth())
                         HorizontalDivider()
-                        TimelinePanel(state, modifier = Modifier.fillMaxWidth().height(360.dp))
+                        if (groupReplay != null) GroupTimelinePanel(groupReplay, state.storeFilter, modifier = Modifier.fillMaxWidth().height(360.dp)) else TimelinePanel(state, modifier = Modifier.fillMaxWidth().height(360.dp))
                         HorizontalDivider()
-                        PositionPanel(state, replay, modifier = Modifier.fillMaxWidth())
+                        if (groupReplay != null) GroupPositionPanel(groupReplay, modifier = Modifier.fillMaxWidth()) else PositionPanel(state, replay, modifier = Modifier.fillMaxWidth())
                         if (branch != null) {
                             HorizontalDivider()
                             BranchPanel(branch, modifier = Modifier.fillMaxWidth())
