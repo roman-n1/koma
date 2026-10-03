@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalKomaApi::class, ExperimentalTime::class)
+@file:OptIn(ExperimentalKomaApi::class, InternalKomaApi::class, ExperimentalTime::class)
 
 package koma.statechart.machine
 
@@ -6,6 +6,9 @@ import koma.core.Action
 import koma.core.Event
 import koma.core.ExceptionHandler
 import koma.core.ExperimentalKomaApi
+import koma.core.InternalKomaApi
+import koma.core.StoreProbe
+import koma.core.StoreTrace
 import koma.observability.JournalEntry
 import koma.observability.MachineGroupId
 import koma.observability.RecordingSession
@@ -18,6 +21,7 @@ import koma.statechart.StateChartDefinition
 import koma.statechart.StateId
 import koma.statechart.Transition
 import koma.test.awaitIdle
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -99,9 +103,13 @@ class GroupMembershipStormTest {
         pickerMember.attach(pickerStore)
         pickerStore.start()
         val roots = mutableListOf<MachineStore<RootCtx, RootAct, Nothing, Nothing>>()
+        val closedRoots = mutableListOf<CompletableDeferred<Unit>>()
         fun newRoot() {
+            val closed = CompletableDeferred<Unit>()
+            closedRoots += closed
             val store = MachineStore(rootMachine, RootCtx(), CommandHandler<Nothing, RootAct> { _, _ -> }, executionScope, coroutineContext = Dispatchers.Default, observers = listOf(rootMember)) {
                 exceptionHandler(ExceptionHandler.Ignore)
+                probe(StoreProbe { if (it === StoreTrace.StoreClosed) closed.complete(Unit) })
             }
             rootMember.attach(store)
             store.start()
@@ -144,6 +152,8 @@ class GroupMembershipStormTest {
             }
             pickerStore.awaitIdle(30.seconds)
             roots.last().awaitIdle(30.seconds)
+            // Old stores may still be finishing their last observer after close returned.
+            for (closed in closedRoots.dropLast(1)) closed.await()
         }
 
         val entries = session.records().map { it.entry }

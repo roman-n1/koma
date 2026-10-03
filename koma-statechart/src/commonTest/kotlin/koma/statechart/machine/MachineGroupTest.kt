@@ -22,6 +22,7 @@ import koma.statechart.StateId
 import koma.statechart.Transition
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -32,6 +33,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
+import kotlin.coroutines.CoroutineContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -117,7 +119,7 @@ class MachineGroupTest {
     }
 
     /** The group with both members attached and routed, on a journal. */
-    private inner class Fixture(scope: TestScope, attachRoot: Boolean = true, pickerPlugin: Plugin<MachineSnapshot<PickerCtx>, MachineInput<PickerAct>, PickerEv>? = null, routed: Boolean = true) {
+    private inner class Fixture(scope: TestScope, attachRoot: Boolean = true, pickerPlugin: Plugin<MachineSnapshot<PickerCtx>, MachineInput<PickerAct>, PickerEv>? = null, routed: Boolean = true, rootContext: CoroutineContext? = null) {
         val dispatcher = StandardTestDispatcher(scope.testScheduler)
         val executionScope = CoroutineScope(dispatcher + SupervisorJob())
         val session = RecordingSession(scope.backgroundScope, id = RuntimeSessionId("g"), group = MachineGroupId("picker"), timeSource = TestTimeSource())
@@ -136,7 +138,7 @@ class MachineGroupTest {
             exceptionHandler(ExceptionHandler.Ignore)
             pickerPlugin?.let { plugin(it) }
         }
-        val rootStore = MachineStore(rootMachine, RootCtx(), CommandHandler<Nothing, RootAct> { _, _ -> }, executionScope, TestClock(scope.testScheduler), dispatcher, observers = listOf(rootMember)) {
+        val rootStore = MachineStore(rootMachine, RootCtx(), CommandHandler<Nothing, RootAct> { _, _ -> }, executionScope, TestClock(scope.testScheduler), rootContext ?: dispatcher, observers = listOf(rootMember)) {
             exceptionHandler(ExceptionHandler.Ignore)
         }
 
@@ -154,6 +156,54 @@ class MachineGroupTest {
         fun close() {
             pickerStore.close()
             rootStore.close()
+        }
+    }
+
+    @Test
+    fun aRoutedEffect_tracksEachReceiverUntilItDecidesOrCloses() = runTest {
+        val f = Fixture(this)
+        val otherId = StoreInstanceId("other-root")
+        val member = f.group.member<RootCtx, RootAct, Nothing, RootEv>(otherId)
+        val other = MachineStore(rootMachine, RootCtx(), CommandHandler<Nothing, RootAct> { _, _ -> }, f.executionScope, TestClock(testScheduler), f.dispatcher, observers = listOf(member))
+        try {
+            member.attach(other)
+            f.group.route<PickerEv, RootAct>(pickerId, otherId) { (it as? PickerEv.Picked)?.let { event -> RootAct.Apply(event.name) } }
+            other.start()
+            runCurrent()
+            (f.rootStore as MachineStoreImpl).freeze()
+            (other as MachineStoreImpl).freeze()
+            f.pickerStore.dispatch(PickerAct.Pick("tom"))
+            runCurrent()
+            val message = MessageId(pickerId, EffectId(1))
+            assertEquals(setOf(BridgeMessage(message, rootId), BridgeMessage(message, otherId)), f.group.inFlight.toSet())
+            f.rootStore.thaw()
+            runCurrent()
+            assertEquals(listOf(BridgeMessage(message, otherId)), f.group.inFlight)
+            other.close()
+            runCurrent()
+            assertTrue(f.group.inFlight.isEmpty())
+            val dropped = f.session.records().map { it.entry }.filterIsInstance<JournalEntry.BridgeDropped>()
+            assertEquals(listOf(otherId), dropped.map { it.to })
+        } finally {
+            other.close()
+            f.close()
+        }
+    }
+
+    @Test
+    fun anImmediateReceiver_isJournaledAfterItsSend() = runTest {
+        val f = Fixture(this, rootContext = Dispatchers.Unconfined)
+        try {
+            runCurrent()
+            f.pickerStore.dispatch(PickerAct.Pick("tom"))
+            runCurrent()
+            val records = f.session.records()
+            val message = MessageRef(pickerId, 1)
+            val sent = records.indexOfFirst { (it.entry as? JournalEntry.BridgeSent)?.message == message }
+            val received = records.indexOfFirst { (it.entry as? JournalEntry.BridgeReceived)?.message == message }
+            assertTrue(sent >= 0 && received > sent, "a receiver must never precede its sender: $records")
+        } finally {
+            f.close()
         }
     }
 
