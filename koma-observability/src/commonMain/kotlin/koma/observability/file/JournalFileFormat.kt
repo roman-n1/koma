@@ -1,6 +1,5 @@
 package koma.observability.file
 
-import koma.core.ExperimentalKomaApi
 import koma.core.InputId
 import koma.observability.ActivationRef
 import koma.observability.Capability
@@ -49,7 +48,6 @@ const val JOURNAL_FILE_FORMAT_VERSION: Int = 1
  * suppressed. Integers are big-endian, strings a byte length and UTF-8, durations whole
  * nanoseconds, enumerations their names (the wire vocabulary).
  */
-@ExperimentalKomaApi
 object JournalFileFormat {
     /** The first eight bytes of every segment. */
     val MAGIC: ByteArray = "KOMAJRNL".encodeToByteArray()
@@ -488,7 +486,6 @@ object JournalFileFormat {
 /**
  * What the header of a segment says.
  */
-@ExperimentalKomaApi
 data class SegmentHeader(
     val fileFormatVersion: Int,
     val recordFormatVersion: Int,
@@ -503,7 +500,6 @@ data class SegmentHeader(
  * mark that says where the reading stopped and why, and whether the segment carried its end
  * frame. A finished segment without a mark was read whole.
  */
-@ExperimentalKomaApi
 data class DecodedSegment(
     val header: SegmentHeader?,
     val records: List<JournalRecord<Nothing, Nothing, Nothing>>,
@@ -515,7 +511,6 @@ data class DecodedSegment(
  * What a reader found instead of, or after, records. Marks are never thrown; they are part of
  * what was read, in its order.
  */
-@ExperimentalKomaApi
 sealed interface SegmentMark {
     /** The bytes do not begin with the segment magic. */
     data class NotASegment(val segment: String, val reason: String) : SegmentMark

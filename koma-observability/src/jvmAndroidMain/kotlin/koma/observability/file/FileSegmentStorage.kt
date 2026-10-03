@@ -1,6 +1,5 @@
 package koma.observability.file
 
-import koma.core.ExperimentalKomaApi
 import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -8,7 +7,6 @@ import java.io.FileOutputStream
 /**
  * Segments as files of [directory], created when absent.
  */
-@ExperimentalKomaApi
 actual class FileSegmentStorage actual constructor(directory: String) : SegmentStorage {
     private val directory = File(directory)
 

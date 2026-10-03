@@ -295,7 +295,7 @@ KDoc that documents these contracts (`Plugin.kt`, `Store.kt`, `StateSaver.kt`, `
 
 | # | Change | Where | Since | Regression tests | Upstream status | Removable when |
 |---|---|---|---|---|---|---|
-| c1 | `InputId` (`@ExperimentalKomaApi`), the id every journal record and decision observer carries | `StoreProbe.kt` | round 9, 90a7e02 | `StoreProbeTest` | proposed with b1 (as `@InternalKomaApi`) | merged |
+| c1 | `InputId` (public; `@ExperimentalKomaApi` until 5.0-3, 2026-10-01), the id every journal record and decision observer carries | `StoreProbe.kt` | round 9, 90a7e02 | `StoreProbeTest` | proposed with b1 (as `@InternalKomaApi`) | merged |
 | c2 | `StoreScope` changed from `sealed` to open, so `ChartHookScope` and `ChartLaunchScope` can be `StoreScope`s for `koma-message`'s `message()` | `StoreScope.kt` | round 4, 916c19c | — | fork-only by design | the chart scopes expose `val store: StoreScope` and delegate instead of extending |
 | c3 | `StorePatch.probes`: a new property, so the data class's constructor and `copy` changed | `StorePatch.kt` | round 9, ccc1c1e | `StoreProbeTest` | with b1 | merged |
 | c4 | New abstract members of `StoreInternalApi` (`dispatchIf`, `matchActionHandlers`, `handlerMetadata`): a binary change for implementors of the internal interface | `StoreInternalApi.kt` | rounds 6, 9 | — | with their rows | with their rows |
@@ -373,7 +373,10 @@ removed from the core of the machine and the journal (`Machine`, `MachineStore`,
 `RecordingCodec`, `RecordingFiles`), held by `apiCheck`; (2) the formats frozen under a migration
 policy: a version bump only with a migration or a reader of the old version and a golden of it.
 (2) is in place since 2026-10-01: the [format freeze policy](../adr/2026-10-01-format-freeze-policy.md)
-and `FormatVersionsTest`, which pins the five versions and names the checklist on a bump.
+and `FormatVersionsTest`, which pins the five versions and names the checklist on a bump. (1) is
+under way per the [stable core ADR](../adr/2026-10-01-stable-core.md): `InputId` and every
+declaration of `koma-observability` since 2026-10-01; `koma-statechart` and the recording formats of
+`koma-timetravel` follow, one PR per module.
 The messenger pilot, device measurements and publishing remain work, not conditions of the number.
 
 ## Remaining work

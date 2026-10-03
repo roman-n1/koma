@@ -4,7 +4,6 @@ package koma.observability
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.core.InputId
 import koma.core.InternalKomaApi
 import koma.core.State
@@ -40,7 +39,6 @@ const val JOURNAL_FORMAT_VERSION: Int = 7
  * assigned [groupSeq], so it never decreases along the sequence. Diagnostic only: the order is
  * [groupSeq], not time
  */
-@ExperimentalKomaApi
 data class JournalRecord<out S : State, out A : Action, out E : Event>(
     val formatVersion: Int,
     val session: RuntimeSessionId,
@@ -58,7 +56,6 @@ data class JournalRecord<out S : State, out A : Action, out E : Event>(
  * payloads and failures already passed through the [PayloadPolicy], plus the records of the
  * recording itself.
  */
-@ExperimentalKomaApi
 sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
     /**
      * A Store started recording into the session, with what its recording can be used for.
@@ -215,7 +212,6 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
 /**
  * What an accepted input is, with the action or failure as the policy kept it.
  */
-@ExperimentalKomaApi
 sealed interface InputDescriptor<out A : Action> {
     data object Startup : InputDescriptor<Nothing>
 
@@ -232,7 +228,6 @@ sealed interface InputDescriptor<out A : Action> {
  * Why an input was discarded; the names are the wire vocabulary, stable across versions of the
  * core types they mirror.
  */
-@ExperimentalKomaApi
 enum class DiscardKind {
     StoreClosed,
     ClearedOnStateExit,
@@ -247,13 +242,11 @@ enum class DiscardKind {
  * A discard reason and, for [DiscardKind.Rejected] and [DiscardKind.StartupFailed], the failure
  * behind it as the policy described it.
  */
-@ExperimentalKomaApi
 data class DiscardDescriptor(val kind: DiscardKind, val failure: FailureDescriptor? = null)
 
 /**
  * How a processing ended; the names are the wire vocabulary.
  */
-@ExperimentalKomaApi
 enum class OutcomeKind {
     Handled,
     Unchanged,
@@ -267,34 +260,29 @@ enum class OutcomeKind {
  * An outcome with the number of snapshots it committed and, for [OutcomeKind.Recovered] and
  * [OutcomeKind.Failed], the failure as the policy described it.
  */
-@ExperimentalKomaApi
 data class OutcomeDescriptor(val kind: OutcomeKind, val commits: Int = 0, val failure: FailureDescriptor? = null)
 
 /**
  * A node with an activation id, as a decision names them.
  */
-@ExperimentalKomaApi
 data class ActivationRef(val node: String, val activation: Long)
 
 /**
  * A command a decision registered: its id, the activation it belongs to, its lane and policy
  * names, and what the policy kept of the command itself.
  */
-@ExperimentalKomaApi
 data class CommandRef(val id: Long, val scope: Long, val lane: String?, val policy: String?, val command: Payload<Any?>)
 
 /**
  * A timer a decision scheduled: its id, the transition it fires (by position in the chart), the
  * activation of its source and when it is due on the machine's clock.
  */
-@ExperimentalKomaApi
 data class TimerRef(val id: Long, val transition: Int, val activation: Long, val deadline: Duration)
 
 /**
  * A bridge message as the journal names it: the Store that sent it and the id of the effect it
  * was routed from, so the same effect gives the same message in a replay.
  */
-@ExperimentalKomaApi
 data class MessageRef(val from: StoreInstanceId, val effect: Long) {
     override fun toString(): String = "${from.value}/e$effect"
 }

@@ -1,6 +1,5 @@
 package koma.observability
 
-import koma.core.ExperimentalKomaApi
 import kotlin.jvm.JvmInline
 import kotlin.random.Random
 
@@ -8,7 +7,6 @@ import kotlin.random.Random
  * One run of the process, or of a runtime inside it: the scope in which [GroupSeq] and
  * [StoreSeq] are assigned. A replay does not reuse the id of the recording it replays.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class RuntimeSessionId(val value: String) {
     init {
@@ -29,7 +27,6 @@ value class RuntimeSessionId(val value: String) {
  * A set of Stores whose records are ordered together, for example one open screen with its
  * root, main and bridge Stores. [GroupSeq] is dense within a group.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class MachineGroupId(val value: String) {
     init {
@@ -43,7 +40,6 @@ value class MachineGroupId(val value: String) {
  * One Store instance. Two tabs showing the same chat are two instances: the id is never a class
  * name or a domain id such as a chat id.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class StoreInstanceId(val value: String) {
     init {
@@ -58,7 +54,6 @@ value class StoreInstanceId(val value: String) {
  * publication order. Assigned under the journal's lock together with the record's retention, so
  * the order of two records is the order they were published in, whatever thread published them.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class GroupSeq(val value: Long) {
     override fun toString(): String = "#$value"
@@ -67,7 +62,6 @@ value class GroupSeq(val value: Long) {
 /**
  * Position of a record among the records of one Store: 1 for the first, then dense.
  */
-@ExperimentalKomaApi
 @JvmInline
 value class StoreSeq(val value: Long) {
     override fun toString(): String = "#$value"
@@ -76,7 +70,6 @@ value class StoreSeq(val value: Long) {
 /**
  * Whether the recorded Store runs live or replays a recording.
  */
-@ExperimentalKomaApi
 enum class ExecutionMode {
     Live,
     Replay,
@@ -89,7 +82,6 @@ enum class ExecutionMode {
  * [InspectOnly]: its records can be shown, not replayed. [DeterministicReplay] is reserved for
  * Stores driven through the replay-ready decision pipeline; nothing grants it yet.
  */
-@ExperimentalKomaApi
 enum class Capability {
     InspectOnly,
     DeterministicReplay,

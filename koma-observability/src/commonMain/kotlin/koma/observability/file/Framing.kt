@@ -1,6 +1,5 @@
 package koma.observability.file
 
-import koma.core.ExperimentalKomaApi
 
 /**
  * The framing every segment file of Koma shares: a magic, then frames of
@@ -9,7 +8,6 @@ import koma.core.ExperimentalKomaApi
  * damage they can suffer, a write cut short, a flipped byte, bytes after the end, is told apart
  * here, once.
  */
-@ExperimentalKomaApi
 object Framing {
     /** The end frame: a length of zero and the CRC of nothing. */
     val END: ByteArray = ByteArray(8)
@@ -64,5 +62,4 @@ object Framing {
  * What [Framing.read] found: the frames that held, the mark of what stopped the reading (with
  * `recordsRead` counting frames), and whether the end frame was there.
  */
-@ExperimentalKomaApi
 class FramesRead(val frames: List<Framing.Frame>, val mark: SegmentMark?, val finished: Boolean)

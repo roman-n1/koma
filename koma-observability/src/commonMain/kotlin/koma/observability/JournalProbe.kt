@@ -5,7 +5,6 @@ package koma.observability
 import koma.core.Action
 import koma.core.DiscardReason
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.core.InputKind
 import koma.core.InternalKomaApi
 import koma.core.ProcessingOutcome
@@ -24,7 +23,6 @@ import kotlin.time.TimeMark
  * @param policy What to keep of states, actions, events and failures; the production default keeps
  * metadata only
  */
-@ExperimentalKomaApi
 fun <S : State, A : Action, E : Event> StoreBuilder<S, A, E>.recordTo(
     session: RecordingSession,
     store: StoreInstanceId,
@@ -36,7 +34,6 @@ fun <S : State, A : Action, E : Event> StoreBuilder<S, A, E>.recordTo(
 /**
  * Records this Store into [session] as [store] from a test patch; see the [StoreBuilder] overload.
  */
-@ExperimentalKomaApi
 fun <S : State, A : Action, E : Event> StorePatchBuilder<S, A, E>.recordTo(
     session: RecordingSession,
     store: StoreInstanceId,
@@ -49,7 +46,6 @@ fun <S : State, A : Action, E : Event> StorePatchBuilder<S, A, E>.recordTo(
  * Turns the traces of one Store into journal entries and publishes them. The policy runs here,
  * on the Store's thread, so nothing of a payload is retained before it decided.
  */
-@ExperimentalKomaApi
 internal class JournalProbe<S : State, A : Action, E : Event>(
     private val session: RecordingSession,
     private val store: StoreInstanceId,

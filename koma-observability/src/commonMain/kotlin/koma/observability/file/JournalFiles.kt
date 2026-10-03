@@ -1,6 +1,5 @@
 package koma.observability.file
 
-import koma.core.ExperimentalKomaApi
 import koma.observability.JournalEntry
 import koma.observability.JournalFormat
 import koma.observability.JournalRecord
@@ -9,7 +8,6 @@ import koma.observability.RuntimeSessionId
 /**
  * One thing read from the segments of a session: a record, or a mark where records could not be.
  */
-@ExperimentalKomaApi
 sealed interface JournalFileEvent {
     data class Record(val record: JournalRecord<Nothing, Nothing, Nothing>) : JournalFileEvent
 
@@ -20,7 +18,6 @@ sealed interface JournalFileEvent {
  * What [JournalFiles.read] found: the records in [koma.observability.GroupSeq] order with the
  * marks between them where segments or frames were missing or damaged.
  */
-@ExperimentalKomaApi
 data class JournalFileContents(val events: List<JournalFileEvent>) {
     val records: List<JournalRecord<Nothing, Nothing, Nothing>> get() = events.mapNotNull { (it as? JournalFileEvent.Record)?.record }
 
@@ -36,7 +33,6 @@ data class JournalFileContents(val events: List<JournalFileEvent>) {
  * crash reporter, an export as lines, and pruning by total size. Reading never throws on
  * damaged segments: what could be read is returned, the rest is marked.
  */
-@ExperimentalKomaApi
 class JournalFiles(private val storage: SegmentStorage) {
     /** The sessions that have segments, oldest first by the storage's clock. */
     fun sessions(): List<RuntimeSessionId> = segments().groupBy { it.session }.entries
