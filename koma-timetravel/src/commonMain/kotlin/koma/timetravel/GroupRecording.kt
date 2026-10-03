@@ -2,7 +2,6 @@ package koma.timetravel
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.core.InputId
 import koma.observability.FailureDescriptor
 import koma.observability.StoreInstanceId
@@ -21,14 +20,12 @@ import koma.statechart.machine.SourceSnapshot
 import kotlinx.coroutines.sync.Mutex
 
 /** One step of a group's run: the [step] of [store]'s recording, at its position in the group's order. */
-@ExperimentalKomaApi
 data class GroupStep(val store: StoreInstanceId, val step: Int)
 
 /**
  * A route of the group's bridge, as a recording remembers it: effects of [from] reached [to] at
  * some time of the run; [pair] is its place in a request/reply pair, when it has one.
  */
-@ExperimentalKomaApi
 data class GroupRoute(val from: StoreInstanceId, val to: StoreInstanceId, val pair: RoutePair? = null)
 
 /**
@@ -48,7 +45,6 @@ data class GroupRoute(val from: StoreInstanceId, val to: StoreInstanceId, val pa
  * @property sourceSnapshots The sources' state where the run begins, for a run recorded since a
  * cut: what a branch scripts the sources' next data from
  */
-@ExperimentalKomaApi
 class GroupRecording(
     val members: Map<StoreInstanceId, Recording<*, *, *, *>>,
     val order: List<GroupStep>,
@@ -123,7 +119,6 @@ class GroupRecording(
  * @param routes The bridge's routes, every one it had, read when [recording] is taken (a
  * group's routes may be registered, or removed, after the recorder is created)
  */
-@ExperimentalKomaApi
 class GroupRecorder(
     private val routes: () -> List<GroupRoute> = { emptyList() },
     private val sources: () -> Set<SourceId> = { emptySet() },

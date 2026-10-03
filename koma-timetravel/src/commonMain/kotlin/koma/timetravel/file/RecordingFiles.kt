@@ -2,7 +2,6 @@ package koma.timetravel.file
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.observability.StoreInstanceId
 import koma.observability.file.SegmentMark
 import koma.observability.file.SegmentStorage
@@ -15,7 +14,6 @@ import koma.timetravel.carriedPast
 /**
  * What a reader of recording files found instead of, or between, steps. Never thrown.
  */
-@ExperimentalKomaApi
 sealed interface RecordingFileMark {
     /** A segment is damaged, cut short, of a newer format or not a segment; see the mark. */
     data class Damaged(val mark: SegmentMark) : RecordingFileMark
@@ -39,7 +37,6 @@ sealed interface RecordingFileMark {
  * @property firstStep The index in the whole run of the range's first step
  * @property segments The segments the range was read from
  */
-@ExperimentalKomaApi
 data class RecordingFileContents<C, A : Action, CMD, E : Event>(
     val recording: Recording<C, A, CMD, E>?,
     val firstStep: Int?,
@@ -55,7 +52,6 @@ data class RecordingFileContents<C, A : Action, CMD, E : Event>(
  * last continuous range of its run with the marks of everything else. Reading never throws on
  * damage. [prune] bounds what every Store's and group's files take together.
  */
-@ExperimentalKomaApi
 class RecordingFiles(private val storage: SegmentStorage) {
     /** The Stores that have segments. */
     fun stores(): List<StoreInstanceId> = storage.list().mapNotNull { RecordingFileFormat.parseSegmentName(it.name)?.first }.distinct()

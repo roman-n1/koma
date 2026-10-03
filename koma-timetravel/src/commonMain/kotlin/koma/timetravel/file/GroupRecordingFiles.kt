@@ -2,7 +2,6 @@ package koma.timetravel.file
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.core.InputId
 import koma.observability.FailureDescriptor
 import koma.observability.MachineGroupId
@@ -53,7 +52,6 @@ import kotlinx.serialization.json.Json
  * Format 2 added the cut to the header; a format 1 segment reads as one without cuts. Format 3
  * added the pair of a route; a format 2 segment reads as routes without pairs.
  */
-@ExperimentalKomaApi
 object GroupRecordingFileFormat {
     val MAGIC: ByteArray = "KOMAGRPO".encodeToByteArray()
 
@@ -192,7 +190,6 @@ internal class EntryWire(val store: String, val step: Int, val sent: List<Messag
  * first entry, [inFlight] the messages sent before it and not yet received, [cut] the group's
  * cut the segment begins at, if it begins at one.
  */
-@ExperimentalKomaApi
 data class GroupSegmentHeader(
     val fileFormatVersion: Int,
     val group: MachineGroupId,
@@ -210,14 +207,11 @@ data class GroupSegmentHeader(
  * entry after it, how many steps of each member came before it, and the sources' snapshots
  * there. A run since a cut knows its sources' state, as [GroupRecording.since] does in memory.
  */
-@ExperimentalKomaApi
 data class RecordedCut(val position: Int, val counts: Map<StoreInstanceId, Int>, val sources: Map<SourceId, SourceSnapshot>)
 
 /** One decision of the group in its order: which member, which of its steps, what it sent over the bridge and what it received. */
-@ExperimentalKomaApi
 data class GroupOrderEntry(val store: StoreInstanceId, val step: Int, val sent: List<MessageId> = emptyList(), val received: MessageId? = null)
 
-@ExperimentalKomaApi
 data class DecodedGroupSegment(val header: GroupSegmentHeader?, val entries: List<GroupOrderEntry>, val mark: SegmentMark?, val finished: Boolean)
 
 /**
@@ -236,7 +230,6 @@ data class DecodedGroupSegment(val header: GroupSegmentHeader?, val entries: Lis
  * @param scope Runs the writers
  * @param config Budgets of every file
  */
-@ExperimentalKomaApi
 class GroupRecordingFileSink(
     private val group: MachineGroup,
     private val id: MachineGroupId,
@@ -434,7 +427,6 @@ private fun MachineGroup.Route.mapUnchecked(event: Event): Action? = mapEvent(ev
  * @property position The index in the whole run of the range's first entry
  * @property cuts The group's cuts inside the range, by position; [since] gives the run from one
  */
-@ExperimentalKomaApi
 class GroupRecordingFileContents internal constructor(
     val recording: GroupRecording?,
     val position: Int?,
@@ -463,7 +455,6 @@ class GroupRecordingFileContents internal constructor(
  * segment's header and the entries before it. The cuts inside the range are offered too: a
  * range since a cut knows the sources' snapshots.
  */
-@ExperimentalKomaApi
 class GroupRecordingFiles(private val storage: SegmentStorage) {
     /** The groups that have order files. */
     fun groups(): List<MachineGroupId> = storage.list().mapNotNull { GroupRecordingFileFormat.parseSegmentName(it.name)?.first }.distinct()

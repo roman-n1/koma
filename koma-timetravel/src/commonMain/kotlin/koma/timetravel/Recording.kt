@@ -2,7 +2,6 @@ package koma.timetravel
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.core.InputId
 import koma.observability.FailureDescriptor
 import koma.statechart.machine.Decision
@@ -19,7 +18,6 @@ import kotlinx.coroutines.sync.Mutex
 /**
  * One input a machine decided during a recorded run, with what came of it.
  */
-@ExperimentalKomaApi
 sealed interface RecordedStep<C, A : Action, CMD, E : Event> {
     val input: MachineInput<A>
 
@@ -48,7 +46,6 @@ sealed interface RecordedStep<C, A : Action, CMD, E : Event> {
  * the live executor for a run recorded from there (see [since])
  * @property steps The inputs in processing order with their outcomes
  */
-@ExperimentalKomaApi
 class Recording<C, A : Action, CMD, E : Event>(
     val definition: DefinitionId,
     val version: DefinitionVersion,
@@ -143,7 +140,6 @@ class Recording<C, A : Action, CMD, E : Event>(
  * what was abandoned is ending until the machine deregisters it. What [Recording.checkpointAt]
  * carries forward, and what a recording file begins each segment with.
  */
-@ExperimentalKomaApi
 fun <C, A : Action, CMD, E : Event> ExecutorCheckpoint<C, CMD>.carriedPast(step: RecordedStep<C, A, CMD, E>): ExecutorCheckpoint<C, CMD> {
     val now = maxOf(now, step.input.now)
     if (step !is RecordedStep.Committed) return copy(now = now)
@@ -171,7 +167,6 @@ fun <C, A : Action, CMD, E : Event> ExecutorCheckpoint<C, CMD>.carriedPast(step:
 /**
  * What a machine can do with a [Recording].
  */
-@ExperimentalKomaApi
 sealed interface Compatibility {
     /** The recording can be decided again and compared step by step. */
     data object Replayable : Compatibility
@@ -197,7 +192,6 @@ sealed interface Compatibility {
  * @param machine The machine of the store
  * @param context The context the store was created with
  */
-@ExperimentalKomaApi
 class MachineRecorder<C, A : Action, CMD, E : Event>(
     private val machine: Machine<C, A, CMD, E>,
     context: C,

@@ -2,7 +2,6 @@ package koma.timetravel.file
 
 import koma.core.Action
 import koma.core.Event
-import koma.core.ExperimentalKomaApi
 import koma.observability.StoreInstanceId
 import koma.observability.file.Framing
 import koma.observability.file.SegmentMark
@@ -32,7 +31,6 @@ const val RECORDING_FILE_FORMAT_VERSION: Int = 1
  * reader tells a continuous range from one with a hole. Checkpoints and steps are the
  * [RecordingCodec]'s JSON, one per frame, with a tag byte in front.
  */
-@ExperimentalKomaApi
 object RecordingFileFormat {
     /** The first eight bytes of every segment. */
     val MAGIC: ByteArray = "KOMARECD".encodeToByteArray()
@@ -148,7 +146,6 @@ object RecordingFileFormat {
 internal class RecordingHeaderWire(val formatVersion: Int, val recordingFormat: Int, val definition: String, val version: String, val store: String, val index: Int, val firstStep: Int)
 
 /** What the header of a recording segment says; [firstStep] is the index in the whole run of the segment's first step. */
-@ExperimentalKomaApi
 data class RecordingSegmentHeader(
     val fileFormatVersion: Int,
     val recordingFormatVersion: Int,
@@ -164,7 +161,6 @@ data class RecordingSegmentHeader(
  * the steps read in order, the mark of what stopped the reading, and whether the end frame
  * was there.
  */
-@ExperimentalKomaApi
 data class DecodedRecordingSegment<C, A : Action, CMD, E : Event>(
     val header: RecordingSegmentHeader?,
     val start: ExecutorCheckpoint<C, CMD>?,
