@@ -37,7 +37,8 @@ builds the inspector and the replay on; this module is the journal only.
 Status: **experimental.** Every declaration is `@ExperimentalKomaApi`, and the module lives in the
 fork [roman-n1/koma](https://github.com/roman-n1/koma). The record model has `JOURNAL_FORMAT_VERSION`
 7 (new variants only at the end, under new tags, new fields only at the end of a variant; a
-reader of a version reads every earlier one),
+reader of a version reads every earlier one; the
+[format freeze policy](../doc/internal/adr/2026-10-01-format-freeze-policy.md) says what a bump ships with),
 the segment layout `JOURNAL_FILE_FORMAT_VERSION` 1; every recording is `Capability.InspectOnly`
 (the replay recording is `koma-timetravel`'s).
 

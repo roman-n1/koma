@@ -372,6 +372,8 @@ removed from the core of the machine and the journal (`Machine`, `MachineStore`,
 `ExecutorCheckpoint`, `MachineGroup`, `RecordingSession`, `JournalEntry`, `JournalFiles`,
 `RecordingCodec`, `RecordingFiles`), held by `apiCheck`; (2) the formats frozen under a migration
 policy: a version bump only with a migration or a reader of the old version and a golden of it.
+(2) is in place since 2026-10-01: the [format freeze policy](../adr/2026-10-01-format-freeze-policy.md)
+and `FormatVersionsTest`, which pins the five versions and names the checklist on a bump.
 The messenger pilot, device measurements and publishing remain work, not conditions of the number.
 
 ## Remaining work
