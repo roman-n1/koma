@@ -112,6 +112,13 @@ public final class koma/timetravel/compose/ComposableSingletons$GroupReplayPanel
 	public final fun getLambda$1057652610$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
 }
 
+public final class koma/timetravel/compose/ComposableSingletons$GroupTimeTravelControlsKt {
+	public static final field INSTANCE Lkoma/timetravel/compose/ComposableSingletons$GroupTimeTravelControlsKt;
+	public fun <init> ()V
+	public final fun getLambda$676953485$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$967325494$koma_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+}
+
 public final class koma/timetravel/compose/ComposableSingletons$InspectorScreenKt {
 	public static final field INSTANCE Lkoma/timetravel/compose/ComposableSingletons$InspectorScreenKt;
 	public fun <init> ()V
@@ -176,6 +183,22 @@ public final class koma/timetravel/compose/GroupReplayPosition {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/timetravel/compose/GroupTimeTravelControls {
+	public static final field $stable I
+	public fun <init> (Lkoma/timetravel/compose/GroupReplayControls;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Lkoma/timetravel/compose/GroupReplayControls;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun branchHere ()V
+	public final fun getBranch ()Lkoma/timetravel/compose/BranchControls;
+	public final fun getBranchPosition ()Ljava/lang/Integer;
+	public final fun getMode ()Lkoma/timetravel/compose/InspectorMode;
+	public final fun getReplay ()Lkoma/timetravel/compose/GroupReplayControls;
+	public final fun returnToReplay ()V
+}
+
+public final class koma/timetravel/compose/GroupTimeTravelControlsKt {
+	public static final fun GroupTimeTravelBar (Lkoma/timetravel/compose/GroupTimeTravelControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
 public final class koma/timetravel/compose/InspectorMode : java/lang/Enum {
 	public static final field Branch Lkoma/timetravel/compose/InspectorMode;
 	public static final field Inspect Lkoma/timetravel/compose/InspectorMode;
@@ -190,6 +213,7 @@ public final class koma/timetravel/compose/InspectorScreenKt {
 	public static final fun BranchPanel (Lkoma/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun DefinitionPanel (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun InspectorScreen (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/GroupReplayControls;Lkoma/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun InspectorScreen (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/GroupTimeTravelControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun InspectorScreen (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/ReplayControls;Lkoma/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun ModeBar (Lkoma/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
 	public static final fun PositionPanel (Lkoma/timetravel/compose/InspectorState;Lkoma/timetravel/compose/ReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V

@@ -22,6 +22,9 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineTime
 import koma.timetravel.GroupBranch
+import koma.timetravel.GroupRecording
+import koma.timetravel.GroupReplaySession
+import koma.timetravel.GroupStep
 import koma.timetravel.RecordedStep
 import koma.timetravel.Recording
 import koma.timetravel.ReplaySession
@@ -47,6 +50,40 @@ import kotlin.time.Duration.Companion.seconds
  * ```
  */
 class BranchControlsTest {
+
+    @Test
+    fun anExperimentRestoresAwaitingCommandsAndTimers_withoutChangingTheReplayCheckpoint() {
+        val initial = machine.initialSnapshot(Ctx())
+        val start = MachineInput.Start(MachineTime.Zero)
+        val started = machine.decide(initial, start)
+        val load = MachineInput.Dispatch(Act.Load, MachineTime.Zero)
+        val loading = machine.decide(started.snapshot, load)
+        val recording = Recording(machine.id, machine.version, initial, listOf(
+            RecordedStep.Committed<Ctx, Act, Fetch, Nothing>(start, started),
+            RecordedStep.Committed<Ctx, Act, Fetch, Nothing>(load, loading),
+        ))
+        val replay = GroupReplayControls(GroupReplaySession(mapOf(store to machine), GroupRecording(mapOf(store to recording), listOf(GroupStep(store, 0), GroupStep(store, 1)))))
+        replay.seek(2)
+        val checkpoint = replay.checkpoint(store)
+        val answer = BranchInput.Answer(store, "Loaded", Act.Loaded)
+        val controls = GroupTimeTravelControls(replay, inputs = listOf(answer))
+        controls.branchHere()
+        val experiment = checkNotNull(controls.branch)
+        val awaiting = experiment.awaiting(store).single()
+        assertEquals(Fetch, awaiting.command)
+        assertEquals(checkpoint.snapshot.timers, experiment.snapshot(store).timers)
+        experiment.answer(answer, awaiting.id)
+        assertTrue(experiment.snapshot(store).isActive(content))
+        assertEquals(checkpoint, replay.checkpoint(store))
+
+        controls.returnToReplay()
+        controls.branchHere()
+        val fresh = checkNotNull(controls.branch)
+        assertEquals(awaiting, fresh.awaiting(store).single())
+        fresh.advance(11.seconds)
+        assertTrue(fresh.snapshot(store).isActive(idle), "the recorded timer fires on the experiment's virtual clock")
+        assertEquals(checkpoint, replay.checkpoint(store))
+    }
 
     data class Ctx(val loaded: Int = 0)
 

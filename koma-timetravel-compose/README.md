@@ -32,6 +32,11 @@ Store and reaches no network.
   `Answer` with a label), the clock's advance, the definition with the active states, and
   every decision made with what it changed. The branch decides with the pure machines;
   nothing runs.
+- **`GroupTimeTravelControls(replay, routes, inputs)`**: the complete replay/experiment
+  workflow. Branch Here creates an isolated branch from every member's checkpoint at the
+  current global position. The screen switches to Branch mode, shows the origin and pauses
+  replay navigation. Return to Replay discards the experiment and restores the replay UI at
+  the original cursor, including any divergence and verification result.
 
 Status: **experimental**, `@ExperimentalKomaApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
 
@@ -69,6 +74,19 @@ fun ReplayGroup(recording: GroupRecording, machines: Map<StoreInstanceId, Machin
 }
 
 @Composable
+fun ExperimentWithGroup(recording: GroupRecording, machines: Map<StoreInstanceId, Machine<*, *, *, *>>, journal: JournalFileContents) {
+    val state = rememberInspectorState(Inspector(journal.events, recording.members))
+    val controls = remember(recording, machines) {
+        GroupTimeTravelControls(
+            GroupReplayControls(GroupReplaySession(machines, recording)),
+            routes = routes, // application-supplied GroupBranch.Route mappings; empty means no local delivery
+            inputs = listOf(BranchInput.Dispatch(storeId, "Load", Act.Load)),
+        )
+    }
+    InspectorScreen(state, timeTravel = controls) // mode comes from the workflow
+}
+
+@Composable
 fun BranchOf(session: GroupReplaySession, machines: Map<StoreInstanceId, Machine<*, *, *, *>>) {
     val branch = remember { BranchControls(session.branch(routes), machines, listOf(BranchInput.Dispatch(storeId, "Load", Act.Load))) }
     InspectorScreen(state, branch = branch)                       // mode Branch: the panel decides what the buttons send
@@ -82,3 +100,10 @@ restore recorded checkpoints without verifying skipped inputs. Forward re-decide
 input and checks bridge/source causality; Verify checks the whole group without moving the
 cursor. Timers, command queues and pending effects are displayed as recorded state; replay
 does not start command handlers, timers or network requests.
+
+Experiments begin from recorded executor checkpoints, so awaiting commands can be answered
+and recorded timers can fire when the virtual clock advances. Application-supplied routes
+map branch effects to local member actions; recorded bridge metadata cannot reconstruct
+those functions. External sources use scripted `BranchInput.Feed` data. While the workflow
+screen owns the cursor, do not move its replay session externally. Returning leaves all
+recorded checkpoints untouched; starting another experiment creates a fresh branch.
