@@ -73,20 +73,31 @@ fun InspectorScreen(state: InspectorState, groupReplay: GroupReplayControls, bra
     InspectorScreenContent(state, null, groupReplay, branch, modifier)
 }
 
+/** Replay, experiment from the current group position, then return to recorded history. */
+@ExperimentalKomaApi
+@Composable
+fun InspectorScreen(state: InspectorState, timeTravel: GroupTimeTravelControls, modifier: Modifier = Modifier) {
+    InspectorScreenContent(state, null, timeTravel.replay, timeTravel.branch, modifier, timeTravel)
+}
+
 @OptIn(ExperimentalKomaApi::class)
 @Composable
-private fun InspectorScreenContent(state: InspectorState, replay: ReplayControls<*, *, *, *>?, groupReplay: GroupReplayControls?, branch: BranchControls?, modifier: Modifier) {
+private fun InspectorScreenContent(state: InspectorState, replay: ReplayControls<*, *, *, *>?, groupReplay: GroupReplayControls?, branch: BranchControls?, modifier: Modifier, timeTravel: GroupTimeTravelControls? = null) {
+    val showReplay = timeTravel?.branch == null
     Surface(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            ModeBar(state)
+            ModeBarContent(state, timeTravel?.mode ?: state.mode)
+            if (timeTravel != null) GroupTimeTravelBar(timeTravel)
             if (replay != null) ReplayBar(replay, state)
-            if (groupReplay != null) GroupReplayBar(groupReplay)
+            if (groupReplay != null && showReplay) GroupReplayBar(groupReplay)
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 if (maxWidth >= 900.dp) {
                     Row(modifier = Modifier.fillMaxSize()) {
                         StoresPanel(state, modifier = Modifier.weight(1f).fillMaxSize())
-                        VerticalRule()
-                        if (groupReplay != null) GroupTimelinePanel(groupReplay, state.storeFilter, modifier = Modifier.weight(2f).fillMaxSize()) else TimelinePanel(state, modifier = Modifier.weight(2f).fillMaxSize())
+                        if (showReplay) {
+                            VerticalRule()
+                            if (groupReplay != null) GroupTimelinePanel(groupReplay, state.storeFilter, modifier = Modifier.weight(2f).fillMaxSize()) else TimelinePanel(state, modifier = Modifier.weight(2f).fillMaxSize())
+                        }
                         VerticalRule()
                         when {
                             branch != null -> BranchPanel(branch, modifier = Modifier.weight(2f).fillMaxSize())
@@ -97,10 +108,12 @@ private fun InspectorScreenContent(state: InspectorState, replay: ReplayControls
                 } else {
                     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         StoresPanel(state, modifier = Modifier.fillMaxWidth())
-                        HorizontalDivider()
-                        if (groupReplay != null) GroupTimelinePanel(groupReplay, state.storeFilter, modifier = Modifier.fillMaxWidth().height(360.dp)) else TimelinePanel(state, modifier = Modifier.fillMaxWidth().height(360.dp))
-                        HorizontalDivider()
-                        if (groupReplay != null) GroupPositionPanel(groupReplay, modifier = Modifier.fillMaxWidth()) else PositionPanel(state, replay, modifier = Modifier.fillMaxWidth())
+                        if (showReplay) {
+                            HorizontalDivider()
+                            if (groupReplay != null) GroupTimelinePanel(groupReplay, state.storeFilter, modifier = Modifier.fillMaxWidth().height(360.dp)) else TimelinePanel(state, modifier = Modifier.fillMaxWidth().height(360.dp))
+                            HorizontalDivider()
+                            if (groupReplay != null) GroupPositionPanel(groupReplay, modifier = Modifier.fillMaxWidth()) else PositionPanel(state, replay, modifier = Modifier.fillMaxWidth())
+                        }
                         if (branch != null) {
                             HorizontalDivider()
                             BranchPanel(branch, modifier = Modifier.fillMaxWidth())
@@ -116,12 +129,18 @@ private fun InspectorScreenContent(state: InspectorState, replay: ReplayControls
 @ExperimentalKomaApi
 @Composable
 fun ModeBar(state: InspectorState, modifier: Modifier = Modifier) {
+    ModeBarContent(state, state.mode, modifier)
+}
+
+@OptIn(ExperimentalKomaApi::class)
+@Composable
+private fun ModeBarContent(state: InspectorState, mode: InspectorMode, modifier: Modifier = Modifier) {
     val inspector = state.inspector
     Row(
-        modifier = modifier.fillMaxWidth().background(modeColor(state.mode)).padding(horizontal = 12.dp, vertical = 8.dp).semantics(mergeDescendants = true) {}.testTag("mode-bar"),
+        modifier = modifier.fillMaxWidth().background(modeColor(mode)).padding(horizontal = 12.dp, vertical = 8.dp).semantics(mergeDescendants = true) {}.testTag("mode-bar"),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(state.mode.name.uppercase(), fontWeight = FontWeight.Bold, color = Color.White)
+        Text(mode.name.uppercase(), fontWeight = FontWeight.Bold, color = Color.White)
         Text("session ${inspector.session ?: "-"}  group ${inspector.group ?: "-"}  records ${inspector.records.size}", color = Color.White)
         Text(InspectorText.completeness(inspector.completeness), fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.testTag("completeness"))
     }

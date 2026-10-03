@@ -192,6 +192,30 @@ class InspectorScreenTest {
     }
 
     @Test
+    fun theExperimentWorkflow_pausesReplay_thenReturnsToTheOriginalPosition() = runComposeUiTest {
+        val replay = GroupReplayFixture.controls()
+        replay.seek(4)
+        val recording = replay.session.recording
+        val state = InspectorState(Inspector.of(GroupReplayFixture.journal(recording), recording.members))
+        val controls = GroupTimeTravelControls(replay, inputs = listOf(BranchInput.Dispatch(GroupReplayFixture.b, "Inc", GroupReplayFixture.Inc)))
+        setContent { InspectorScreen(state, timeTravel = controls) }
+        onNodeWithTag("mode-bar").assertTextContains("REPLAY", substring = true)
+        onNodeWithTag("time-travel-branch").performClick()
+        onNodeWithTag("mode-bar").assertTextContains("BRANCH", substring = true)
+        onNodeWithTag("time-travel-origin").assertTextContains("group position 4", substring = true)
+        onNodeWithTag("group-replay-bar").assertDoesNotExist()
+        onNodeWithTag("group-timeline").assertDoesNotExist()
+        onNodeWithTag("branch-input-root-2-Inc").performClick()
+        onNodeWithTag("branch-root-2").assertTextContains("Ctx(n=12)", substring = true)
+        onNodeWithTag("time-travel-return").performClick()
+        onNodeWithTag("mode-bar").assertTextContains("REPLAY", substring = true)
+        onNodeWithTag("group-replay-position").assertTextContains("4 / 6", substring = true)
+        onNodeWithTag("group-member-root-2").assertTextContains("Ctx(n=11)", substring = true)
+        onNodeWithTag("group-replay-forward").performClick()
+        onNodeWithTag("group-replay-position").assertTextContains("5 / 6", substring = true)
+    }
+
+    @Test
     fun theBranchPanel_decidesAScriptedInput_andDrawsTheDefinition() = runComposeUiTest {
         val recording = recording()
         val session = ReplaySession(machine, recording).also { it.seek(1) }
