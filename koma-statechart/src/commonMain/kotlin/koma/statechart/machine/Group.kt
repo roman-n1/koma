@@ -110,11 +110,9 @@ class MachineGroup(private val session: RecordingSession? = null) {
     private val members = linkedMapOf<StoreInstanceId, Member<*, *, *, *>>()
     private val routeList = mutableListOf<Route>()
     private val routeHistoryList = mutableListOf<Route>()
-    private val inFlightMessages = linkedMapOf<MessageId, BridgeMessage>()
-
-    // The store each message in flight was delivered to: dropped when that store closes,
-    // whatever the member attached since.
-    private val inFlightTargets = hashMapOf<MessageId, MachineStoreImpl<*, *, *, *>>()
+    // A routed effect can reach several members: each destination has its own delivery.
+    // Track the actual store too, so reattachment cannot move an old delivery to a new store.
+    private val inFlightTargets = linkedMapOf<BridgeMessage, MachineStoreImpl<*, *, *, *>>()
     private val sourceList = mutableListOf<ExternalSource>()
     private val cutListeners = mutableListOf<CutListener>()
 
@@ -143,7 +141,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
     val memberIds: List<StoreInstanceId> get() = locked { members.keys.toList() }
 
     /** The messages sent and not yet decided by their receiver. */
-    val inFlight: List<BridgeMessage> get() = locked { inFlightMessages.values.toList() }
+    val inFlight: List<BridgeMessage> get() = locked { inFlightTargets.keys.toList() }
 
     /** The attached sources, in registration order. */
     val sourceIds: List<SourceId> get() = locked { sourceList.map { it.id } }
@@ -269,7 +267,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
                 }
             }
             val held = attached.associate { (id, store) -> id to store.heldInputs }
-            val messages = locked { inFlightMessages.values.toList() }
+            val messages = locked { inFlightTargets.keys.toList() }
             val snapshots = sources.associate { it.id to it.snapshot() }
             val boundary = session?.stats?.published?.takeIf { it > 0 }?.let(::GroupSeq)
             session?.publish(JournalEntry.CheckpointCreated(attached.map { it.first }, sources.map { it.id.value }, messages.size))
@@ -334,7 +332,6 @@ class MachineGroup(private val session: RecordingSession? = null) {
 
         override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
             decided(input, machineInput)
-            send(input, machineInput, decision)
         }
 
         override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) = decided(input, machineInput)
@@ -344,15 +341,15 @@ class MachineGroup(private val session: RecordingSession? = null) {
         private fun decided(input: InputId?, machineInput: MachineInput<A>) {
             if (machineInput !is MachineInput.BridgeReceived) return
             val (wasInFlight, gone) = locked {
-                inFlightTargets.remove(machineInput.message)
-                (inFlightMessages.remove(machineInput.message) != null) to !isReachable
+                (inFlightTargets.remove(BridgeMessage(machineInput.message, id)) != null) to !isReachable
             }
             // Dropped already (a closing store decided it all the same) or a member that left: not the group's story.
             if (!wasInFlight && gone) return
             session?.publish(id, JournalEntry.BridgeReceived(input, machineInput.message.toRef()))
         }
 
-        private fun send(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+        // MachineStore routes only after every observer has recorded the sending decision.
+        internal fun send(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
             if (decision.effects.isEmpty()) return
             val routes = locked { if (detached) emptyList() else routeList.filter { it.from == id } }
             if (routes.isEmpty()) return
@@ -369,16 +366,17 @@ class MachineGroup(private val session: RecordingSession? = null) {
                     val target = locked {
                         val member = members[route.to]
                         val store = member?.store
-                        if (member == null || store == null || !member.isReachable) {
+                        val target = if (member == null || store == null || !member.isReachable) {
                             null
                         } else {
-                            inFlightMessages[message] = BridgeMessage(message, route.to)
-                            inFlightTargets[message] = store
+                            inFlightTargets[BridgeMessage(message, route.to)] = store
                             store
                         }
+                        // Publish before delivery and before a close listener can drop it.
+                        session?.publish(id, JournalEntry.BridgeSent(input, message.toRef(), route.to, delivered = target != null, cause = cause))
+                        target
                     }
                     target?.deliverUnchecked(message, action)
-                    session?.publish(id, JournalEntry.BridgeSent(input, message.toRef(), route.to, delivered = target != null, cause = cause))
                 }
             }
         }
@@ -388,7 +386,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
     private fun takeInFlight(store: MachineStoreImpl<*, *, *, *>): List<BridgeMessage> {
         val mine = inFlightTargets.filterValues { it === store }.keys.toList()
         for (id in mine) inFlightTargets.remove(id)
-        return mine.mapNotNull { inFlightMessages.remove(it) }
+        return mine
     }
 
     private inline fun <T> locked(block: () -> T): T {
