@@ -1,5 +1,11 @@
 # koma-timetravel-compose
 
+The debug screen for recorded Machines: select a position, move every group member together,
+compare decisions, or experiment in a branch. Choose `GroupTimeTravelControls` for the whole
+replay → experiment → return workflow, `GroupReplayControls` for replay only, or
+`ReplayControls` for one Store. Add this to a debug dependency graph; setup follows the
+[installation guide](../README.md#installation).
+
 For a complete runnable recording → disk → replay → experiment workflow, see the
 [Time Travel desktop example](../examples/time-travel/README.md).
 

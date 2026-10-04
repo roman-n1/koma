@@ -1,5 +1,14 @@
 # koma-statechart-compose
 
+Use this when a Machine effect must survive the UI temporarily leaving composition: for
+example, an unhandled navigation request or confirmation dialog. Ordinary state rendering
+still uses [koma-compose](../koma-compose/README.md); this module handles the Machine's
+retained mailbox. Dependency setup follows [installation](../README.md#installation).
+
+Retention is an acknowledgement/retry contract, not an exactly-once guarantee for external
+operations. A recreated collector can receive an unacknowledged effect again; handle it
+before acknowledging it and choose an application-appropriate retry policy.
+
 Compose Multiplatform helpers for [koma-statechart](../koma-statechart/README.md)'s
 `MachineStore`, on top of [koma-compose](../koma-compose): what a screen needs from a machine
 that `ViewStore` does not cover. `koma-compose` stays core-only, as upstream keeps it; the
