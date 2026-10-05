@@ -21,11 +21,14 @@ import koma.test.startAndAwait
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -71,6 +74,7 @@ class SocketSourceIntegrationTest {
         private var generation = 0
         private var lastAccepted = 0
         private val stopped = CompletableDeferred<Unit>()
+        val readerStopped get() = reader.isCompleted
         private val reader = scope.launch(Dispatchers.IO) {
             try {
                 while (!stopped.isCompleted) {
@@ -117,9 +121,12 @@ class SocketSourceIntegrationTest {
         override fun resume() = feedLock.unlock()
         suspend fun close() {
             stopped.complete(Unit)
-            activeSocket.getAndSet(null)?.close() // Unblocks a real readLine or connect.
-            reader.cancel()
-            reader.join()
+            try {
+                activeSocket.getAndSet(null)?.close() // Unblocks a real readLine or connect.
+            } finally {
+                reader.cancel()
+                reader.join()
+            }
         }
     }
 
@@ -149,10 +156,17 @@ class SocketSourceIntegrationTest {
         }
         suspend fun accept(): Socket = withContext(Dispatchers.IO) { server.accept() }
         suspend fun close() {
-            if (::source.isInitialized) source.close()
-            server.close()
-            store.close()
-            scope.cancel()
+            withContext(NonCancellable) {
+                try {
+                    withTimeout(5_000) { if (::source.isInitialized) source.close() }
+                } finally {
+                    try {
+                        server.close()
+                    } finally {
+                        try { store.close() } finally { scope.cancel() }
+                    }
+                }
+            }
         }
         fun assertCut(checkpoint: GroupCheckpoint, last: Int, generation: Int) {
             assertEquals((1..last).toList(), checkpoint.members.getValue(memberId).snapshot.context)
@@ -165,6 +179,29 @@ class SocketSourceIntegrationTest {
         val output = getOutputStream().bufferedWriter()
         sequences.forEach { output.appendLine(it.toString()) }
         output.flush()
+    }
+
+    @Test
+    fun cleanupFromACancelledContextClosesTheSocketServerAndOwnerScope() = runBlocking {
+        withTimeout(15_000) {
+            val f = Fixture()
+            try {
+                f.start()
+                f.accept().use { connection ->
+                    connection.soTimeout = 5_000
+                    f.source.connected.receive()
+                    val cleanup = launch {
+                        currentCoroutineContext().cancel()
+                        f.close()
+                    }
+                    cleanup.join()
+                    assertTrue(f.server.isClosed)
+                    assertTrue(f.source.readerStopped)
+                    assertTrue(f.scope.coroutineContext.job.isCancelled)
+                    assertEquals(-1, withContext(Dispatchers.IO) { connection.getInputStream().read() }, "the peer sees EOF")
+                }
+            } finally { f.close() }
+        }
     }
 
     @Test
