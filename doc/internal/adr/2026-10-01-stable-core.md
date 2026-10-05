@@ -40,23 +40,24 @@ one operation on it is not (`MachineStore.feed`).
 
 ### Store adapter boundary (2026-10-03 review)
 
-The pure chart/machine model, snapshots, decisions, executor checkpoints and journal remain
-stable. The live Store adapters have two planned changes in the divergence inventory:
-ChartHookScope/ChartLaunchScope will delegate to StoreScope instead of inheriting it (c2),
-and raw StoreBuilder recovery configuration will be replaced by a constrained chart/machine
-configuration (b6). Removing the marker from those declarations would promise compatibility
-for an API already scheduled to change.
+The planned adapter configuration changes are resolved on 2026-10-05. ChartHookScope,
+ChartEnterScope and ChartLaunchScope expose `val store: StoreScope` instead of inheriting it.
+StateChartStoreBuilder.store receives ChartStoreConfiguration; its recover<T> handler exposes
+only context, error, event and the underlying StoreScope. Context changes commit once after a
+successful handler. MachineStore and MachineTestDriver receive StoreConfiguration without state,
+initialState, pendingActionPolicy or raw recovery. Journal recording remains available through
+`koma.statechart.recordTo`. Settings and plugins keep their existing execution semantics.
 
-Keep ChartHookScope, ChartEnterScope and ChartLaunchScope experimental, together with the
-onEnter, onExit and activity methods that expose them. StateChartStoreBuilder.store and the
-MachineStore factory remain experimental because they expose the raw StoreBuilder contract.
-The MachineStore interface itself is stable; feed and external sources keep their existing
-markers. Guards, pure effects, the chart definition and the recording formats remain stable.
+These declarations are promoted to stable together. This deliberately changes the previously
+experimental receiver contracts in the unreleased 5.0 alpha: remove raw state<ChartState<C>>
+wrappers, replace nextState { state.copy(context = value) } with context = value, and call
+store.message(...) from chart scopes. Stable pure model and recording formats are unchanged.
+The core StoreScope remains open for compatibility with existing stable-core consumers; chart
+scopes no longer require its openness. Recovery validators remain an internal defense.
 
-This boundary adds no runtime behavior or wire-format change. Promote an adapter only after
-its planned configuration is resolved and the compatibility decision is documented. A green
-apiCheck alone is not evidence for removing an opt-in: its dumps do not carry these markers.
-
+Validation includes recovery selection and rollback, preservation of activities/configuration/
+timers, actual delegated handler/launch scopes, all existing adapter tests and platform/API CI.
+ExternalSource/feed/source and debug tooling retain their existing experimental markers.
 Not adopted:
 
 - Removing the marker everywhere at once: the tooling modules change with every inspector

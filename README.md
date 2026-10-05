@@ -224,7 +224,7 @@ kotlin {
 ```
 
 The publishing convention sets the included projects' group/version, so Gradle substitutes
-the matching coordinates. Add only the modules you need. The Machine Store factory and debug
+the matching coordinates. Add only the modules you need. External sources and debug
 tools currently need `@OptIn(koma.core.ExperimentalKomaApi::class)` at their use sites.
 Keep all Koma modules on the same fork version; the original `io.github.koma-kt` classes and
 the fork's classes have the same packages and must not be mixed in one dependency graph.

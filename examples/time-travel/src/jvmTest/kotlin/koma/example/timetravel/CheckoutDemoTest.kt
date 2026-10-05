@@ -4,16 +4,72 @@ package koma.example.timetravel
 
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import koma.observability.RuntimeSessionId
+import koma.observability.file.FileSegmentStorage
+import koma.observability.file.JournalFiles
+import koma.observability.file.SegmentMark
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import koma.timetravel.GroupMismatch
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class CheckoutDemoTest {
+    @Test
+    fun recordingWaitsForCommittedObserversBeforeFinalizingTheFiles() = runBlocking {
+        val parent = Files.createTempDirectory("koma-checkout-observer-")
+        val entered = CompletableDeferred<Unit>()
+        val release = CountDownLatch(1)
+        try {
+            withTimeout(20_000) {
+                val recording = async(Dispatchers.Default) {
+                    CheckoutDemo.record(parent, AtomicInteger()) {
+                        entered.complete(Unit)
+                        check(release.await(15, TimeUnit.SECONDS)) { "Test did not release the summary observer" }
+                    }
+                }
+                try {
+                    entered.await() // The summary StateFlow already says 100; its file observer has not run.
+                    assertNull(withTimeoutOrNull(250) { recording.await() }, "A published snapshot must not finalize recording before observers finish")
+                    assertFalse(recording.isCompleted)
+                    val directory = Files.list(parent).use { it.findFirst().orElseThrow() }
+                    val journals = JournalFiles(FileSegmentStorage(directory.toString()))
+                    withTimeout(5_000) {
+                        // Synchronize with the independent writer instead of assuming it has
+                        // opened/flushed a segment by the time the Store observer is reached.
+                        while (journals.read(RuntimeSessionId("checkout-demo-run")).marks.none { it is SegmentMark.Unfinished }) delay(10)
+                    }
+                    release.countDown()
+                    val recorded = recording.await()
+                    val loaded = CheckoutDemo.load(recorded.directory)
+                    assertTrue(loaded.journal.marks.isEmpty(), "Shutdown joins StoreClosed publishers before finishing journal")
+                    val replay = loaded.replay(fixed = false)
+                    assertEquals(emptyList(), replay.session.verify())
+                    replay.seek(replay.length)
+                    assertEquals(SummaryContext(100), replay.snapshot(CheckoutDemo.summaryId).context)
+                } finally {
+                    release.countDown()
+                }
+            }
+        } finally {
+            release.countDown()
+            parent.toFile().deleteRecursively()
+        }
+    }
+
     @Test
     fun diskRecordingReopens_reproducesTheBug_andExperimentsWithoutCallingLiveHandlers() = runBlocking {
         val parent = Files.createTempDirectory("koma-checkout-test-")

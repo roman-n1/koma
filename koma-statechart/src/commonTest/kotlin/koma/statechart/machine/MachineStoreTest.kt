@@ -168,7 +168,7 @@ class MachineStoreTest {
         }
     }
 
-    private class Harness(scope: TestScope, machine: Machine<ListContext, ListAction, ListCommand, ListEvent>, configure: koma.core.StoreBuilder<MachineSnapshot<ListContext>, MachineInput<ListAction>, ListEvent>.() -> Unit = {}) {
+    private class Harness(scope: TestScope, machine: Machine<ListContext, ListAction, ListCommand, ListEvent>, configure: koma.statechart.StoreConfiguration<MachineSnapshot<ListContext>, MachineInput<ListAction>, ListEvent>.() -> Unit = {}) {
         val handler = Handler()
         val handled = mutableListOf<Throwable>()
         val dispatcher = StandardTestDispatcher(scope.testScheduler)
@@ -188,7 +188,7 @@ class MachineStoreTest {
 
     private fun TestScope.harness(
         machine: Machine<ListContext, ListAction, ListCommand, ListEvent> = listMachine(),
-        configure: koma.core.StoreBuilder<MachineSnapshot<ListContext>, MachineInput<ListAction>, ListEvent>.() -> Unit = {},
+        configure: koma.statechart.StoreConfiguration<MachineSnapshot<ListContext>, MachineInput<ListAction>, ListEvent>.() -> Unit = {},
     ) = Harness(this, machine, configure)
 
     // --- commit protocol ---
@@ -397,26 +397,6 @@ class MachineStoreTest {
         second.close()
     }
 
-    @Test
-    fun handlersFromTheConfiguration_cannotShadowTheMachine() = runTest {
-        val h = harness {
-            state<MachineSnapshot<ListContext>> {
-                enter { nextState { state.copy(revision = 77) } }
-                action<MachineInput<ListAction>> { nextState { state.copy(revision = 88) } }
-            }
-        }
-        h.store.startAndAwait()
-        runCurrent()
-        assertEquals(1, h.store.currentState.revision, "the machine decided the start, not the configured enter {}")
-
-        h.store.dispatch(ListAction.Load("cats"))
-        runCurrent()
-
-        assertEquals(2, h.store.currentState.revision)
-        assertTrue(h.store.currentState.isActive(loading), "the machine decided the action, not the configured action {}")
-        h.close()
-    }
-
     // --- timers ---
 
     @Test
@@ -479,27 +459,6 @@ class MachineStoreTest {
         assertEquals(before, h.store.currentState)
         assertEquals(listOf<Throwable>(boom), h.handled)
         assertTrue(h.handler.cancelled.isEmpty(), "Connect keeps running")
-        h.close()
-    }
-
-    @Test
-    fun recover_mayNotChangeTheSnapshot() = runTest {
-        val boom = IllegalArgumentException("guard")
-        val h = harness(listMachine(guardBoom = { throw boom })) {
-            state<MachineSnapshot<ListContext>> {
-                recover<IllegalArgumentException> { nextState { state.copy(revision = 99) } }
-            }
-        }
-        h.store.startAndAwait()
-        runCurrent()
-
-        h.store.dispatch(ListAction.Boom)
-        runCurrent()
-
-        assertEquals(1, h.store.currentState.revision)
-        val reported = assertIs<IllegalArgumentException>(h.handled.single())
-        assertTrue("may not change the snapshot" in reported.message.orEmpty(), reported.message)
-        assertEquals(listOf<Throwable>(boom), reported.suppressedExceptions)
         h.close()
     }
 

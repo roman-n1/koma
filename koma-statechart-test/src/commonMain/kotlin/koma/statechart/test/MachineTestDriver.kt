@@ -4,7 +4,7 @@ import koma.core.Action
 import koma.core.Event
 import koma.core.ExceptionHandler
 import koma.core.ExperimentalKomaApi
-import koma.core.StoreBuilder
+import koma.statechart.StoreConfiguration
 import koma.statechart.StateId
 import koma.statechart.machine.Admission
 import koma.statechart.machine.AdmissionPolicy
@@ -57,7 +57,7 @@ class MachineTestDriver<C, A : Action, CMD, E : Event>(
     val handler: ScriptedCommandHandler<CMD, A> = ScriptedCommandHandler(),
     admission: AdmissionPolicy = AdmissionPolicy.Unbounded,
     mailbox: MailboxConfig<E> = MailboxConfig(),
-    builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit = {},
+    builder: StoreConfiguration<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit = {},
 ) {
     private val scheduler = scope.testScheduler
     private val dispatcher = StandardTestDispatcher(scheduler)

@@ -31,6 +31,7 @@ import koma.observability.file.JournalFileSink
 import koma.observability.file.JournalFiles
 import koma.observability.file.SegmentMark
 import koma.observability.recordTo
+import koma.statechart.recordTo
 import koma.statechart.ActionMatcher
 import koma.statechart.AtomicState
 import koma.statechart.CompoundState

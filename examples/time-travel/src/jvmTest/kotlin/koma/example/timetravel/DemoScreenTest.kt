@@ -4,6 +4,9 @@ package koma.example.timetravel
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.ComposeUiTest
+import androidx.compose.ui.test.ComposeTimeoutException
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -20,12 +23,12 @@ class DemoScreenTest {
             runComposeUiTest {
                 setContent { MaterialTheme { DemoScreen(parent) } }
                 onNodeWithTag("demo-record").performClick()
-                waitUntil(timeoutMillis = 15_000) { onAllNodesWithText("Live price handler ran 1 time", substring = true).fetchSemanticsNodes().isNotEmpty() }
+                awaitStatus("Live price handler ran 1 time")
                 onNodeWithTag("group-replay-verdict").assertTextContains("no divergence", substring = true)
                 onNodeWithTag("demo-original").performClick()
-                waitUntil(timeoutMillis = 15_000) { onAllNodesWithText("Original reducer: Verify matches", substring = true).fetchSemanticsNodes().isNotEmpty() }
+                awaitStatus("Original reducer: Verify matches")
                 onNodeWithTag("demo-changed").performClick()
-                waitUntil(timeoutMillis = 15_000) { onAllNodesWithText("Changed reducer: forward stops", substring = true).fetchSemanticsNodes().isNotEmpty() }
+                awaitStatus("Changed reducer: forward stops")
                 onNodeWithTag("group-replay-why").assertTextContains("cart-1", substring = true)
                 onNodeWithTag("group-replay-why").assertTextContains("context", substring = true)
                 onNodeWithTag("time-travel-branch").performClick()
@@ -35,11 +38,24 @@ class DemoScreenTest {
                 onNodeWithTag("time-travel-return").performClick()
                 onNodeWithTag("group-replay-why").assertTextContains("context", substring = true)
                 onNodeWithTag("demo-original").performClick()
-                waitUntil(timeoutMillis = 15_000) { onAllNodesWithText("Original reducer: Verify matches", substring = true).fetchSemanticsNodes().isNotEmpty() }
+                awaitStatus("Original reducer: Verify matches")
                 onNodeWithTag("group-replay-verdict").assertTextContains("no divergence", substring = true)
             }
         } finally {
             parent.toFile().deleteRecursively()
         }
     }
+
+    private fun ComposeUiTest.awaitStatus(expected: String) {
+        try {
+            waitUntil(timeoutMillis = 15_000) {
+                onAllNodesWithText(expected, substring = true).fetchSemanticsNodes().isNotEmpty()
+            }
+        } catch (timeout: ComposeTimeoutException) {
+            val status = onNodeWithTag("demo-status").fetchSemanticsNode().config[SemanticsProperties.Text]
+                .joinToString { it.text }
+            throw AssertionError("Expected '$expected'; actual demo status: $status", timeout)
+        }
+    }
+
 }
