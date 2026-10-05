@@ -57,3 +57,24 @@ are not replayed to collectors that appear later. For retained Machine effects, 
 
 See the [Compose reference](../doc/guides/store-api.md#compose) and
 [ViewStore source](src/commonMain/kotlin/koma/compose/ViewStore.kt) for complete helper contracts.
+
+## Android lifecycle verification
+
+The device suite uses a real `ComponentActivity`, `ActivityScenario.recreate()` and
+real Koma Stores. It checks retained snapshots across configuration recreation,
+discarding snapshots when a screen is removed, independent keyed instances,
+Store replacement, and externally owned Store lifetime. Run it on a connected
+emulator or device:
+
+```shell
+./gradlew :koma-compose:connectedAndroidDeviceTest
+```
+
+The `Android Compose lifecycle` CI workflow runs the suite on an API 35 emulator.
+`rememberStateSaver()` retains **snapshots**, not the Store itself. A Store created
+inside the composition with `autoClose = true` closes on Activity recreation and
+a new Store restores the retained snapshot. A Store owned by a ViewModel should
+use `autoClose = false`; its owner is responsible for closing it.
+
+This suite covers configuration changes and screen lifetime. Process death needs
+a persistent `StateSaver`; the in-memory retained saver does not survive it.

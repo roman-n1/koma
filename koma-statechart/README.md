@@ -74,10 +74,9 @@ outermost first, inner transitions take priority over outer ones. The module use
 so it is built and published together with it and is not meant to run against another version.
 
 Status: the **pure chart/machine model, snapshots, decisions and checkpoints are stable in the
-fork**, held by `apiCheck`. The Store adapter scopes (`ChartHookScope`, `ChartEnterScope`,
-`ChartLaunchScope`) and the methods exposing them, raw `StateChartStoreBuilder.store`
-configuration and the `MachineStore` factory remain `@ExperimentalKomaApi` while their planned
-configuration changes are resolved. The `MachineStore` interface is stable. `ExternalSource`,
+fork**, held by `apiCheck`. The Store adapters and their constrained runtime settings are also
+stable. Chart scopes delegate Store extensions through `store`; chart recovery can update context
+only, and the MachineStore builder cannot install arbitrary handlers or recovery. `ExternalSource`,
 `MachineStore.feed` and `MachineGroup.source` also remain experimental; see the
 [stable core boundary](../doc/internal/adr/2026-10-01-stable-core.md#store-adapter-boundary-2026-10-03-review).
 The module lives in the fork
@@ -209,7 +208,7 @@ What the builder offers:
 | `effect(label) { context, action -> context }` | Implements an effect label: a pure context update. |
 | `onEnter(id) { }` / `onExit(id) { }` | Hooks: read and assign `context`, read `action`, `event(e)`; `onEnter` can `launch { }` work that lives while the state is active. |
 | `activity(id) { }` | Work that runs while the state is active, including after a restore. |
-| `store { }` | The underlying `StoreBuilder`. |
+| `store { }` | Runtime settings: saver, plugins, exception handler, start policy and context-only `recover<T>`. |
 
 In one step: exit hooks (innermost first), effects, enter hooks (outermost first), then work of
 exited states is cancelled and activities and timers of entered states start. The UI sees one new
@@ -221,14 +220,27 @@ the node. If the node exits before the queued action is handled, the action is d
 if the same node has already been entered again. This prevents an old load or connection attempt
 from completing a newer one.
 
-In `store { state<ChartState<C>> { recover<Exception> { ... } } }`, recovery may update `context`.
-It cannot replace `configuration` or `timers`, since that would bypass exit/entry hooks and leave
-the old activities running; a recovery that tries is reported as an `IllegalArgumentException`
-with the original error attached as a suppressed exception. To recover into another node, dispatch
-an action declared in the chart from outside the handler: `recover {}` cannot dispatch itself, so
-either emit an event there and dispatch from a plugin's `onEvent`, or let the error reach the
-Store's `exceptionHandler` and dispatch from it. In-place recovery can use
-`nextState { state.copy(context = ...) }`.
+Recovery uses a constrained scope:
+
+```kotlin
+store {
+    recover<IllegalStateException> {
+        context = context.copy(lastError = error.message)
+    }
+}
+```
+
+`ChartRecoveryScope` exposes `error`, `context`, `event(e)` and `store` for StoreScope extensions;
+it cannot replace configuration or timers. The first matching recovery handler wins. Context is
+committed once when recovery completes; if recovery throws, its context update is discarded and
+the failure reaches `exceptionHandler`. Events already emitted are not rolled back. To change
+active nodes, emit an event and dispatch a declared action from its receiver, or dispatch from the
+exception handler. `MachineStore` has runtime configuration only: failures are reported to its
+exception handler, while domain recovery is an explicit machine input and decision.
+
+Chart hooks and activities no longer inherit `StoreScope`. For message extensions, use
+`store.message(message)`; activity `event`, `dispatch` and `updateContext` retain their activation
+gates. Extensions called through `store` keep their own contract and gain no activation gate.
 
 A heartbeat modelled as a self-loop timer on a node restarts that node's activities on every
 firing, and an action one of them dispatched just before the firing is discarded with the old
@@ -402,7 +414,7 @@ What holds:
   `CommandAbandoned`. The bookkeeping is `Lanes`, a pure value the scheduler, a recording and a
   replay branch all run: a cancelled command holds its place in the lane until its job has ended.
 - A decision that fails (a rule threw) commits nothing and cancels nothing; its cause reaches the
-  exception handler. `recover {}` may not change the snapshot.
+  exception handler. Domain recovery uses explicit machine inputs, not raw Store recovery.
 - A restored snapshot that was already started starts over with its context: commands are not
   part of the snapshot. They are part of `store.checkpoint()`, the executor's state as data
   (`ExecutorCheckpoint`): the snapshot of the last decision it carried out, its clock, and every
@@ -607,9 +619,40 @@ provided the chart does not rely on them either:
   is dropped on its own (the next transition into that history state takes the default target).
   Context schema migrations remain the application's responsibility.
 
+## Persistence across process restarts
+
+`StateSaver` supplies storage and encoding through your implementation. Use durable storage for
+process restarts; an in-memory saver only survives as long as its owner does. Keep an application
+schema version beside the saved data and migrate or reject incompatible context before returning
+a snapshot. Returning `null` starts with the declared initial context; a decoding `Exception` is
+reported to the Store's exception handler and also falls back to the declared initial state.
+Configure an exception handler that reports persistence failures if you need to diagnose them.
+
+The two live adapters intentionally restore differently:
+
+| Adapter | Nodes and business context | Work after startup |
+|---|---|---|
+| `StateChartStore` | Valid saved configuration and context are retained. Invalid active nodes fall back to the new chart's initial configuration with the saved context. Invalid history records are discarded. | Enter hooks and their launched work do not run for valid restored nodes; declared activities restart. Each timer restarts with its full declared delay. |
+| `MachineStore` | An already started saved snapshot starts at the current machine's initial configuration, retaining its context and using the current definition/version. | Fresh startup commands and timers run. Old in-flight commands and timer deadlines are not resumed. |
+
+A `MachineStore` reset from another definition/version is also reported to its exception handler;
+a reset from an already started snapshot of the same definition/version is expected behavior.
+
+`MachineStore.checkpoint()` and Time Travel replay are separate executor-level mechanisms. A
+`StateSaver` snapshot does not include the command payloads and lanes needed to resume execution.
+For business deadlines that must survive downtime, persist the absolute deadline in your context
+and explicitly derive the next action from it when the application resumes.
+
+The [persistent restore integration tests](src/jvmTest/kotlin/koma/statechart/PersistentRestoreJvmTest.kt)
+write and restore snapshots in separate JVMs with an application-owned file codec. They cover
+timer/activity behavior, abrupt process death with pending work, changed definitions, missing
+files, truncated data and rejected schema versions. They verify process-independent persistence;
+Android Activity recreation and platform storage durability require their own application/device
+tests.
+
 ## Limitations
 
-- Experimental API that may change; no release has been published yet.
+- External sources and debug tooling remain experimental; no release has been published yet.
 - No eventless (completion) transitions, final states, internal transitions or SCXML `invoke`.
   Model "when the work is done" as an action that the state's work dispatches.
 - Guards and effects are labels in the model; their code lives in the Store builder, so tools see
@@ -622,9 +665,8 @@ provided the chart does not rely on them either:
 - A step whose hook or effect throws is not committed, but events that its hooks already emitted
   are not taken back, and a timer whose firing failed does not fire again until its state is
   re-entered.
-- Inside `StateChartStore { }`, `enter {}` and `action {}` handlers registered through `store {}`
-  never run (the chart owns the only handler), `initialState` there is ignored, and
-  `PendingActionPolicy.ClearOnStateExit` does not apply to chart steps.
+- Adapter runtime configuration does not expose `state`, `initialState` or pending-action policies.
+  Active nodes change through chart/machine transitions, not competing Store handlers.
 - In a hook, `context` is the hook's value; do not name a surrounding parameter `context`, or it
   shadows it.
 - A chart store's activities and timers run in a task runner subscribed from the chart's

@@ -16,11 +16,14 @@ kotlin {
         namespace = "koma.compose"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
+        androidResources.enable = true
 
         // withJava() // enable java compilation support
         withHostTestBuilder {}.configure {}
         withDeviceTestBuilder {
             sourceSetTreeName = "test"
+        }.configure {
+            instrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         }
 
         compilerOptions {
@@ -56,6 +59,13 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.coroutines.test)
+        }
+        getByName("androidDeviceTest").dependencies {
+            implementation("androidx.activity:activity-compose:1.13.0")
+            implementation("androidx.compose.ui:ui-test-junit4:1.11.0")
+            implementation("androidx.test:runner:1.7.0")
+            implementation("androidx.test:rules:1.7.0")
+            implementation("androidx.test.ext:junit:1.3.0")
         }
         jvmTest.dependencies {
             implementation(libs.lifecycle.viewmodel.compose)

@@ -35,20 +35,30 @@ public abstract interface class koma/statechart/ChartEnterScope : koma/statechar
 	public abstract fun launch (Lkotlin/jvm/functions/Function2;)V
 }
 
-public abstract interface class koma/statechart/ChartHookScope : koma/core/StoreScope {
+public abstract interface class koma/statechart/ChartHookScope {
 	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getAction ()Lkoma/core/Action;
 	public abstract fun getContext ()Ljava/lang/Object;
 	public abstract fun getNode-LbxWZow ()Ljava/lang/String;
+	public abstract fun getStore ()Lkoma/core/StoreScope;
 	public abstract fun setContext (Ljava/lang/Object;)V
 }
 
-public abstract interface class koma/statechart/ChartLaunchScope : koma/core/StoreScope {
+public abstract interface class koma/statechart/ChartLaunchScope {
 	public abstract fun dispatch (Lkoma/core/Action;)V
 	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getNode-LbxWZow ()Ljava/lang/String;
+	public abstract fun getStore ()Lkoma/core/StoreScope;
 	public abstract fun isActive ()Z
 	public abstract fun updateContext (Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class koma/statechart/ChartRecoveryScope {
+	public abstract fun event (Lkoma/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getContext ()Ljava/lang/Object;
+	public abstract fun getError ()Ljava/lang/Exception;
+	public abstract fun getStore ()Lkoma/core/StoreScope;
+	public abstract fun setContext (Ljava/lang/Object;)V
 }
 
 public final class koma/statechart/ChartState : koma/core/State {
@@ -67,6 +77,9 @@ public final class koma/statechart/ChartState : koma/core/State {
 	public fun hashCode ()I
 	public final fun isActive-ZRfKfRY (Ljava/lang/String;)Z
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/ChartStoreConfiguration : koma/statechart/StoreConfiguration {
 }
 
 public final class koma/statechart/ChartTimers {
@@ -347,6 +360,22 @@ public final class koma/statechart/StepResult$Transitioned : koma/statechart/Ste
 	public final fun getTransitions ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public class koma/statechart/StoreConfiguration {
+	public final fun autoStartPolicy (Lkoma/core/AutoStartPolicy;)V
+	public final fun coroutineContext (Lkotlin/coroutines/CoroutineContext;)V
+	public final fun exceptionHandler (Lkoma/core/ExceptionHandler;)V
+	public final fun getDelegate ()Lkoma/core/StoreBuilder;
+	public final fun plugin (Lkoma/core/Plugin;[Lkoma/core/Plugin;)V
+	public final fun pluginExecutionPolicy (Lkoma/core/PluginExecutionPolicy;)V
+	public final fun probe (Lkoma/core/StoreProbe;[Lkoma/core/StoreProbe;)V
+	public final fun stateSaver (Lkoma/core/StateSaver;)V
+}
+
+public final class koma/statechart/StoreConfigurationKt {
+	public static final fun recordTo-z5rPi9M (Lkoma/statechart/StoreConfiguration;Lkoma/observability/RecordingSession;Ljava/lang/String;Lkoma/observability/PayloadPolicy;)V
+	public static synthetic fun recordTo-z5rPi9M$default (Lkoma/statechart/StoreConfiguration;Lkoma/observability/RecordingSession;Ljava/lang/String;Lkoma/observability/PayloadPolicy;ILjava/lang/Object;)V
 }
 
 public final class koma/statechart/TimerFired : koma/core/Action {

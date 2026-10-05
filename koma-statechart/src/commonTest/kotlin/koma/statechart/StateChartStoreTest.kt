@@ -505,9 +505,7 @@ class StateChartStoreTest {
                 error("keyboard broke")
             }
             store {
-                state<ChartState<Messenger>> {
-                    recover<IllegalStateException> { errors += error }
-                }
+                recover<IllegalStateException> { errors += error }
             }
         }
         send(store, MessengerAction.Open, MessengerAction.KeyPress)
@@ -545,9 +543,7 @@ class StateChartStoreTest {
         val store = messenger {
             onEnter(inbox) { if (starting) error("no inbox yet") }
             store {
-                state<ChartState<Messenger>> {
-                    recover<IllegalStateException> { errors += error }
-                }
+                recover<IllegalStateException> { errors += error }
             }
         }
         store.startAndAwait()

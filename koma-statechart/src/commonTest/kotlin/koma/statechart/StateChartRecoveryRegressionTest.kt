@@ -81,7 +81,7 @@ class StateChartRecoveryRegressionTest {
     }
 
     @Test
-    fun recoveryCannotChangeConfigurationWithoutManagingItsActivities() = runTest {
+    fun contextRecoveryPreservesConfigurationAndActivities() = runTest {
         val chart = StateChartDefinition(a, listOf(AtomicState(a), AtomicState(b)), listOf(Transition(a, b, go, effect = "fail")))
         val errors = mutableListOf<Throwable>()
         var active = false
@@ -90,9 +90,8 @@ class StateChartRecoveryRegressionTest {
             activity(a) { active = true; try { awaitCancellation() } finally { active = false } }
             store {
                 exceptionHandler(ExceptionHandler { errors += it })
-                state<ChartState<Int>> {
-                    recover<IllegalStateException> { nextState { state.copy(configuration = chart.configurationOf(b)) } }
-                }
+                recover<IllegalStateException> { context = 7 }
+
             }
         }
         try {
@@ -100,37 +99,58 @@ class StateChartRecoveryRegressionTest {
             runCurrent()
             assertEquals(listOf(a), store.currentState.activeLeaves(chart))
             assertTrue(active)
-            assertTrue(errors.single().message.orEmpty().contains("recover"))
-            assertEquals("operation failed", errors.single().suppressedExceptions.single().message)
+            assertEquals(7, store.currentState.context)
+            assertTrue(errors.isEmpty())
         } finally {
             store.close()
         }
     }
 
     @Test
-    fun recoveryCannotReplaceTimerBookkeepingButCanUpdateContext() = runTest {
+    fun recoveryPreservesTimerBookkeepingAndSelectsFirstMatchingType() = runTest {
         val chart = StateChartDefinition(a, listOf(AtomicState(a), AtomicState(b)), listOf(Transition(a, b, go, effect = "fail"), Transition(a, b, Trigger.After(1.seconds))))
-        for (changeTimers in listOf(true, false)) {
-            val errors = mutableListOf<Throwable>()
-            val store = StateChartStore<Int, Go, Nothing>(chart, 0, backgroundScope.coroutineContext) {
-                effect("fail") { _, _ -> error("operation failed") }
-                store {
-                    exceptionHandler(ExceptionHandler { errors += it })
-                    state<ChartState<Int>> {
-                        recover<IllegalStateException> {
-                            nextState { if (changeTimers) state.copy(timers = ChartTimers()) else state.copy(context = 1) }
-                        }
-                    }
-                }
+        val errors = mutableListOf<Throwable>()
+        val calls = mutableListOf<String>()
+        val store = StateChartStore<Int, Go, Nothing>(chart, 0, backgroundScope.coroutineContext) {
+            effect("fail") { _, _ -> error("operation failed") }
+            store {
+                exceptionHandler(ExceptionHandler { errors += it })
+                recover<IllegalArgumentException> { calls += "wrong type" }
+                recover<IllegalStateException> { calls += error.message.orEmpty(); context += 1 }
+                recover<Exception> { calls += "later handler"; context = -1 }
             }
-            try {
-                store.dispatchAndAwait(Go)
-                assertEquals(if (changeTimers) 0 else 1, store.currentState.context)
-                assertEquals(setOf(1), store.currentState.timers.running.keys)
-                assertEquals(if (changeTimers) 1 else 0, errors.size)
-            } finally {
-                store.close()
+        }
+        try {
+            store.startAndAwait()
+            val timers = store.currentState.timers
+            store.dispatchAndAwait(Go)
+            assertEquals(1, store.currentState.context)
+            assertEquals(timers, store.currentState.timers)
+            assertEquals(listOf("operation failed"), calls)
+            assertTrue(errors.isEmpty())
+        } finally {
+            store.close()
+        }
+    }
+
+    @Test
+    fun throwingRecoveryRollsBackItsContextAndReportsFailure() = runTest {
+        val chart = StateChartDefinition(a, listOf(AtomicState(a), AtomicState(b)), listOf(Transition(a, b, go, effect = "fail")))
+        val errors = mutableListOf<Throwable>()
+        val store = StateChartStore<Int, Go, Nothing>(chart, 0, backgroundScope.coroutineContext) {
+            effect("fail") { _, _ -> error("operation failed") }
+            store {
+                exceptionHandler(ExceptionHandler { errors += it })
+                recover<IllegalStateException> { context = 99; error("recovery failed") }
             }
+        }
+        try {
+            store.dispatchAndAwait(Go)
+            assertEquals(0, store.currentState.context)
+            assertEquals(listOf(a), store.currentState.activeLeaves(chart))
+            assertEquals("recovery failed", errors.single().message)
+        } finally {
+            store.close()
         }
     }
 }

@@ -19,7 +19,7 @@ import koma.observability.RecordingSession
 import koma.observability.RuntimeSessionId
 import koma.observability.StoreInstanceId
 import koma.observability.TimerRef
-import koma.observability.recordTo
+import koma.statechart.recordTo
 import koma.statechart.ActionMatcher
 import koma.statechart.AtomicState
 import koma.statechart.CompoundState
