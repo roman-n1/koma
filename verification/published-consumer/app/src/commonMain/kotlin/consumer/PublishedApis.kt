@@ -63,7 +63,8 @@ fun chart(scope: CoroutineScope): Store<ChartState<Int>, Increment, Ev> = StateC
 fun runningMachine(scope: CoroutineScope): MachineStore<Int, Increment, Nothing, Ev> {
     val group = MachineGroup()
     val member = group.member<Int, Increment, Nothing, Ev>(StoreInstanceId("published"))
-    return MachineStore(machine, 0, CommandHandler<Nothing, Increment> { _, _ -> }, scope, observers = listOf(member)).also { member.attach(it) }
+    return MachineStore(machine, 0, CommandHandler<Nothing, Increment> { _, _ -> }, scope,
+        coroutineContext = scope.coroutineContext, observers = listOf(member)).also { member.attach(it) }
 }
 
 @Composable

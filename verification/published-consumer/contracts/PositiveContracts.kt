@@ -8,7 +8,8 @@ import koma.statechart.machine.CommandHandler
 import koma.statechart.machine.MachineStore
 import kotlinx.coroutines.CoroutineScope
 
-fun configuredMachine(scope: CoroutineScope) = MachineStore(machine, 0, CommandHandler<Nothing, Increment> { _, _ -> }, scope) {
+fun configuredMachine(scope: CoroutineScope) = MachineStore(machine, 0, CommandHandler<Nothing, Increment> { _, _ -> }, scope,
+    coroutineContext = scope.coroutineContext) {
     exceptionHandler(ExceptionHandler.Ignore)
 }
 fun configuredChart(scope: CoroutineScope) = StateChartStore<Int, Increment, Ev>(definition, 0, scope.coroutineContext) {
