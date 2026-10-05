@@ -33,6 +33,7 @@ kotlin {
     iosArm64()
     iosSimulatorArm64()
     jvm {
+        attributes.attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 11)
         compilerOptions {
             jvmTarget = JvmTarget.JVM_11
         }

@@ -23,18 +23,18 @@ for module in "${MODULES[@]}"; do
     PUBLISH_TASKS+=(":$module:publish${publication}PublicationToConsumerRepository")
   done
 done
-"$ROOT/gradlew" -p "$ROOT" "${PUBLISH_TASKS[@]}" -Pkoma.consumer.repository="$WORK/maven" --no-configuration-cache --max-workers=2
+"$ROOT/gradlew" -p "$ROOT" "${PUBLISH_TASKS[@]}" -Pkoma.consumer.repository="$WORK/maven" --no-configuration-cache --max-workers=2 --no-daemon
 python3 "$ROOT/verification/published-consumer/verify_metadata.py" "$WORK/maven" "$GROUP" "$VERSION" "$TARGET"
 PROPERTIES=(-Pconsumer.repository="$WORK/maven" -Pconsumer.group="$GROUP" -Pconsumer.version="$VERSION" -Pconsumer.target="$TARGET"
   -Pconsumer.kotlin="$(value kotlin)" -Pconsumer.agp="$(value agp)" -Pconsumer.compose="$(value compose-multiplatform)" -Pconsumer.coroutines="$(value coroutines)")
 mkdir -p "$WORK/positive" "$WORK/negative"
 cp "$ROOT/verification/published-consumer/contracts/PositiveContracts.kt" "$WORK/positive/"
 cp "$ROOT/verification/published-consumer/contracts/"*.kt "$WORK/negative/"
-"$ROOT/gradlew" -p "$ROOT/verification/published-consumer" "${PROPERTIES[@]}" -Pconsumer.contractSources="$WORK/positive" "${TASKS[@]}" verifyPublishedGraphs --no-configuration-cache --max-workers=2
+"$ROOT/gradlew" -p "$ROOT/verification/published-consumer" "${PROPERTIES[@]}" -Pconsumer.contractSources="$WORK/positive" "${TASKS[@]}" verifyPublishedGraphs --no-configuration-cache --max-workers=2 --no-daemon
 if [[ "$TARGET" == jvm ]]; then
   REPORTS="$ROOT/verification/published-consumer/build/reports/contracts"
   mkdir -p "$REPORTS"
-  if "$ROOT/gradlew" -p "$ROOT/verification/published-consumer" "${PROPERTIES[@]}" -Pconsumer.contractSources="$WORK/negative" :app:compileKotlinJvm --no-configuration-cache --max-workers=2 > "$REPORTS/negative-compile.log" 2>&1; then
+  if "$ROOT/gradlew" -p "$ROOT/verification/published-consumer" "${PROPERTIES[@]}" -Pconsumer.contractSources="$WORK/negative" :app:compileKotlinJvm --no-configuration-cache --max-workers=2 --no-daemon > "$REPORTS/negative-compile.log" 2>&1; then
     printf 'Forbidden adapter DSL compiled successfully; contract verification failed\n' >&2
     exit 1
   fi
