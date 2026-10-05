@@ -17,6 +17,9 @@ import koma.statechart.machine.MachineInput
 import koma.timetravel.RecordedStep
 import koma.timetravel.RecordingCodec
 import koma.timetravel.carriedPast
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -34,7 +37,8 @@ import kotlinx.coroutines.sync.Mutex
  * full is dropped, counted, and the next step begins a new segment with a checkpoint that
  * already includes the dropped one, so the file stays replayable after the hole
  * @property flushEveryFrames How many frames are written before the storage is asked to flush
- * @property onFailure Called with a storage failure; the writer stops after one
+ * @property onFailure Called with a storage failure; the writer stops writing after one and
+ * releases its output. An exception thrown by this callback is ignored.
  */
 data class RecordingFileConfig(
     val maxSegmentBytes: Int = 512 * 1024,
@@ -65,6 +69,7 @@ data class RecordingFileStats(val recorded: Long, val written: Long, val dropped
  * simply absent: the files end before the run did, and only [stats] tells. A run that did not
  * begin at the machine's initial snapshot is noticed at its first step and reported through
  * [problem], like `MachineRecorder`.
+ * A storage failure or cancellation releases the output without completing a partial segment.
  *
  * @param store The Store this recording is of; names the segments
  * @param machine The machine of the store
@@ -108,19 +113,55 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
     private var failed = false
 
     private val writer: Job = scope.launch {
-        for (item in queue) {
-            if (failed) continue
+        var failure: Throwable? = null
+        try {
+            for (item in queue) {
+                if (failed) continue
+                try {
+                    write(item)
+                } catch (e: Exception) {
+                    if (e is CancellationException && !currentCoroutineContext().isActive) throw e
+                    failed = true
+                    release(e)
+                    notifyFailure(e)
+                }
+            }
+            if (!failed) finish()
+        } catch (t: Throwable) {
+            failure = t
+            if (t is CancellationException || t !is Exception) throw t
+            notifyFailure(t)
+        } finally {
+            // Cancellation leaves an unfinished segment; never append END to a failed frame.
             try {
-                write(item)
-            } catch (e: Exception) {
-                failed = true
-                config.onFailure(e)
+                release(failure)
+            } finally {
+                locked { closed = true }
+                queue.cancel()
             }
         }
-        if (!failed) try {
-            finish()
-        } catch (e: Exception) {
-            config.onFailure(e)
+    }
+
+    private fun notifyFailure(failure: Throwable) {
+        try {
+            config.onFailure(failure)
+        } catch (_: Exception) {
+            // Reporting a storage failure must not fail the writer's parent or its cleanup.
+        }
+    }
+
+    private fun release(failure: Throwable?) {
+        val output = output ?: return
+        this.output = null
+        closeOutput(output, failure)
+    }
+
+    private fun closeOutput(output: SegmentOutput, failure: Throwable?) {
+        try {
+            output.close()
+        } catch (t: Throwable) {
+            if (failure == null) throw t
+            if (failure !== t) failure.addSuppressed(t)
         }
     }
 
@@ -198,9 +239,9 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
         val header = RecordingFileFormat.header(machine.id, machine.version, store, segmentIndex, item.index)
         val checkpoint = RecordingFileFormat.checkpointFrame(codec.encodeCheckpoint(item.before))
         val output = storage.append(RecordingFileFormat.segmentName(store, segmentIndex))
+        this.output = output
         output.write(header)
         output.write(checkpoint)
-        this.output = output
         segmentBytes = header.size + checkpoint.size
         segmentSteps = 0
         unflushed = 0
@@ -210,9 +251,16 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
 
     private fun finish() {
         val output = output ?: return
-        output.write(Framing.END)
-        output.close()
         this.output = null
+        var failure: Throwable? = null
+        try {
+            output.write(Framing.END)
+        } catch (t: Throwable) {
+            failure = t
+            throw t
+        } finally {
+            closeOutput(output, failure)
+        }
     }
 
     private fun retain() {
