@@ -21,6 +21,18 @@ data class SourceSnapshot(val source: SourceId, val kind: String, val version: I
  * members decided is missing from it. [pause] returns once no input is being fed and none will
  * be until [resume]; it never waits for a Store, and the group gives up the cut when it does
  * not return within the timeout.
+ *
+ * Serialize feeding and snapshot state changes with the pause boundary. Advance an admission
+ * cursor only for [Admission.Accepted]; a rejected input was not queued and may be retried.
+ * Accepted means queued, not committed: the group waits for members before taking [snapshot].
+ * Keep network reads and retry waits outside the feed lock so a stalled socket or a full queue
+ * cannot prevent a cut. A reconnect can redeliver data: source protocols need their own stable
+ * sequence/cursor and deduplication; `feed` does not deduplicate actions.
+ *
+ * A successful [pause] transfers responsibility for [resume] to the group. If [pause] throws
+ * or is cancelled before returning, the source must roll back any partial pause itself; the
+ * group cannot know which resources it acquired. Cleanup should not suspend in a cancelled
+ * context (use a non-cancellable context when suspending cleanup is necessary).
  */
 @ExperimentalKomaApi
 interface ExternalSource {
@@ -29,12 +41,21 @@ interface ExternalSource {
     /** What the source is, for its snapshot's readers: `paging`, `socket`, `subscription`. */
     val kind: String
 
-    /** Stops feeding; returns once no feed is in progress. */
+    /**
+     * Stops feeding; returns once no feed is in progress. Roll back acquired pause resources
+     * before propagating failure or cancellation. Never wait for a Store to process an input.
+     */
     suspend fun pause()
 
-    /** The source's state now, as data. */
+    /**
+     * The source's state while paused, as data. Admission cursors reflect accepted inputs;
+     * pending requests, load states and connection generations may be separate fields.
+     */
     fun snapshot(): SourceSnapshot
 
-    /** Feeds again. */
+    /**
+     * Releases a successful pause and permits feeding again. Release owned resources even if
+     * resuming another resource fails. Called once per successful pause, including failed cuts.
+     */
     fun resume()
 }

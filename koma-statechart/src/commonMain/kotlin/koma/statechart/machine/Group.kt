@@ -254,8 +254,14 @@ class MachineGroup(private val session: RecordingSession? = null) {
             // Sources first: once none feeds, what the members hold is all there is.
             for (source in sources) {
                 val remaining = timeout - started.elapsedNow()
-                if (remaining <= Duration.ZERO || withTimeoutOrNull(remaining) { source.pause() } == null) return null
-                paused += source
+                if (remaining <= Duration.ZERO) return null
+                val completed = withTimeoutOrNull(remaining) {
+                    source.pause()
+                    // Transfer ownership before leaving the timeout scope: prompt cancellation
+                    // can discard its successful result even after pause has returned.
+                    paused += source
+                }
+                if (completed == null) return null
             }
             for ((_, store) in attached) store.freeze()
             frozen = true

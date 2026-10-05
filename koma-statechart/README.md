@@ -460,6 +460,31 @@ What holds:
   themselves: transitions, activations, commands, timers, ignored inputs with their reason,
   refused actions. Commands and refused actions carry only what the describers you pass keep.
 
+### External source adapter contract
+
+`ExternalSource`, `MachineStore.feed` and source registration remain experimental. A socket or
+paging adapter must serialize `feed` and its admission cursor with `pause`:
+
+- Advance the cursor when `feed` returns `Admission.Accepted`. It means the input is queued;
+  the group waits for the member to decide it before taking the source snapshot. On
+  `Admission.Rejected`, keep the pending item or explicitly record a deliberate drop.
+- Keep blocking socket reads and retry/backpressure waits outside the feed lock. A quiet socket
+  or a full member queue must still allow `pause` to complete. Data already read but not admitted
+  waits until the source resumes and belongs after the cut.
+- A successful `pause` transfers cleanup to the group, which calls `resume` once, including when
+  another source or member fails. A throwing or cancelled `pause` must roll back its own partial
+  pause before propagating the failure. Use non-cancellable cleanup if that rollback suspends.
+- Keep a stable upstream sequence or page cursor when reconnects can redeliver data. `feed`
+  does not deduplicate. The source snapshot can distinguish its admitted cursor from pending
+  requests and connection generations.
+
+The [paging contract tests](src/commonTest/kotlin/koma/statechart/machine/ExternalSourceContractTest.kt)
+exercise rejection/retry, cancellation and timeout rollback, and data arriving during a cut.
+The [JVM socket integration tests](src/jvmTest/kotlin/koma/statechart/machine/SocketSourceIntegrationTest.kt)
+use real loopback TCP connections to check reconnect/redelivery, queued frames during a cut and
+backpressure. These are adapter examples and tests; the library does not provide a socket or
+pagination transport.
+
 ### Effects in Compose
 
 [koma-statechart-compose](../koma-statechart-compose/README.md) subscribes a composition to the
