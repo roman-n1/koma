@@ -7,6 +7,7 @@ import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicInteger
 import koma.core.Action
 import koma.core.Event
+import koma.core.InputId
 import koma.observability.MachineGroupId
 import koma.observability.RecordingSession
 import koma.observability.RuntimeSessionId
@@ -25,6 +26,9 @@ import koma.statechart.StateId
 import koma.statechart.Transition
 import koma.statechart.Trigger
 import koma.statechart.machine.CommandHandler
+import koma.statechart.machine.Decision
+import koma.statechart.machine.DecisionObserver
+import koma.statechart.machine.MachineInput
 import koma.statechart.machine.DefinitionId
 import koma.statechart.machine.DefinitionVersion
 import koma.statechart.machine.Machine
@@ -135,7 +139,11 @@ object CheckoutDemo {
     }
 
     /** Writes a fresh directory every time; no existing recording is overwritten. */
-    suspend fun record(parent: Path, calls: AtomicInteger = AtomicInteger()): Recorded = withContext(Dispatchers.IO) {
+    suspend fun record(parent: Path, calls: AtomicInteger = AtomicInteger()): Recorded =
+        record(parent, calls, beforeSummaryRecorded = null)
+
+    // The example's test seam holds a real committed observer before the file observer runs.
+    internal suspend fun record(parent: Path, calls: AtomicInteger, beforeSummaryRecorded: (() -> Unit)?): Recorded = withContext(Dispatchers.IO) {
         Files.createDirectories(parent)
         val directory = Files.createTempDirectory(parent, "checkout-")
         val storage = FileSegmentStorage(directory.toString())
@@ -154,12 +162,17 @@ object CheckoutDemo {
         val cartStore = MachineStore(cartMachine, CartContext(), CommandHandler<LookupPrice, CartAction> { _, results ->
             calls.incrementAndGet()
             results.result(CartAction.Priced(100))
-        }, engine, observers = listOf(cartMember, session.decisionsOf(cartId), files.member(cartId, cartMachine, CartContext(), cartCodec))) {
+        }, engine, coroutineContext = engine.coroutineContext, observers = listOf(cartMember, session.decisionsOf(cartId), files.member(cartId, cartMachine, CartContext(), cartCodec))) {
             recordTo(session, cartId)
+        }
+        val summaryObserver = object : DecisionObserver<SummaryContext, UpdateTotal, NoCommand, NoEvent> {
+            override fun onCommitted(input: InputId?, machineInput: MachineInput<UpdateTotal>, decision: Decision<SummaryContext, NoCommand, NoEvent>) {
+                if (decision.snapshot.context.total == 100) beforeSummaryRecorded?.invoke()
+            }
         }
         val summaryStore = MachineStore(summaryMachine, SummaryContext(), CommandHandler<NoCommand, UpdateTotal> { _, _ ->
             error("The summary has no commands")
-        }, engine, observers = listOf(summaryMember, session.decisionsOf(summaryId), files.member(summaryId, summaryMachine, SummaryContext(), summaryCodec))) {
+        }, engine, coroutineContext = engine.coroutineContext, observers = listOf(summaryMember, session.decisionsOf(summaryId), summaryObserver, files.member(summaryId, summaryMachine, SummaryContext(), summaryCodec))) {
             recordTo(session, summaryId)
         }
         try {
@@ -173,6 +186,9 @@ object CheckoutDemo {
                 summaryStore.state.first { it.configuration.active.isNotEmpty() }
                 cartStore.dispatch(CartAction.Start)
                 summaryStore.state.first { it.context.total == 100 }
+                // StateFlow publishes before the committed plugins/observers finish. A group
+                // cut drains both members and their executors before cancellation can stop them.
+                checkNotNull(group.checkpoint(5.seconds)) { "Checkout did not reach a consistent recording boundary" }
             }
         } finally {
             // Join Store shutdown before draining file writers: no late observer can append
