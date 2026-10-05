@@ -40,6 +40,7 @@ data class JournalFileConfig(
  * end frame, so a reader tells it from one cut short by a crash. Writing happens on the
  * session's writer; [flush] and [close] may be called from anywhere, for example from a
  * lifecycle or crash hook, and never wait for a Store.
+ * A storage failure stops this sink and releases its output; subsequent writes are ignored.
  */
 class JournalFileSink(
     private val storage: SegmentStorage,
@@ -72,23 +73,29 @@ class JournalFileSink(
         locked {
             if (closed) return
             val session = session
-            if (session == null) begin(record) else require(record.session == session && record.group == group) {
+            if (session != null) require(record.session == session && record.group == group) {
                 "[Koma] JournalFileSink writes session $session group $group; got ${record.session} ${record.group}"
             }
-            val frame = JournalFileFormat.frame(record)
-            if (segmentRecords > 0 && segmentBytes + frame.size > config.maxSegmentBytes) {
-                finish()
-                index++
-                open()
-                retain()
-            }
-            val output = checkNotNull(output)
-            output.write(frame)
-            segmentBytes += frame.size
-            segmentRecords++
-            if (++unflushed >= config.flushEveryRecords) {
-                output.flush()
-                unflushed = 0
+            try {
+                if (session == null) begin(record)
+                val frame = JournalFileFormat.frame(record)
+                if (segmentRecords > 0 && segmentBytes + frame.size > config.maxSegmentBytes) {
+                    finish()
+                    index++
+                    open()
+                    retain()
+                }
+                val output = checkNotNull(output)
+                output.write(frame)
+                segmentBytes += frame.size
+                segmentRecords++
+                if (++unflushed >= config.flushEveryRecords) {
+                    output.flush()
+                    unflushed = 0
+                }
+            } catch (t: Throwable) {
+                abort(t)
+                throw t
             }
         }
     }
@@ -96,8 +103,13 @@ class JournalFileSink(
     /** Hands what was written to the storage; for a background or crash path. */
     fun flush() {
         locked {
-            output?.flush()
-            unflushed = 0
+            try {
+                output?.flush()
+                unflushed = 0
+            } catch (t: Throwable) {
+                abort(t)
+                throw t
+            }
         }
     }
 
@@ -122,8 +134,8 @@ class JournalFileSink(
     private fun open() {
         val header = JournalFileFormat.header(checkNotNull(session), checkNotNull(group), checkNotNull(mode), index)
         val output = storage.append(JournalFileFormat.segmentName(checkNotNull(session), index))
-        output.write(header)
         this.output = output
+        output.write(header)
         segmentBytes = header.size
         segmentRecords = 0
         unflushed = 0
@@ -131,9 +143,32 @@ class JournalFileSink(
 
     private fun finish() {
         val output = output ?: return
-        output.write(JournalFileFormat.END)
-        output.close()
         this.output = null
+        var failure: Throwable? = null
+        try {
+            output.write(JournalFileFormat.END)
+        } catch (t: Throwable) {
+            failure = t
+            throw t
+        } finally {
+            closeOutput(output, failure)
+        }
+    }
+
+    private fun abort(failure: Throwable) {
+        closed = true
+        val output = output ?: return
+        this.output = null
+        closeOutput(output, failure)
+    }
+
+    private fun closeOutput(output: SegmentOutput, failure: Throwable?) {
+        try {
+            output.close()
+        } catch (t: Throwable) {
+            if (failure == null) throw t
+            if (failure !== t) failure.addSuppressed(t)
+        }
     }
 
     private fun retain() {

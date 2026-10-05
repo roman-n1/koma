@@ -138,7 +138,10 @@ class GroupRecorder(
      */
     fun <C, A : Action, CMD, E : Event> member(id: StoreInstanceId, machine: Machine<C, A, CMD, E>, context: C): DecisionObserver<C, A, CMD, E> {
         val recorder = MachineRecorder(machine, context)
-        locked { require(recorders.put(id, recorder) == null) { "[Koma] $id is already recorded by this group recorder" } }
+        locked {
+            require(id !in recorders) { "[Koma] $id is already recorded by this group recorder" }
+            recorders[id] = recorder
+        }
         return object : DecisionObserver<C, A, CMD, E> {
             override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) = locked {
                 recorder.onCommitted(input, machineInput, decision)

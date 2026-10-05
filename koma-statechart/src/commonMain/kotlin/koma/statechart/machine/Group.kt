@@ -232,7 +232,10 @@ class MachineGroup(private val session: RecordingSession? = null) {
      */
     fun <C, A : Action, CMD, E : Event> member(id: StoreInstanceId): Member<C, A, CMD, E> {
         val member = Member<C, A, CMD, E>(id)
-        locked { require(members.put(id, member) == null) { "[Koma] $id is already a member of this group" } }
+        locked {
+            require(id !in members) { "[Koma] $id is already a member of this group" }
+            members[id] = member
+        }
         return member
     }
 
@@ -246,6 +249,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
         val started = TimeSource.Monotonic.markNow()
         val paused = mutableListOf<ExternalSource>()
         var frozen = false
+        var failure: Throwable? = null
         try {
             // Sources first: once none feeds, what the members hold is all there is.
             for (source in sources) {
@@ -275,9 +279,22 @@ class MachineGroup(private val session: RecordingSession? = null) {
             // Still frozen: a listener sees the cut where the members' observers stand.
             for (listener in locked { cutListeners.toList() }) listener.onCut(checkpoint)
             checkpoint
+        } catch (t: Throwable) {
+            failure = t
+            throw t
         } finally {
-            if (frozen) for ((_, store) in attached) store.thaw()
-            for (source in paused) source.resume()
+            val primary = failure
+            fun release(block: () -> Unit) {
+                try {
+                    block()
+                } catch (t: Throwable) {
+                    val previous = failure
+                    if (previous == null) failure = t else if (previous !== t) previous.addSuppressed(t)
+                }
+            }
+            if (frozen) for ((_, store) in attached) release { store.thaw() }
+            for (source in paused) release { source.resume() }
+            if (primary == null) failure?.let { throw it }
         }
     }
 

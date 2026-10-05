@@ -19,6 +19,7 @@ import platform.posix.closedir
 import platform.posix.errno
 import platform.posix.fclose
 import platform.posix.fflush
+import platform.posix.ferror
 import platform.posix.fopen
 import platform.posix.fread
 import platform.posix.fwrite
@@ -35,6 +36,9 @@ actual class FileSegmentStorage actual constructor(private val directory: String
     init {
         if (mkdir(directory, S_IRWXU.convert()) != 0) {
             require(errno == EEXIST) { "[Koma] Cannot create directory $directory (errno $errno)" }
+            val existing = opendir(directory)
+            require(existing != null) { "[Koma] Not an accessible directory: $directory (errno $errno)" }
+            closedir(existing)
         }
     }
 
@@ -69,6 +73,7 @@ actual class FileSegmentStorage actual constructor(private val directory: String
                 if (read <= 0) break
                 chunks += buffer.copyOf(read)
             }
+            check(ferror(file) == 0) { "[Koma] Cannot read ${path(name)} (errno $errno)" }
             val total = chunks.sumOf { it.size }
             val bytes = ByteArray(total)
             var offset = 0
@@ -96,11 +101,11 @@ actual class FileSegmentStorage actual constructor(private val directory: String
         }
 
         override fun flush() {
-            fflush(file)
+            check(fflush(file) == 0) { "[Koma] Cannot flush ${path(name)} (errno $errno)" }
         }
 
         override fun close() {
-            fclose(file)
+            check(fclose(file) == 0) { "[Koma] Cannot close ${path(name)} (errno $errno)" }
         }
     }
 

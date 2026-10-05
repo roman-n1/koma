@@ -30,6 +30,9 @@ import koma.timetravel.GroupStep
 import koma.timetravel.RecordedStep
 import koma.timetravel.Recording
 import koma.timetravel.RecordingCodec
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -261,22 +264,59 @@ class GroupRecordingFileSink(
     private var segmentIndex = -1
     private var segmentBytes = 0
     private var segmentEntries = 0
+    private var unflushed = 0
     private var failed = false
 
     private val writer: Job = scope.launch {
-        for (item in queue) {
-            if (failed) continue
+        var failure: Throwable? = null
+        try {
+            for (item in queue) {
+                if (failed) continue
+                try {
+                    write(item)
+                } catch (e: Exception) {
+                    if (e is CancellationException && !currentCoroutineContext().isActive) throw e
+                    failed = true
+                    release(e)
+                    notifyFailure(e)
+                }
+            }
+            if (!failed) finish()
+        } catch (t: Throwable) {
+            failure = t
+            if (t is CancellationException || t !is Exception) throw t
+            notifyFailure(t)
+        } finally {
+            // Cancellation leaves an unfinished segment; never append END to a failed frame.
             try {
-                write(item)
-            } catch (e: Exception) {
-                failed = true
-                config.onFailure(e)
+                release(failure)
+            } finally {
+                locked { closed = true }
+                queue.cancel()
             }
         }
-        if (!failed) try {
-            finish()
-        } catch (e: Exception) {
-            config.onFailure(e)
+    }
+
+    private fun notifyFailure(failure: Throwable) {
+        try {
+            config.onFailure(failure)
+        } catch (_: Exception) {
+            // Reporting a storage failure must not fail the writer's parent or its cleanup.
+        }
+    }
+
+    private fun release(failure: Throwable?) {
+        val output = output ?: return
+        this.output = null
+        closeOutput(output, failure)
+    }
+
+    private fun closeOutput(output: SegmentOutput, failure: Throwable?) {
+        try {
+            output.close()
+        } catch (t: Throwable) {
+            if (failure == null) throw t
+            if (failure !== t) failure.addSuppressed(t)
         }
     }
 
@@ -294,8 +334,11 @@ class GroupRecordingFileSink(
      * and to the group's order.
      */
     fun <C, A : Action, CMD, E : Event> member(memberId: StoreInstanceId, machine: Machine<C, A, CMD, E>, context: C, codec: RecordingCodec<C, A, CMD, E>): DecisionObserver<C, A, CMD, E> {
-        val sink = RecordingFileSink(memberId, machine, context, codec, storage, scope, config)
-        locked { require(sinks.put(memberId, sink) == null) { "[Koma] $memberId is already recorded by this group sink" } }
+        val sink = locked {
+            check(!closed) { "[Koma] This group sink is closed" }
+            require(memberId !in sinks) { "[Koma] $memberId is already recorded by this group sink" }
+            RecordingFileSink(memberId, machine, context, codec, storage, scope, config).also { sinks[memberId] = it }
+        }
         return object : DecisionObserver<C, A, CMD, E> {
             override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
                 sink.onCommitted(input, machineInput, decision)
@@ -375,6 +418,10 @@ class GroupRecordingFileSink(
         output.write(frame)
         segmentBytes += frame.size
         segmentEntries++
+        if (++unflushed >= config.flushEveryFrames) {
+            output.flush()
+            unflushed = 0
+        }
     }
 
     private fun open(item: Item) {
@@ -383,19 +430,27 @@ class GroupRecordingFileSink(
             GroupSegmentHeader(GroupRecordingFileFormat.VERSION, id, locked { sinks.keys.toList() }, group.routeHistory.map { GroupRoute(it.from, it.to, it.pair) }, group.sourceIds.toSet(), segmentIndex, item.index, item.inFlight, item.cut),
         )
         val output = storage.append(GroupRecordingFileFormat.segmentName(id, segmentIndex))
-        output.write(header)
         this.output = output
+        output.write(header)
         segmentBytes = header.size
         segmentEntries = 0
+        unflushed = 0
     }
 
     private fun nextIndex(): Int = storage.list().mapNotNull { GroupRecordingFileFormat.parseSegmentName(it.name) }.filter { it.first == id }.maxOfOrNull { it.second }?.plus(1) ?: 0
 
     private fun finish() {
         val output = output ?: return
-        output.write(Framing.END)
-        output.close()
         this.output = null
+        var failure: Throwable? = null
+        try {
+            output.write(Framing.END)
+        } catch (t: Throwable) {
+            failure = t
+            throw t
+        } finally {
+            closeOutput(output, failure)
+        }
     }
 
     private fun retain() {

@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalKomaApi::class)
+@file:OptIn(ExperimentalKomaApi::class, kotlinx.cinterop.ExperimentalForeignApi::class)
 
 package koma.observability.file
 
@@ -18,6 +18,7 @@ import platform.Foundation.NSTemporaryDirectory
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -26,6 +27,36 @@ import kotlin.time.Duration.Companion.milliseconds
  * storage over it reads them, sizes and deletion work.
  */
 class FileSegmentStorageIosTest {
+
+    @Test
+    fun aRegularFileCannotBeUsedAsTheStorageDirectory() {
+        val directory = NSTemporaryDirectory() + "koma-directory-" + Random.nextLong().toULong().toString(16)
+        val storage = FileSegmentStorage(directory)
+        try {
+            storage.append("plain").close()
+            assertFailsWith<IllegalArgumentException> { FileSegmentStorage("$directory/plain") }
+        } finally {
+            storage.delete("plain")
+            platform.posix.remove(directory)
+        }
+    }
+
+    @Test
+    fun readingADirectoryReportsAnIoErrorInsteadOfReturningEmptyBytes() {
+        val directory = NSTemporaryDirectory() + "koma-read-error-" + Random.nextLong().toULong().toString(16)
+        val storage = FileSegmentStorage(directory)
+        val child = "$directory/child"
+        FileSegmentStorage(child)
+        try {
+            assertFailsWith<IllegalStateException> { storage.read("child") }
+            assertFailsWith<IllegalStateException> { storage.read("missing") }
+            assertFailsWith<IllegalStateException> { storage.append("child") }
+            assertTrue(storage.list().isEmpty(), "failed operations created no segment")
+        } finally {
+            platform.posix.remove(child)
+            platform.posix.remove(directory)
+        }
+    }
 
     private val session = RuntimeSessionId("ios")
 

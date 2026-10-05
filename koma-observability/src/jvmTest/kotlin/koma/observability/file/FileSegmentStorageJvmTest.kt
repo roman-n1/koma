@@ -19,6 +19,7 @@ import java.io.RandomAccessFile
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.milliseconds
@@ -29,6 +30,22 @@ import kotlin.time.Duration.Companion.milliseconds
  * whole frame, and pruning deletes files.
  */
 class FileSegmentStorageJvmTest {
+
+    @Test
+    fun invalidDirectoryAndFileOperationsReportErrorsWithoutCreatingSegments() {
+        val directory = Files.createTempDirectory("koma-file-errors").toFile()
+        try {
+            val storage = FileSegmentStorage(directory.path)
+            storage.append("plain").close()
+            assertFailsWith<IllegalArgumentException> { FileSegmentStorage(File(directory, "plain").path) }
+            storage.delete("plain")
+            Files.createDirectory(File(directory, "child").toPath())
+            assertFailsWith<java.io.IOException> { storage.read("child") }
+            assertFailsWith<java.io.IOException> { storage.read("missing") }
+            assertFailsWith<java.io.IOException> { storage.append("child") }
+            assertTrue(storage.list().isEmpty())
+        } finally { directory.deleteRecursively() }
+    }
 
     private val session = RuntimeSessionId("jvm")
 
