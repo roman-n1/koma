@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -188,16 +188,21 @@ private class Fixture {
     private fun newStore(saver: StateSaver<Counter>): TrackedStore = TrackedStore(
         Store<Counter, Increment, Nothing>(Counter(0)) {
             stateSaver(saver)
-            state<Counter> { action<Increment> { nextState(state.copy(value = state.value + 1)) } }
+            state<Counter> { action<Increment> { nextState { state.copy(value = state.value + 1) } } }
         },
     ).also { allStores += it }
 
     @Composable fun Content() {
         for (tab in tabs.value) key(tab) {
             val saver = rememberStateSaver<Counter>()
-            val view = rememberViewStore(key = storeKey.value, autoClose = ownsStore) {
-                (if (ownsStore) newStore(saver) else external.getOrPut(tab) { newStore(saver) })
-                    .also { adopted[tab] = it }
+            val view = if (ownsStore) {
+                rememberViewStore(key = storeKey.value, autoClose = true) {
+                    newStore(saver).also { adopted[tab] = it }
+                }
+            } else {
+                val store = external.getOrPut(tab) { newStore(saver) }
+                adopted[tab] = store
+                rememberViewStore(store = store, autoClose = false)
             }
             SideEffect { handles[tab] = Handle(saver, adopted.getValue(tab), view) }
         }
