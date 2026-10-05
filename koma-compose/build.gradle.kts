@@ -32,7 +32,11 @@ kotlin {
     }
     iosArm64()
     iosSimulatorArm64()
-    jvm()
+    jvm {
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_11
+        }
+    }
     // Web targets (js / wasmJs) are browser-only here — intentionally no nodejs(). This module
     // depends on Compose Multiplatform, whose rendering layer (Skiko) ships a
     // browser-only web runtime: the generated skiko.mjs has its Node loader

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+TARGET=${1:-jvm}
+case "$TARGET" in
+  jvm) PUBLICATIONS=(Jvm); TASKS=(:app:jvmTest :tooling:compileKotlinJvm) ;;
+  android) PUBLICATIONS=(Android); TASKS=(:app:compileAndroidMain :tooling:compileAndroidMain) ;;
+  js) PUBLICATIONS=(Js); TASKS=(:app:compileKotlinJs :tooling:compileKotlinJs) ;;
+  wasm) PUBLICATIONS=(WasmJs); TASKS=(:app:compileKotlinWasmJs :tooling:compileKotlinWasmJs) ;;
+  ios) PUBLICATIONS=(IosArm64 IosSimulatorArm64); TASKS=(:app:compileKotlinIosArm64 :app:compileKotlinIosSimulatorArm64 :tooling:compileKotlinIosArm64 :tooling:compileKotlinIosSimulatorArm64) ;;
+  *) printf 'Usage: %s [jvm|android|js|wasm|ios]\n' "$0" >&2; exit 2 ;;
+esac
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/koma-published-consumer.XXXXXX")
+trap 'rm -rf "$WORK"' EXIT
+# Read the actual publishing coordinates and plugin versions, without duplicating release values.
+value() { python3 "$ROOT/verification/published-consumer/config.py" "$ROOT" "$1"; }
+GROUP=$(value group)
+VERSION=$(value version)
+MODULES=(koma-core koma-compose koma-logging koma-message koma-test koma-statechart koma-observability koma-timetravel koma-statechart-test koma-timetravel-compose koma-statechart-compose)
+PUBLISH_TASKS=()
+for module in "${MODULES[@]}"; do
+  for publication in KotlinMultiplatform "${PUBLICATIONS[@]}"; do
+    PUBLISH_TASKS+=(":$module:publish${publication}PublicationToConsumerRepository")
+  done
+done
+"$ROOT/gradlew" -p "$ROOT" "${PUBLISH_TASKS[@]}" -Pkoma.consumer.repository="$WORK/maven" --no-configuration-cache --max-workers=2
+python3 "$ROOT/verification/published-consumer/verify_metadata.py" "$WORK/maven" "$GROUP" "$VERSION" "$TARGET"
+PROPERTIES=(-Pconsumer.repository="$WORK/maven" -Pconsumer.group="$GROUP" -Pconsumer.version="$VERSION" -Pconsumer.target="$TARGET"
+  -Pconsumer.kotlin="$(value kotlin)" -Pconsumer.agp="$(value agp)" -Pconsumer.compose="$(value compose-multiplatform)" -Pconsumer.coroutines="$(value coroutines)")
+mkdir -p "$WORK/positive" "$WORK/negative"
+cp "$ROOT/verification/published-consumer/contracts/PositiveContracts.kt" "$WORK/positive/"
+cp "$ROOT/verification/published-consumer/contracts/"*.kt "$WORK/negative/"
+"$ROOT/gradlew" -p "$ROOT/verification/published-consumer" "${PROPERTIES[@]}" -Pconsumer.contractSources="$WORK/positive" "${TASKS[@]}" verifyPublishedGraphs --no-configuration-cache --max-workers=2
+if [[ "$TARGET" == jvm ]]; then
+  REPORTS="$ROOT/verification/published-consumer/build/reports/contracts"
+  mkdir -p "$REPORTS"
+  if "$ROOT/gradlew" -p "$ROOT/verification/published-consumer" "${PROPERTIES[@]}" -Pconsumer.contractSources="$WORK/negative" :app:compileKotlinJvm --no-configuration-cache --max-workers=2 > "$REPORTS/negative-compile.log" 2>&1; then
+    printf 'Forbidden adapter DSL compiled successfully; contract verification failed\n' >&2
+    exit 1
+  fi
+  python3 "$ROOT/verification/published-consumer/verify_negative.py" "$WORK/negative/NegativeContracts.kt" "$REPORTS/negative-compile.log"
+fi
+printf 'Published consumer verification passed: %s (%s:%s)\n' "$TARGET" "$GROUP" "$VERSION"

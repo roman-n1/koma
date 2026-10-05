@@ -1,0 +1,68 @@
+"""Validate real publications, dependency coordinates and the production/debug boundary."""
+import hashlib
+import json
+import sys
+import xml.etree.ElementTree as ET
+import zipfile
+from pathlib import Path
+
+repo, group, version, target = Path(sys.argv[1]), *sys.argv[2:]
+production = {"koma-core", "koma-compose", "koma-logging", "koma-message", "koma-statechart", "koma-observability", "koma-statechart-compose"}
+tooling = {"koma-test", "koma-statechart-test", "koma-timetravel", "koma-timetravel-compose"}
+modules = production | tooling
+suffixes = {"jvm": ["jvm"], "android": ["android"], "js": ["js"], "wasm": ["wasm-js"], "ios": ["iosarm64", "iossimulatorarm64"]}[target]
+ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+edges = {module: set() for module in modules}
+
+def dependency(owner, dependency_group, name, dependency_version):
+    if not name.startswith("koma-"):
+        return
+    assert dependency_group == group, (owner, "wrong dependency group", dependency_group, name)
+    assert dependency_version == version, (owner, "wrong dependency version", name, dependency_version)
+    # Prefer the longest prefix: koma-statechart-test is not koma-statechart.
+    base = max((module for module in modules if name == module or name.startswith(module + "-")), key=len, default=None)
+    assert base is not None, (owner, "unknown Koma artifact", name)
+    edges[owner].add(base)
+
+for module in sorted(modules):
+    for artifact in [module] + [module + "-" + suffix for suffix in suffixes]:
+        folder = repo / group.replace(".", "/") / artifact / version
+        stem = artifact + "-" + version
+        pom = ET.parse(folder / (stem + ".pom")).getroot()
+        assert pom.findtext("m:groupId", namespaces=ns) == group, artifact
+        assert pom.findtext("m:artifactId", namespaces=ns) == artifact, artifact
+        assert pom.findtext("m:version", namespaces=ns) == version, artifact
+        for item in pom.findall("m:dependencies/m:dependency", ns):
+            dependency(module, item.findtext("m:groupId", namespaces=ns), item.findtext("m:artifactId", namespaces=ns), item.findtext("m:version", namespaces=ns))
+        metadata = json.loads((folder / (stem + ".module")).read_text())
+        component = metadata["component"]
+        assert component["group"] == group and component["module"] == module and component["version"] == version, artifact
+        if artifact != module:
+            assert (folder / component["url"]).is_file(), (artifact, "missing root metadata")
+        for variant in metadata["variants"]:
+            attributes = variant.get("attributes", {})
+            if attributes.get("org.jetbrains.kotlin.platform.type") == "jvm":
+                assert attributes.get("org.gradle.jvm.version") == 11, (artifact, "JVM baseline must not depend on build JDK", attributes)
+            for item in variant.get("dependencies", []):
+                dependency(module, item["group"], item["module"], item.get("version", {}).get("requires"))
+            for item in variant.get("files", []):
+                payload = folder / item["url"]
+                assert payload.is_file(), (artifact, "missing payload", item["url"])
+                assert payload.stat().st_size == item["size"], (artifact, "payload size", item["url"])
+                assert hashlib.sha256(payload.read_bytes()).hexdigest() == item["sha256"], (artifact, "payload hash", item["url"])
+                if target == "jvm" and payload.suffix == ".jar":
+                    with zipfile.ZipFile(payload) as jar:
+                        for name in jar.namelist():
+                            if name.endswith(".class"):
+                                assert int.from_bytes(jar.read(name)[6:8], "big") <= 55, (artifact, "bytecode newer than Java 11", name)
+
+for module in production:
+    visited, pending = set(), [module]
+    while pending:
+        node = pending.pop()
+        if node in visited:
+            continue
+        visited.add(node)
+        pending.extend(edges[node])
+    assert visited.isdisjoint(tooling), (module, "tooling in published production graph", visited & tooling)
+print("Validated Maven POMs, Gradle metadata and payload hashes for", len(modules), "modules on", target)

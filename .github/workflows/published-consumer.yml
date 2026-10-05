@@ -1,0 +1,39 @@
+name: Published consumer
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  consumer:
+    name: Maven consumer (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: jvm, os: ubuntu-latest}
+          - {target: android, os: ubuntu-latest}
+          - {target: js, os: ubuntu-latest}
+          - {target: wasm, os: ubuntu-latest}
+          - {target: ios, os: macos-26}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: gradle/actions/wrapper-validation@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+      - name: Publish to isolated Maven repository and consume artifacts
+        run: scripts/verify-published-consumer.sh ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: published-consumer-${{ matrix.target }}
+          path: verification/published-consumer/**/build/reports
+          if-no-files-found: ignore
