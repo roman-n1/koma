@@ -9,6 +9,9 @@ import kotlin.test.assertEquals
 class PublishedSmokeTest {
     @Test
     fun publishedStoreChartMachineAndMessageBusWorkTogether() = runTest {
+        System.getProperty("consumer.expected.java.feature")?.let {
+            assertEquals(it.toInt(), Runtime.version().feature(), "CI must execute the smoke on the requested Java runtime")
+        }
         val counter = counter(this)
         val receiver = receiver(this)
         val chart = chart(this)

@@ -27,6 +27,16 @@ done
 python3 "$ROOT/verification/published-consumer/verify_metadata.py" "$WORK/maven" "$GROUP" "$VERSION" "$TARGET"
 PROPERTIES=(-Pconsumer.repository="$WORK/maven" -Pconsumer.group="$GROUP" -Pconsumer.version="$VERSION" -Pconsumer.target="$TARGET"
   -Pconsumer.kotlin="$(value kotlin)" -Pconsumer.agp="$(value agp)" -Pconsumer.compose="$(value compose-multiplatform)" -Pconsumer.coroutines="$(value coroutines)")
+if [[ "$TARGET" == jvm ]]; then
+  if [[ -n "${KOMA_CONSUMER_JAVA11_HOME:-}" ]]; then
+    PROPERTIES+=(-Pconsumer.java11.home="$KOMA_CONSUMER_JAVA11_HOME")
+  elif [[ "${CI:-}" == true ]]; then
+    printf 'JVM consumer CI requires KOMA_CONSUMER_JAVA11_HOME; Java 11 execution must not be skipped\n' >&2
+    exit 1
+  else
+    printf 'Java 11 home not supplied; local smoke uses the Gradle runtime (CI executes on Java 11)\n'
+  fi
+fi
 mkdir -p "$WORK/positive" "$WORK/negative"
 cp "$ROOT/verification/published-consumer/contracts/PositiveContracts.kt" "$WORK/positive/"
 cp "$ROOT/verification/published-consumer/contracts/"*.kt "$WORK/negative/"

@@ -30,7 +30,10 @@ running Gradle. This catches a default-JVM-target problem that source-project te
 `app` consumes production modules only. Core, statechart and observability are intentionally
 transitive dependencies; common code calls their APIs and compiles Compose ViewStore/Mailbox
 usage. The JVM smoke executes ordinary Store, StateChartStore, MachineStore, the message bus
-and a logging plugin. `tooling` separately compiles MachineTestDriver, koma-test helpers and
+and a logging plugin. CI builds with JDK 17 and executes the JVM smoke with a real JDK 11, so
+target-11 bytecode calling newer Java APIs is detected. Locally set
+`KOMA_CONSUMER_JAVA11_HOME=/path/to/jdk-11` to do the same; otherwise the local smoke uses the
+Gradle runtime and reports that limitation. `tooling` separately compiles MachineTestDriver, koma-test helpers and
 the Time Travel inspector. Graph checks require all eleven modules to be consumed and reject
 source-project substitution, mixed fork versions and test/debug modules in the app graph.
 

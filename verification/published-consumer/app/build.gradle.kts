@@ -34,3 +34,14 @@ kotlin {
         }
     }
 }
+
+// Build with the same modern JDK as the producer, execute the published-artifact smoke on
+// Java 11 in CI. Bytecode target alone cannot catch calls to APIs absent on that runtime.
+tasks.withType<Test>().configureEach {
+    providers.gradleProperty("consumer.java11.home").orNull?.let { java11Home ->
+        val java11 = file("$java11Home/bin/java")
+        check(java11.isFile) { "Java 11 runtime not found: $java11" }
+        executable = java11.absolutePath
+        systemProperty("consumer.expected.java.feature", "11")
+    }
+}
