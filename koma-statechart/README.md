@@ -594,6 +594,37 @@ provided the chart does not rely on them either:
   is dropped on its own (the next transition into that history state takes the default target).
   Context schema migrations remain the application's responsibility.
 
+## Persistence across process restarts
+
+`StateSaver` supplies storage and encoding through your implementation. Use durable storage for
+process restarts; an in-memory saver only survives as long as its owner does. Keep an application
+schema version beside the saved data and migrate or reject incompatible context before returning
+a snapshot. Returning `null` starts with the declared initial context; a decoding `Exception` is
+reported to the Store's exception handler and also falls back to the declared initial state.
+Configure an exception handler that reports persistence failures if you need to diagnose them.
+
+The two live adapters intentionally restore differently:
+
+| Adapter | Nodes and business context | Work after startup |
+|---|---|---|
+| `StateChartStore` | Valid saved configuration and context are retained. Invalid active nodes fall back to the new chart's initial configuration with the saved context. Invalid history records are discarded. | Enter hooks and their launched work do not run for valid restored nodes; declared activities restart. Each timer restarts with its full declared delay. |
+| `MachineStore` | An already started saved snapshot starts at the current machine's initial configuration, retaining its context and using the current definition/version. | Fresh startup commands and timers run. Old in-flight commands and timer deadlines are not resumed. |
+
+A `MachineStore` reset from another definition/version is also reported to its exception handler;
+a reset from an already started snapshot of the same definition/version is expected behavior.
+
+`MachineStore.checkpoint()` and Time Travel replay are separate executor-level mechanisms. A
+`StateSaver` snapshot does not include the command payloads and lanes needed to resume execution.
+For business deadlines that must survive downtime, persist the absolute deadline in your context
+and explicitly derive the next action from it when the application resumes.
+
+The [persistent restore integration tests](src/jvmTest/kotlin/koma/statechart/PersistentRestoreJvmTest.kt)
+write and restore snapshots in separate JVMs with an application-owned file codec. They cover
+timer/activity behavior, abrupt process death with pending work, changed definitions, missing
+files, truncated data and rejected schema versions. They verify process-independent persistence;
+Android Activity recreation and platform storage durability require their own application/device
+tests.
+
 ## Limitations
 
 - External sources and debug tooling remain experimental; no release has been published yet.
