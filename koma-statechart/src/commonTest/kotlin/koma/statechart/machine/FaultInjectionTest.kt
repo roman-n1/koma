@@ -14,7 +14,7 @@ import koma.observability.Payload
 import koma.observability.PayloadPolicy
 import koma.observability.RecordingSession
 import koma.observability.StoreInstanceId
-import koma.observability.recordTo
+import koma.statechart.recordTo
 import koma.statechart.ActionMatcher
 import koma.statechart.AtomicState
 import koma.statechart.CompoundState

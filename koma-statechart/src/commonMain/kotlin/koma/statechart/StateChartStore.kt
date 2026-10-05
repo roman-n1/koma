@@ -79,8 +79,10 @@ data class ChartTimers(
  * [StateChartStoreBuilder.onEnter] hook.
  */
 @KomaStoreDsl
-@ExperimentalKomaApi
-interface ChartHookScope<C, E : Event> : StoreScope {
+interface ChartHookScope<C, E : Event> {
+    /** Underlying handler scope for extensions such as `store.message(...)`. */
+    val store: StoreScope
+
     /**
      * The node being exited or entered.
      */
@@ -108,7 +110,6 @@ interface ChartHookScope<C, E : Event> : StoreScope {
  * Scope of an [StateChartStoreBuilder.onEnter] hook.
  */
 @KomaStoreDsl
-@ExperimentalKomaApi
 interface ChartEnterScope<C, A : Action, E : Event> : ChartHookScope<C, E> {
     /**
      * Starts work that lives while [node] stays active: it is cancelled when [node] is exited (or
@@ -126,8 +127,10 @@ interface ChartEnterScope<C, A : Action, E : Event> : ChartHookScope<C, E> {
  * `recover {}` handlers, otherwise by its exception handler.
  */
 @KomaStoreDsl
-@ExperimentalKomaApi
-interface ChartLaunchScope<C, A : Action, E : Event> : StoreScope {
+interface ChartLaunchScope<C, A : Action, E : Event> {
+    /** Underlying launch scope for StoreScope extensions. */
+    val store: StoreScope
+
     /**
      * The node this work belongs to.
      */
@@ -169,7 +172,7 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
     internal val enterHooks = mutableMapOf<StateId, MutableList<suspend ChartEnterScope<C, A, E>.() -> Unit>>()
     internal val exitHooks = mutableMapOf<StateId, MutableList<suspend ChartHookScope<C, E>.() -> Unit>>()
     internal val activities = mutableMapOf<StateId, MutableList<suspend ChartLaunchScope<C, A, E>.() -> Unit>>()
-    internal val storeBlocks = mutableListOf<StoreBuilder<ChartState<C>, A, E>.() -> Unit>()
+    internal val storeBlocks = mutableListOf<ChartStoreConfiguration<C, A, E>.() -> Unit>()
 
     /**
      * Implements the guard [label]. It receives the state before the step and the action, or
@@ -198,7 +201,6 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * work that lives while [id] is active. It is not run again for a configuration restored by a
      * [koma.core.StateSaver]; use [activity] for work that must run then too.
      */
-    @ExperimentalKomaApi
     fun onEnter(id: StateId, hook: suspend ChartEnterScope<C, A, E>.() -> Unit) {
         enterHooks.getOrPut(id) { mutableListOf() } += hook
     }
@@ -208,7 +210,6 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * order added. It can update the context and emit events. Work launched for [id] is cancelled
      * right after the step that exits it.
      */
-    @ExperimentalKomaApi
     fun onExit(id: StateId, hook: suspend ChartHookScope<C, E>.() -> Unit) {
         exitHooks.getOrPut(id) { mutableListOf() } += hook
     }
@@ -218,22 +219,16 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * the step's hooks), when the Store starts in a configuration where [id] is active, restored
      * or not, and it is cancelled when [id] is exited.
      */
-    @ExperimentalKomaApi
     fun activity(id: StateId, block: suspend ChartLaunchScope<C, A, E>.() -> Unit) {
         activities.getOrPut(id) { mutableListOf() } += block
     }
 
     /**
-     * Configures the underlying Koma Store: coroutine context, state saver, plugins, exception
-     * handler, policies and `recover {}` handlers. Blocks run in the order added, after the chart's
-     * own handlers are registered, so `enter {}` and `action {}` handlers registered here never run.
-     * The initial state is the chart's: an `initialState` set here is ignored.
-     * A `recover {}` handler may update [ChartState.context], but may not change configuration or
-     * timer bookkeeping. Dispatch a declared chart action to change nodes, so hooks, activities,
-     * history and timers participate in the transition.
+     * Configures runtime settings and context-only recovery. The chart owns the initial
+     * configuration and handlers; settings cannot register competing transitions or timers.
+     * Blocks run in declaration order. See [ChartStoreConfiguration.recover].
      */
-    @ExperimentalKomaApi
-    fun store(block: StoreBuilder<ChartState<C>, A, E>.() -> Unit) {
+    fun store(block: ChartStoreConfiguration<C, A, E>.() -> Unit) {
         storeBlocks += block
     }
 }
@@ -347,12 +342,14 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
                 action<Action> {
                     val result = runtime.step(state.configuration, state, action)
                     if (result is StepResult.Transitioned) {
-                        val next = takeStep(state, result, action) { event(it) }
+                        val next = takeStep(state, result, action, this) { event(it) }
                         nextState { next }
                     }
                 }
             }
-            config.storeBlocks.forEach { it() }
+            @Suppress("UNCHECKED_CAST")
+            val settings = this as StoreBuilder<ChartState<C>, A, E>
+            config.storeBlocks.forEach { block -> block(ChartStoreConfiguration(settings)) }
             validateRecovery { previous, recovered ->
                 require(previous.configuration == recovered.configuration && previous.timers == recovered.timers) {
                     "[Koma] StateChartStore recover {} may update context only; dispatch a declared chart action to change configuration or timers"
@@ -394,7 +391,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         // node must not leave the nodes after it without one.
         for (id in active) entered[id] = Job()
         try {
-            if (fresh) for (id in active) context = enter(id, entered.getValue(id), context, null, launches) { event(it) }
+            if (fresh) for (id in active) context = enter(id, entered.getValue(id), context, null, launches, this) { event(it) }
         } catch (e: Exception) {
             // The Store's own cancellation ends the start; any other exception, including an
             // expired withTimeout, is a failed hook (the core rule).
@@ -422,14 +419,14 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
     }
 
     /** Runs the hooks and effects of [result] and returns the state to commit. */
-    private suspend fun takeStep(state: ChartState<C>, result: StepResult.Transitioned, action: Action, emit: suspend (E) -> Unit): ChartState<C> {
+    private suspend fun takeStep(state: ChartState<C>, result: StepResult.Transitioned, action: Action, storeScope: StoreScope, emit: suspend (E) -> Unit): ChartState<C> {
         var context = state.context
         val entered = linkedMapOf<StateId, Job>()
         val launches = mutableListOf<Task>()
         try {
             for (id in result.exited) {
                 for (hook in config.exitHooks[id].orEmpty()) {
-                    val scope = ExitScope(id, action, context, emit)
+                    val scope = ExitScope(id, action, context, storeScope, emit)
                     scope.hook()
                     context = scope.context
                 }
@@ -440,7 +437,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
             for (id in result.entered) {
                 val activation = Job()
                 entered[id] = activation
-                context = enter(id, activation, context, action, launches, emit)
+                context = enter(id, activation, context, action, launches, storeScope, emit)
             }
         } catch (e: Throwable) {
             entered.values.forEach { it.cancel() }
@@ -464,11 +461,12 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         context: C,
         action: Action?,
         launches: MutableList<Task>,
+        storeScope: StoreScope,
         emit: suspend (E) -> Unit,
     ): C {
         var current = context
         for (hook in config.enterHooks[id].orEmpty()) {
-            val scope = EnterHookScope(id, action, current, emit, activation, launches)
+            val scope = EnterHookScope(id, action, current, storeScope, emit, activation, launches)
             try {
                 scope.hook()
             } finally {
@@ -521,7 +519,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         }
         val timer = definition.transitions[index]
         val next = when (val result = runtime.fire(state.configuration, state, timer)) {
-            is StepResult.Transitioned -> takeStep(state, result, TimerFired(timer)) { scope.event(it) }
+            is StepResult.Transitioned -> takeStep(state, result, TimerFired(timer), scope) { scope.event(it) }
             StepResult.Ignored -> state.copy(timers = state.timers.copy(running = state.timers.running - index))
         }
         scope.nextState { next }
@@ -569,6 +567,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         override val node: StateId,
         override val action: Action?,
         override var context: C,
+        override val store: StoreScope,
         private val emit: suspend (E) -> Unit,
     ) : ChartHookScope<C, E> {
         override suspend fun event(event: E) = emit(event)
@@ -578,6 +577,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         override val node: StateId,
         override val action: Action?,
         override var context: C,
+        override val store: StoreScope,
         private val emit: suspend (E) -> Unit,
         private val activation: Job,
         private val launches: MutableList<Task>,
@@ -593,6 +593,8 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
     }
 
     private inner class LaunchScope(override val node: StateId, private val activation: Job) : ChartLaunchScope<C, A, E> {
+        override val store: StoreScope get() = transactor
+
         // The activation is a plain Job that close() does not cancel; the transactor's scope is.
         override val isActive: Boolean get() = activation.isActive && transactor.isActive
 
@@ -617,7 +619,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
 
         override fun dispatch(action: A) {
             @Suppress("UNCHECKED_CAST")
-            (store as StoreInternalApi<ChartState<C>, A, E>).dispatchIf(action) { activation.isActive }
+            (this@ChartStoreHost.store as StoreInternalApi<ChartState<C>, A, E>).dispatchIf(action) { activation.isActive }
         }
     }
 }

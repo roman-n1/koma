@@ -11,7 +11,7 @@ import koma.observability.PayloadPolicy
 import koma.observability.RecordingSession
 import koma.observability.RuntimeSessionId
 import koma.observability.StoreInstanceId
-import koma.observability.recordTo
+import koma.statechart.recordTo
 import koma.statechart.example.picker.AddressBookSearchMachine.Contact
 import koma.statechart.example.picker.AddressBookSearchMachine.Group
 import koma.statechart.example.picker.AddressBookSearchMachine.Guest

@@ -86,11 +86,13 @@ abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: koma.core/Event> 
     abstract fun launch(kotlin.coroutines/SuspendFunction1<koma.statechart/ChartLaunchScope<#A, #B, #C>, kotlin/Unit>) // koma.statechart/ChartEnterScope.launch|launch(kotlin.coroutines.SuspendFunction1<koma.statechart.ChartLaunchScope<1:0,1:1,1:2>,kotlin.Unit>){}[0]
 }
 
-abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: koma.core/Event> koma.statechart/ChartLaunchScope : koma.core/StoreScope { // koma.statechart/ChartLaunchScope|null[0]
+abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: koma.core/Event> koma.statechart/ChartLaunchScope { // koma.statechart/ChartLaunchScope|null[0]
     abstract val isActive // koma.statechart/ChartLaunchScope.isActive|{}isActive[0]
         abstract fun <get-isActive>(): kotlin/Boolean // koma.statechart/ChartLaunchScope.isActive.<get-isActive>|<get-isActive>(){}[0]
     abstract val node // koma.statechart/ChartLaunchScope.node|{}node[0]
         abstract fun <get-node>(): koma.statechart/StateId // koma.statechart/ChartLaunchScope.node.<get-node>|<get-node>(){}[0]
+    abstract val store // koma.statechart/ChartLaunchScope.store|{}store[0]
+        abstract fun <get-store>(): koma.core/StoreScope // koma.statechart/ChartLaunchScope.store.<get-store>|<get-store>(){}[0]
 
     abstract fun dispatch(#B) // koma.statechart/ChartLaunchScope.dispatch|dispatch(1:1){}[0]
     abstract suspend fun event(#C) // koma.statechart/ChartLaunchScope.event|event(1:2){}[0]
@@ -115,11 +117,26 @@ abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: 
     abstract suspend fun checkpoint(): koma.statechart.machine/ExecutorCheckpoint<#A, #C> // koma.statechart.machine/MachineStore.checkpoint|checkpoint(){}[0]
 }
 
-abstract interface <#A: kotlin/Any?, #B: koma.core/Event> koma.statechart/ChartHookScope : koma.core/StoreScope { // koma.statechart/ChartHookScope|null[0]
+abstract interface <#A: kotlin/Any?, #B: koma.core/Event, #C: kotlin/Exception> koma.statechart/ChartRecoveryScope { // koma.statechart/ChartRecoveryScope|null[0]
+    abstract val error // koma.statechart/ChartRecoveryScope.error|{}error[0]
+        abstract fun <get-error>(): #C // koma.statechart/ChartRecoveryScope.error.<get-error>|<get-error>(){}[0]
+    abstract val store // koma.statechart/ChartRecoveryScope.store|{}store[0]
+        abstract fun <get-store>(): koma.core/StoreScope // koma.statechart/ChartRecoveryScope.store.<get-store>|<get-store>(){}[0]
+
+    abstract var context // koma.statechart/ChartRecoveryScope.context|{}context[0]
+        abstract fun <get-context>(): #A // koma.statechart/ChartRecoveryScope.context.<get-context>|<get-context>(){}[0]
+        abstract fun <set-context>(#A) // koma.statechart/ChartRecoveryScope.context.<set-context>|<set-context>(1:0){}[0]
+
+    abstract suspend fun event(#B) // koma.statechart/ChartRecoveryScope.event|event(1:1){}[0]
+}
+
+abstract interface <#A: kotlin/Any?, #B: koma.core/Event> koma.statechart/ChartHookScope { // koma.statechart/ChartHookScope|null[0]
     abstract val action // koma.statechart/ChartHookScope.action|{}action[0]
         abstract fun <get-action>(): koma.core/Action? // koma.statechart/ChartHookScope.action.<get-action>|<get-action>(){}[0]
     abstract val node // koma.statechart/ChartHookScope.node|{}node[0]
         abstract fun <get-node>(): koma.statechart/StateId // koma.statechart/ChartHookScope.node.<get-node>|<get-node>(){}[0]
+    abstract val store // koma.statechart/ChartHookScope.store|{}store[0]
+        abstract fun <get-store>(): koma.core/StoreScope // koma.statechart/ChartHookScope.store.<get-store>|<get-store>(){}[0]
 
     abstract var context // koma.statechart/ChartHookScope.context|{}context[0]
         abstract fun <get-context>(): #A // koma.statechart/ChartHookScope.context.<get-context>|<get-context>(){}[0]
@@ -983,13 +1000,17 @@ final class <#A: koma.core/State> koma.statechart/StateChartRuntime { // koma.st
     final fun step(koma.statechart/StateConfiguration, #A, koma.core/Action): koma.statechart/StepResult // koma.statechart/StateChartRuntime.step|step(koma.statechart.StateConfiguration;1:0;koma.core.Action){}[0]
 }
 
+final class <#A: kotlin/Any?, #B: koma.core/Action, #C: koma.core/Event> koma.statechart/ChartStoreConfiguration : koma.statechart/StoreConfiguration<koma.statechart/ChartState<#A>, #B, #C> { // koma.statechart/ChartStoreConfiguration|null[0]
+    final inline fun <#A1: reified kotlin/Exception> recover(kotlinx.coroutines/CoroutineDispatcher? = ..., noinline kotlin.coroutines/SuspendFunction1<koma.statechart/ChartRecoveryScope<#A, #C, #A1>, kotlin/Unit>) // koma.statechart/ChartStoreConfiguration.recover|recover(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<koma.statechart.ChartRecoveryScope<1:0,1:2,0:0>,kotlin.Unit>){0§<kotlin.Exception>}[0]
+}
+
 final class <#A: kotlin/Any?, #B: koma.core/Action, #C: koma.core/Event> koma.statechart/StateChartStoreBuilder { // koma.statechart/StateChartStoreBuilder|null[0]
     final fun activity(koma.statechart/StateId, kotlin.coroutines/SuspendFunction1<koma.statechart/ChartLaunchScope<#A, #B, #C>, kotlin/Unit>) // koma.statechart/StateChartStoreBuilder.activity|activity(koma.statechart.StateId;kotlin.coroutines.SuspendFunction1<koma.statechart.ChartLaunchScope<1:0,1:1,1:2>,kotlin.Unit>){}[0]
     final fun effect(kotlin/String, kotlin/Function2<#A, koma.core/Action, #A>) // koma.statechart/StateChartStoreBuilder.effect|effect(kotlin.String;kotlin.Function2<1:0,koma.core.Action,1:0>){}[0]
     final fun guard(kotlin/String, kotlin/Function2<koma.statechart/ChartState<#A>, koma.core/Action, kotlin/Boolean>) // koma.statechart/StateChartStoreBuilder.guard|guard(kotlin.String;kotlin.Function2<koma.statechart.ChartState<1:0>,koma.core.Action,kotlin.Boolean>){}[0]
     final fun onEnter(koma.statechart/StateId, kotlin.coroutines/SuspendFunction1<koma.statechart/ChartEnterScope<#A, #B, #C>, kotlin/Unit>) // koma.statechart/StateChartStoreBuilder.onEnter|onEnter(koma.statechart.StateId;kotlin.coroutines.SuspendFunction1<koma.statechart.ChartEnterScope<1:0,1:1,1:2>,kotlin.Unit>){}[0]
     final fun onExit(koma.statechart/StateId, kotlin.coroutines/SuspendFunction1<koma.statechart/ChartHookScope<#A, #C>, kotlin/Unit>) // koma.statechart/StateChartStoreBuilder.onExit|onExit(koma.statechart.StateId;kotlin.coroutines.SuspendFunction1<koma.statechart.ChartHookScope<1:0,1:2>,kotlin.Unit>){}[0]
-    final fun store(kotlin/Function1<koma.core/StoreBuilder<koma.statechart/ChartState<#A>, #B, #C>, kotlin/Unit>) // koma.statechart/StateChartStoreBuilder.store|store(kotlin.Function1<koma.core.StoreBuilder<koma.statechart.ChartState<1:0>,1:1,1:2>,kotlin.Unit>){}[0]
+    final fun store(kotlin/Function1<koma.statechart/ChartStoreConfiguration<#A, #B, #C>, kotlin/Unit>) // koma.statechart/StateChartStoreBuilder.store|store(kotlin.Function1<koma.statechart.ChartStoreConfiguration<1:0,1:1,1:2>,kotlin.Unit>){}[0]
 }
 
 final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/Machine { // koma.statechart.machine/Machine|null[0]
@@ -1934,6 +1955,19 @@ final value class koma.statechart/StateId { // koma.statechart/StateId|null[0]
     final fun toString(): kotlin/String // koma.statechart/StateId.toString|toString(){}[0]
 }
 
+open class <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> koma.statechart/StoreConfiguration { // koma.statechart/StoreConfiguration|null[0]
+    final val delegate // koma.statechart/StoreConfiguration.delegate|{}delegate[0]
+        final fun <get-delegate>(): koma.core/StoreBuilder<#A, #B, #C> // koma.statechart/StoreConfiguration.delegate.<get-delegate>|<get-delegate>(){}[0]
+
+    final fun autoStartPolicy(koma.core/AutoStartPolicy) // koma.statechart/StoreConfiguration.autoStartPolicy|autoStartPolicy(koma.core.AutoStartPolicy){}[0]
+    final fun coroutineContext(kotlin.coroutines/CoroutineContext) // koma.statechart/StoreConfiguration.coroutineContext|coroutineContext(kotlin.coroutines.CoroutineContext){}[0]
+    final fun exceptionHandler(koma.core/ExceptionHandler) // koma.statechart/StoreConfiguration.exceptionHandler|exceptionHandler(koma.core.ExceptionHandler){}[0]
+    final fun plugin(koma.core/Plugin<#A, #B, #C>, kotlin/Array<out koma.core/Plugin<#A, #B, #C>>...) // koma.statechart/StoreConfiguration.plugin|plugin(koma.core.Plugin<1:0,1:1,1:2>;kotlin.Array<out|koma.core.Plugin<1:0,1:1,1:2>>...){}[0]
+    final fun pluginExecutionPolicy(koma.core/PluginExecutionPolicy) // koma.statechart/StoreConfiguration.pluginExecutionPolicy|pluginExecutionPolicy(koma.core.PluginExecutionPolicy){}[0]
+    final fun probe(koma.core/StoreProbe<#A, #B, #C>, kotlin/Array<out koma.core/StoreProbe<#A, #B, #C>>...) // koma.statechart/StoreConfiguration.probe|probe(koma.core.StoreProbe<1:0,1:1,1:2>;kotlin.Array<out|koma.core.StoreProbe<1:0,1:1,1:2>>...){}[0]
+    final fun stateSaver(koma.core/StateSaver<#A>) // koma.statechart/StoreConfiguration.stateSaver|stateSaver(koma.core.StateSaver<1:0>){}[0]
+}
+
 final fun (koma.statechart/StateChartDefinition).koma.statechart/activeLeaves(koma.statechart/StateConfiguration): kotlin.collections/List<koma.statechart/StateId> // koma.statechart/activeLeaves|activeLeaves@koma.statechart.StateChartDefinition(koma.statechart.StateConfiguration){}[0]
 final fun (koma.statechart/StateChartDefinition).koma.statechart/reachableStates(): kotlin.collections/Set<koma.statechart/StateId> // koma.statechart/reachableStates|reachableStates@koma.statechart.StateChartDefinition(){}[0]
 final fun (koma.statechart/StateChartDefinition).koma.statechart/shortestPathTo(koma.statechart/StateId): koma.statechart/StateChartPath? // koma.statechart/shortestPathTo|shortestPathTo@koma.statechart.StateChartDefinition(koma.statechart.StateId){}[0]
@@ -1942,7 +1976,8 @@ final fun (koma.statechart/StateChartDefinition).koma.statechart/toMermaid(kotli
 final fun (koma.statechart/StateChartDefinition).koma.statechart/transitionCoveragePaths(): kotlin.collections/List<koma.statechart/StateChartPath> // koma.statechart/transitionCoveragePaths|transitionCoveragePaths@koma.statechart.StateChartDefinition(){}[0]
 final fun (koma.statechart/StateChartDefinition).koma.statechart/validate(kotlin.collections/List<koma.core/Action> = ...): kotlin.collections/List<koma.statechart/ValidationIssue> // koma.statechart/validate|validate@koma.statechart.StateChartDefinition(kotlin.collections.List<koma.core.Action>){}[0]
 final fun <#A: koma.core/Event> (koma.observability/RecordingSession).koma.statechart.machine/effectsOf(koma.observability/StoreInstanceId, kotlin/Function1<#A, koma.observability/Payload<#A>> = ...): koma.statechart.machine/EffectListener<#A> // koma.statechart.machine/effectsOf|effectsOf@koma.observability.RecordingSession(koma.observability.StoreInstanceId;kotlin.Function1<0:0,koma.observability.Payload<0:0>>){0§<koma.core.Event>}[0]
+final fun <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> (koma.statechart/StoreConfiguration<#A, #B, #C>).koma.statechart/recordTo(koma.observability/RecordingSession, koma.observability/StoreInstanceId, koma.observability/PayloadPolicy<#A, #B, #C> = ...) // koma.statechart/recordTo|recordTo@koma.statechart.StoreConfiguration<0:0,0:1,0:2>(koma.observability.RecordingSession;koma.observability.StoreInstanceId;koma.observability.PayloadPolicy<0:0,0:1,0:2>){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: koma.core/Event> koma.statechart/StateChartStore(koma.statechart/StateChartDefinition, #A, kotlin.coroutines/CoroutineContext? = ..., kotlin/Function1<koma.statechart/StateChartStoreBuilder<#A, #B, #C>, kotlin/Unit> = ...): koma.core/Store<koma.statechart/ChartState<#A>, #B, #C> // koma.statechart/StateChartStore|StateChartStore(koma.statechart.StateChartDefinition;0:0;kotlin.coroutines.CoroutineContext?;kotlin.Function1<koma.statechart.StateChartStoreBuilder<0:0,0:1,0:2>,kotlin.Unit>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.observability/RecordingSession).koma.statechart.machine/decisionsOf(koma.observability/StoreInstanceId, kotlin/Function1<#C, koma.observability/Payload<#C>> = ..., kotlin/Function1<#B, koma.observability/Payload<#B>> = ...): koma.statechart.machine/DecisionObserver<#A, #B, #C, #D> // koma.statechart.machine/decisionsOf|decisionsOf@koma.observability.RecordingSession(koma.observability.StoreInstanceId;kotlin.Function1<0:2,koma.observability.Payload<0:2>>;kotlin.Function1<0:1,koma.observability.Payload<0:1>>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/Machine(koma.statechart.machine/DefinitionId, koma.statechart.machine/DefinitionVersion, koma.statechart/StateChartDefinition, kotlin/Function1<koma.statechart.machine/MachineBuilder<#A, #B, #C, #D>, kotlin/Unit> = ...): koma.statechart.machine/Machine<#A, #B, #C, #D> // koma.statechart.machine/Machine|Machine(koma.statechart.machine.DefinitionId;koma.statechart.machine.DefinitionVersion;koma.statechart.StateChartDefinition;kotlin.Function1<koma.statechart.machine.MachineBuilder<0:0,0:1,0:2,0:3>,kotlin.Unit>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
-final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/MachineStore(koma.statechart.machine/Machine<#A, #B, #C, #D>, #A, koma.statechart.machine/CommandHandler<#C, #B>, kotlinx.coroutines/CoroutineScope, koma.statechart.machine/MachineClock = ..., kotlin.coroutines/CoroutineContext? = ..., koma.statechart.machine/AdmissionPolicy = ..., kotlin.collections/List<koma.statechart.machine/DecisionObserver<#A, #B, #C, #D>> = ..., koma.statechart.machine/MailboxConfig<#D> = ..., kotlin/Function1<koma.core/StoreBuilder<koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.machine/MachineInput<#B>, #D>, kotlin/Unit> = ...): koma.statechart.machine/MachineStore<#A, #B, #C, #D> // koma.statechart.machine/MachineStore|MachineStore(koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>;0:0;koma.statechart.machine.CommandHandler<0:2,0:1>;kotlinx.coroutines.CoroutineScope;koma.statechart.machine.MachineClock;kotlin.coroutines.CoroutineContext?;koma.statechart.machine.AdmissionPolicy;kotlin.collections.List<koma.statechart.machine.DecisionObserver<0:0,0:1,0:2,0:3>>;koma.statechart.machine.MailboxConfig<0:3>;kotlin.Function1<koma.core.StoreBuilder<koma.statechart.machine.MachineSnapshot<0:0>,koma.statechart.machine.MachineInput<0:1>,0:3>,kotlin.Unit>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/MachineStore(koma.statechart.machine/Machine<#A, #B, #C, #D>, #A, koma.statechart.machine/CommandHandler<#C, #B>, kotlinx.coroutines/CoroutineScope, koma.statechart.machine/MachineClock = ..., kotlin.coroutines/CoroutineContext? = ..., koma.statechart.machine/AdmissionPolicy = ..., kotlin.collections/List<koma.statechart.machine/DecisionObserver<#A, #B, #C, #D>> = ..., koma.statechart.machine/MailboxConfig<#D> = ..., kotlin/Function1<koma.statechart/StoreConfiguration<koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.machine/MachineInput<#B>, #D>, kotlin/Unit> = ...): koma.statechart.machine/MachineStore<#A, #B, #C, #D> // koma.statechart.machine/MachineStore|MachineStore(koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>;0:0;koma.statechart.machine.CommandHandler<0:2,0:1>;kotlinx.coroutines.CoroutineScope;koma.statechart.machine.MachineClock;kotlin.coroutines.CoroutineContext?;koma.statechart.machine.AdmissionPolicy;kotlin.collections.List<koma.statechart.machine.DecisionObserver<0:0,0:1,0:2,0:3>>;koma.statechart.machine.MailboxConfig<0:3>;kotlin.Function1<koma.statechart.StoreConfiguration<koma.statechart.machine.MachineSnapshot<0:0>,koma.statechart.machine.MachineInput<0:1>,0:3>,kotlin.Unit>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]

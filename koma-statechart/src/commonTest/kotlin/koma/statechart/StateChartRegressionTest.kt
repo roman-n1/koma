@@ -17,6 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.assertIs
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -61,7 +62,7 @@ class StateChartRegressionTest {
                 delay(1.seconds)
                 error("boom")
             }
-            store { state<ChartState<Unit>> { recover<IllegalStateException> { } } }
+            store { recover<IllegalStateException> { } }
         }
 
         store.dispatchAndAwait(ChartAction.Go)
@@ -283,7 +284,7 @@ class StateChartRegressionTest {
         val timed = chart.copy(transitions = chart.transitions + Transition(a, b, Trigger.After(1.seconds)))
         val store = StateChartStore<Unit, ChartAction, ChartEvent>(timed, Unit, backgroundScope.coroutineContext) {
             onEnter(b) { if (++attempts == 1) error("boom") }
-            store { state<ChartState<Unit>> { recover<IllegalStateException> { recovered++ } } }
+            store { recover<IllegalStateException> { recovered++ } }
         }
 
         store.startAndAwait()
@@ -327,7 +328,7 @@ class StateChartRegressionTest {
                 context = 42
                 error("boom")
             }
-            store { state<ChartState<Int>> { recover<IllegalStateException> { recovered++ } } }
+            store { recover<IllegalStateException> { recovered++ } }
         }
 
         store.startAndAwait()
@@ -369,7 +370,7 @@ class StateChartRegressionTest {
         val store = StateChartStore<Unit, ChartAction, ChartEvent>(chart, Unit, backgroundScope.coroutineContext) {
             onEnter(root) { error("boom") }
             activity(leaf) { leafActivityRuns++ }
-            store { state<ChartState<Unit>> { recover<Exception> { recovered += error.message.orEmpty() } } }
+            store { recover<Exception> { recovered += error.message.orEmpty() } }
         }
 
         store.startAndAwait()
@@ -396,7 +397,7 @@ class StateChartRegressionTest {
         val store = StateChartStore<Unit, ChartAction, ChartEvent>(timed, Unit, backgroundScope.coroutineContext) {
             onEnter(b) { withTimeout(1.milliseconds) { delay(1.seconds) } }
             activity(a) { withTimeout(1.milliseconds) { delay(1.seconds) } }
-            store { state<ChartState<Unit>> { recover<Exception> { recovered += error::class.simpleName.orEmpty() } } }
+            store { recover<Exception> { recovered += error::class.simpleName.orEmpty() } }
         }
 
         store.startAndAwait()
@@ -438,7 +439,7 @@ class StateChartRegressionTest {
                     activeAfterClose = isActive
                 }
             }
-            store { state<ChartState<Int>> { recover<IllegalStateException> { recovered += error.message.orEmpty() } } }
+            store { recover<IllegalStateException> { recovered += error.message.orEmpty() } }
         }
 
         store.startAndAwait()
@@ -466,7 +467,7 @@ class StateChartRegressionTest {
         val store = StateChartStore<Unit, ChartAction, ChartEvent>(timed, Unit, backgroundScope.coroutineContext) {
             onEnter(a) { withTimeout(10.milliseconds) { delay(1.seconds) } }
             activity(a) { activityRan = true }
-            store { state<ChartState<Unit>> { recover<Exception> { recovered += error::class.simpleName.orEmpty() } } }
+            store { recover<Exception> { recovered += error::class.simpleName.orEmpty() } }
         }
 
         store.startAndAwait()
@@ -481,25 +482,38 @@ class StateChartRegressionTest {
     }
 
     /**
-     * Chart hook and launch scopes are Store scopes, so extensions declared on `StoreScope`, such
-     * as `koma-message`'s `message()`, work from them.
+     * Chart scopes delegate Store extensions to the actual handler or launch scope.
      */
     @Test
-    fun chartScopes_areStoreScopes() = runTest {
-        val scopes = mutableListOf<Any>()
+    fun chartScopes_delegateToUnderlyingStoreScopes() = runTest {
+        val scopes = mutableMapOf<String, koma.core.StoreScope>()
         val store = StateChartStore<Unit, ChartAction, ChartEvent>(chart, Unit, backgroundScope.coroutineContext) {
-            onEnter(a) { scopes += this }
-            onExit(a) { scopes += this }
-            activity(a) { scopes += this }
+            onEnter(a) { scopes["enter"] = store; launch { scopes["launch"] = store } }
+            onExit(a) { scopes["exit"] = store }
+            activity(a) { scopes["activity"] = store }
         }
-
         store.startAndAwait()
-        runCurrent() // the activity of A runs
-        store.dispatchAndAwait(ChartAction.Go)
         runCurrent()
+        store.dispatchAndAwait(ChartAction.Go)
+        assertIs<koma.core.EnterScope<*, *, *>>(scopes.getValue("enter"))
+        assertIs<koma.core.ActionScope<*, *, *, *>>(scopes.getValue("exit"))
+        assertIs<koma.core.EnterLaunchScope<*, *, *>>(scopes.getValue("launch"))
+        assertIs<koma.core.EnterLaunchScope<*, *, *>>(scopes.getValue("activity"))
+        store.close()
+    }
 
-        assertEquals(3, scopes.size)
-        assertTrue(scopes.all { it is koma.core.StoreScope })
+    @Test
+    fun timerHooksDelegateToTransactionScope() = runTest {
+        val timed = chart.copy(transitions = listOf(Transition(a, b, Trigger.After(1.seconds))))
+        var underlying: koma.core.StoreScope? = null
+        val store = StateChartStore<Unit, ChartAction, ChartEvent>(timed, Unit, backgroundScope.coroutineContext) {
+            onEnter(b) { underlying = store }
+        }
+        store.startAndAwait()
+        advanceTimeBy(1.seconds)
+        runCurrent()
+        assertIs<koma.core.EnterTransactionScope<*, *, *>>(underlying)
+        assertTrue(store.currentState.isActive(b))
         store.close()
     }
 
@@ -708,7 +722,7 @@ class StateChartRegressionTest {
                 error("activity failed")
             }
             onEnter(b) { delay(1.seconds) }
-            store { state<ChartState<Unit>> { recover<IllegalStateException> { recovered += error.message.orEmpty() } } }
+            store { recover<IllegalStateException> { recovered += error.message.orEmpty() } }
         }
 
         store.startAndAwait()
@@ -750,7 +764,7 @@ class StateChartRegressionTest {
                 delay(1.seconds)
                 error("enter failed")
             }
-            store { state<ChartState<Unit>> { recover<IllegalStateException> { recovered += error.message.orEmpty() } } }
+            store { recover<IllegalStateException> { recovered += error.message.orEmpty() } }
         }
 
         store.startAndAwait()

@@ -10,7 +10,7 @@ import koma.core.Plugin
 import koma.core.PluginPatch
 import koma.core.PluginScope
 import koma.core.Store
-import koma.core.StoreBuilder
+import koma.statechart.StoreConfiguration
 import koma.core.StoreHandlerMetadata
 import koma.core.StoreInternalApi
 import koma.core.StorePatch
@@ -108,8 +108,8 @@ interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>
  * [Store.currentState]. If the store closes between the commit and the scheduler's turn, nothing
  * starts. [MachineStore.checkpoint] is the scheduler's state as data.
  *
- * `recover {}` handlers configured in [builder] may not change the snapshot: the machine is the
- * only writer. A `StateSaver` that restores an already started snapshot cannot restore its
+ * The machine is the only snapshot writer; [builder] exposes runtime settings without arbitrary
+ * state handlers or recovery. A `StateSaver` that restores an already started snapshot cannot restore its
  * commands (they are not in the snapshot), so the store starts over from the initial
  * configuration with the restored context.
  *
@@ -127,7 +127,6 @@ interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>
  * @param builder Store configuration: plugins, exception handler, state saver, journal
  * @throws IllegalArgumentException if [scope] uses [Dispatchers.Unconfined]
  */
-@ExperimentalKomaApi
 fun <C, A : Action, CMD, E : Event> MachineStore(
     machine: Machine<C, A, CMD, E>,
     context: C,
@@ -138,7 +137,7 @@ fun <C, A : Action, CMD, E : Event> MachineStore(
     admission: AdmissionPolicy = AdmissionPolicy.Unbounded,
     observers: List<DecisionObserver<C, A, CMD, E>> = emptyList(),
     mailbox: MailboxConfig<E> = MailboxConfig(),
-    builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit = {},
+    builder: StoreConfiguration<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit = {},
 ): MachineStore<C, A, CMD, E> = MachineStoreImpl(machine, context, handler, scope, clock, coroutineContext, admission, observers, mailbox, builder)
 
 @OptIn(InternalKomaApi::class)
@@ -152,7 +151,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     private val admission: AdmissionPolicy,
     private val observers: List<DecisionObserver<C, A, CMD, E>>,
     mailboxConfig: MailboxConfig<E>,
-    builder: StoreBuilder<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit,
+    builder: StoreConfiguration<MachineSnapshot<C>, MachineInput<A>, E>.() -> Unit,
 ) : MachineStore<C, A, CMD, E>, StoreInternalApi<MachineSnapshot<C>, A, E> {
     init {
         require(scope.coroutineContext[ContinuationInterceptor] !== Dispatchers.Unconfined) {
@@ -253,7 +252,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
                     for (listener in listeners) listener()
                 }
             })
-            builder()
+            StoreConfiguration(this).builder()
             plugin(Executor())
             validateRecovery { previous, recovered ->
                 require(previous == recovered) { "[Koma] MachineStore recover {} may not change the snapshot; dispatch an action the machine decides" }

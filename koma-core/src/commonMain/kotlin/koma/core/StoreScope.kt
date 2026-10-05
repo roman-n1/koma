@@ -7,7 +7,8 @@ import kotlinx.coroutines.CoroutineDispatcher
  *
  * Extensions declared on it, such as `koma-message`'s `message()`, are available in every scope
  * that implements it: Koma's own `enter {}`, `action {}`, `exit {}`, `recover {}`, launch and
- * transaction scopes, and the hook and launch scopes of `koma-statechart`.
+ * transaction scopes. Chart hooks and activities expose their underlying scope as `store`,
+ * so they use `store.message(...)`.
  */
 interface StoreScope
 
