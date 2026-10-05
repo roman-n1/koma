@@ -259,3 +259,6 @@ records the individual changes and their route back upstream.
 - [Internal documentation](doc/internal/README.md): architecture, decisions, review evidence and roadmap.
 - [Build conventions](build-logic/README.md): coordinates, publishing and project setup.
 - Validation: `./gradlew jvmTest apiCheck checkDebugGraph`; the CI also tests Android, iOS, JS and Wasm.
+- Published artifacts: `scripts/verify-published-consumer.sh jvm` builds an
+  [independent Maven consumer](verification/published-consumer/README.md); CI also compiles its
+  Android, JS, Wasm and iOS variants.

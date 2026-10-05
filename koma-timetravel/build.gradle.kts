@@ -28,7 +28,12 @@ kotlin {
     }
     iosArm64()
     iosSimulatorArm64()
-    jvm()
+    jvm {
+        attributes.attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 11)
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_11
+        }
+    }
     js(IR) {
         browser()
         nodejs {

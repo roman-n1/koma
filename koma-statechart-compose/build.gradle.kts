@@ -33,7 +33,12 @@ kotlin {
     }
     iosArm64()
     iosSimulatorArm64()
-    jvm()
+    jvm {
+        attributes.attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 11)
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_11
+        }
+    }
     // Web targets are browser-only, as in koma-compose: Skiko's web runtime has no Node loader.
     js(IR) {
         browser()
