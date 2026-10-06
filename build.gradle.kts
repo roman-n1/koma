@@ -18,6 +18,7 @@ plugins {
 @OptIn(kotlinx.validation.ExperimentalBCVApi::class)
 apiValidation {
     ignoredProjects += "time-travel-example" // runnable debug application, not a published API
+    ignoredProjects += "durable-effects-example" // application-owned persistence example
     klib {
         enabled = true
     }
