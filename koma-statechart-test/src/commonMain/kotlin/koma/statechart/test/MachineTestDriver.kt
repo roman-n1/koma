@@ -63,6 +63,13 @@ class MachineTestDriver<C, A : Action, CMD, E : Event>(
     private val dispatcher = StandardTestDispatcher(scheduler)
     private val executionScope = CoroutineScope(dispatcher + SupervisorJob())
 
+    /** Immutable starting model data for independent, IO-free generated scenarios. */
+    val initialSnapshot: MachineSnapshot<C> = machine.initialSnapshot(context)
+    private val coverageRecorder = MachineCoverageRecorder(machine)
+
+    /** Behavioural coverage accumulated from this driver's actual Store decisions. */
+    val coverage: MachineCoverage get() = coverageRecorder.snapshot()
+
     /** What the store reported to its exception handler, in order. */
     val failures: List<Throwable> get() = failureList.toList()
     private val failureList = mutableListOf<Throwable>()
@@ -70,6 +77,7 @@ class MachineTestDriver<C, A : Action, CMD, E : Event>(
     /** The store; every action a test sends goes through its admission. */
     val store: MachineStore<C, A, CMD, E> = MachineStore(
         machine, context, handler, executionScope, VirtualMachineClock(scheduler), dispatcher, admission = admission, mailbox = mailbox,
+        observers = listOf(coverageRecorder),
     ) {
         exceptionHandler(ExceptionHandler { failureList += it })
         builder()

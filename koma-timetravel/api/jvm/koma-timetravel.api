@@ -343,6 +343,11 @@ public final class koma/timetravel/MachineRecorder : koma/statechart/machine/Dec
 	public final fun recording ()Lkoma/timetravel/Recording;
 }
 
+public final class koma/timetravel/RecordInputsKt {
+	public static final fun recordInputs (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/ExecutorCheckpoint;Ljava/util/List;)Lkoma/timetravel/Recording;
+	public static final fun recordInputs (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;)Lkoma/timetravel/Recording;
+}
+
 public abstract interface class koma/timetravel/RecordedStep {
 	public abstract fun getInput ()Lkoma/statechart/machine/MachineInput;
 }

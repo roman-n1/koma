@@ -27,6 +27,12 @@ sealed interface koma.statechart.test/ExplorationStrategy { // koma.statechart.t
         final fun toString(): kotlin/String // koma.statechart.test/ExplorationStrategy.RandomWalk.toString|toString(){}[0]
     }
 
+    final object AllTransitions : koma.statechart.test/ExplorationStrategy { // koma.statechart.test/ExplorationStrategy.AllTransitions|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/ExplorationStrategy.AllTransitions.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.statechart.test/ExplorationStrategy.AllTransitions.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.statechart.test/ExplorationStrategy.AllTransitions.toString|toString(){}[0]
+    }
+
     final object BreadthFirst : koma.statechart.test/ExplorationStrategy { // koma.statechart.test/ExplorationStrategy.BreadthFirst|null[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/ExplorationStrategy.BreadthFirst.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // koma.statechart.test/ExplorationStrategy.BreadthFirst.hashCode|hashCode(){}[0]
@@ -50,13 +56,41 @@ final class <#A: koma.core/Action> koma.statechart.test/MachineScenario { // kom
     final fun toString(): kotlin/String // koma.statechart.test/MachineScenario.toString|toString(){}[0]
 }
 
+final class <#A: koma.core/Action> koma.statechart.test/ScenarioCoverage { // koma.statechart.test/ScenarioCoverage|null[0]
+    constructor <init>(koma.statechart.test/MachineScenario<#A>, kotlin.collections/Set<koma.statechart.machine/TransitionId>) // koma.statechart.test/ScenarioCoverage.<init>|<init>(koma.statechart.test.MachineScenario<1:0>;kotlin.collections.Set<koma.statechart.machine.TransitionId>){}[0]
+
+    final val scenario // koma.statechart.test/ScenarioCoverage.scenario|{}scenario[0]
+        final fun <get-scenario>(): koma.statechart.test/MachineScenario<#A> // koma.statechart.test/ScenarioCoverage.scenario.<get-scenario>|<get-scenario>(){}[0]
+    final val transitions // koma.statechart.test/ScenarioCoverage.transitions|{}transitions[0]
+        final fun <get-transitions>(): kotlin.collections/Set<koma.statechart.machine/TransitionId> // koma.statechart.test/ScenarioCoverage.transitions.<get-transitions>|<get-transitions>(){}[0]
+
+    final fun component1(): koma.statechart.test/MachineScenario<#A> // koma.statechart.test/ScenarioCoverage.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Set<koma.statechart.machine/TransitionId> // koma.statechart.test/ScenarioCoverage.component2|component2(){}[0]
+    final fun copy(koma.statechart.test/MachineScenario<#A> = ..., kotlin.collections/Set<koma.statechart.machine/TransitionId> = ...): koma.statechart.test/ScenarioCoverage<#A> // koma.statechart.test/ScenarioCoverage.copy|copy(koma.statechart.test.MachineScenario<1:0>;kotlin.collections.Set<koma.statechart.machine.TransitionId>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/ScenarioCoverage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.test/ScenarioCoverage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.test/ScenarioCoverage.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.test/MachineCoverageRecorder : koma.statechart.machine/DecisionTraceObserver<#A, #B, #C, #D> { // koma.statechart.test/MachineCoverageRecorder|null[0]
+    constructor <init>(koma.statechart.machine/Machine<#A, #B, #C, #D>) // koma.statechart.test/MachineCoverageRecorder.<init>|<init>(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>){}[0]
+
+    final fun onCommitted(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/Decision<#A, #C, #D>) // koma.statechart.test/MachineCoverageRecorder.onCommitted|onCommitted(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
+    final fun onDecided(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/ExplainedDecision<#A, #C, #D>) // koma.statechart.test/MachineCoverageRecorder.onDecided|onDecided(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.ExplainedDecision<1:0,1:2,1:3>){}[0]
+    final fun snapshot(): koma.statechart.test/MachineCoverage // koma.statechart.test/MachineCoverageRecorder.snapshot|snapshot(){}[0]
+}
+
 final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.test/MachineTestDriver { // koma.statechart.test/MachineTestDriver|null[0]
     constructor <init>(koma.statechart.machine/Machine<#A, #B, #C, #D>, #A, kotlinx.coroutines.test/TestScope, koma.statechart.test/ScriptedCommandHandler<#C, #B> = ..., koma.statechart.machine/AdmissionPolicy = ..., koma.statechart.machine/MailboxConfig<#D> = ..., kotlin/Function1<koma.statechart/StoreConfiguration<koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.machine/MachineInput<#B>, #D>, kotlin/Unit> = ...) // koma.statechart.test/MachineTestDriver.<init>|<init>(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>;1:0;kotlinx.coroutines.test.TestScope;koma.statechart.test.ScriptedCommandHandler<1:2,1:1>;koma.statechart.machine.AdmissionPolicy;koma.statechart.machine.MailboxConfig<1:3>;kotlin.Function1<koma.statechart.StoreConfiguration<koma.statechart.machine.MachineSnapshot<1:0>,koma.statechart.machine.MachineInput<1:1>,1:3>,kotlin.Unit>){}[0]
 
+    final val coverage // koma.statechart.test/MachineTestDriver.coverage|{}coverage[0]
+        final fun <get-coverage>(): koma.statechart.test/MachineCoverage // koma.statechart.test/MachineTestDriver.coverage.<get-coverage>|<get-coverage>(){}[0]
     final val failures // koma.statechart.test/MachineTestDriver.failures|{}failures[0]
         final fun <get-failures>(): kotlin.collections/List<kotlin/Throwable> // koma.statechart.test/MachineTestDriver.failures.<get-failures>|<get-failures>(){}[0]
     final val handler // koma.statechart.test/MachineTestDriver.handler|{}handler[0]
         final fun <get-handler>(): koma.statechart.test/ScriptedCommandHandler<#C, #B> // koma.statechart.test/MachineTestDriver.handler.<get-handler>|<get-handler>(){}[0]
+    final val initialSnapshot // koma.statechart.test/MachineTestDriver.initialSnapshot|{}initialSnapshot[0]
+        final fun <get-initialSnapshot>(): koma.statechart.machine/MachineSnapshot<#A> // koma.statechart.test/MachineTestDriver.initialSnapshot.<get-initialSnapshot>|<get-initialSnapshot>(){}[0]
     final val machine // koma.statechart.test/MachineTestDriver.machine|{}machine[0]
         final fun <get-machine>(): koma.statechart.machine/Machine<#A, #B, #C, #D> // koma.statechart.test/MachineTestDriver.machine.<get-machine>|<get-machine>(){}[0]
     final val pendingEffects // koma.statechart.test/MachineTestDriver.pendingEffects|{}pendingEffects[0]
@@ -91,10 +125,12 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
 }
 
 final class <#A: kotlin/Any?, #B: koma.core/Action> koma.statechart.test/ExplorationReport { // koma.statechart.test/ExplorationReport|null[0]
-    constructor <init>(kotlin/Int, kotlin/Long, koma.statechart.test/MachineCoverage, kotlin.collections/List<koma.statechart.test/SequenceFailure<#A, #B>>, kotlin/Boolean, kotlin/Int, kotlin.collections/List<koma.statechart.test/MachineScenario<#B>> = ...) // koma.statechart.test/ExplorationReport.<init>|<init>(kotlin.Int;kotlin.Long;koma.statechart.test.MachineCoverage;kotlin.collections.List<koma.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Int;kotlin.collections.List<koma.statechart.test.MachineScenario<1:1>>){}[0]
+    constructor <init>(kotlin/Int, kotlin/Long, koma.statechart.test/MachineCoverage, kotlin.collections/List<koma.statechart.test/SequenceFailure<#A, #B>>, kotlin/Boolean, kotlin/Int, kotlin.collections/List<koma.statechart.test/MachineScenario<#B>> = ..., kotlin.collections/List<koma.statechart.test/ScenarioCoverage<#B>> = ...) // koma.statechart.test/ExplorationReport.<init>|<init>(kotlin.Int;kotlin.Long;koma.statechart.test.MachineCoverage;kotlin.collections.List<koma.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Int;kotlin.collections.List<koma.statechart.test.MachineScenario<1:1>>;kotlin.collections.List<koma.statechart.test.ScenarioCoverage<1:1>>){}[0]
 
     final val coverage // koma.statechart.test/ExplorationReport.coverage|{}coverage[0]
         final fun <get-coverage>(): koma.statechart.test/MachineCoverage // koma.statechart.test/ExplorationReport.coverage.<get-coverage>|<get-coverage>(){}[0]
+    final val coverageScenarios // koma.statechart.test/ExplorationReport.coverageScenarios|{}coverageScenarios[0]
+        final fun <get-coverageScenarios>(): kotlin.collections/List<koma.statechart.test/ScenarioCoverage<#B>> // koma.statechart.test/ExplorationReport.coverageScenarios.<get-coverageScenarios>|<get-coverageScenarios>(){}[0]
     final val decisions // koma.statechart.test/ExplorationReport.decisions|{}decisions[0]
         final fun <get-decisions>(): kotlin/Int // koma.statechart.test/ExplorationReport.decisions.<get-decisions>|<get-decisions>(){}[0]
     final val failures // koma.statechart.test/ExplorationReport.failures|{}failures[0]
@@ -116,10 +152,71 @@ final class <#A: kotlin/Any?, #B: koma.core/Action> koma.statechart.test/Explora
     final fun component5(): kotlin/Boolean // koma.statechart.test/ExplorationReport.component5|component5(){}[0]
     final fun component6(): kotlin/Int // koma.statechart.test/ExplorationReport.component6|component6(){}[0]
     final fun component7(): kotlin.collections/List<koma.statechart.test/MachineScenario<#B>> // koma.statechart.test/ExplorationReport.component7|component7(){}[0]
-    final fun copy(kotlin/Int = ..., kotlin/Long = ..., koma.statechart.test/MachineCoverage = ..., kotlin.collections/List<koma.statechart.test/SequenceFailure<#A, #B>> = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin.collections/List<koma.statechart.test/MachineScenario<#B>> = ...): koma.statechart.test/ExplorationReport<#A, #B> // koma.statechart.test/ExplorationReport.copy|copy(kotlin.Int;kotlin.Long;koma.statechart.test.MachineCoverage;kotlin.collections.List<koma.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Int;kotlin.collections.List<koma.statechart.test.MachineScenario<1:1>>){}[0]
+    final fun component8(): kotlin.collections/List<koma.statechart.test/ScenarioCoverage<#B>> // koma.statechart.test/ExplorationReport.component8|component8(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Long = ..., koma.statechart.test/MachineCoverage = ..., kotlin.collections/List<koma.statechart.test/SequenceFailure<#A, #B>> = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin.collections/List<koma.statechart.test/MachineScenario<#B>> = ..., kotlin.collections/List<koma.statechart.test/ScenarioCoverage<#B>> = ...): koma.statechart.test/ExplorationReport<#A, #B> // koma.statechart.test/ExplorationReport.copy|copy(kotlin.Int;kotlin.Long;koma.statechart.test.MachineCoverage;kotlin.collections.List<koma.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Int;kotlin.collections.List<koma.statechart.test.MachineScenario<1:1>>;kotlin.collections.List<koma.statechart.test.ScenarioCoverage<1:1>>){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/ExplorationReport.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // koma.statechart.test/ExplorationReport.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // koma.statechart.test/ExplorationReport.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action> koma.statechart.test/MachineTestPlan { // koma.statechart.test/MachineTestPlan|null[0]
+    constructor <init>(koma.statechart.machine/DefinitionId, koma.statechart.machine/DefinitionVersion, kotlin.collections/List<koma.statechart.test/MachineScenario<#B>>, kotlin.collections/Set<koma.statechart.machine/TransitionId>, kotlin.collections/Set<koma.statechart.machine/TransitionId>, kotlin.collections/List<koma.statechart.test/SequenceFailure<#A, #B>>, kotlin/Boolean, kotlin/Boolean, kotlin/Int) // koma.statechart.test/MachineTestPlan.<init>|<init>(koma.statechart.machine.DefinitionId;koma.statechart.machine.DefinitionVersion;kotlin.collections.List<koma.statechart.test.MachineScenario<1:1>>;kotlin.collections.Set<koma.statechart.machine.TransitionId>;kotlin.collections.Set<koma.statechart.machine.TransitionId>;kotlin.collections.List<koma.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Boolean;kotlin.Int){}[0]
+
+    final val definition // koma.statechart.test/MachineTestPlan.definition|{}definition[0]
+        final fun <get-definition>(): koma.statechart.machine/DefinitionId // koma.statechart.test/MachineTestPlan.definition.<get-definition>|<get-definition>(){}[0]
+    final val discoveryFailures // koma.statechart.test/MachineTestPlan.discoveryFailures|{}discoveryFailures[0]
+        final fun <get-discoveryFailures>(): kotlin.collections/List<koma.statechart.test/SequenceFailure<#A, #B>> // koma.statechart.test/MachineTestPlan.discoveryFailures.<get-discoveryFailures>|<get-discoveryFailures>(){}[0]
+    final val requiredTransitions // koma.statechart.test/MachineTestPlan.requiredTransitions|{}requiredTransitions[0]
+        final fun <get-requiredTransitions>(): kotlin.collections/Set<koma.statechart.machine/TransitionId> // koma.statechart.test/MachineTestPlan.requiredTransitions.<get-requiredTransitions>|<get-requiredTransitions>(){}[0]
+    final val scenarios // koma.statechart.test/MachineTestPlan.scenarios|{}scenarios[0]
+        final fun <get-scenarios>(): kotlin.collections/List<koma.statechart.test/MachineScenario<#B>> // koma.statechart.test/MachineTestPlan.scenarios.<get-scenarios>|<get-scenarios>(){}[0]
+    final val searchTruncated // koma.statechart.test/MachineTestPlan.searchTruncated|{}searchTruncated[0]
+        final fun <get-searchTruncated>(): kotlin/Boolean // koma.statechart.test/MachineTestPlan.searchTruncated.<get-searchTruncated>|<get-searchTruncated>(){}[0]
+    final val selectionAttempts // koma.statechart.test/MachineTestPlan.selectionAttempts|{}selectionAttempts[0]
+        final fun <get-selectionAttempts>(): kotlin/Int // koma.statechart.test/MachineTestPlan.selectionAttempts.<get-selectionAttempts>|<get-selectionAttempts>(){}[0]
+    final val selectionOptimal // koma.statechart.test/MachineTestPlan.selectionOptimal|{}selectionOptimal[0]
+        final fun <get-selectionOptimal>(): kotlin/Boolean // koma.statechart.test/MachineTestPlan.selectionOptimal.<get-selectionOptimal>|<get-selectionOptimal>(){}[0]
+    final val uncoveredTransitions // koma.statechart.test/MachineTestPlan.uncoveredTransitions|{}uncoveredTransitions[0]
+        final fun <get-uncoveredTransitions>(): kotlin.collections/Set<koma.statechart.machine/TransitionId> // koma.statechart.test/MachineTestPlan.uncoveredTransitions.<get-uncoveredTransitions>|<get-uncoveredTransitions>(){}[0]
+    final val version // koma.statechart.test/MachineTestPlan.version|{}version[0]
+        final fun <get-version>(): koma.statechart.machine/DefinitionVersion // koma.statechart.test/MachineTestPlan.version.<get-version>|<get-version>(){}[0]
+
+    final fun assertReady(kotlin/Boolean = ...) // koma.statechart.test/MachineTestPlan.assertReady|assertReady(kotlin.Boolean){}[0]
+    final fun component1(): koma.statechart.machine/DefinitionId // koma.statechart.test/MachineTestPlan.component1|component1(){}[0]
+    final fun component2(): koma.statechart.machine/DefinitionVersion // koma.statechart.test/MachineTestPlan.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<koma.statechart.test/MachineScenario<#B>> // koma.statechart.test/MachineTestPlan.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/Set<koma.statechart.machine/TransitionId> // koma.statechart.test/MachineTestPlan.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/Set<koma.statechart.machine/TransitionId> // koma.statechart.test/MachineTestPlan.component5|component5(){}[0]
+    final fun component6(): kotlin.collections/List<koma.statechart.test/SequenceFailure<#A, #B>> // koma.statechart.test/MachineTestPlan.component6|component6(){}[0]
+    final fun component7(): kotlin/Boolean // koma.statechart.test/MachineTestPlan.component7|component7(){}[0]
+    final fun component8(): kotlin/Boolean // koma.statechart.test/MachineTestPlan.component8|component8(){}[0]
+    final fun component9(): kotlin/Int // koma.statechart.test/MachineTestPlan.component9|component9(){}[0]
+    final fun copy(koma.statechart.machine/DefinitionId = ..., koma.statechart.machine/DefinitionVersion = ..., kotlin.collections/List<koma.statechart.test/MachineScenario<#B>> = ..., kotlin.collections/Set<koma.statechart.machine/TransitionId> = ..., kotlin.collections/Set<koma.statechart.machine/TransitionId> = ..., kotlin.collections/List<koma.statechart.test/SequenceFailure<#A, #B>> = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ...): koma.statechart.test/MachineTestPlan<#A, #B> // koma.statechart.test/MachineTestPlan.copy|copy(koma.statechart.machine.DefinitionId;koma.statechart.machine.DefinitionVersion;kotlin.collections.List<koma.statechart.test.MachineScenario<1:1>>;kotlin.collections.Set<koma.statechart.machine.TransitionId>;kotlin.collections.Set<koma.statechart.machine.TransitionId>;kotlin.collections.List<koma.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Boolean;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/MachineTestPlan.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.test/MachineTestPlan.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.test/MachineTestPlan.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action> koma.statechart.test/ScenarioResult { // koma.statechart.test/ScenarioResult|null[0]
+    constructor <init>(koma.statechart.test/MachineScenario<#B>, koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.test/MachineCoverage, koma.statechart.test/SequenceFailure<#A, #B>? = ...) // koma.statechart.test/ScenarioResult.<init>|<init>(koma.statechart.test.MachineScenario<1:1>;koma.statechart.machine.MachineSnapshot<1:0>;koma.statechart.test.MachineCoverage;koma.statechart.test.SequenceFailure<1:0,1:1>?){}[0]
+
+    final val coverage // koma.statechart.test/ScenarioResult.coverage|{}coverage[0]
+        final fun <get-coverage>(): koma.statechart.test/MachineCoverage // koma.statechart.test/ScenarioResult.coverage.<get-coverage>|<get-coverage>(){}[0]
+    final val failure // koma.statechart.test/ScenarioResult.failure|{}failure[0]
+        final fun <get-failure>(): koma.statechart.test/SequenceFailure<#A, #B>? // koma.statechart.test/ScenarioResult.failure.<get-failure>|<get-failure>(){}[0]
+    final val scenario // koma.statechart.test/ScenarioResult.scenario|{}scenario[0]
+        final fun <get-scenario>(): koma.statechart.test/MachineScenario<#B> // koma.statechart.test/ScenarioResult.scenario.<get-scenario>|<get-scenario>(){}[0]
+    final val snapshot // koma.statechart.test/ScenarioResult.snapshot|{}snapshot[0]
+        final fun <get-snapshot>(): koma.statechart.machine/MachineSnapshot<#A> // koma.statechart.test/ScenarioResult.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
+
+    final fun component1(): koma.statechart.test/MachineScenario<#B> // koma.statechart.test/ScenarioResult.component1|component1(){}[0]
+    final fun component2(): koma.statechart.machine/MachineSnapshot<#A> // koma.statechart.test/ScenarioResult.component2|component2(){}[0]
+    final fun component3(): koma.statechart.test/MachineCoverage // koma.statechart.test/ScenarioResult.component3|component3(){}[0]
+    final fun component4(): koma.statechart.test/SequenceFailure<#A, #B>? // koma.statechart.test/ScenarioResult.component4|component4(){}[0]
+    final fun copy(koma.statechart.test/MachineScenario<#B> = ..., koma.statechart.machine/MachineSnapshot<#A> = ..., koma.statechart.test/MachineCoverage = ..., koma.statechart.test/SequenceFailure<#A, #B>? = ...): koma.statechart.test/ScenarioResult<#A, #B> // koma.statechart.test/ScenarioResult.copy|copy(koma.statechart.test.MachineScenario<1:1>;koma.statechart.machine.MachineSnapshot<1:0>;koma.statechart.test.MachineCoverage;koma.statechart.test.SequenceFailure<1:0,1:1>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/ScenarioResult.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.test/ScenarioResult.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.test/ScenarioResult.toString|toString(){}[0]
 }
 
 final class <#A: kotlin/Any?, #B: koma.core/Action> koma.statechart.test/ScriptedCommandHandler : koma.statechart.machine/CommandHandler<#A, #B> { // koma.statechart.test/ScriptedCommandHandler|null[0]
@@ -179,6 +276,28 @@ final class <#A: kotlin/Any?, #B: koma.core/Action> koma.statechart.test/ShrinkR
     final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/ShrinkReport.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // koma.statechart.test/ShrinkReport.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // koma.statechart.test/ShrinkReport.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: koma.core/Action> koma.statechart.test/TestPlanResult { // koma.statechart.test/TestPlanResult|null[0]
+    constructor <init>(koma.statechart.test/MachineTestPlan<#A, #B>, kotlin.collections/List<koma.statechart.test/ScenarioResult<#A, #B>>, koma.statechart.test/MachineCoverage) // koma.statechart.test/TestPlanResult.<init>|<init>(koma.statechart.test.MachineTestPlan<1:0,1:1>;kotlin.collections.List<koma.statechart.test.ScenarioResult<1:0,1:1>>;koma.statechart.test.MachineCoverage){}[0]
+
+    final val coverage // koma.statechart.test/TestPlanResult.coverage|{}coverage[0]
+        final fun <get-coverage>(): koma.statechart.test/MachineCoverage // koma.statechart.test/TestPlanResult.coverage.<get-coverage>|<get-coverage>(){}[0]
+    final val failures // koma.statechart.test/TestPlanResult.failures|{}failures[0]
+        final fun <get-failures>(): kotlin.collections/List<koma.statechart.test/SequenceFailure<#A, #B>> // koma.statechart.test/TestPlanResult.failures.<get-failures>|<get-failures>(){}[0]
+    final val plan // koma.statechart.test/TestPlanResult.plan|{}plan[0]
+        final fun <get-plan>(): koma.statechart.test/MachineTestPlan<#A, #B> // koma.statechart.test/TestPlanResult.plan.<get-plan>|<get-plan>(){}[0]
+    final val scenarios // koma.statechart.test/TestPlanResult.scenarios|{}scenarios[0]
+        final fun <get-scenarios>(): kotlin.collections/List<koma.statechart.test/ScenarioResult<#A, #B>> // koma.statechart.test/TestPlanResult.scenarios.<get-scenarios>|<get-scenarios>(){}[0]
+
+    final fun assertSuccess() // koma.statechart.test/TestPlanResult.assertSuccess|assertSuccess(){}[0]
+    final fun component1(): koma.statechart.test/MachineTestPlan<#A, #B> // koma.statechart.test/TestPlanResult.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<koma.statechart.test/ScenarioResult<#A, #B>> // koma.statechart.test/TestPlanResult.component2|component2(){}[0]
+    final fun component3(): koma.statechart.test/MachineCoverage // koma.statechart.test/TestPlanResult.component3|component3(){}[0]
+    final fun copy(koma.statechart.test/MachineTestPlan<#A, #B> = ..., kotlin.collections/List<koma.statechart.test/ScenarioResult<#A, #B>> = ..., koma.statechart.test/MachineCoverage = ...): koma.statechart.test/TestPlanResult<#A, #B> // koma.statechart.test/TestPlanResult.copy|copy(koma.statechart.test.MachineTestPlan<1:0,1:1>;kotlin.collections.List<koma.statechart.test.ScenarioResult<1:0,1:1>>;koma.statechart.test.MachineCoverage){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/TestPlanResult.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.test/TestPlanResult.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.test/TestPlanResult.toString|toString(){}[0]
 }
 
 final class <#A: kotlin/Any?> koma.statechart.test/CoverageMetric { // koma.statechart.test/CoverageMetric|null[0]
@@ -245,8 +364,10 @@ final class koma.statechart.test/GuardOutcome { // koma.statechart.test/GuardOut
 }
 
 final class koma.statechart.test/MachineCoverage { // koma.statechart.test/MachineCoverage|null[0]
-    constructor <init>(koma.statechart.test/CoverageMetric<koma.statechart/StateId>, koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId>, koma.statechart.test/CoverageMetric<koma.statechart.test/GuardOutcome>, koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId>) // koma.statechart.test/MachineCoverage.<init>|<init>(koma.statechart.test.CoverageMetric<koma.statechart.StateId>;koma.statechart.test.CoverageMetric<koma.statechart.machine.TransitionId>;koma.statechart.test.CoverageMetric<koma.statechart.test.GuardOutcome>;koma.statechart.test.CoverageMetric<koma.statechart.machine.TransitionId>){}[0]
+    constructor <init>(koma.statechart.test/CoverageMetric<koma.statechart/StateId>, koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId>, koma.statechart.test/CoverageMetric<koma.statechart.test/GuardOutcome>, koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId>, koma.statechart.machine/DefinitionId? = ..., koma.statechart.machine/DefinitionVersion? = ...) // koma.statechart.test/MachineCoverage.<init>|<init>(koma.statechart.test.CoverageMetric<koma.statechart.StateId>;koma.statechart.test.CoverageMetric<koma.statechart.machine.TransitionId>;koma.statechart.test.CoverageMetric<koma.statechart.test.GuardOutcome>;koma.statechart.test.CoverageMetric<koma.statechart.machine.TransitionId>;koma.statechart.machine.DefinitionId?;koma.statechart.machine.DefinitionVersion?){}[0]
 
+    final val definition // koma.statechart.test/MachineCoverage.definition|{}definition[0]
+        final fun <get-definition>(): koma.statechart.machine/DefinitionId? // koma.statechart.test/MachineCoverage.definition.<get-definition>|<get-definition>(){}[0]
     final val guards // koma.statechart.test/MachineCoverage.guards|{}guards[0]
         final fun <get-guards>(): koma.statechart.test/CoverageMetric<koma.statechart.test/GuardOutcome> // koma.statechart.test/MachineCoverage.guards.<get-guards>|<get-guards>(){}[0]
     final val states // koma.statechart.test/MachineCoverage.states|{}states[0]
@@ -255,12 +376,16 @@ final class koma.statechart.test/MachineCoverage { // koma.statechart.test/Machi
         final fun <get-timers>(): koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId> // koma.statechart.test/MachineCoverage.timers.<get-timers>|<get-timers>(){}[0]
     final val transitions // koma.statechart.test/MachineCoverage.transitions|{}transitions[0]
         final fun <get-transitions>(): koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId> // koma.statechart.test/MachineCoverage.transitions.<get-transitions>|<get-transitions>(){}[0]
+    final val version // koma.statechart.test/MachineCoverage.version|{}version[0]
+        final fun <get-version>(): koma.statechart.machine/DefinitionVersion? // koma.statechart.test/MachineCoverage.version.<get-version>|<get-version>(){}[0]
 
     final fun component1(): koma.statechart.test/CoverageMetric<koma.statechart/StateId> // koma.statechart.test/MachineCoverage.component1|component1(){}[0]
     final fun component2(): koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId> // koma.statechart.test/MachineCoverage.component2|component2(){}[0]
     final fun component3(): koma.statechart.test/CoverageMetric<koma.statechart.test/GuardOutcome> // koma.statechart.test/MachineCoverage.component3|component3(){}[0]
     final fun component4(): koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId> // koma.statechart.test/MachineCoverage.component4|component4(){}[0]
-    final fun copy(koma.statechart.test/CoverageMetric<koma.statechart/StateId> = ..., koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId> = ..., koma.statechart.test/CoverageMetric<koma.statechart.test/GuardOutcome> = ..., koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId> = ...): koma.statechart.test/MachineCoverage // koma.statechart.test/MachineCoverage.copy|copy(koma.statechart.test.CoverageMetric<koma.statechart.StateId>;koma.statechart.test.CoverageMetric<koma.statechart.machine.TransitionId>;koma.statechart.test.CoverageMetric<koma.statechart.test.GuardOutcome>;koma.statechart.test.CoverageMetric<koma.statechart.machine.TransitionId>){}[0]
+    final fun component5(): koma.statechart.machine/DefinitionId? // koma.statechart.test/MachineCoverage.component5|component5(){}[0]
+    final fun component6(): koma.statechart.machine/DefinitionVersion? // koma.statechart.test/MachineCoverage.component6|component6(){}[0]
+    final fun copy(koma.statechart.test/CoverageMetric<koma.statechart/StateId> = ..., koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId> = ..., koma.statechart.test/CoverageMetric<koma.statechart.test/GuardOutcome> = ..., koma.statechart.test/CoverageMetric<koma.statechart.machine/TransitionId> = ..., koma.statechart.machine/DefinitionId? = ..., koma.statechart.machine/DefinitionVersion? = ...): koma.statechart.test/MachineCoverage // koma.statechart.test/MachineCoverage.copy|copy(koma.statechart.test.CoverageMetric<koma.statechart.StateId>;koma.statechart.test.CoverageMetric<koma.statechart.machine.TransitionId>;koma.statechart.test.CoverageMetric<koma.statechart.test.GuardOutcome>;koma.statechart.test.CoverageMetric<koma.statechart.machine.TransitionId>;koma.statechart.machine.DefinitionId?;koma.statechart.machine.DefinitionVersion?){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.test/MachineCoverage.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // koma.statechart.test/MachineCoverage.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // koma.statechart.test/MachineCoverage.toString|toString(){}[0]
@@ -277,10 +402,19 @@ final class koma.statechart.test/VirtualMachineClock : koma.statechart.machine/M
     }
 }
 
+final fun (koma.statechart.test/MachineCoverage).koma.statechart.test/assertTransitionsCovered(kotlin.collections/Set<koma.statechart.machine/TransitionId> = ...) // koma.statechart.test/assertTransitionsCovered|assertTransitionsCovered@koma.statechart.test.MachineCoverage(kotlin.collections.Set<koma.statechart.machine.TransitionId>){}[0]
+final fun (koma.statechart.test/MachineCoverage).koma.statechart.test/describe(koma.statechart/StateChartDefinition? = ...): kotlin/String // koma.statechart.test/describe|describe@koma.statechart.test.MachineCoverage(koma.statechart.StateChartDefinition?){}[0]
+final fun (koma.statechart.test/MachineCoverage).koma.statechart.test/merge(koma.statechart.test/MachineCoverage): koma.statechart.test/MachineCoverage // koma.statechart.test/merge|merge@koma.statechart.test.MachineCoverage(koma.statechart.test.MachineCoverage){}[0]
 final fun (kotlinx.coroutines.test/TestScope).koma.statechart.test/machineClock(): koma.statechart.test/VirtualMachineClock // koma.statechart.test/machineClock|machineClock@kotlinx.coroutines.test.TestScope(){}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.test/explore(koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.test/MachineInputGenerator<#A, #B>, koma.statechart.test/ExplorationStrategy = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., koma.statechart.machine/MachineTime = ...): koma.statechart.test/ExplorationReport<#A, #B> // koma.statechart.test/explore|explore@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>;koma.statechart.test.MachineInputGenerator<0:0,0:1>;koma.statechart.test.ExplorationStrategy;kotlin.Int;kotlin.Int;kotlin.Int;koma.statechart.machine.MachineTime){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.test/generateTestPlan(koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.test/MachineInputGenerator<#A, #B>, koma.statechart.test/ExplorationStrategy = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., koma.statechart.machine/MachineTime = ...): koma.statechart.test/MachineTestPlan<#A, #B> // koma.statechart.test/generateTestPlan|generateTestPlan@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>;koma.statechart.test.MachineInputGenerator<0:0,0:1>;koma.statechart.test.ExplorationStrategy;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;koma.statechart.machine.MachineTime){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.test/replaySequence(koma.statechart.machine/MachineSnapshot<#A>, kotlin.collections/List<koma.statechart.machine/MachineInput<#B>>): koma.statechart.test/SequenceFailure<#A, #B>? // koma.statechart.test/replaySequence|replaySequence@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>;kotlin.collections.List<koma.statechart.machine.MachineInput<0:1>>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.test/runPlan(koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.test/MachineTestPlan<#A, #B>): koma.statechart.test/TestPlanResult<#A, #B> // koma.statechart.test/runPlan|runPlan@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>;koma.statechart.test.MachineTestPlan<0:0,0:1>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.test/runScenario(koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.test/MachineScenario<#B>): koma.statechart.test/ScenarioResult<#A, #B> // koma.statechart.test/runScenario|runScenario@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>;koma.statechart.test.MachineScenario<0:1>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.test/shrink(koma.statechart.machine/MachineSnapshot<#A>, kotlin.collections/List<koma.statechart.machine/MachineInput<#B>>, kotlin/Int = ...): koma.statechart.test/ShrinkReport<#A, #B> // koma.statechart.test/shrink|shrink@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>;kotlin.collections.List<koma.statechart.machine.MachineInput<0:1>>;kotlin.Int){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.test/shrink(koma.statechart.machine/MachineSnapshot<#A>, kotlin.collections/List<koma.statechart.machine/MachineInput<#B>>, kotlin/Int = ..., kotlin/Function2<koma.statechart.test/SequenceFailure<#A, #B>, koma.statechart.test/SequenceFailure<#A, #B>, kotlin/Boolean>): koma.statechart.test/ShrinkReport<#A, #B> // koma.statechart.test/shrink|shrink@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>;kotlin.collections.List<koma.statechart.machine.MachineInput<0:1>>;kotlin.Int;kotlin.Function2<koma.statechart.test.SequenceFailure<0:0,0:1>,koma.statechart.test.SequenceFailure<0:0,0:1>,kotlin.Boolean>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.test/MachineTestDriver<#A, #B, #C, #D>).koma.statechart.test/generateTestPlan(koma.statechart.test/MachineInputGenerator<#A, #B>, kotlin/Int = ..., kotlin/Int = ...): koma.statechart.test/MachineTestPlan<#A, #B> // koma.statechart.test/generateTestPlan|generateTestPlan@koma.statechart.test.MachineTestDriver<0:0,0:1,0:2,0:3>(koma.statechart.test.MachineInputGenerator<0:0,0:1>;kotlin.Int;kotlin.Int){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.test/MachineTestDriver<#A, #B, #C, #D>).koma.statechart.test/verifyPlan(koma.statechart.test/MachineTestPlan<#A, #B>): koma.statechart.test/TestPlanResult<#A, #B> // koma.statechart.test/verifyPlan|verifyPlan@koma.statechart.test.MachineTestDriver<0:0,0:1,0:2,0:3>(koma.statechart.test.MachineTestPlan<0:0,0:1>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action> (koma.statechart.test/MachineInputGenerator<#A, #B>).koma.statechart.test/withTimers(): koma.statechart.test/MachineInputGenerator<#A, #B> // koma.statechart.test/withTimers|withTimers@koma.statechart.test.MachineInputGenerator<0:0,0:1>(){0§<kotlin.Any?>;1§<koma.core.Action>}[0]
 final fun <#A: kotlin/Any?, #B: kotlin/Any?> (koma.statechart.machine/ExecutorCheckpoint<#A, #B>).koma.statechart.test/pendingWork(): koma.statechart.test/MachinePendingWork<#B> // koma.statechart.test/pendingWork|pendingWork@koma.statechart.machine.ExecutorCheckpoint<0:0,0:1>(){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
 final suspend fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/MachineStore<#A, #B, #C, #D>).koma.statechart.test/assertNoPendingWork(koma.test/StoreRecorder<koma.statechart.machine/MachineSnapshot<#A>, #B, #D>? = ...) // koma.statechart.test/assertNoPendingWork|assertNoPendingWork@koma.statechart.machine.MachineStore<0:0,0:1,0:2,0:3>(koma.test.StoreRecorder<koma.statechart.machine.MachineSnapshot<0:0>,0:1,0:3>?){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]

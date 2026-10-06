@@ -41,11 +41,20 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.replaySequence(
  */
 fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.shrink(
     initial: MachineSnapshot<C>, inputs: List<MachineInput<A>>, maxAttempts: Int = 1_000,
+): ShrinkReport<C, A> = shrink(initial, inputs, maxAttempts) { original, candidate ->
+    candidate.identities.any { it in original.identities }
+}
+
+/** Custom semantic failure matching; the pure predicate must accept the original failure itself. */
+fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.shrink(
+    initial: MachineSnapshot<C>, inputs: List<MachineInput<A>>, maxAttempts: Int = 1_000,
+    preservesFailure: (original: SequenceFailure<C, A>, candidate: SequenceFailure<C, A>) -> Boolean,
 ): ShrinkReport<C, A> {
     require(maxAttempts > 0) { "[Koma] Shrinking needs a positive attempt budget" }
     var attempts = 1
     var best = requireNotNull(replaySequence(initial, inputs)) { "[Koma] Sequence does not fail" }
-    val identities = best.identities
+    val original = best
+    require(preservesFailure(original, original)) { "[Koma] Preservation predicate rejected the original failure" }
     var size = maxOf(1, best.inputs.size / 2)
     var truncated = false
     while (best.inputs.isNotEmpty()) {
@@ -56,7 +65,7 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.shrink(
             val candidate = best.inputs.take(position) + best.inputs.drop(position + size)
             attempts++
             val failure = replaySequence(initial, candidate)
-            if (failure != null && failure.identities.any { it in identities }) {
+            if (failure != null && preservesFailure(original, failure)) {
                 best = failure
                 reduced = true
                 break

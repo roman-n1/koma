@@ -82,6 +82,24 @@ only, and the MachineStore builder cannot install arbitrary handlers or recovery
 The module lives in the fork
 [roman-n1/koma](https://github.com/roman-n1/koma), not in upstream Koma.
 
+## Behaviour queries and documentation
+
+`machine.declaredActions(snapshot)` lists active transition/handler matchers without running
+guards. `machine.availableActions(snapshot, actualActions)` evaluates selection for supplied
+typed payloads, reporting executable, blocked, undeclared and failed-guard cases. It runs no
+reducers/hooks/handlers or IO; eligibility does not guarantee full macrostep success.
+
+Supply diagnostic metadata with `guard("online", "Connection.Online is required") { snapshot, action -> … }`.
+`machine.explainWhyRejected(explainedDecision)` reuses actual observations without another guard
+evaluation; the snapshot/action/explicit-time overload simulates a complete pure decision.
+
+`before.behaviouralDiffTo(after)` compares explicit versions of one logical Machine, including
+structural changes and migration/version obligations. It cannot inspect executable rule bodies.
+`chart.transitionMatrix().toMarkdown()` renders a state/trigger matrix;
+`toTransitionTableMarkdown()` renders detailed declaration rows with guards, effects and indices.
+These are declaration views; hierarchy and guards still determine actual runtime selection.
+See [derived behavioural feature contracts](../doc/internal/design/2026-10-06-derived-behavioural-features.md).
+
 ## Dependency
 
 The fork publishes every module as `io.github.roman-n1:<module>:5.0.0-alpha.1` to Maven Central from
