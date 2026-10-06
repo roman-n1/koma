@@ -17,6 +17,7 @@ plugins {
 // change of the public surface is a deliberate `apiDump` in the same change.
 @OptIn(kotlinx.validation.ExperimentalBCVApi::class)
 apiValidation {
+    ignoredProjects += "resource-soak" // device verification harness, not a published API
     ignoredProjects += "time-travel-example" // runnable debug application, not a published API
     ignoredProjects += "durable-effects-example" // application-owned persistence example
     klib {
