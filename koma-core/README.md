@@ -101,3 +101,7 @@ decisions are needed. Core's Kotlin state objects and chart nodes are different 
   [builder](src/commonMain/kotlin/koma/core/StoreBuilder.kt).
 - [Fork differences](../README.md#what-differs-from-the-original-project) and
   [stability boundary](../doc/internal/adr/2026-10-01-stable-core.md).
+
+The [binary upgrade check](../verification/binary-consumer/README.md) runs a client compiled
+against published upstream 4.0.0 with the fork core, without recompiling that client.
+Native and web klibs preserve the upstream library identity while Maven coordinates identify the fork.

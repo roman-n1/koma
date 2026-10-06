@@ -25,8 +25,13 @@ kotlin {
             jvmTarget = JvmTarget.JVM_11
         }
     }
-    iosArm64()
-    iosSimulatorArm64()
+    // Maven coordinates distinguish the fork, but frozen upstream klibs refer to this identity.
+    iosArm64 {
+        compilations.named("main") { compileTaskProvider.configure { compilerOptions.moduleName.set("io.github.koma-kt:koma-core") } }
+    }
+    iosSimulatorArm64 {
+        compilations.named("main") { compileTaskProvider.configure { compilerOptions.moduleName.set("io.github.koma-kt:koma-core") } }
+    }
     jvm {
         attributes.attribute(org.gradle.api.attributes.java.TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 11)
         compilerOptions {
@@ -34,6 +39,7 @@ kotlin {
         }
     }
     js(IR) {
+        compilations.named("main") { compileTaskProvider.configure { compilerOptions.freeCompilerArgs.add("-Xir-module-name=io.github.koma-kt:koma-core") } }
         browser()
         nodejs {
             testTask {
@@ -43,6 +49,7 @@ kotlin {
     }
     @OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
     wasmJs {
+        compilations.named("main") { compileTaskProvider.configure { compilerOptions.freeCompilerArgs.add("-Xir-module-name=io.github.koma-kt:koma-core") } }
         browser()
         nodejs {
             testTask {
