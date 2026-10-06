@@ -1,0 +1,11 @@
+public final class koma/diagnostics/sdk/OpenTelemetryDiagnosticSink : koma/diagnostics/DiagnosticSink {
+	public fun <init> (Lio/opentelemetry/api/trace/Tracer;I)V
+	public synthetic fun <init> (Lio/opentelemetry/api/trace/Tracer;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun emit (Lkoma/diagnostics/CausalTraceEvent;)V
+}
+
+public final class koma/diagnostics/sdk/SentryDiagnosticSink : koma/diagnostics/DiagnosticSink {
+	public fun <init> (Lio/sentry/IScopes;)V
+	public fun emit (Lkoma/diagnostics/CausalTraceEvent;)V
+}
+

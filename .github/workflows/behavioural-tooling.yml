@@ -1,0 +1,61 @@
+name: Behavioural tooling
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  behavioural-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Read baseline from the previous Git revision
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if ! git show "$BASE_SHA:.koma/baselines/messenger-send.koma.json" > "$RUNNER_TEMP/koma-before.json"; then
+            rm -f "$RUNNER_TEMP/koma-before.json"
+          fi
+      - name: Execute plans and export review artifacts
+        run: ./gradlew :behaviour-review:exportBehaviour -Pkoma.behaviour.baseline="$RUNNER_TEMP/koma-before.json"
+      - name: Publish review summary
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          folder = Path('verification/behaviour-review/build/behaviour-review')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write('## Koma behavioural review\n\n')
+              for name in ('behaviour.diff', 'coverage.diff', 'coverage.txt'):
+                  text = (folder / name).read_text().replace('```', "'''" )
+                  summary.write(f'### {name}\n\n```text\n{text}\n```\n\n')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: behavioural-review
+          path: verification/behaviour-review/build/behaviour-review
+          if-no-files-found: error
+  intellij-plugin:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Build installable plugin and test navigation
+        run: ./gradlew -p tooling/intellij-plugin buildPlugin test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: koma-intellij-plugin
+          path: tooling/intellij-plugin/build/distributions/*.zip
+          if-no-files-found: error

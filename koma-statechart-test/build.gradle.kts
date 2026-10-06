@@ -53,6 +53,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            implementation(libs.serialization.json)
             api(project(":koma-statechart"))
             api(project(":koma-test"))
             api(libs.coroutines.test)

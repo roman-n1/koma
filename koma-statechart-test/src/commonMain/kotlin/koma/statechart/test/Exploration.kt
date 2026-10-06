@@ -28,6 +28,9 @@ sealed interface ExplorationStrategy {
     /** Breadth-first search stopping once every declared transition was actually taken. */
     data object AllTransitions : ExplorationStrategy
 
+    /** Stops at a finite coverage target; missing obligations remain visible in the report. */
+    data class Cover(val target: CoverageTarget) : ExplorationStrategy
+
     /** Reproducible random walks through the application's generated input choices. */
     data class RandomWalk(val seed: Int, val runs: Int = 100) : ExplorationStrategy {
         init { require(runs > 0) { "[Koma] Random walks need at least one run" } }
@@ -71,6 +74,10 @@ data class MachineScenario<A : Action>(val name: String, val inputs: List<Machin
 
 /** Coverage of an executable prefix, captured during exploration rather than inferred from its graph. */
 data class ScenarioCoverage<A : Action>(val scenario: MachineScenario<A>, val transitions: Set<TransitionId>)
+
+/** Actual prefix observations, separate from the original transition-only record's stable ABI. */
+data class BehaviouralScenarioCoverage<A : Action>(val scenario: MachineScenario<A>, val coverage: MachineCoverage)
+data class BehaviouralExplorationReport<C, A : Action>(val report: ExplorationReport<C, A>, val scenarios: List<BehaviouralScenarioCoverage<A>>)
 
 /** Search results. [truncated] means a decision/failure budget stopped work, not proof of safety. */
 data class ExplorationReport<C, A : Action>(
@@ -122,15 +129,29 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.explore(
     maxDecisions: Int = 10_000,
     maxFailures: Int = 1,
     now: MachineTime = MachineTime.Zero,
-): ExplorationReport<C, A> {
+): ExplorationReport<C, A> = exploreDetailed(initial, generator, strategy, maxDepth, maxDecisions, maxFailures, now).report
+
+/** Per-prefix state/guard observations captured during the same decisions, without replaying metadata. */
+fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.exploreDetailed(
+    initial: MachineSnapshot<C>, generator: MachineInputGenerator<C, A>,
+    strategy: ExplorationStrategy = ExplorationStrategy.BreadthFirst,
+    maxDepth: Int = 10, maxDecisions: Int = 10_000, maxFailures: Int = 1, now: MachineTime = MachineTime.Zero,
+): BehaviouralExplorationReport<C, A> {
     require(maxDepth >= 0 && maxDecisions > 0 && maxFailures > 0) { "[Koma] Invalid exploration limits" }
     val coverage = MachineCoverageRecorder(this)
     val failures = mutableListOf<SequenceFailure<C, A>>()
     var decisions = 0
     var checked = 0L
     var truncated = false
-    val scenarios = linkedMapOf<Set<TransitionId>, MachineScenario<A>>()
-    data class Path<C, A : Action>(val snapshot: MachineSnapshot<C>, val inputs: List<MachineInput<A>>, val now: MachineTime, val depth: Int, val transitions: Set<TransitionId> = emptySet())
+    val scenarios = linkedMapOf<MachineCoverage, MachineScenario<A>>()
+    val emptyCoverage = coverage.snapshot()
+    val requirements = when (strategy) {
+        ExplorationStrategy.AllTransitions -> chart.requirements(CoverageTarget.AllTransitions)
+        is ExplorationStrategy.Cover -> chart.requirements(strategy.target)
+        else -> null
+    }
+    fun goalMet(): Boolean = requirements?.missing(coverage.snapshot())?.isEmpty == true
+    data class Path<C, A : Action>(val snapshot: MachineSnapshot<C>, val inputs: List<MachineInput<A>>, val now: MachineTime, val depth: Int, val transitions: Set<TransitionId> = emptySet(), val localCoverage: MachineCoverage)
 
     fun decidePath(path: Path<C, A>, input: MachineInput<A>, depth: Int): Path<C, A>? {
         if (decisions >= maxDecisions || failures.size >= maxFailures) { truncated = true; return null }
@@ -141,21 +162,30 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.explore(
         checked += invariants.size
         val inputs = path.inputs + input
         val covered = path.transitions + explained.decision.transitions
-        val previous = scenarios[covered]
+        val local = path.localCoverage.copy(
+            states = path.localCoverage.states.copy(covered = path.localCoverage.states.covered + explained.explanation.active +
+                explained.decision.snapshot.configuration.active + explained.decision.entered.map { it.node }),
+            transitions = path.localCoverage.transitions.copy(covered = covered),
+            guards = path.localCoverage.guards.copy(covered = path.localCoverage.guards.covered + explained.explanation.guards.mapNotNull {
+                it.result?.let { result -> GuardOutcome(it.transition, result) } }),
+            timers = path.localCoverage.timers.copy(covered = covered intersect path.localCoverage.timers.expected),
+        )
+        val previous = scenarios[local]
         if (previous == null || inputs.size < previous.inputs.size) {
-            scenarios[covered] = MachineScenario(previous?.name ?: "scenario-${scenarios.size + 1}", inputs.toList())
+            scenarios[local] = MachineScenario(previous?.name ?: "scenario-${scenarios.size + 1}", inputs.toList())
         }
         val failure = sequenceFailure(inputs, explained.decision)
         if (failure != null) { failures += failure; return null }
-        return Path(explained.decision.snapshot, inputs, input.now, depth, covered)
+        return Path(explained.decision.snapshot, inputs, input.now, depth, covered, local)
     }
 
     require(initial.definition == id && initial.version == version) { "[Koma] Snapshot belongs to another machine or version" }
-    var start: Path<C, A>? = Path(initial, emptyList(), now, 0)
+    var start: Path<C, A>? = Path(initial, emptyList(), now, 0, localCoverage = emptyCoverage.copy(states = emptyCoverage.states.copy(covered = initial.configuration.active)))
     if (!initial.isStarted) {
         start = decidePath(start!!, MachineInput.Start(now), 0)
     } else {
         coverage.observeInitial(initial)
+        scenarios[start!!.localCoverage] = MachineScenario("initial", emptyList())
         checked += invariants.size
         val violations = checkInvariants(initial)
         if (violations.isNotEmpty()) {
@@ -164,17 +194,17 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.explore(
         }
     }
     when (strategy) {
-        ExplorationStrategy.BreadthFirst, ExplorationStrategy.AllTransitions -> {
+        ExplorationStrategy.BreadthFirst, ExplorationStrategy.AllTransitions, is ExplorationStrategy.Cover -> {
             val queue = ArrayDeque<Path<C, A>>()
             start?.let(queue::addLast)
             while (queue.isNotEmpty() && !truncated) {
-                if (strategy == ExplorationStrategy.AllTransitions && coverage.snapshot().transitions.missing.isEmpty()) break
+                if (goalMet()) break
                 val path = queue.removeFirst()
                 if (path.depth == maxDepth) continue
                 for (input in generator.inputs(path.snapshot, path.now)) {
                     val next = decidePath(path, input, path.depth + 1)
                     if (next != null) queue.addLast(next)
-                    if (truncated || (strategy == ExplorationStrategy.AllTransitions && coverage.snapshot().transitions.missing.isEmpty())) break
+                    if (truncated || goalMet()) break
                 }
             }
         }
@@ -190,6 +220,7 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.explore(
             }
         }
     }
-    return ExplorationReport(decisions, checked, coverage.snapshot(), failures.toList(), truncated, maxDepth, scenarios.values.toList(),
-        scenarios.map { (transitions, scenario) -> ScenarioCoverage(scenario, transitions.toSet()) })
+    val report = ExplorationReport(decisions, checked, coverage.snapshot(), failures.toList(), truncated, maxDepth, scenarios.values.toList(),
+        scenarios.map { (observations, scenario) -> ScenarioCoverage(scenario, observations.transitions.covered) })
+    return BehaviouralExplorationReport(report, scenarios.map { (observations, scenario) -> BehaviouralScenarioCoverage(scenario, observations) })
 }
