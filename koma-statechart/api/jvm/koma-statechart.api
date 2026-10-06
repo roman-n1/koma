@@ -728,6 +728,13 @@ public final class koma/statechart/machine/Admission$Accepted : koma/statechart/
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/statechart/machine/Admission$Closed : koma/statechart/machine/Admission {
+	public static final field INSTANCE Lkoma/statechart/machine/Admission$Closed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/statechart/machine/Admission$Rejected : koma/statechart/machine/Admission {
 	public fun <init> (II)V
 	public final fun component1 ()I

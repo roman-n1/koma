@@ -4,6 +4,7 @@ import koma.core.Action
 import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import koma.core.InputId
+import koma.core.InputKind
 import koma.core.InternalKomaApi
 import koma.core.ActionHandlerMatch
 import koma.core.Plugin
@@ -19,6 +20,7 @@ import koma.core.StoreTrace
 import koma.core.StorePendingWork
 import koma.core.currentInputId
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -44,13 +46,15 @@ import kotlin.time.Duration
 interface MachineStore<C, A : Action, CMD, E : Event> : Store<MachineSnapshot<C>, A, E> {
     /**
      * Offers [action] and says whether it was accepted, according to the [AdmissionPolicy].
-     * [dispatch] is this with the answer dropped.
+     * [dispatch] is this with the answer dropped. A closed store returns [Admission.Closed];
+     * an accepted input may still be discarded by a later close before processing.
      */
     fun admit(action: A): Admission
 
     /**
      * Offers [action] as an input of the external source [source], under the [AdmissionPolicy]
-     * like a dispatch: a source that is refused decides itself whether to retry or drop. The
+     * like a dispatch: a source that is refused decides itself whether to retry or drop.
+     * [Admission.Closed] is terminal for this store, rather than backpressure to retry. The
      * input is a [MachineInput.External], so a recording knows where it came from.
      */
     @ExperimentalKomaApi
@@ -171,8 +175,17 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     @Volatile
     private var pending: Pending<C, A, CMD, E>? = null
 
-    // Dispatched actions accepted and not yet processed; a MutableStateFlow as a thread-safe counter.
-    private val waiting = MutableStateFlow(0)
+    // Separate from the cut gate: acceptance traces run synchronously inside inner.dispatch,
+    // and processing/discard traces may arrive concurrently from the inner store.
+    private val tracking = Mutex()
+    private var waiting = 0
+    private class Submission<A : Action>(
+        val input: MachineInput<A>,
+        var counted: Boolean = false,
+        val completion: CompletableDeferred<Unit>? = null,
+    )
+    private val submitted = mutableMapOf<InputId, Submission<A>>()
+    private var registering: Submission<A>? = null
 
     private var pluginScope: PluginScope<MachineSnapshot<C>, MachineInput<A>>? = null
 
@@ -184,8 +197,13 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     // The controlled queue of a group cut: while frozen, every input (dispatched, delivered, fed
     // by the executor) waits here instead of entering the inner store, in arrival order.
     private val gate = Mutex()
-    private val frozen = MutableStateFlow(false)
-    private val held = ArrayDeque<MachineInput<A>>()
+    private var frozen = false
+    private val held = ArrayDeque<Submission<A>>()
+    private val entering = ArrayDeque<Submission<A>>()
+    private var handoffs = 0
+    private val handoffChanges = MutableStateFlow(0L)
+    private var draining = false
+    private var handingOff: Submission<A>? = null
 
     // Plugins given to the store through `patch {}` (koma-test), adapted to the inner store; the
     // executor hands them every effect, since the inner store never sees the effects.
@@ -239,11 +257,11 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
                     }
                 }
                 action<MachineInput<A>> {
-                    if (action is MachineInput.Dispatch || action is MachineInput.External) waiting.update { it - 1 }
                     decide(state, action, currentInputId()) { nextState { it } }
                 }
             }
             probe(StoreProbe { trace ->
+                track(trace)
                 if (trace === StoreTrace.StoreClosed) {
                     val listeners = gated {
                         processingEnded = true
@@ -346,27 +364,63 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     override fun feed(source: SourceId, action: A): Admission = admitting(action) { MachineInput.External(source, action, clock.now()) }
 
     private inline fun admitting(action: A, input: () -> MachineInput<A>): Admission {
-        reserve(action)?.let { return it }
-        enqueue(input())
-        return Admission.Accepted
+        if (closed) return Admission.Closed
+        // An application clock may throw or block: it must not hold the cut gate or reserve space.
+        return submit(action, Submission(input()))
     }
 
-    // Books the action with the admission policy: `null` when it may enter, the rejection otherwise.
-    private fun reserve(action: A): Admission.Rejected? {
-        val limit = (admission as? AdmissionPolicy.Bounded)?.maxPending
-        if (limit != null) {
-            while (true) {
-                val current = waiting.value
-                if (current >= limit) {
-                    val rejection = Admission.Rejected(current, limit)
-                    observe { it.onRejected(action, rejection) }
-                    return rejection
+    private fun submit(action: A, submission: Submission<A>): Admission {
+        val result = gated {
+            if (closed) return@gated Admission.Closed
+            val rejection = locked(tracking) {
+                val limit = (admission as? AdmissionPolicy.Bounded)?.maxPending
+                if (limit != null && waiting >= limit) {
+                    Admission.Rejected(waiting, limit)
+                } else {
+                    waiting++
+                    submission.counted = true
+                    null
                 }
-                if (waiting.compareAndSet(current, current + 1)) return null
+            }
+            if (rejection != null) return@gated rejection
+            queueOpen(submission)
+            Admission.Accepted
+        }
+        // Observer callbacks may dispatch or close. They cannot run under either gate.
+        if (result is Admission.Rejected) observe { it.onRejected(action, result) }
+        if (result == Admission.Accepted) drain()
+        return result
+    }
+
+    private fun track(trace: StoreTrace<MachineSnapshot<C>, MachineInput<A>, E>) {
+        val completion = locked(tracking) {
+            when (trace) {
+                is StoreTrace.InputAccepted -> {
+                    val input = (trace.kind as? InputKind.Dispatch)?.action
+                    registering?.takeIf { it.input === input }?.let { submitted[trace.input] = it }
+                    null
+                }
+                is StoreTrace.ProcessingStarted -> {
+                    submitted[trace.input]?.let { releaseReservation(it) }
+                    null
+                }
+                is StoreTrace.InputDiscarded -> submitted.remove(trace.input)?.let {
+                    releaseReservation(it)
+                    it.completion
+                }
+                is StoreTrace.ProcessingFinished -> submitted.remove(trace.input)?.completion
+                else -> null
             }
         }
-        waiting.update { it + 1 }
-        return null
+        completion?.complete(Unit)
+    }
+
+    // Called only with tracking held. A discard frees a reservation even if no handler ran.
+    private fun releaseReservation(submission: Submission<A>) {
+        if (submission.counted) {
+            submission.counted = false
+            waiting--
+        }
     }
 
     // --- StoreInternalApi: what koma-test's extensions speak ---
@@ -377,25 +431,21 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
      * Admits [action] like [dispatch] and waits until the machine decided it: the commit and the
      * observers, not the commands the decision started. A rejected action throws, since it never
      * became an input. During a group cut the input waits in the controlled queue; the call then
-     * returns after the thaw, once the inner store finished what it held.
+     * returns after the thaw, once this input finished. A close discards held or queued inputs
+     * and releases their waiters; acceptance does not guarantee processing. An already closed
+     * store throws before accepting the action.
      */
     override suspend fun dispatchAndAwait(action: A) {
-        reserve(action)?.let { throw IllegalStateException("[Koma] dispatchAndAwait: the action was rejected by the admission policy (pending=${it.pending}, limit=${it.limit})") }
-        val input = MachineInput.Dispatch(action, clock.now())
-        val heldByCut = gated {
-            if (frozen.value) {
-                held += input
-                true
-            } else {
-                false
-            }
+        // A zero-time idle query never waits, but retains the core's guard against awaiting
+        // this same store from its handler, hook, observer or transaction.
+        innerApi.awaitIdle(Duration.ZERO)
+        check(!closed) { "[Koma] dispatchAndAwait: the store is closed" }
+        val completion = CompletableDeferred<Unit>()
+        when (val result = submit(action, Submission(MachineInput.Dispatch(action, clock.now()), completion = completion))) {
+            Admission.Accepted -> completion.await()
+            Admission.Closed -> throw IllegalStateException("[Koma] dispatchAndAwait: the store is closed")
+            is Admission.Rejected -> throw IllegalStateException("[Koma] dispatchAndAwait: the action was rejected by the admission policy (pending=${result.pending}, limit=${result.limit})")
         }
-        if (!heldByCut) {
-            innerApi.dispatchAndAwait(input)
-            return
-        }
-        frozen.first { !it }
-        innerApi.awaitIdle(Duration.INFINITE)
     }
 
     /**
@@ -406,8 +456,17 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
      * the held inputs are outside the inner store, so a frozen store is idle once it drained.
      */
     override suspend fun awaitIdle(timeout: Duration): StorePendingWork {
+        // Check the core's same-store await guard before waiting for the handoff queue.
+        innerApi.awaitIdle(Duration.ZERO)
         val settled = withTimeoutOrNull(timeout) {
             while (true) {
+                // A dispatcher may execute inline, so handing an input off can itself run a
+                // handler. A cut includes all offers made before freeze, even those still here.
+                while (true) {
+                    val observed = handoffChanges.value
+                    if (gated { handoffs == 0 }) break
+                    handoffChanges.first { it != observed }
+                }
                 innerApi.awaitIdle(Duration.INFINITE)
                 try {
                     // The actor answers after every decision queued before: all of them carried out.
@@ -415,10 +474,12 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
                 } catch (e: IllegalStateException) {
                     break // closed: nothing more will happen
                 }
-                if (innerApi.awaitIdle(Duration.ZERO).isIdle) break
+                if (gated { handoffs == 0 } && innerApi.awaitIdle(Duration.ZERO).isIdle) break
             }
         }
-        return if (settled != null) StorePendingWork(0, 0) else innerApi.awaitIdle(Duration.ZERO)
+        if (settled != null) return StorePendingWork(0, 0)
+        val innerPending = innerApi.awaitIdle(Duration.ZERO)
+        return StorePendingWork(innerPending.inputs + gated { handoffs }, innerPending.launches)
     }
 
     override fun dispatchIf(action: A, isValid: () -> Boolean) {
@@ -473,12 +534,65 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
 
     private fun enqueue(input: MachineInput<A>) {
         gated {
-            if (frozen.value) {
-                held += input
-                return
+            if (!closed) queueOpen(Submission(input))
+        }
+        drain()
+    }
+
+    // Called only while holding gate, serializing reservation, cut order and close.
+    private fun queueOpen(submission: Submission<A>) {
+        if (frozen) held += submission else {
+            entering += submission
+            handoffs++
+        }
+    }
+
+    // Exactly one caller hands queued inputs to the core, outside gate. With an immediate
+    // dispatcher the core may run an observer here; a reentrant offer only appends to entering.
+    private fun drain() {
+        val elected = gated {
+            if (draining || entering.isEmpty()) false else {
+                draining = true
+                true
             }
         }
-        inner.dispatch(input)
+        if (!elected) return
+        while (true) {
+            val submission = gated {
+                if (entering.isEmpty()) {
+                    draining = false
+                    null
+                } else entering.removeFirst().also { handingOff = it }
+            } ?: return
+            try {
+                dispatchSubmission(submission)
+            } catch (failure: Throwable) {
+                // A fatal probe throwable can abort synchronous dispatch. Close the remaining
+                // queue rather than strand reservations and waiters behind a lost drainer.
+                close()
+                locked(tracking) { submitted.entries.removeAll { it.value === submission } }
+                submission.completion?.completeExceptionally(failure)
+                gated { draining = false }
+                throw failure
+            } finally {
+                gated {
+                    handingOff = null
+                    handoffs--
+                }
+                // StateFlow may resume an immediate collector inline. Notify only after gate
+                // is released, just as per-input completions are outside tracking.
+                handoffChanges.update { it + 1 }
+            }
+        }
+    }
+
+    private fun dispatchSubmission(submission: Submission<A>) {
+        locked(tracking) { registering = submission }
+        try {
+            inner.dispatch(submission.input)
+        } finally {
+            locked(tracking) { registering = null }
+        }
     }
 
     /**
@@ -486,7 +600,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
      * inner store are still processed. For a group cut.
      */
     internal fun freeze() {
-        gated { frozen.value = true }
+        gated { if (!closed) frozen = true }
     }
 
     /**
@@ -495,25 +609,32 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
      */
     internal fun thaw() {
         gated {
-            // Under the gate, so an input arriving now cannot overtake the held ones; the flag
-            // turns after the drain, so a waiter of `frozen` sees the held inputs already counted.
-            while (held.isNotEmpty()) inner.dispatch(held.removeFirst())
-            frozen.value = false
+            // Transfer before admitting new arrivals, preserving held-input order. Dispatching
+            // happens after unlocking, so even inline observers can safely dispatch or close.
+            handoffs += held.size
+            while (held.isNotEmpty()) entering += held.removeFirst()
+            frozen = false
         }
+        drain()
     }
 
     /** How many inputs the controlled queue holds now. */
     internal val heldInputs: Int
         get() = gated { held.size }
 
-    private inline fun <T> gated(block: () -> T): T {
-        while (!gate.tryLock()) {
+    /** Accepted dispatches/feeds still waiting to start processing. */
+    internal val pendingAdmissions: Int get() = locked(tracking) { waiting }
+
+    private inline fun <T> gated(block: () -> T): T = locked(gate, block)
+
+    private inline fun <T> locked(lock: Mutex, block: () -> T): T {
+        while (!lock.tryLock()) {
             // Spin: the holder appends one input, or drains the held ones.
         }
         try {
             return block()
         } finally {
-            gate.unlock()
+            lock.unlock()
         }
     }
 
@@ -524,10 +645,24 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     }
 
     override fun close() {
-        gated {
+        val discarded = gated {
             if (closed) return
             closed = true
+            val queued = held.toList() + entering.toList()
+            handoffs -= entering.size
+            held.clear()
+            entering.clear()
+            frozen = false
+            locked(tracking) {
+                waiting = 0
+                queued.forEach { it.counted = false }
+                handingOff?.counted = false
+                submitted.values.forEach { it.counted = false }
+            }
+            queued
         }
+        handoffChanges.update { it + 1 }
+        discarded.forEach { it.completion?.complete(Unit) }
         scheduler.close()
         mailboxImpl.close()
         executionScope.cancel()

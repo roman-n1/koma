@@ -8,7 +8,7 @@ import koma.core.ExperimentalKomaApi
  * the machine waiting for a command that already answered.
  */
 sealed interface AdmissionPolicy {
-    /** Every action is accepted; the queue grows without limit. */
+    /** Every action offered to an open store is accepted; the queue grows without limit. */
     data object Unbounded : AdmissionPolicy
 
     /** At most [maxPending] actions wait for processing; further ones are refused. */
@@ -24,8 +24,11 @@ sealed interface AdmissionPolicy {
  * the action was accepted; [MachineStore.admit] says.
  */
 sealed interface Admission {
-    /** The action waits for processing. */
+    /** The open store queued the action. A later close may discard it before processing. */
     data object Accepted : Admission
+
+    /** The store has closed; the action was not queued. Retrying this store cannot succeed. */
+    data object Closed : Admission
 
     /** The action was refused: [pending] actions already waited, the limit is [limit]. */
     data class Rejected(val pending: Int, val limit: Int) : Admission
