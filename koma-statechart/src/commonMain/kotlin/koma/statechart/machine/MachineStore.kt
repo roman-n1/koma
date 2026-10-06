@@ -393,26 +393,34 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     }
 
     private fun track(trace: StoreTrace<MachineSnapshot<C>, MachineInput<A>, E>) {
-        val completion = locked(tracking) {
+        val completions = locked(tracking) {
             when (trace) {
                 is StoreTrace.InputAccepted -> {
                     val input = (trace.kind as? InputKind.Dispatch)?.action
                     registering?.takeIf { it.input === input }?.let { submitted[trace.input] = it }
-                    null
+                    emptyList()
                 }
                 is StoreTrace.ProcessingStarted -> {
                     submitted[trace.input]?.let { releaseReservation(it) }
-                    null
+                    emptyList()
                 }
                 is StoreTrace.InputDiscarded -> submitted.remove(trace.input)?.let {
                     releaseReservation(it)
-                    it.completion
+                    listOfNotNull(it.completion)
+                } ?: emptyList()
+                is StoreTrace.ProcessingFinished -> listOfNotNull(submitted.remove(trace.input)?.completion)
+                StoreTrace.StoreClosed -> {
+                    // This terminal trace follows every inner job, including a blocking observer.
+                    // It is safe to release any remaining waiter now, never at close() request time.
+                    val remaining = submitted.values.toList()
+                    submitted.clear()
+                    remaining.forEach { releaseReservation(it) }
+                    remaining.mapNotNull { it.completion }
                 }
-                is StoreTrace.ProcessingFinished -> submitted.remove(trace.input)?.completion
-                else -> null
+                else -> emptyList()
             }
         }
-        completion?.complete(Unit)
+        completions.forEach { it.complete(Unit) }
     }
 
     // Called only with tracking held. A discard frees a reservation even if no handler ran.

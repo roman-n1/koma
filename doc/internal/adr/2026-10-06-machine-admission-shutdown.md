@@ -20,7 +20,10 @@ store or capacity rejection throws before admission. An accepted input subsequen
 discarded by close completes normally, matching core Store cancellation semantics.
 Closing a frozen store releases held awaiters without requiring a subsequent thaw.
 An observer already running still has to return before its input's waiter completes.
-The core's same-store await guard is preserved for plugins and handlers.
+The core's same-store await guard is preserved for plugins and handlers. A fatal processing-start
+probe, or an exception handler rethrowing a probe failure, still executes core processing cleanup
+and emits its terminal failure trace. The machine's terminal `StoreClosed` trace additionally
+releases any remaining tracked waiter after all inner jobs have ended.
 
 ## Handoff and cuts
 
@@ -46,7 +49,9 @@ unchanged. Both JVM and KLIB API dumps include the new outcome.
 
 `AdmissionShutdownJvmTest` uses JVM threads and latch barriers, without timing sleeps,
 for timestamp/close races, simultaneous bounded offers, processing observers and an
-inline-dispatcher handoff during a cut. It also covers clock failure, startup discard,
+inline-dispatcher handoff during a cut. Dedicated JVM threads also check fatal and rethrowing
+processing-start probes, both in the core and machine adapter: pending work is released,
+per-input waits terminate, the next action still runs, and close emits its terminal trace. It also covers clock failure, startup discard,
 individual await isolation, cut shutdown and same-store await rejection. The initial
 three shutdown regressions failed against the original implementation and passed
 after the fix; the existing chart, helper and Time Travel suites remain required.

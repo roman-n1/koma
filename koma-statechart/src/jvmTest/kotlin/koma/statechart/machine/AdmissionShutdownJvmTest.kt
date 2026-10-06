@@ -2,13 +2,19 @@
 
 package koma.statechart.machine
 
+import java.io.File
+import java.net.URLClassLoader
+import java.nio.file.Files
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import koma.core.Action
 import koma.core.Event
 import koma.core.InputId
+import koma.core.StoreProbe
+import koma.core.StoreTrace
 import koma.core.Plugin
 import koma.core.PluginScope
 import koma.core.ExceptionHandler
@@ -28,6 +34,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
@@ -324,6 +331,64 @@ class AdmissionShutdownJvmTest {
         }
     }
 
+    @Test fun aFatalProcessingStartProbeDoesNotStrandItsInputWaiter() = failedStartProbe(false)
+    @Test fun aRethrowingProcessingStartProbeHandlerDoesNotStrandItsInputWaiter() {
+        // ExceptionHandler.Rethrow intentionally reaches global uncaught reporting. Isolate
+        // the JVM so coroutine-test does not attribute that expected failure to a later test.
+        val log = Files.createTempFile("koma-machine-probe-", ".log").toFile()
+        val paths = generateSequence(javaClass.classLoader) { it.parent }.filterIsInstance<URLClassLoader>()
+            .flatMap { it.urLs.asSequence() }.map { File(it.toURI()).path }.toList()
+        val classpath = (paths + System.getProperty("java.class.path").split(File.pathSeparator)).distinct()
+        val child = ProcessBuilder(File(System.getProperty("java.home"), "bin/java").path,
+            "-cp", classpath.joinToString(File.pathSeparator), MachineProbeFailureProcess::class.java.name)
+            .redirectErrorStream(true).redirectOutput(log).start()
+        try {
+            assertTrue(child.waitFor(20, TimeUnit.SECONDS), "Rethrow child timed out")
+            assertEquals(0, child.exitValue(), log.readText())
+            assertTrue(log.readText().contains("OK machine rethrow"), log.readText())
+        } finally {
+            if (child.isAlive) child.destroyForcibly().waitFor()
+            log.delete()
+        }
+    }
+
+    internal fun failedStartProbe(rethrow: Boolean) = runBlocking {
+        val failures = LinkedBlockingQueue<Throwable>()
+        val armed = AtomicBoolean(false)
+        val closed = CountDownLatch(1)
+        // Capture a Rethrow handler's uncaught failure on this dedicated thread, without
+        // changing global JVM exception handlers or suppressing unrelated coroutine failures.
+        val dispatcher = Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "koma-admission-probe-failure").apply {
+                uncaughtExceptionHandler = Thread.UncaughtExceptionHandler { _, failure -> failures.offer(failure) }
+            }
+        }.asCoroutineDispatcher()
+        try {
+            Fixture(coroutineContext = dispatcher, configure = {
+                exceptionHandler(if (rethrow) ExceptionHandler.Rethrow else ExceptionHandler { failures.offer(it) })
+                probe(StoreProbe { trace ->
+                    if (trace is StoreTrace.ProcessingStarted && armed.compareAndSet(true, false)) {
+                        if (rethrow) throw IllegalStateException("probe failure") else throw AssertionError("fatal probe failure")
+                    }
+                    if (trace === StoreTrace.StoreClosed) closed.countDown()
+                })
+            }).use { f ->
+                f.store.startAndAwait()
+                armed.set(true)
+                withTimeout(10_000) { f.store.dispatchAndAwait(Tick) }
+                assertTrue(failures.poll(10, TimeUnit.SECONDS) != null)
+                assertEquals(0, f.impl.pendingAdmissions)
+                assertEquals(0, f.store.currentState.context)
+                withTimeout(10_000) { f.store.awaitIdle() }
+                withTimeout(10_000) { f.store.dispatchAndAwait(Tick) }
+                assertEquals(1, f.store.currentState.context)
+                f.store.close()
+                assertTrue(closed.await(10, TimeUnit.SECONDS))
+                assertEquals(0, f.impl.pendingAdmissions)
+            }
+        } finally { dispatcher.close() }
+    }
+
     @Test fun awaitingFromTheSameStoresPluginStillFailsFast() = runBlocking {
         lateinit var store: MachineStore<Int, Tick, Nothing, Never>
         val checked = AtomicBoolean(false)
@@ -342,5 +407,12 @@ class AdmissionShutdownJvmTest {
             assertEquals(1, store.currentState.context)
             assertEquals(0, f.impl.pendingAdmissions)
         }
+    }
+}
+
+object MachineProbeFailureProcess {
+    @JvmStatic fun main(args: Array<String>) {
+        AdmissionShutdownJvmTest().failedStartProbe(true)
+        println("OK machine rethrow")
     }
 }
