@@ -34,7 +34,11 @@ do not establish performance, thermal behaviour or memory budgets on production 
 
 ## Workload
 
-Each batch creates 16 Stores and destroys them after the workload. The common implementation is
+Each batch creates 16 Stores and destroys them after the workload. The long benchmark runs
+these Stores and their UI consumers on an **owned fixed pool of four workers**, with one
+separate owned writer worker for blocking journal I/O. Both pools are closed and their workers
+are terminated before each GC/memory snapshot; the report states this dispatcher configuration
+and requires zero owned workers after close. The common implementation is
 [ResourceSoak.kt](src/commonMain/kotlin/koma/soak/ResourceSoak.kt).
 
 - Synthetic ASCII message bodies are approximately 4 KiB. Each Store's domain history retains
@@ -54,8 +58,8 @@ Each batch creates 16 Stores and destroys them after the workload. The common im
   `droppedForSinks`, while Store latency remains bounded. This controlled slow-I/O model does
   not claim that an emulator's virtual disk matches a phone's flash storage.
 - Each batch stops producers, waits for every accepted message to commit, closes Stores,
-  awaits all owned Store/subscriber/command jobs, drains the recording, closes the sink, and
-  joins the writer. Pending Store inputs, active commands, mailbox effects, child jobs and
+  awaits all owned Store/subscriber/command jobs, drains the recording, closes the sink,
+  joins the writer, and terminates both owned dispatcher pools. Pending Store inputs, active commands, mailbox effects, child jobs and
   file outputs must all be zero after teardown. Batch directories are deleted. External sources
   are outside this workload (`sourceCount=0`); their lifecycle has separate contract tests.
 
@@ -119,6 +123,21 @@ Kotlin 2.3.20 custom allocator, this tracks allocator-backed system allocations/
 not an exact count of live object bytes or all native malloc allocations. Resident memory also
 includes runtime/allocator/system memory. The JVM target is only a
 harness smoke check and reports zero for unavailable native/PSS metrics.
+
+The fixed topology controls runtime worker allocation while preserving parallel Store
+execution. Darwin `Dispatchers.Default` uses an elastic global GCD queue; its thread population
+and allocator-backed pages can vary after application jobs finish. The plateau budgets above
+apply to the reported four-plus-one owned-worker workload, not to arbitrary Default dispatcher
+thread capacity or physical-device performance. An additional test execution launches a fresh Native process (and a separate JVM test worker)
+from the same test compilation/binary. The ordinary and long test tasks depend on this execution,
+so Default diagnostics cannot pollute the controlled soak process baseline. Its real
+`Dispatchers.Default` regression
+runs repeated recording ON/OFF batches and checks weak-reference witnesses for all Stores,
+current domain contexts and payloads, owner jobs, and the RecordingSession after the isolated
+batch helper returns and GC runs. A deliberately retained payload is a positive control for
+that detector. Default allocator/thread snapshots are diagnostic; the reachability test makes
+no allocator-plateau claim. Weak checks sample these object graphs; the controlled long test
+still gates all measured allocator/resident growth, including allocations outside those graphs.
 
 ## Reports and interpreting a failure
 

@@ -23,3 +23,8 @@ actual object SoakPlatform {
     actual fun removeDirectory(path: String) { File(path).deleteRecursively() }
     actual fun writeReport(name: String, content: String) { File(reportDirectory).mkdirs(); File(reportDirectory, name).writeText(content) }
 }
+
+internal actual fun weakWitness(value: Any): WeakWitness {
+    val reference = java.lang.ref.WeakReference(value)
+    return object : WeakWitness { override val isAlive get() = reference.get() != null }
+}

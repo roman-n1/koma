@@ -74,3 +74,8 @@ actual object SoakPlatform {
         } finally { check(fclose(output) == 0) }
     }
 }
+
+internal actual fun weakWitness(value: Any): WeakWitness {
+    val reference = kotlin.native.ref.WeakReference(value)
+    return object : WeakWitness { override val isAlive get() = reference.get() != null }
+}

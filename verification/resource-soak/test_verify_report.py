@@ -20,7 +20,7 @@ class ReportValidationTest(unittest.TestCase):
                                        "accepted": 100, "p95Micros": 700000 if short else 20,
                                        "p99Micros": 1200000 if short else 30,
                                        **{f: 0 for f in ("jobsAfterClose", "outputsAfterClose", "pendingInputsAfterClose",
-                                                        "commandsAfterClose", "mailboxAfterClose")}},
+                                                        "commandsAfterClose", "mailboxAfterClose", "ownedWorkersAfterClose")}},
                             "memory": {"heapBytes": (40 if batch % 2 == 0 else 8) * 1024 * 1024,
                                        "nativeBytes": 0, "residentBytes": 0, "threads": 20}})
         warmup = copy.deepcopy(samples[:1])
@@ -28,6 +28,8 @@ class ReportValidationTest(unittest.TestCase):
         warmup[0]["result"].update(batch=0, p95Micros=794279, p99Micros=811660)
         return {"metadata": {"platform": "iOS", "durationSeconds": str(seconds), "warmupSeconds": "0" if short else "30",
                              "assessment": "harness-smoke" if short else "steady-soak",
+                             "storeWorkers": "4", "writerWorkers": "1",
+                             "dispatcher": "owned fixed pool: stores=4, writer=1; terminated before GC",
                              **{f: "actual-test-device" for f in ("runtime", "os", "device", "architecture")}},
                 "budgets": {"p95Micros": 500000, "p99Micros": 1000000, "heapPlateauGrowthBytes": 8 * 1024 * 1024,
                             "nativePlateauGrowthBytes": 8 * 1024 * 1024, "residentPlateauGrowthBytes": 64 * 1024 * 1024,

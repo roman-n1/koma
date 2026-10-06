@@ -36,7 +36,7 @@ class MemoryAssessmentTest {
 
     private fun sample(index: Int, recording: Boolean, heap: Long) = Sample(
         startedMillis = index * 1000L, elapsedMillis = index * 1000L + 900,
-        result = BatchResult(index, recording, 100, 0, 10, 20, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0),
+        result = BatchResult(index, recording, 100, 0, 10, 20, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0),
         memory = MemorySample(heap, heap, heap, 20),
     )
 }

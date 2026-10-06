@@ -22,6 +22,8 @@ assert int(metadata["durationSeconds"]) == seconds, metadata
 for field in ("runtime", "os", "device", "architecture"):
     assert metadata.get(field) not in (None, "", "null"), (field, metadata)
 assert not report["failures"], report["failures"]
+assert metadata["storeWorkers"] == "4" and metadata["writerWorkers"] == "1", metadata
+assert metadata["dispatcher"] == "owned fixed pool: stores=4, writer=1; terminated before GC", metadata
 expected_warmup = min(30, seconds // 5)
 assert int(metadata["warmupSeconds"]) == expected_warmup, metadata
 fixed_budgets = {"p95Micros": 500000, "p99Micros": 1000000, "heapPlateauGrowthBytes": 8 * 1024 * 1024,
@@ -84,7 +86,7 @@ else:
 for sample in warmup + samples:
     result = sample["result"]
     assert result["accepted"] >= 100, result
-    for field in ("jobsAfterClose", "outputsAfterClose", "pendingInputsAfterClose", "commandsAfterClose", "mailboxAfterClose"):
+    for field in ("jobsAfterClose", "outputsAfterClose", "pendingInputsAfterClose", "commandsAfterClose", "mailboxAfterClose", "ownedWorkersAfterClose"):
         assert result[field] == 0, result
 with (root / "samples.csv").open() as stream:
     rows = list(csv.DictReader(stream))

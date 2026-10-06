@@ -39,6 +39,7 @@ import koma.statechart.machine.MachineInput
 import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MachineStore
 import koma.statechart.machine.MailboxConfig
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Dispatchers
@@ -138,7 +139,7 @@ data class BatchResult(val batch: Int, val recording: Boolean, val accepted: Lon
     val p95Micros: Long, val p99Micros: Long, val sampledInFlightHighWater: Int,
     val sampledCorePendingHighWater: Int, val sampledMailboxHighWater: Int, val retainedHighWater: Int, val sinkBusyHighWater: Int,
     val droppedForSinks: Long, val bytesWritten: Long, val jobsAfterClose: Int, val outputsAfterClose: Int,
-    val pendingInputsAfterClose: Int, val commandsAfterClose: Int, val mailboxAfterClose: Int)
+    val pendingInputsAfterClose: Int, val commandsAfterClose: Int, val mailboxAfterClose: Int, val ownedWorkersAfterClose: Int)
 
 @Serializable
 data class Sample(val startedMillis: Long, val elapsedMillis: Long, val result: BatchResult, val memory: MemorySample)
@@ -173,7 +174,7 @@ suspend fun runResourceSoak() {
     try {
         while (started.elapsedNow() < SOAK_SECONDS.seconds || batch < minimumBatches || samples.size < minimumSamples || !hasModeCoverage()) {
             val batchStarted = started.elapsedNow()
-            val result = runBatch(batch)
+            val result = runControlledBatch(batch)
             val memory = SoakPlatform.afterGc()
             val sample = Sample(batchStarted.inWholeMilliseconds, started.elapsedNow().inWholeMilliseconds, result, memory)
             if (batch > 0 && batchStarted >= warmupSeconds.seconds) {
@@ -202,16 +203,16 @@ suspend fun runResourceSoak() {
         if (residentGrowth != null && residentGrowth > budgets.getValue("residentPlateauGrowthBytes")) failures += "Resident memory did not plateau: +$residentGrowth bytes"
         if (threadGrowth != null && threadGrowth > 16) failures += "OS thread count did not plateau: +$threadGrowth threads"
         val report = BudgetReport(SoakPlatform.metadata() + mapOf("durationSeconds" to SOAK_SECONDS.toString(), "warmupSeconds" to warmupSeconds.toString(),
-            "dispatcher" to "Dispatchers.Default", "slowWriteMillis" to "2", "latency" to "accepted offer to committed decision; bounded rolling tail per batch",
+            "dispatcher" to "owned fixed pool: stores=4, writer=1; terminated before GC", "storeWorkers" to "4", "writerWorkers" to "1", "slowWriteMillis" to "2", "latency" to "accepted offer to committed decision; bounded rolling tail per batch",
             "assessment" to if (assessPerformance) "steady-soak" else "harness-smoke",
             "memorySampling" to "after teardown and two requested GCs; same-recording-mode first/last-third medians; worst mode growth", "sourceCount" to "0"),
             budgets + ("threadPlateauGrowth" to 16L), samples, warmupSamples, growthByMode != null, growthByMode, heapGrowth, nativeGrowth, residentGrowth, threadGrowth, failures)
         val json = Json { prettyPrint = true }.encodeToString(report)
         SoakPlatform.writeReport("report.json", json)
-        val csv = "phase,started_ms,elapsed_ms,batch,recording,accepted,rejected,p95_us,p99_us,inflight_sampled_highwater,core_pending_sampled_highwater,mailbox_sampled_highwater,retained_highwater,sink_busy_highwater,dropped,bytes_written,heap_bytes,native_bytes,resident_bytes,threads,jobs_after_close,outputs_after_close,pending_inputs_after_close,commands_after_close,mailbox_after_close\n" +
+        val csv = "phase,started_ms,elapsed_ms,batch,recording,accepted,rejected,p95_us,p99_us,inflight_sampled_highwater,core_pending_sampled_highwater,mailbox_sampled_highwater,retained_highwater,sink_busy_highwater,dropped,bytes_written,heap_bytes,native_bytes,resident_bytes,threads,jobs_after_close,outputs_after_close,pending_inputs_after_close,commands_after_close,mailbox_after_close,owned_workers_after_close\n" +
             (warmupSamples + samples).sortedBy { it.result.batch }.joinToString("\n") { s -> s.result.run {
                 val phase = if (s in warmupSamples) "warmup" else if (assessPerformance) "steady" else "smoke"
-                "$phase,${s.startedMillis},${s.elapsedMillis},${this.batch},$recording,$accepted,$rejected,$p95Micros,$p99Micros,$sampledInFlightHighWater,$sampledCorePendingHighWater,$sampledMailboxHighWater,$retainedHighWater,$sinkBusyHighWater,$droppedForSinks,$bytesWritten,${s.memory.heapBytes},${s.memory.nativeBytes},${s.memory.residentBytes},${s.memory.threads},$jobsAfterClose,$outputsAfterClose,$pendingInputsAfterClose,$commandsAfterClose,$mailboxAfterClose"
+                "$phase,${s.startedMillis},${s.elapsedMillis},${this.batch},$recording,$accepted,$rejected,$p95Micros,$p99Micros,$sampledInFlightHighWater,$sampledCorePendingHighWater,$sampledMailboxHighWater,$retainedHighWater,$sinkBusyHighWater,$droppedForSinks,$bytesWritten,${s.memory.heapBytes},${s.memory.nativeBytes},${s.memory.residentBytes},${s.memory.threads},$jobsAfterClose,$outputsAfterClose,$pendingInputsAfterClose,$commandsAfterClose,$mailboxAfterClose,$ownedWorkersAfterClose"
             } }
         SoakPlatform.writeReport("samples.csv", csv)
         println("SOAK_REPORT ${SoakPlatform.reportDirectory}/report.json (${samples.size} ${if (assessPerformance) "steady" else "smoke"} samples, ${warmupSamples.size} warmup)")
@@ -219,11 +220,14 @@ suspend fun runResourceSoak() {
     }
 }
 
-private suspend fun runBatch(batch: Int): BatchResult {
+internal suspend fun runBatch(batch: Int, storeDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    writerDispatcher: CoroutineDispatcher = Dispatchers.Default, witnesses: MutableList<NamedWitness>? = null,
+    activeMillis: Long = if (SOAK_SECONDS < 30) 300 else 2000): BatchResult {
+    fun observe(label: String, value: Any) { witnesses?.add(NamedWitness("batch-$batch:$label", weakWitness(value))) }
     val owner = SupervisorJob()
-    val scope = CoroutineScope(Dispatchers.Default + owner)
+    val scope = CoroutineScope(storeDispatcher + owner)
     val writerOwner = SupervisorJob()
-    val writerScope = CoroutineScope(Dispatchers.Default + writerOwner)
+    val writerScope = CoroutineScope(writerDispatcher + writerOwner)
     val directory = SoakPlatform.directory(batch)
     val storage = SlowStorage(FileSegmentStorage(directory))
     val sink = JournalFileSink(storage, JournalFileConfig(maxSegmentBytes = 128 * 1024, maxSegments = 2, flushEveryRecords = 8))
@@ -237,6 +241,9 @@ private suspend fun runBatch(batch: Int): BatchResult {
             sinkBusy.update { it + 1 }; sinkHigh.update { maxOf(it, sinkBusy.value) }
             try { sink.write(record) } finally { sinkBusy.update { it - 1 } }
         })) else null
+    observe("owner", owner)
+    observe("writerOwner", writerOwner)
+    session?.let { observe("recording", it) }
     val latencies = Latencies()
     val commands = MutableStateFlow(0)
     val stores = mutableListOf<MachineStore<History, Message, Poll, Render>>()
@@ -274,6 +281,7 @@ private suspend fun runBatch(batch: Int): BatchResult {
                     event = { e: Render -> Payload.Projected("render", mapOf("body" to e.body)) },
                 )) }
             }
+            observe("store-$index", store)
             stores += store
             (store as StoreInternalApi<MachineSnapshot<History>, Message, Render>).startAndAwait()
             subscriberJobs += scope.launch { store.state.collect { check(it.context.messages.size <= CONTEXT_MESSAGES) } }
@@ -281,7 +289,7 @@ private suspend fun runBatch(batch: Int): BatchResult {
         }
         val active = TimeSource.Monotonic.markNow()
         var ticks = 0
-        while (active.elapsedNow() < (if (SOAK_SECONDS < 30) 300 else 2000).milliseconds) {
+        while (active.elapsedNow() < activeMillis.milliseconds) {
             stores.forEachIndexed { index, store ->
                 repeat(48) {
                     val action = Message(++sequence, nowNanos(), "$sequence:$payload")
@@ -318,7 +326,9 @@ private suspend fun runBatch(batch: Int): BatchResult {
         }
     }
     // Assertions follow all release attempts, so a regression never skips writer/file cleanup.
-    stores.forEach { store ->
+    stores.forEachIndexed { index, store ->
+        observe("context-$index", store.currentState.context)
+        store.currentState.context.messages.lastOrNull()?.let { observe("payload-$index", it) }
         val pending = (store as StoreInternalApi<MachineSnapshot<History>, Message, Render>).awaitIdle(1.seconds)
         pendingAfterClose += pending.inputs
         mailboxAfterClose += store.mailbox.pending.size
@@ -339,7 +349,7 @@ private suspend fun runBatch(batch: Int): BatchResult {
     check(storage.list().all { it.size <= 128 * 1024 + 8 }) { "Segment byte budget exceeded" }
     val result = BatchResult(batch, recording, count, rejected, p95, p99, inFlightHigh, corePendingHigh, mailboxHigh, retainedHigh, sinkHigh.value,
         stats?.droppedForSinks ?: 0, storage.bytes.value, owner.children.count() + writerOwner.children.count(), storage.outputs.value,
-        pendingAfterClose, commands.value, mailboxAfterClose)
+        pendingAfterClose, commands.value, mailboxAfterClose, 0)
     SoakPlatform.removeDirectory(directory)
     return result
 }
