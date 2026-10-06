@@ -143,7 +143,12 @@ object CheckoutDemo {
         record(parent, calls, beforeSummaryRecorded = null)
 
     // The example's test seam holds a real committed observer before the file observer runs.
-    internal suspend fun record(parent: Path, calls: AtomicInteger, beforeSummaryRecorded: (() -> Unit)?): Recorded = withContext(Dispatchers.IO) {
+    internal suspend fun record(
+        parent: Path,
+        calls: AtomicInteger,
+        beforeSummaryStartupRecorded: (() -> Unit)? = null,
+        beforeSummaryRecorded: (() -> Unit)? = null,
+    ): Recorded = withContext(Dispatchers.IO) {
         Files.createDirectories(parent)
         val directory = Files.createTempDirectory(parent, "checkout-")
         val storage = FileSegmentStorage(directory.toString())
@@ -170,9 +175,14 @@ object CheckoutDemo {
                 if (decision.snapshot.context.total == 100) beforeSummaryRecorded?.invoke()
             }
         }
+        val summaryStartupObserver = object : DecisionObserver<SummaryContext, UpdateTotal, NoCommand, NoEvent> {
+            override fun onCommitted(input: InputId?, machineInput: MachineInput<UpdateTotal>, decision: Decision<SummaryContext, NoCommand, NoEvent>) {
+                if (machineInput is MachineInput.Start) beforeSummaryStartupRecorded?.invoke()
+            }
+        }
         val summaryStore = MachineStore(summaryMachine, SummaryContext(), CommandHandler<NoCommand, UpdateTotal> { _, _ ->
             error("The summary has no commands")
-        }, engine, coroutineContext = engine.coroutineContext, observers = listOf(summaryMember, session.decisionsOf(summaryId), summaryObserver, files.member(summaryId, summaryMachine, SummaryContext(), summaryCodec))) {
+        }, engine, coroutineContext = engine.coroutineContext, observers = listOf(summaryStartupObserver, summaryMember, session.decisionsOf(summaryId), summaryObserver, files.member(summaryId, summaryMachine, SummaryContext(), summaryCodec))) {
             recordTo(session, summaryId)
         }
         try {
@@ -184,6 +194,10 @@ object CheckoutDemo {
                 summaryStore.start()
                 cartStore.state.first { it.isActive(idle) }
                 summaryStore.state.first { it.configuration.active.isNotEmpty() }
+                // Active snapshots publish before startup observers. Drain startup before
+                // issuing inputs, so a branch at the first price mismatch has both members
+                // started in its true recorded prefix, not just in the live StateFlows.
+                checkNotNull(group.checkpoint(5.seconds)) { "Checkout startup did not reach a consistent recording boundary" }
                 cartStore.dispatch(CartAction.Start)
                 summaryStore.state.first { it.context.total == 100 }
                 // StateFlow publishes before the committed plugins/observers finish. A group

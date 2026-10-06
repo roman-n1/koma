@@ -29,6 +29,50 @@ import kotlin.test.assertTrue
 
 class CheckoutDemoTest {
     @Test
+    fun scenarioWaitsForStartupRecordingBeforeCreatingTheReplayBranchPrefix() = runBlocking {
+        val parent = Files.createTempDirectory("koma-checkout-startup-")
+        val entered = CompletableDeferred<Unit>()
+        val release = CountDownLatch(1)
+        val calls = AtomicInteger()
+        try {
+            withTimeout(20_000) {
+                val recording = async(Dispatchers.Default) {
+                    CheckoutDemo.record(parent, calls, beforeSummaryStartupRecorded = {
+                        entered.complete(Unit)
+                        check(release.await(15, TimeUnit.SECONDS)) { "Test did not release the summary startup observer" }
+                    })
+                }
+                try {
+                    entered.await() // Active state is already published; Start is not in group order yet.
+                    val prematurePrice = withTimeoutOrNull(250) {
+                        while (calls.get() == 0) delay(1)
+                        calls.get()
+                    }
+                    release.countDown()
+                    val loaded = CheckoutDemo.load(recording.await().directory)
+                    assertNull(prematurePrice, "The price lookup must wait until every startup observer is recorded")
+                    assertEquals(emptyList(), loaded.replay(fixed = false).session.verify())
+                    val controls = loaded.controls(fixed = true)
+                    val failure = controls.replay.session.verify().filterIsInstance<GroupMismatch.Replay>().single()
+                    controls.replay.seek(failure.position)
+                    assertTrue(controls.replay.snapshot(CheckoutDemo.summaryId).isStarted, "The true recorded prefix must contain Summary Start")
+                    controls.branchHere()
+                    val branch = checkNotNull(controls.branch)
+                    branch.answer(CheckoutDemo.answers.first(), branch.awaiting(CheckoutDemo.cartId).single().id)
+                    assertEquals(CartContext(20, 100, 80), branch.snapshot(CheckoutDemo.cartId).context)
+                    assertEquals(SummaryContext(80), branch.snapshot(CheckoutDemo.summaryId).context)
+                    assertEquals(1, calls.get(), "An experiment must not execute live command handlers")
+                } finally {
+                    release.countDown()
+                }
+            }
+        } finally {
+            release.countDown()
+            parent.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
     fun recordingWaitsForCommittedObserversBeforeFinalizingTheFiles() = runBlocking {
         val parent = Files.createTempDirectory("koma-checkout-observer-")
         val entered = CompletableDeferred<Unit>()
