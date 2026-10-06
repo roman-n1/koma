@@ -34,7 +34,11 @@ do not establish performance, thermal behaviour or memory budgets on production 
 
 ## Workload
 
-Each batch creates 16 Stores and destroys them after the workload. The common implementation is
+Each batch creates 16 Stores and destroys them after the workload. The long benchmark runs
+these Stores and their UI consumers on an **owned fixed pool of four workers**, with one
+separate owned writer worker for blocking journal I/O. Both pools are closed and their workers
+are terminated before each GC/memory snapshot; the report states this dispatcher configuration
+and requires zero owned workers after close. The common implementation is
 [ResourceSoak.kt](src/commonMain/kotlin/koma/soak/ResourceSoak.kt).
 
 - Synthetic ASCII message bodies are approximately 4 KiB. Each Store's domain history retains
@@ -54,8 +58,8 @@ Each batch creates 16 Stores and destroys them after the workload. The common im
   `droppedForSinks`, while Store latency remains bounded. This controlled slow-I/O model does
   not claim that an emulator's virtual disk matches a phone's flash storage.
 - Each batch stops producers, waits for every accepted message to commit, closes Stores,
-  awaits all owned Store/subscriber/command jobs, drains the recording, closes the sink, and
-  joins the writer. Pending Store inputs, active commands, mailbox effects, child jobs and
+  awaits all owned Store/subscriber/command jobs, drains the recording, closes the sink,
+  joins the writer, and terminates both owned dispatcher pools. Pending Store inputs, active commands, mailbox effects, child jobs and
   file outputs must all be zero after teardown. Batch directories are deleted. External sources
   are outside this workload (`sourceCount=0`); their lifecycle has separate contract tests.
 
@@ -94,19 +98,46 @@ exact queue high water.
 
 For long runs, memory samples exclude the first 30 seconds (or one fifth of runs shorter than
 150 seconds). They follow batch teardown and two requested GCs, with delays for reclamation.
-At least six steady samples are required. First-third and last-third medians must stay within
-the fixed growth budgets, so repeatedly accumulating Stores/payloads/jobs cannot be excused by
-a budget that grows with runtime. The short smoke excludes the first batch and requires two
-samples. Android's `System.gc` is a request; the report is an empirical plateau check, not a
+Only batches that **start after warmup** receive the p95/p99 budget check. Cold-start and
+warmup latency measurements remain in `warmupSamples` and CSV rows marked `warmup`.
+Memory is assessed separately for recording ON and OFF: each mode requires at least nine
+post-warmup samples, and its first-third and last-third medians use at least three snapshots.
+Runs continue until both modes have nine snapshots, so a manual 30-second run can exceed
+its requested minimum while collecting coverage. The report includes both mode deltas; the worst mode delta must satisfy each unchanged budget.
+This avoids treating a stable ON/OFF allocation-level difference as cumulative growth while
+still rejecting growth within either mode.
+
+Runs shorter than 30 seconds are `harness-smoke`: they require two measured batches after the
+first batch and still enforce queue bounds, at least 100 latency samples per batch, every
+accepted message committing, and complete teardown. They **do not assess latency budgets or
+memory plateau**; `plateauEvaluated` is false and all growth fields are null. Long runs set
+`plateauEvaluated` only when both recording modes have sufficient coverage. Android's `System.gc` is a request; the report is an empirical plateau check, not a
 proof that every unreachable object was collected.
 
 Android reports used Java heap, `Debug.getNativeHeapAllocatedSize`, process PSS from
 `Debug.MemoryInfo` (converted from KiB to bytes), and `/proc/self/task` thread count. iOS reports
-the [Kotlin/Native GC live heap](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.native.runtime/-g-c-info/),
+[Kotlin/Native GCInfo allocator heap bytes](https://github.com/JetBrains/kotlin/blob/v2.3.20/kotlin-native/runtime/src/alloc/custom/cpp/GCApi.cpp#L138),
 Mach process resident size and Mach thread count, releasing the returned Mach thread rights.
-On iOS `heapBytes` and `nativeBytes` are the same Kotlin/Native GC heap metric, not two different
-pools; resident memory also includes runtime/allocator/system memory. The JVM target is only a
+On iOS `heapBytes` and `nativeBytes` are the same `GCInfo.memoryUsageAfter["heap"].totalObjectsSizeBytes` metric. With the pinned
+Kotlin 2.3.20 custom allocator, this tracks allocator-backed system allocations/pages; it is
+not an exact count of live object bytes or all native malloc allocations. Resident memory also
+includes runtime/allocator/system memory. The JVM target is only a
 harness smoke check and reports zero for unavailable native/PSS metrics.
+
+The fixed topology controls runtime worker allocation while preserving parallel Store
+execution. Darwin `Dispatchers.Default` uses an elastic global GCD queue; its thread population
+and allocator-backed pages can vary after application jobs finish. The plateau budgets above
+apply to the reported four-plus-one owned-worker workload, not to arbitrary Default dispatcher
+thread capacity or physical-device performance. An additional test execution launches a fresh Native process (and a separate JVM test worker)
+from the same test compilation/binary. The ordinary and long test tasks depend on this execution,
+so Default diagnostics cannot pollute the controlled soak process baseline. Its real
+`Dispatchers.Default` regression
+runs repeated recording ON/OFF batches and checks weak-reference witnesses for all Stores,
+current domain contexts and payloads, owner jobs, and the RecordingSession after the isolated
+batch helper returns and GC runs. A deliberately retained payload is a positive control for
+that detector. Default allocator/thread snapshots are diagnostic; the reachability test makes
+no allocator-plateau claim. Weak checks sample these object graphs; the controlled long test
+still gates all measured allocator/resident growth, including allocations outside those graphs.
 
 ## Reports and interpreting a failure
 
@@ -115,7 +146,8 @@ Android runs the assembled test APK with `am instrument`, copies its private rep
 installed, checks the instrumentation's positive test count and success, then uninstalls its
 test package. This avoids AGP/UTP's cleanup deleting app-owned reports before collection.
 CI validates the requested duration, actual device metadata, successful measurements, both
-recording modes and enough steady samples. It fails if instrumentation/native tests ran zero
+recording modes and at least nine steady samples per mode. The validator independently
+recomputes the mode medians and worst-mode deltas from the raw samples. It fails if instrumentation/native tests ran zero
 cases or left no report. Measurement execution is never reused from Gradle's task cache.
 CI uploads `report.json`, `samples.csv` and test reports even on failure. Native/JVM reports
 are under `verification/resource-soak/build/reports/resource-soak/ios` and `.../jvm`. Android

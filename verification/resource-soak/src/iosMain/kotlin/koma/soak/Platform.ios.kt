@@ -38,7 +38,7 @@ actual object SoakPlatform {
     actual fun metadata() = mapOf("platform" to "iOS", "runtime" to "Kotlin/Native ${KotlinVersion.CURRENT}", "os" to NSProcessInfo.processInfo.operatingSystemVersionString,
         "device" to NSProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"].toString(),
         "architecture" to kotlin.native.Platform.cpuArchitecture.name, "debugBinary" to kotlin.native.Platform.isDebugBinary.toString(),
-        "processors" to NSProcessInfo.processInfo.processorCount.toString(), "memoryUnits" to "bytes; native=Kotlin GC live heap; resident=Mach resident_size")
+        "processors" to NSProcessInfo.processInfo.processorCount.toString(), "memoryUnits" to "bytes; heap/native=GCInfo custom allocator heap bytes; resident=Mach resident_size")
     actual suspend fun afterGc(): MemorySample {
         repeat(2) { GC.collect(); delay(100) }
         val heap = checkNotNull(GC.lastGCInfo).memoryUsageAfter.getValue("heap").totalObjectsSizeBytes
@@ -73,4 +73,9 @@ actual object SoakPlatform {
             bytes.usePinned { check(fwrite(it.addressOf(0), 1u, bytes.size.convert(), output).toLong() == bytes.size.toLong()) }
         } finally { check(fclose(output) == 0) }
     }
+}
+
+internal actual fun weakWitness(value: Any): WeakWitness {
+    val reference = kotlin.native.ref.WeakReference(value)
+    return object : WeakWitness { override val isAlive get() = reference.get() != null }
 }

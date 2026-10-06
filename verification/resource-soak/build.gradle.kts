@@ -1,4 +1,6 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.NativeBuildType
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -32,9 +34,22 @@ kotlin {
         }
         compilerOptions { jvmTarget = JvmTarget.JVM_11 }
     }
-    jvm { compilerOptions { jvmTarget = JvmTarget.JVM_11 } }
+    jvm {
+        compilerOptions { jvmTarget = JvmTarget.JVM_11 }
+        val defaultReachability = testRuns.create("defaultReachability") {
+            setExecutionSourceFrom(compilations.getByName("test"))
+            executionTask.configure { useJUnit(); filter.includeTestsMatching("koma.soak.DefaultReachabilityTest*") }
+        }
+        testRuns.getByName("test").executionTask.configure {
+            useJUnit()
+            filter.excludeTestsMatching("koma.soak.DefaultReachabilityTest*")
+            dependsOn(defaultReachability.executionTask)
+        }
+    }
     iosArm64()
-    iosSimulatorArm64()
+    iosSimulatorArm64 {
+        testRuns.create("defaultReachability") { setExecutionSourceFrom(binaries.getTest(NativeBuildType.DEBUG)) }
+    }
     sourceSets {
         commonMain {
             kotlin.srcDir(generatedConfig)
@@ -45,6 +60,7 @@ kotlin {
             }
         }
         commonTest.dependencies { implementation(libs.kotlin.test) }
+        getByName("jvmTest").dependencies { implementation(kotlin("test-junit")) }
         getByName("androidDeviceTest").dependencies {
             implementation("androidx.test:runner:1.7.0")
             implementation("androidx.test.ext:junit:1.3.0")
@@ -52,9 +68,21 @@ kotlin {
     }
 }
 
-tasks.withType<AbstractTestTask>().configureEach { testLogging.showStandardStreams = true }
-// Measurements must execute on the current runner/device, never replay another machine's cache.
-tasks.matching { it.name in setOf("jvmTest", "iosSimulatorArm64Test", "connectedAndroidDeviceTest") }.configureEach {
+// Each execution launches a fresh process; never reuse another device's measurements.
+tasks.withType<AbstractTestTask>().configureEach {
+    testLogging.showStandardStreams = true
+    outputs.upToDateWhen { false }
+    outputs.cacheIf { false }
+}
+tasks.withType<KotlinNativeSimulatorTest>().configureEach {
+    if (name == "iosSimulatorArm64DefaultReachabilityTest") {
+        filter.includeTestsMatching("koma.soak.DefaultReachabilityTest*")
+    } else if (name == "iosSimulatorArm64Test") {
+        filter.excludeTestsMatching("koma.soak.DefaultReachabilityTest*")
+        dependsOn("iosSimulatorArm64DefaultReachabilityTest")
+    }
+}
+tasks.matching { it.name == "connectedAndroidDeviceTest" }.configureEach {
     outputs.upToDateWhen { false }
     outputs.cacheIf { false }
 }
