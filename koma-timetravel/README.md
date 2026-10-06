@@ -218,3 +218,24 @@ turns the older JSON into the newer one; the codec carries the migrations of its
 (1, an `initial` snapshot, to 2, a `start` checkpoint), `migrations` is for formats it does not
 know. `RecordingCodecGoldenTest` holds the golden fixtures of the current format and of the
 previous one, so a change of the text is a deliberate change of the version.
+
+## Files after interruption
+
+A successful storage flush hands complete frames to the operating system; a new process can
+read them after the writer is killed. Unflushed buffered bytes may be absent. A frame cut short
+is discarded and reported as `TruncatedTail`; an intact segment without END is `Unfinished`.
+Rotation is not atomic: the preceding segment remains readable if the next header is interrupted.
+Recording and group readers return the continuous range their files still cover, for replay.
+
+This is a **process interruption contract**, not a power-loss guarantee. JVM/Android use
+`BufferedOutputStream.flush()` and iOS uses `fflush()`; neither requests `fsync`. A failure from
+write, flush or close stops the affected sink and releases its handle. A disk-full failure must
+be handled through the journal session's failure reporter or recording's `onFailure`; it does
+not imply that queued decisions reached disk. Recording failures leave the segment without END.
+
+`RecordingDurabilityJvmTest` kills child JVM writers at buffered/flushed frame boundaries,
+inside a frame, and during rotation, then checks the files and replay in a fresh JVM. The
+`Recording filesystem durability` CI job also fills an isolated 8 MiB tmpfs and verifies actual
+ENOSPC for journal, member and group writers. It never fills a developer's filesystem. These
+tests validate JVM process death and disk full; iOS interruption and power loss remain separate
+platform validation work.

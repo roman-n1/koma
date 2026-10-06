@@ -609,9 +609,11 @@ class GroupRecordingFiles(private val storage: SegmentStorage) {
         val offsets = mutableMapOf<StoreInstanceId, Int>()
         for ((member, pair) in members) {
             val (recording, firstStep) = pair
-            val firstInRange = range.firstOrNull { it.store == member }?.step ?: (firstStep + recording.length)
+            val firstInRange = range.firstOrNull { it.store == member }?.step ?: (stepsBefore(entries, from, member) ?: firstStep)
             val skip = firstInRange - firstStep
-            trimmed[member] = recording.sinceStep(skip)
+            // A member writer may flush ahead of the order writer when the process dies.
+            // Keep only the steps whose order entries survive, on both ends of the range.
+            trimmed[member] = recording.sinceStep(skip, range.count { it.store == member })
             offsets[member] = firstInRange
         }
         val groupOrder = range.map { GroupStep(it.store, it.step - offsets.getValue(it.store)) }
@@ -634,8 +636,8 @@ class GroupRecordingFiles(private val storage: SegmentStorage) {
         RecordingFiles(this).read(member, codec as RecordingCodec<Any?, Action, Any?, Event>)
 
     @Suppress("UNCHECKED_CAST")
-    private fun Recording<*, *, *, *>.sinceStep(skip: Int): Recording<*, *, *, *> {
+    private fun Recording<*, *, *, *>.sinceStep(skip: Int, count: Int): Recording<*, *, *, *> {
         val typed = this as Recording<Any?, Action, Any?, Event>
-        return Recording(typed.definition, typed.version, typed.checkpointAt(skip), typed.steps.drop(skip))
+        return Recording(typed.definition, typed.version, typed.checkpointAt(skip), typed.steps.drop(skip).take(count))
     }
 }

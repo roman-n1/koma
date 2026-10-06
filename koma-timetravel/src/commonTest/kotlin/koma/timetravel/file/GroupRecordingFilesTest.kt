@@ -221,6 +221,34 @@ class GroupRecordingFilesTest {
     }
 
     @Test
+    fun memberFilesAheadOfTheOrder_areTrimmedToEverySurvivingPrefix() = runTest {
+        val live = Live(this)
+        kicks(live, 3)
+        live.close()
+        val whole = live.recorder.recording()
+        val name = GroupRecordingFileFormat.segmentName(groupId, 0)
+        val bytes = live.storage.read(name)
+        val decoded = GroupRecordingFileFormat.decodeSegment(name, bytes)
+        val header = checkNotNull(decoded.header)
+        for (count in 1 until decoded.entries.size) {
+            val prefix = GroupRecordingFileFormat.header(header) +
+                decoded.entries.take(count).fold(byteArrayOf()) { acc, entry -> acc + GroupRecordingFileFormat.entryFrame(entry) }
+            live.storage.delete(name)
+            live.storage.append(name).use { it.write(prefix) } // no END: order writer died first
+            val contents = GroupRecordingFiles(live.storage).read(groupId, codecs)
+            val read = checkNotNull(contents.recording)
+            assertEquals(whole.order.take(count), read.order, "prefix $count")
+            for ((member, recording) in read.members) {
+                val covered = read.order.count { it.store == member }
+                assertEquals(whole.members.getValue(member).steps.take(covered), recording.steps)
+                assertEquals(whole.members.getValue(member).start, recording.start, "prefix $count: $member checkpoint")
+            }
+            assertTrue(contents.marks.any { it is RecordingFileMark.Damaged && it.mark is SegmentMark.Unfinished })
+            assertEquals(emptyList(), GroupReplaySession(machines, read).verify(), "prefix $count")
+        }
+    }
+
+    @Test
     fun aRingThatDroppedEarlySegments_yieldsTheRangeEveryFileCovers_withItsMessagesInFlight() = runTest {
         val live = Live(this, RecordingFileConfig(maxSegmentBytes = 900, maxSegments = 2))
         kicks(live, 8)
