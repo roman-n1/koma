@@ -7,9 +7,11 @@ jobs:
     uses: ./.github/workflows/gradle.yml
   consumer:
     uses: ./.github/workflows/published-consumer.yml
+  binary:
+    uses: ./.github/workflows/binary-consumer.yml
   publish:
     name: Release build and publish
-    needs: [test, consumer]
+    needs: [test, consumer, binary]
     runs-on: macOS-latest
     steps:
       - name: Check out code

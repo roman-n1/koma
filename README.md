@@ -262,3 +262,6 @@ records the individual changes and their route back upstream.
 - Published artifacts: `scripts/verify-published-consumer.sh jvm` builds an
   [independent Maven consumer](verification/published-consumer/README.md); CI also compiles its
   Android, JS, Wasm and iOS variants.
+
+Previously compiled stable consumers are checked separately by the
+[binary upgrade fixture](verification/binary-consumer/README.md) on JVM, JS, Wasm and iOS.
