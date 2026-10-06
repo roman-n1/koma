@@ -5,6 +5,10 @@ import koma.core.Event
 import koma.core.ExperimentalKomaApi
 import koma.core.KomaStoreDsl
 import koma.observability.FailureDescriptor
+import koma.statechart.AutomaticTransition
+import koma.statechart.MicrostepLimitException
+import koma.statechart.Trigger
+import koma.statechart.isComplete
 import koma.statechart.ActionMatcher
 import koma.statechart.HistoryState
 import koma.statechart.StateChartDefinition
@@ -134,6 +138,27 @@ interface MachineActionScope<C, out A : Action, in CMD, in E : Event> {
  */
 @KomaStoreDsl
 class MachineBuilder<C, A : Action, CMD, E : Event> internal constructor() {
+    internal val invariants = mutableMapOf<String, MachineInvariant<C>>()
+    internal var enforceInvariants = false
+    internal var maxMicrosteps = 100
+
+    /** Sets the maximum automatic microsteps of one input; overflow rolls the entire decision back. */
+    fun maxMicrosteps(limit: Int) {
+        require(limit > 0) { "[Koma] Microstep limit must be positive" }
+        maxMicrosteps = limit
+    }
+
+    /** Adds a named, pure predicate checked on stable snapshots by tests, replay and inspectors. */
+    fun invariant(name: String, predicate: (MachineSnapshot<C>) -> Boolean) {
+        require(name !in invariants) { "[Koma] Invariant '$name' is declared twice" }
+        invariants[name] = MachineInvariant(name, predicate)
+    }
+
+    /** Opts into runtime checks: violations fail and roll back the entire decision before IO. */
+    fun enforceInvariants() {
+        enforceInvariants = true
+    }
+
     internal val guards = mutableMapOf<String, (MachineSnapshot<C>, Action) -> Boolean>()
     internal val effects = mutableMapOf<String, (C, Action) -> C>()
     internal val entries = mutableMapOf<StateId, MutableList<MachineEnterScope<C, A, CMD, E>.() -> Unit>>()
@@ -161,6 +186,11 @@ class MachineBuilder<C, A : Action, CMD, E : Event> internal constructor() {
     fun effect(label: String, effect: (context: C, action: Action) -> C) {
         require(effects.put(label, effect) == null) { "[Koma] Effect '$label' is implemented twice" }
     }
+
+    /** Typed implementation key, shared with the model-building DSL. */
+    fun guard(key: koma.statechart.GuardKey, guard: (MachineSnapshot<C>, Action) -> Boolean) = guard(key.name, guard)
+    /** Typed reducer key, shared with the model-building DSL. */
+    fun effect(key: koma.statechart.EffectKey, effect: (C, Action) -> C) = effect(key.name, effect)
 
     /**
      * Adds a rule run whenever [id] is entered, outermost nodes first; rules of one node run in the
@@ -236,6 +266,22 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
     val chart: StateChartDefinition,
     config: MachineBuilder<C, A, CMD, E>,
 ) {
+    /** The immutable set of named predicates, in declaration order. */
+    val invariants: List<MachineInvariant<C>> = config.invariants.values.toList()
+    private val enforceInvariants = config.enforceInvariants
+    private val maxMicrosteps = config.maxMicrosteps
+    private val hasAutomaticTransitions = chart.transitions.any { it.trigger == Trigger.Eventless || it.trigger == Trigger.Completion }
+
+    /** Whether a started workflow's active top-level state has completed. */
+    fun isComplete(snapshot: MachineSnapshot<C>): Boolean = snapshot.isStarted &&
+        chart.childrenOf(null).any { chart.isComplete(snapshot.configuration, it.id) }
+
+    /** Checks any stable snapshot, including a restored one; never executes commands. */
+    fun checkInvariants(snapshot: MachineSnapshot<C>): List<InvariantViolation> {
+        require(snapshot.definition == id && snapshot.version == version) { "[Koma] Snapshot belongs to another machine or version" }
+        return invariants.check(snapshot)
+    }
+
     private val guards: Map<String, (MachineSnapshot<C>, Action) -> Boolean> = config.guards.toMap()
     private val effects: Map<String, (C, Action) -> C> = config.effects.toMap()
     private val entries: Map<StateId, List<MachineEnterScope<C, A, CMD, E>.() -> Unit>> = config.entries.mapValues { it.value.toList() }
@@ -281,33 +327,43 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
      *
      * @throws IllegalArgumentException if [snapshot] belongs to another machine or version
      */
-    fun decide(snapshot: MachineSnapshot<C>, input: MachineInput<A>): Decision<C, CMD, E> {
+    fun decide(snapshot: MachineSnapshot<C>, input: MachineInput<A>): Decision<C, CMD, E> =
+        decideObserved(snapshot, input, null)
+
+    /** Decides once and captures actual guard results and candidate priority, without extra guard calls. */
+    fun decideExplained(snapshot: MachineSnapshot<C>, input: MachineInput<A>): ExplainedDecision<C, CMD, E> {
+        val trace = SelectionTrace()
+        val decision = decideObserved(snapshot, input, trace)
+        return ExplainedDecision(decision, trace.explanation(snapshot.configuration.active, trace.selected))
+    }
+
+    private fun decideObserved(snapshot: MachineSnapshot<C>, input: MachineInput<A>, trace: SelectionTrace?): Decision<C, CMD, E> {
         require(snapshot.definition == id && snapshot.version == version) {
             "[Koma] Snapshot of ${snapshot.definition} ${snapshot.version} given to machine $id $version"
         }
         return try {
-            when (input) {
+            val first = when (input) {
                 is MachineInput.Start -> if (snapshot.isStarted) ignored(snapshot, IgnoreReason.AlreadyStarted) else start(snapshot, input)
                 is MachineInput.Dispatch -> when {
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
-                    else -> step(snapshot, input, input.action, changed = false)
+                    else -> step(snapshot, input, input.action, changed = false, trace = trace)
                 }
                 is MachineInput.BridgeReceived -> when {
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
-                    else -> step(snapshot, input, input.action, changed = false)
+                    else -> step(snapshot, input, input.action, changed = false, trace = trace)
                 }
                 is MachineInput.External -> when {
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
-                    else -> step(snapshot, input, input.action, changed = false)
+                    else -> step(snapshot, input, input.action, changed = false, trace = trace)
                 }
                 is MachineInput.TimerFired -> when {
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
-                    else -> fire(snapshot, input)
+                    else -> fire(snapshot, input, trace)
                 }
                 is MachineInput.CommandResult -> when {
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
                     input.command !in snapshot.commands -> ignored(snapshot, IgnoreReason.StaleCommand)
-                    else -> step(snapshot, input, input.action, changed = false)
+                    else -> step(snapshot, input, input.action, changed = false, trace = trace)
                 }
                 is MachineInput.CommandCompleted -> when {
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
@@ -317,7 +373,7 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
                 is MachineInput.CommandFailed -> when {
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
                     input.command !in snapshot.commands -> ignored(snapshot, IgnoreReason.StaleCommand)
-                    else -> step(snapshot.copy(commands = snapshot.commands - input.command), input, CommandFailure(input.command, input.failure), changed = true)
+                    else -> step(snapshot.copy(commands = snapshot.commands - input.command), input, CommandFailure(input.command, input.failure), changed = true, trace = trace)
                 }
                 is MachineInput.CommandAbandoned -> when {
                     !snapshot.isStarted -> ignored(snapshot, IgnoreReason.NotStarted)
@@ -325,6 +381,12 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
                     else -> Decision(DecisionOutcome.Handled, snapshot.copy(revision = snapshot.revision + 1, commands = snapshot.commands - input.command))
                 }
             }
+            val decision = if (first.isHandled && hasAutomaticTransitions) stabilize(snapshot, input, first, trace) else first
+            if (enforceInvariants && decision.snapshot.isStarted) {
+                val violations = checkInvariants(decision.snapshot)
+                if (violations.isNotEmpty()) throw InvariantViolationException(violations)
+            }
+            decision
         } catch (e: Exception) {
             Decision(DecisionOutcome.Failed(FailureDescriptor.of(e), e), snapshot)
         }
@@ -346,11 +408,17 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
      * the input was decided on (a deregistered command), so an action no transition takes is
      * still a handled decision.
      */
-    private fun step(base: MachineSnapshot<C>, input: MachineInput<A>, action: Action, changed: Boolean): Decision<C, CMD, E> {
-        return when (val result = runtime.step(base.configuration, base, action)) {
-            StepResult.Ignored -> handle(base, input, action)
+    private fun step(base: MachineSnapshot<C>, input: MachineInput<A>, action: Action, changed: Boolean, trace: SelectionTrace?): Decision<C, CMD, E> {
+        trace?.candidates?.addAll(chart.transitions.withIndex().filter {
+            it.value.source in base.configuration.active && it.value.on?.matches(action) == true
+        }.map { TransitionId(it.index) })
+        return when (val result = runtime.stepObserved(base.configuration, base, action, observer(trace))) {
+            StepResult.Ignored -> handle(base, input, action, trace)
                 ?: if (changed) Decision(DecisionOutcome.Handled, base.copy(revision = base.revision + 1)) else ignored(base, IgnoreReason.NoTransition)
-            is StepResult.Transitioned -> take(base, input, action, result)
+            is StepResult.Transitioned -> {
+                trace?.selected = trace.selected + result.transitions.map { TransitionId(chart.transitions.indexOf(it)) }
+                take(base, input, action, result)
+            }
         }
     }
 
@@ -358,9 +426,10 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
      * Runs the first action handler of the innermost active node that matches [action], if any:
      * the configuration and the activations stay as they are.
      */
-    private fun handle(base: MachineSnapshot<C>, input: MachineInput<A>, action: Action): Decision<C, CMD, E>? {
+    private fun handle(base: MachineSnapshot<C>, input: MachineInput<A>, action: Action, trace: SelectionTrace?): Decision<C, CMD, E>? {
         for (node in chart.inEntryOrder(base.configuration.active).asReversed()) {
             val handler = handlers[node]?.firstOrNull { it.matcher.matches(action) } ?: continue
+            trace?.handledBy = node
             val step = Step(base, input, action)
             step.handle(node, handler.rule)
             return step.decision(configuration = base.configuration, transitions = emptyList())
@@ -368,14 +437,61 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
         return null
     }
 
-    private fun fire(snapshot: MachineSnapshot<C>, input: MachineInput.TimerFired): Decision<C, CMD, E> {
+    private fun fire(snapshot: MachineSnapshot<C>, input: MachineInput.TimerFired, trace: SelectionTrace?): Decision<C, CMD, E> {
         val record = snapshot.timers[input.timer] ?: return ignored(snapshot, IgnoreReason.UnknownTimer)
         val timer = chart.transitions[record.transition.index]
+        trace?.candidates?.add(record.transition)
         // The timer is spent whether or not its guard holds: it fires once per scheduling.
         val spent = snapshot.copy(timers = snapshot.timers - input.timer)
-        return when (val result = runtime.fire(snapshot.configuration, snapshot, timer)) {
+        return when (val result = runtime.fireObserved(snapshot.configuration, snapshot, timer, observer(trace))) {
             StepResult.Ignored -> Decision(DecisionOutcome.Handled, spent.copy(revision = spent.revision + 1), timersCancelled = listOf(input.timer))
-            is StepResult.Transitioned -> take(spent, input, TimerFired(timer), result, alreadyCancelled = listOf(input.timer))
+            is StepResult.Transitioned -> {
+                trace?.selected = trace.selected + record.transition
+                take(spent, input, TimerFired(timer), result, alreadyCancelled = listOf(input.timer))
+            }
+        }
+    }
+
+    private fun stabilize(base: MachineSnapshot<C>, input: MachineInput<A>, first: Decision<C, CMD, E>, trace: SelectionTrace?): Decision<C, CMD, E> {
+        val steps = mutableListOf(first)
+        val automatic = mutableListOf<koma.statechart.Transition>()
+        var current = first.snapshot
+        while (true) {
+            trace?.candidates?.addAll(chart.transitions.withIndex().filter {
+                it.value.source in current.configuration.active &&
+                    (it.value.trigger == Trigger.Eventless || (it.value.trigger == Trigger.Completion && chart.isComplete(current.configuration, it.value.source)))
+            }.map { TransitionId(it.index) })
+            val result = runtime.automaticObserved(current.configuration, current, observer(trace))
+            if (result !is StepResult.Transitioned) break
+            if (steps.size - 1 >= maxMicrosteps) throw MicrostepLimitException(maxMicrosteps, automatic + result.transitions)
+            automatic += result.transitions
+            trace?.selected = trace.selected + result.transitions.map { TransitionId(chart.transitions.indexOf(it)) }
+            val action = AutomaticTransition(result.transitions.first().trigger == Trigger.Completion)
+            val step = take(current, input, action, result)
+            steps += step
+            current = step.snapshot.copy(revision = base.revision + 1)
+        }
+        if (steps.size == 1) return first
+        return Decision(
+            DecisionOutcome.Handled, current.copy(revision = base.revision + 1),
+            transitions = steps.flatMap { it.transitions },
+            exited = steps.flatMap { it.exited }, entered = steps.flatMap { it.entered },
+            commands = steps.flatMap { it.commands }.filter { it.id in current.commands },
+            cancelledScopes = steps.flatMap { it.cancelledScopes },
+            timersScheduled = steps.flatMap { it.timersScheduled }.filter { it.id in current.timers },
+            timersCancelled = steps.flatMap { it.timersCancelled },
+            effects = steps.flatMap { it.effects },
+        )
+    }
+
+    private fun observer(trace: SelectionTrace?): ((koma.statechart.Transition, Boolean?, Exception?) -> Unit)? {
+        if (trace == null) return null
+        return { transition, result, error ->
+            val id = TransitionId(chart.transitions.indexOf(transition))
+            if (error == null && result != false) trace.enabled += id
+            transition.guard?.let { label ->
+                trace.guards += GuardEvaluation(id, label, result, error?.let(FailureDescriptor::of))
+            }
         }
     }
 

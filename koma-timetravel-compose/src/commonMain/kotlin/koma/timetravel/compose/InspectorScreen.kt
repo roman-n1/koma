@@ -246,6 +246,11 @@ fun PositionPanel(state: InspectorState, replay: ReplayControls<*, *, *, *>? = n
         }
         if (replay != null) {
             Spacer(Modifier.height(8.dp))
+            OutlinedButton(onClick = { replay.explainNext() }, modifier = Modifier.testTag("explain-next")) { Text("Explain next input / check invariants") }
+            replay.explanationOutcome?.let { Text(it) }
+            StateChartPanel(replay.session.machine.chart, replay.snapshot,
+                previous = replay.session.recording.snapshotAt((replay.position - 1).coerceAtLeast(0)).configuration,
+                explanation = replay.explanation, violations = replay.invariantViolations)
             DefinitionPanel(replay.mermaid(), "Definition of ${replay.store} at ${replay.position}", tag = "definition")
         }
     }

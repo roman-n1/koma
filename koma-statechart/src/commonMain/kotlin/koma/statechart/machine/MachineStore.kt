@@ -283,7 +283,11 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
         get() = inner as StoreInternalApi<MachineSnapshot<C>, MachineInput<A>, E>
 
     private inline fun decide(snapshot: MachineSnapshot<C>, input: MachineInput<A>, inputId: InputId?, commit: (MachineSnapshot<C>) -> Unit) {
-        val decision = machine.decide(snapshot, input)
+        val explained = if (observers.any { it is DecisionExplanationObserver }) machine.decideExplained(snapshot, input) else null
+        val decision = explained?.decision ?: machine.decide(snapshot, input)
+        if (explained != null) observe { observer ->
+            (observer as? DecisionExplanationObserver)?.onExplained(inputId, explained.explanation)
+        }
         when (val outcome = decision.outcome) {
             DecisionOutcome.Handled -> {
                 pending = Pending(decision, inputId, input)

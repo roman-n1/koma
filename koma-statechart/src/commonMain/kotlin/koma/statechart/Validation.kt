@@ -8,6 +8,13 @@ import kotlin.time.Duration
  * A structural problem found by [validate].
  */
 sealed interface ValidationIssue {
+    /** Final leaves cannot transition out. */
+    data class TransitionFromFinal(val transition: Transition) : ValidationIssue
+    /** Completion only belongs to compound or parallel states. */
+    data class InvalidCompletionSource(val transition: Transition) : ValidationIssue
+    /** Automatic choices without guards depend on declaration order. */
+    data class AmbiguousAutomaticTransitions(val source: StateId, val trigger: Trigger, val transitions: List<Transition>) : ValidationIssue
+
     /**
      * Two or more states use the same [id].
      */
@@ -205,6 +212,10 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
         if (transition.source !in declared) issues += ValidationIssue.UnknownTransitionSource(transition)
         if (transition.target !in declared) issues += ValidationIssue.UnknownTransitionTarget(transition)
         if (node(transition.source) is HistoryState) issues += ValidationIssue.TransitionFromHistory(transition)
+        if (node(transition.source) is FinalState) issues += ValidationIssue.TransitionFromFinal(transition)
+        if (transition.trigger == Trigger.Completion && node(transition.source) !is CompoundState && node(transition.source) !is ParallelState) {
+            issues += ValidationIssue.InvalidCompletionSource(transition)
+        }
         val delay = transition.after
         if (delay != null && !delay.isPositive()) issues += ValidationIssue.NonPositiveDelay(transition)
     }
@@ -227,6 +238,10 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
         .groupBy({ it.first }, { it.second })
         .filterValues { it.size > 1 }
         .forEach { (key, group) -> issues += ValidationIssue.AmbiguousTimers(key.first, key.second, group) }
+
+    withoutGuard.filter { it.trigger == Trigger.Eventless || it.trigger == Trigger.Completion }
+        .groupBy { it.source to it.trigger }.filterValues { it.size > 1 }
+        .forEach { (key, group) -> issues += ValidationIssue.AmbiguousAutomaticTransitions(key.first, key.second, group) }
 
     val samples = sampleActions.distinct()
     if (samples.isNotEmpty()) {
@@ -370,7 +385,7 @@ private fun StateChartDefinition.hasConsistentActiveNodes(active: Set<StateId>, 
         val parent = node.parent
         if (id != root && parent != null && parent !in active) return false
         val consistent = when (node) {
-            is AtomicState -> true
+            is AtomicState, is FinalState -> true
             is CompoundState -> childrenOf(id).count { it.id in active } == 1
             is ParallelState -> hierarchy.regions[id].orEmpty().all { it in active }
             is HistoryState -> false
@@ -389,7 +404,7 @@ internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
         val parent = node.parent ?: continue
         when (node(parent)) {
             null -> issues += ValidationIssue.UnknownParent(node.id, parent)
-            is AtomicState -> issues += ValidationIssue.AtomicParent(node.id, parent)
+            is AtomicState, is FinalState -> issues += ValidationIssue.AtomicParent(node.id, parent)
             is HistoryState -> issues += ValidationIssue.HistoryParent(node.id, parent)
             is CompoundState, is ParallelState -> Unit
         }

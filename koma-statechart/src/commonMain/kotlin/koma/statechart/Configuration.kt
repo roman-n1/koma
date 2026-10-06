@@ -103,8 +103,11 @@ internal fun StateChartDefinition.selectTransitions(
     val selected = mutableListOf<Pair<Transition, Set<StateId>>>()
     for (leaf in activeLeaves(configuration)) {
         val transition = candidatesFor(leaf).firstOrNull(enabled) ?: continue
+        if (selected.any { it.first == transition }) continue
         val exitSet = exitSet(configuration, transition).toSet()
-        val conflicting = selected.filter { (other, otherExit) -> otherExit.any { it in exitSet } }
+        val conflicting = selected.filter { (other, otherExit) ->
+            otherExit.any { it in exitSet } || other.source in exitSet || transition.source in otherExit
+        }
         if (conflicting.all { (other, _) -> isDescendant(transition.source, other.source) }) {
             selected -= conflicting.toSet()
             selected += transition to exitSet
@@ -122,7 +125,7 @@ internal fun StateChartDefinition.selectTransitions(
  * timer fires alone, as in [StateChartRuntime.fire].
  */
 internal fun StateChartDefinition.graphStep(configuration: StateConfiguration, trigger: Transition): Microstep {
-    if (trigger.isTimer) return microstep(configuration, listOf(trigger))
+    if (trigger.on == null) return microstep(configuration, listOf(trigger))
     val triggerExit = exitSet(configuration, trigger).toSet()
     val taken = selectTransitions(configuration) { transition ->
         transition == trigger || (transition.on == trigger.on && exitSet(configuration, transition).none { it in triggerExit })
@@ -148,6 +151,7 @@ internal fun StateChartDefinition.domainOf(source: StateId, target: StateId): St
 }
 
 internal fun StateChartDefinition.exitSet(configuration: StateConfiguration, transition: Transition): List<StateId> {
+    if (transition.kind == TransitionKind.Internal) return emptyList()
     val domain = domainOf(transition)
     return configuration.active.filter { domain == null || isDescendant(it, domain) }
 }
@@ -262,7 +266,7 @@ internal fun StateChartDefinition.microstep(configuration: StateConfiguration, t
     val exitSet = linkedSetOf<StateId>()
     for (transition in transitions) exitSet += exitSet(configuration, transition)
     val history = recordHistory(configuration, exitSet)
-    val entrySet = entrySet(transitions.map { domainOf(it) to it.target }, history)
+    val entrySet = entrySet(transitions.filter { it.kind != TransitionKind.Internal }.map { domainOf(it) to it.target }, history)
     val exited = exitSet.sortedWith(exitOrder())
     val entered = entrySet.sortedWith(entryOrder())
     return Microstep(exited, entered, StateConfiguration(active = (configuration.active - exitSet) + entered, history = history))

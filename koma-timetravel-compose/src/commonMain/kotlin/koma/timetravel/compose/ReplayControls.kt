@@ -36,6 +36,21 @@ class ReplayControls<C, A : Action, CMD, E : Event>(val store: StoreInstanceId, 
     var verdict: String? by mutableStateOf(null)
         private set
 
+    /** Explicitly requested diagnostic computation; composition itself never re-runs guards. */
+    var explanation: koma.statechart.machine.DecisionExplanation? by mutableStateOf(null)
+        private set
+    var explanationOutcome: String? by mutableStateOf(null)
+        private set
+    var invariantViolations: List<koma.statechart.machine.InvariantViolation> by mutableStateOf(emptyList())
+        private set
+
+    fun explainNext() {
+        val explained = session.explainNext()
+        explanation = explained?.explanation
+        explanationOutcome = explained?.decision?.outcome?.toString()
+        invariantViolations = session.checkInvariants()
+    }
+
     val length: Int get() = session.length
 
     /** The snapshot the replay is at. */
@@ -62,18 +77,27 @@ class ReplayControls<C, A : Action, CMD, E : Event>(val store: StoreInstanceId, 
             is ReplayStep.Diverged -> divergence = step.mismatch.describe()
         }
         position = session.position
+        explanation = null
+        explanationOutcome = null
+        invariantViolations = emptyList()
     }
 
     fun stepBackward() {
         session.stepBackward()
         divergence = null
         position = session.position
+        explanation = null
+        explanationOutcome = null
+        invariantViolations = emptyList()
     }
 
     fun seek(target: Int) {
         session.seek(target.coerceIn(0, length))
         divergence = null
         position = session.position
+        explanation = null
+        explanationOutcome = null
+        invariantViolations = emptyList()
     }
 
     fun verify() {

@@ -3,6 +3,7 @@
 This is the place for documents that record the thinking and specifications behind the code.
 It is not documentation for users.
 
+- [Gap analysis: six implementation waves and contracts](./design/2026-10-06-gap-roadmap.md)
 - [Time Travel and structured logging: implementation handoff](./design/2026-09-29-time-travel-logging-handoff.md)
 
 As a policy, the format is kept light. Being able to keep it up takes priority.

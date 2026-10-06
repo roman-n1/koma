@@ -181,6 +181,7 @@ internal object RandomCharts {
         }
         fun withParent(node: StateNode, parent: StateId?): StateNode = when (node) {
             is AtomicState -> node.copy(parent = parent)
+            is FinalState -> node.copy(parent = parent)
             is CompoundState -> node.copy(parent = parent)
             is ParallelState -> node.copy(parent = parent)
             is HistoryState -> node.copy(parent = parent ?: node.parent)

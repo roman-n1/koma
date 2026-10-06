@@ -91,6 +91,7 @@ fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
         val ref = refs.getValue(id)
         val node = hierarchy.nodes[id]
         return when {
+            node is FinalState -> "state \"${mermaidText(id.value).replace("\"", "'")} [final]\" as $ref"
             node is HistoryState -> "state \"${if (node.deep) "[H*]" else "[H]"}\" as $ref"
             ref == id.value -> ref
             else -> "state \"${mermaidText(id.value).replace("\"", "'")}\" as $ref"
@@ -113,9 +114,12 @@ fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
             val label = when (val trigger = transition.trigger) {
                 is Trigger.OnAction -> mermaidText(trigger.matcher.name)
                 is Trigger.After -> "after ${trigger.delay}"
+                Trigger.Eventless -> "always"
+                Trigger.Completion -> "done"
             }
             append("$indent${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : $label")
             transition.guard?.let { append(" [${mermaidText(it)}]") }
+            if (transition.kind == TransitionKind.Internal) append(" (internal)")
             transition.effect?.let { append(" / ${mermaidText(it)}") }
             appendLine()
         }

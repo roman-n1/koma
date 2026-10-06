@@ -213,9 +213,9 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         for (history in histories) {
             val tracked = definition.configurationOf(from).copy(history = history)
             val taken = explain(tracked, action, to) ?: continue
-            if (explained == null) explained = taken
-            // Recorded from what is known, never from an inferred record: a guess is not kept.
-            val after = definition.microstep(tracked, taken).configuration.history
+            if (explained == null) explained = taken.transitions
+            // Reapply batches to known history; inferred history is not retained.
+            val after = taken.batches.fold(tracked) { current, batch -> definition.microstep(current, batch).configuration }.history
             if (after !in next) next += after
         }
         if (explained != null) {
@@ -295,31 +295,57 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
      * in [to] alone, then the other guard assignments, then a timer of an active source fired
      * alone. Without an action: the first transition that ends in [to] alone, whatever its trigger.
      */
-    private fun explain(tracked: StateConfiguration, action: A?, to: Set<StateId>): List<Transition>? {
-        fun endsIn(configuration: StateConfiguration, transitions: List<Transition>): Boolean =
-            transitions.isNotEmpty() && definition.microstep(configuration, transitions).leaves(definition).toSet() == to
-        fun alone(transition: Transition): List<Transition>? =
-            listOf(transition).takeIf { endsIn(withInferredHistory(tracked, transition, to), it) }
-        val candidates = definition.activeLeaves(tracked).flatMap { definition.candidatesFor(it) }.distinct()
-        if (action == null) {
-            // No trigger: the first transition that leads there, whatever its trigger.
-            return candidates.firstNotNullOfOrNull(::alone)
+    private data class Explanation(val batches: List<List<Transition>>) {
+        val transitions: List<Transition> get() = batches.flatten()
+    }
+
+    private fun explain(tracked: StateConfiguration, action: A?, to: Set<StateId>): Explanation? {
+        fun ending(configuration: StateConfiguration, transitions: List<Transition>): Explanation? {
+            val first = if (transitions.isEmpty()) configuration else definition.microstep(configuration, transitions).configuration
+            if (definition.transitions.none { it.trigger == Trigger.Eventless || it.trigger == Trigger.Completion }) {
+                if (transitions.isEmpty()) return null
+                return Explanation(listOf(transitions)).takeIf { definition.activeLeaves(first).toSet() == to }
+            }
+            // Guards/context are unknown to this observer. Enumerate potential automatic choices,
+            // preserving batch order/history and requiring a potentially stable final configuration.
+            data class Path(val configuration: StateConfiguration, val batches: List<List<Transition>>)
+            val queue = ArrayDeque(listOf(Path(first, if (transitions.isEmpty()) emptyList() else listOf(transitions))))
+            val seen = mutableSetOf<StateConfiguration>()
+            while (queue.isNotEmpty() && seen.size < 256) {
+                val path = queue.removeFirst()
+                if (!seen.add(path.configuration)) continue
+                val automatic = definition.transitions.filter {
+                    it.source in path.configuration.active && (it.trigger == Trigger.Eventless ||
+                        (it.trigger == Trigger.Completion && definition.isComplete(path.configuration, it.source)))
+                }
+                val guarded = automatic.filter { it.guard != null }.take(MAX_GUARD_ENUMERATION)
+                for (mask in 0 until (1 shl guarded.size)) {
+                    val enabled = automatic.filter { it.guard == null }.toSet() + guarded.filterIndexed { i, _ -> mask and (1 shl i) != 0 }
+                    var selected = definition.selectTransitions(path.configuration) { it in enabled && it.trigger == Trigger.Eventless }
+                    if (selected.isEmpty()) selected = definition.selectTransitions(path.configuration) { it in enabled && it.trigger == Trigger.Completion }
+                    if (selected.isEmpty()) {
+                        if (definition.activeLeaves(path.configuration).toSet() == to) return Explanation(path.batches)
+                    } else {
+                        val next = definition.microstep(path.configuration, selected).configuration
+                        if (next !in seen) queue.addLast(Path(next, path.batches + listOf(selected)))
+                    }
+                }
+            }
+            return null
         }
+        fun alone(transition: Transition): Explanation? = ending(withInferredHistory(tracked, transition, to), listOf(transition))
+        val candidates = definition.activeLeaves(tracked).flatMap { definition.candidatesFor(it) }.distinct()
+        if (action == null) return candidates.firstNotNullOfOrNull(::alone)
         val matching = candidates.filter { it.on?.matches(action) == true }
         val enumerated = matching.take(MAX_GUARD_ENUMERATION)
-        // The runtime's own choice with every guard true: what a Store following the chart does,
-        // including the transitions of several regions taken together.
         val allEnabled = enumerated.toSet()
-        definition.selectTransitions(tracked) { it in allEnabled }.let { if (endsIn(tracked, it)) return it }
-        // One matching transition alone, in priority order (with a history record inferred).
+        ending(tracked, definition.selectTransitions(tracked) { it in allEnabled })?.let { return it }
         matching.firstNotNullOfOrNull(::alone)?.let { return it }
-        // The other guard assignments.
         for (mask in (1 shl enumerated.size) - 2 downTo 1) {
             val enabled = enumerated.filterIndexed { i, _ -> mask and (1 shl i) != 0 }.toSet()
-            val taken = definition.selectTransitions(tracked) { it in enabled }
-            if (endsIn(tracked, taken)) return taken
+            ending(tracked, definition.selectTransitions(tracked) { it in enabled })?.let { return it }
         }
-        // No action transition explains it: a timer of an active source fired alone.
+        ending(tracked, emptyList())?.let { return it }
         return candidates.filter { it.isTimer }.firstNotNullOfOrNull(::alone)
     }
 

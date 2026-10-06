@@ -1,6 +1,6 @@
 # Statechart layer on top of Koma: roadmap
 
-- Updated: 2026-10-01 (plan B dropped; full divergence inventory vs 4.0.0; version 5.0 decision; 2026-09-28: phase status after wave 6)
+- Updated: 2026-10-06 (gap-analysis waves implemented; see 2026-10-06-gap-roadmap.md); 2026-10-01 (plan B dropped; full divergence inventory vs 4.0.0; version 5.0 decision; 2026-09-28: phase status after wave 6)
 
 ## Background
 
@@ -96,7 +96,10 @@ wave are in [`2026-09-28-statechart-semantics.md`](./2026-09-28-statechart-seman
 "Wave 1–5 decisions". Phase 4 was done last rather than fourth: the adapter is easier to write once the
 semantics of hierarchy, regions, history and timers are already fixed.
 
-Not done from phase 8: invariant checking and shrinking of a failing sequence.
+Phase 8 now includes named invariants, executable bounded exploration, seeded random walks,
+state/transition/guard/timer coverage and deletion shrinking of a failing sequence. The
+[six-wave gap follow-up](2026-10-06-gap-roadmap.md) also adds explanations, automatic transition
+semantics, durability/migrations, scoped child composition and the typed DSL/diagram.
 The debug timeline, group replay and replay/experiment workflow are implemented, with a
 [runnable disk-to-inspector example](../../../examples/time-travel/README.md) added on 2026-10-03.
 
@@ -410,7 +413,8 @@ The messenger pilot, device measurements and publishing remain work, not conditi
 3. **Model.** No eventless (completion) transitions, final states, internal
    transitions or `invoke`. The first candidate is completion transitions: with them "the work
    is finished" is described without an artificial action.
-4. **Phase 8.** Invariant checking on paths and shrinking of a failing action sequence.
+4. **Phase 8 (implemented 2026-10-06).** Invariants, bounded executable exploration,
+   guard/state/transition/timer coverage and shrinking. See the six-wave gap follow-up above.
    The debug timeline and group replay/experiment inspector are implemented; the
    [desktop example](../../../examples/time-travel/README.md) demonstrates the complete file
    workflow. Real messenger wiring and device measurements remain separate work.

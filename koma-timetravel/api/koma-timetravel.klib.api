@@ -1287,6 +1287,8 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
         final fun <get-position>(): kotlin/Int // koma.timetravel/ReplaySession.position.<get-position>|<get-position>(){}[0]
 
     final fun branch(): koma.timetravel/Branch<#A, #B, #C, #D> // koma.timetravel/ReplaySession.branch|branch(){}[0]
+    final fun checkInvariants(): kotlin.collections/List<koma.statechart.machine/InvariantViolation> // koma.timetravel/ReplaySession.checkInvariants|checkInvariants(){}[0]
+    final fun explainNext(): koma.statechart.machine/ExplainedDecision<#A, #C, #D>? // koma.timetravel/ReplaySession.explainNext|explainNext(){}[0]
     final fun seek(kotlin/Int) // koma.timetravel/ReplaySession.seek|seek(kotlin.Int){}[0]
     final fun stepBackward(): kotlin/Boolean // koma.timetravel/ReplaySession.stepBackward|stepBackward(){}[0]
     final fun stepForward(): koma.timetravel/ReplayStep<#A, #B, #C, #D>? // koma.timetravel/ReplaySession.stepForward|stepForward(){}[0]

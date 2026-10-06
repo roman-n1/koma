@@ -9,6 +9,7 @@ import koma.core.Action
 import koma.core.Event
 import koma.core.InputId
 import koma.observability.MachineGroupId
+import koma.observability.JournalSink
 import koma.observability.RecordingSession
 import koma.observability.RuntimeSessionId
 import koma.observability.StoreInstanceId
@@ -147,6 +148,7 @@ object CheckoutDemo {
         parent: Path,
         calls: AtomicInteger,
         beforeSummaryStartupRecorded: (() -> Unit)? = null,
+        onJournalFlushed: (() -> Unit)? = null,
         beforeSummaryRecorded: (() -> Unit)? = null,
     ): Recorded = withContext(Dispatchers.IO) {
         Files.createDirectories(parent)
@@ -157,7 +159,14 @@ object CheckoutDemo {
         val engine = CoroutineScope(Dispatchers.Default + engineJob)
         val writers = CoroutineScope(Dispatchers.IO + writerJob)
         val journalSink = JournalFileSink(storage)
-        val session = RecordingSession(writers, sessionId, groupId, sinks = listOf(journalSink))
+        // Tests can observe a completed writer flush while a Store observer is held. Reading
+        // the buffered file alone cannot establish that the independent writer has caught up.
+        val diagnosticSink = if (onJournalFlushed == null) journalSink else JournalSink { record ->
+            journalSink.write(record)
+            journalSink.flush()
+            onJournalFlushed()
+        }
+        val session = RecordingSession(writers, sessionId, groupId, sinks = listOf(diagnosticSink))
         val group = MachineGroup(session)
         val files = GroupRecordingFileSink(group, groupId, storage, writers)
         val cartMachine = cart(fixed = false)

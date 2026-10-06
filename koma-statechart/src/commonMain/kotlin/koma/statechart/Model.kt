@@ -49,6 +49,12 @@ data class AtomicState(
     override val parent: StateId? = null,
 ) : StateNode
 
+/** A terminal leaf; entering it completes its compound parent. It has no outgoing transitions. */
+data class FinalState(override val id: StateId, override val parent: StateId? = null) : StateNode
+
+/** External transitions exit/re-enter; internal self-transitions preserve the activation. */
+enum class TransitionKind { External, Internal }
+
 /**
  * A state with child states, of which exactly one is active while this state is active.
  *
@@ -170,6 +176,12 @@ data class ActionMatcher(
  * More kinds of triggers may be added, so code that matches on this type should expect more cases.
  */
 sealed interface Trigger {
+    /** Fires without external input while its guard holds. */
+    data object Eventless : Trigger
+
+    /** Fires when the source compound/parallel state has completed. */
+    data object Completion : Trigger
+
     /**
      * The transition fires when an action matching [matcher] arrives (see [StateChartRuntime.step]).
      */
@@ -212,7 +224,12 @@ data class Transition(
     val trigger: Trigger,
     val guard: String? = null,
     val effect: String? = null,
+    val kind: TransitionKind = TransitionKind.External,
 ) {
+    init {
+        require(kind != TransitionKind.Internal || source == target) { "[Koma] Internal transitions must target their source" }
+    }
+
     /**
      * A transition fired by an action matching [on].
      */
@@ -222,7 +239,8 @@ data class Transition(
         on: ActionMatcher,
         guard: String? = null,
         effect: String? = null,
-    ) : this(source, target, Trigger.OnAction(on), guard, effect)
+        kind: TransitionKind = TransitionKind.External,
+    ) : this(source, target, Trigger.OnAction(on), guard, effect, kind)
 
     /**
      * The matcher of an action transition, or `null` for a timer.

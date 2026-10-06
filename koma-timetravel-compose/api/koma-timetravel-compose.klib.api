@@ -106,11 +106,18 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
 
     final var divergence // koma.timetravel.compose/ReplayControls.divergence|{}divergence[0]
         final fun <get-divergence>(): kotlin/String? // koma.timetravel.compose/ReplayControls.divergence.<get-divergence>|<get-divergence>(){}[0]
+    final var explanation // koma.timetravel.compose/ReplayControls.explanation|{}explanation[0]
+        final fun <get-explanation>(): koma.statechart.machine/DecisionExplanation? // koma.timetravel.compose/ReplayControls.explanation.<get-explanation>|<get-explanation>(){}[0]
+    final var explanationOutcome // koma.timetravel.compose/ReplayControls.explanationOutcome|{}explanationOutcome[0]
+        final fun <get-explanationOutcome>(): kotlin/String? // koma.timetravel.compose/ReplayControls.explanationOutcome.<get-explanationOutcome>|<get-explanationOutcome>(){}[0]
+    final var invariantViolations // koma.timetravel.compose/ReplayControls.invariantViolations|{}invariantViolations[0]
+        final fun <get-invariantViolations>(): kotlin.collections/List<koma.statechart.machine/InvariantViolation> // koma.timetravel.compose/ReplayControls.invariantViolations.<get-invariantViolations>|<get-invariantViolations>(){}[0]
     final var position // koma.timetravel.compose/ReplayControls.position|{}position[0]
         final fun <get-position>(): kotlin/Int // koma.timetravel.compose/ReplayControls.position.<get-position>|<get-position>(){}[0]
     final var verdict // koma.timetravel.compose/ReplayControls.verdict|{}verdict[0]
         final fun <get-verdict>(): kotlin/String? // koma.timetravel.compose/ReplayControls.verdict.<get-verdict>|<get-verdict>(){}[0]
 
+    final fun explainNext() // koma.timetravel.compose/ReplayControls.explainNext|explainNext(){}[0]
     final fun mermaid(): kotlin/String // koma.timetravel.compose/ReplayControls.mermaid|mermaid(){}[0]
     final fun seek(kotlin/Int) // koma.timetravel.compose/ReplayControls.seek|seek(kotlin.Int){}[0]
     final fun stepBackward() // koma.timetravel.compose/ReplayControls.stepBackward|stepBackward(){}[0]
@@ -299,6 +306,7 @@ final val koma.timetravel.compose/koma_timetravel_compose_InspectorState$stablep
 final val koma.timetravel.compose/koma_timetravel_compose_ReplayControls$stableprop // koma.timetravel.compose/koma_timetravel_compose_ReplayControls$stableprop|#static{}koma_timetravel_compose_ReplayControls$stableprop[0]
 
 final fun (koma.timetravel.inspect/Completeness).koma.timetravel.compose/label(): kotlin/String // koma.timetravel.compose/label|label@koma.timetravel.inspect.Completeness(){}[0]
+final fun <#A: kotlin/Any?> koma.timetravel.compose/StateChartPanel(koma.statechart/StateChartDefinition, koma.statechart.machine/MachineSnapshot<#A>, koma.statechart/StateConfiguration?, koma.statechart.machine/DecisionExplanation?, kotlin.collections/List<koma.statechart.machine/InvariantViolation>?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/StateChartPanel|StateChartPanel(koma.statechart.StateChartDefinition;koma.statechart.machine.MachineSnapshot<0:0>;koma.statechart.StateConfiguration?;koma.statechart.machine.DecisionExplanation?;kotlin.collections.List<koma.statechart.machine.InvariantViolation>?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){0§<kotlin.Any?>}[0]
 final fun koma.timetravel.compose/BranchPanel(koma.timetravel.compose/BranchControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/BranchPanel|BranchPanel(koma.timetravel.compose.BranchControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun koma.timetravel.compose/DefinitionPanel(kotlin/String, kotlin/String, kotlin/String, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/DefinitionPanel|DefinitionPanel(kotlin.String;kotlin.String;kotlin.String;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun koma.timetravel.compose/GroupPositionPanel(koma.timetravel.compose/GroupReplayControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // koma.timetravel.compose/GroupPositionPanel|GroupPositionPanel(koma.timetravel.compose.GroupReplayControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]

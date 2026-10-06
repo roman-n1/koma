@@ -59,3 +59,46 @@ fun aLoad_fetches_andShowsTheContent() = runTest {
     driver.close()
 }
 ```
+
+## Model-based testing
+
+Declare pure predicates once on the machine; tests, replay and debug tools share them:
+
+```kotlin
+val machine = Machine<Context, Act, Command, Ev>(id, version, chart) {
+    invariant("signed-out-has-no-chat") { snapshot ->
+        !snapshot.isActive(signedOut) || !snapshot.isActive(chatOpen)
+    }
+    // Optional in debug runtime: a violation rolls back the whole macrostep before IO.
+    // enforceInvariants()
+}
+
+val inputs = MachineInputGenerator<Context, Act> { snapshot, now ->
+    buildList {
+        add(MachineInput.Dispatch(Act.Logout, now))
+        if (snapshot.isActive(signedIn)) add(MachineInput.Dispatch(Act.OpenChat, now))
+        // Supply valid typed payloads / command results here; no reflection or real IO.
+    }
+}.withTimers()
+
+val initial = machine.initialSnapshot(Context())
+val report = machine.explore(initial, inputs, maxDepth = 20, maxDecisions = 10_000)
+println(report.coverage.states.percent)
+println(report.coverage.transitions.missing)
+println(report.coverage.guards.percent) // true/false outcomes per transition
+
+report.failures.firstOrNull()?.let { failure ->
+    val minimal = machine.shrink(initial, failure.inputs)
+    println(minimal.failure.inputs) // actual inputs, payloads, virtual times
+    check(!minimal.truncated)       // otherwise minimality has not been established
+}
+report.assertSuccess()             // also rejects an exhausted decision budget
+```
+
+`ExplorationStrategy.RandomWalk(seed = 42, runs = 1_000)` selects reproducible random input
+choices. Breadth-first search keeps different contexts/history even when active nodes are equal.
+`report.scenarios` contains executable prefixes that cover the transitions actually reached;
+`machine.replaySequence(initial, scenario.inputs)` reruns one and returns its first failure.
+Neither coverage nor a successful bounded run proves safety beyond supplied payloads and depth.
+`MachineTestDriver` also checks every recorded stable snapshot on settle, including transient
+commits between two calls. Runtime-enforced violations appear in the driver's `failures` list.

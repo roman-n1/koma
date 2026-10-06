@@ -687,3 +687,85 @@ tests.
 - A chart store's activities and timers run in a task runner subscribed from the chart's
   `enter {}`, so koma-test's `awaitIdle()` returns while an activity awaits its node's exit and
   while a timer waits: they are the chart's data, not launches to wait for.
+
+## Automatic workflow transitions and typed DSL
+
+The DSL builds the same immutable `StateChartDefinition` used by runtime, Mermaid, validation
+and tests. `GuardKey`/`EffectKey` share stable labels with their typed implementations:
+
+```kotlin
+val valid = GuardKey("valid")
+val update = EffectKey("update")
+val chart = stateChart(idle) {
+    state(idle) { on<Act.Submit>("Submit", validating) }
+    state(validating) { always(done) { guard(valid); effect(update) } }
+    final(done)
+}
+val machine = Machine<Context, Act, Command, Ev>(id, version, chart) {
+    guard(valid) { snapshot, _ -> snapshot.context.isValid }
+    effect(update) { context, _ -> context.copy(submitted = true) }
+    invariant("submitted-is-valid") { !it.context.submitted || it.context.isValid }
+    maxMicrosteps(100)
+}
+```
+
+`compound(id, initial) { ... }` and `parallel(id) { ... }` nest state declarations; parent
+transitions use `transitions(id) { onDone(target) }`. A compound completes when its active child
+is final; a parallel completes when every region completes. Eventless transitions run first,
+then completion transitions, until stable. `Machine` and `StateChartStore` commit a macrostep
+once; pure runtime users drive individual `automaticStep` calls. Guards see updated context
+between microsteps. A limit overflow fails and rolls back the entire Machine decision.
+
+`Transition(..., kind = TransitionKind.Internal)` requires source == target and runs effects
+without exit/re-entry, preserving activations, commands and timers. A fired internal timer is
+spent and does not restart. Ordinary external self-transitions still restart lifetimes.
+
+## Decision explanations
+
+`machine.decideExplained(snapshot, input)` decides once and returns the actual decision plus
+active nodes, matching candidates, guard evaluations and the action-handler node. A candidate
+can be selected, guard-rejected, priority-skipped, conflict-lost or guard-failed. Unvisited guards
+are never invoked for diagnostics. `decision.outcome` also distinguishes stale commands/timers,
+not-started inputs and already-started inputs. Explanation text contains metadata only.
+
+For live `MachineStore`, pass `decisionDiagnostics { inputId, explanation -> ... }` as an
+observer. This captures the actual decision; do not decide the input again to diagnose it.
+`CausalityTracker(storeId, capacity)` links command outputs to the input that registered them,
+exposes a `StateFlow`, and marks evicted ancestry incomplete. Group bridge causality remains
+in the journal's cross-store message references. Production journal payload policy still defaults
+to metadata only; application projections/codecs own redaction before recording payloads.
+
+## Durable workflow and migrations
+
+`DurableMachine(machine, storage, keyOf)` wraps the pure machine with an atomic snapshot/outbox
+transaction. Storage implements `DurableMachineStorage.load/commit`, with durable compare-and-swap
+by generation. `initialize`, `commit` and `executeNext` return only persisted intents. A durable
+handler receives a stable `IdempotencyKey` and persisted attempt count; it must use service-side
+idempotency or a transactional local receipt. Scope exit cancels ordinary work while durable
+operations stay in the outbox. Completed receipts suppress repeat execution and reject payload
+changes for a reused key. Use this executor instead of a second writer attached to MachineStore.
+
+Recovery restores deadlines, outbox and ordinary command payloads. `dueTimers(now)` lists overdue
+timers; `initialize` on an existing checkpoint returns ordinary registrations to restart. Supply
+logical time that continues from the checkpoint rather than resetting on process restart.
+Persisted outbox schemas and receipt retention remain application storage responsibilities.
+
+`SnapshotMigration<OldContext, NewContext>` changes model version, configuration/context and
+work explicitly. `newMachine.migrateSnapshot(oldSnapshot, migration)` validates the result's
+hierarchy/history, activation ids, commands, timers, counters and invariants. `SnapshotMigrations`
+provides an unambiguous acyclic version chain. `oldChart.diffTo(newChart)` produces a behavioural
+PR diff and conservative snapshot/replay compatibility flags; it cannot inspect guard/reducer code.
+
+## Scoped child machines
+
+`InvokedMachine(parent, ownerNode, child, context, toChild, toParent)` is a pure typed composition.
+Its snapshot holds both machines and the exact parent activation owning the child. Child inputs
+carry that owner id, so late inputs cannot reach a replacement child after re-entry. Routing drains
+in FIFO order within an atomic composite decision, with a feedback limit. Failure rolls back both
+snapshots. Execute `parentCommands/parentTimers` and `childCommands/childTimers` after committing;
+child work is addressed by owner plus its local command/timer id. Raw decisions describe the
+microsteps; work that started and stopped in the same composite decision is filtered out.
+
+Use `MachineGroup` for independently executing/persisted stores and failure isolation; its
+consistent checkpoint and bridge contracts remain unchanged. See the semantics documents under
+`doc/internal/design/2026-10-06-*.md` for transaction and lifecycle details.
