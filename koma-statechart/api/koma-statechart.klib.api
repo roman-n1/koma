@@ -409,6 +409,12 @@ sealed interface koma.statechart.machine/Admission { // koma.statechart.machine/
         final fun hashCode(): kotlin/Int // koma.statechart.machine/Admission.Accepted.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // koma.statechart.machine/Admission.Accepted.toString|toString(){}[0]
     }
+
+    final object Closed : koma.statechart.machine/Admission { // koma.statechart.machine/Admission.Closed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/Admission.Closed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // koma.statechart.machine/Admission.Closed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // koma.statechart.machine/Admission.Closed.toString|toString(){}[0]
+    }
 }
 
 sealed interface koma.statechart.machine/AdmissionPolicy { // koma.statechart.machine/AdmissionPolicy|null[0]

@@ -1154,9 +1154,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         val outer = processing
         val current = Processing(input, ++processingOrdinal)
         processing = current
-        trace { StoreTrace.ProcessingStarted(current.input, current.ordinal) }
         var outcome: ProcessingOutcome? = null
         try {
+            // A probe (or a rethrowing exception handler) can abort this boundary too.
+            // It still owes the input a terminal trace and must release pending work.
+            trace { StoreTrace.ProcessingStarted(current.input, current.ordinal) }
             block()
         } catch (t: Throwable) {
             val closed = t is CancellationException && !currentCoroutineContext().isActive

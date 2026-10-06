@@ -422,7 +422,16 @@ What holds:
   its last input on its way to the machine. `koma-timetravel` branches from it and records from it.
 - `AdmissionPolicy.Bounded(n)` refuses a dispatched action while `n` accepted actions still wait;
   `store.admit(action)` says whether it was accepted, `dispatch` drops the answer. Inputs the
-  machine's own commands and timers send are never refused.
+  machine's own commands and timers send bypass backpressure while the store is open.
+  `Admission.Closed` means the store has closed and the input was not queued; do not retry that
+  store. `Accepted` means queued, and a later close may discard the input before processing.
+  Close clears inputs held by a group cut and releases their `dispatchAndAwait` callers;
+  an individual await finishes when its own input finishes or is discarded, independent of
+  later traffic. Calling `dispatchAndAwait` on an already closed store throws.
+
+  **5.0 alpha migration:** `Admission.Closed` is a new sealed outcome. Add a terminal closed
+  branch to exhaustive `when (admission)` expressions compiled against an earlier unreleased
+  alpha. Capacity rejection remains `Rejected(pending, limit)`; closure is not backpressure.
 - Effects reach the UI through `store.event` (transient: delivered to whoever collects now, or
   lost) or, when `MailboxConfig.policy` says `Retained` or `Latest(key)`, through
   `store.mailbox`: they wait there, with their `EffectId`, until a subscriber of

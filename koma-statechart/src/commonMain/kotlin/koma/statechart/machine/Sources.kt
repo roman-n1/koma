@@ -24,7 +24,10 @@ data class SourceSnapshot(val source: SourceId, val kind: String, val version: I
  *
  * Serialize feeding and snapshot state changes with the pause boundary. Advance an admission
  * cursor only for [Admission.Accepted]; a rejected input was not queued and may be retried.
+ * [Admission.Closed] is terminal for that store: stop retrying it or attach a replacement store.
  * Accepted means queued, not committed: the group waits for members before taking [snapshot].
+ * A later close may discard accepted inputs before processing; durable source delivery needs
+ * its own acknowledgement or idempotency protocol, not just admission.
  * Keep network reads and retry waits outside the feed lock so a stalled socket or a full queue
  * cannot prevent a cut. A reconnect can redeliver data: source protocols need their own stable
  * sequence/cursor and deduplication; `feed` does not deduplicate actions.
