@@ -145,9 +145,12 @@ class DiskOutbox(private val path: Path) : StateSaver<MachineSnapshot<Outbox>> {
         durableReplace(path, storageJson.encodeToString(DomainFile(outbox = state.context)))
         durable.value = state.context // Publish only after persistence actually succeeded.
         savedRevision.value = state.revision
-        synchronized(barriers) {
-            barriers.filterValues { it(state.context) }.keys.forEach { it.complete(Unit) }
+        val completed = synchronized(barriers) {
+            barriers.filterValues { it(state.context) }.keys.toList()
         }
+        // An immediate continuation may call back into the session. Resume it outside the
+        // barrier monitor rather than carrying an application callback across that lock.
+        completed.forEach { it.complete(Unit) }
     }
 }
 
@@ -258,7 +261,7 @@ class CreditSession private constructor(private val files: SessionFiles) : AutoC
         boundary(Boundary.AfterMailboxAck)
     }
 
-    // CLI owner teardown runs outside the Store's job and waits before releasing the writer lock.
+    // CLI teardown runs outside Store/handler jobs and waits before releasing the writer lock.
     @Synchronized
     override fun close() {
         if (closed) return

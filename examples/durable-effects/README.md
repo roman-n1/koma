@@ -67,7 +67,8 @@ ledger write can finish despite cancellation, so teardown waits for it before re
 If a screen left after step 3, a new subscriber verifies the receipt and acknowledges the
 existing delivery. It need not run the credit again. The CLI closes the Store and waits for
 its owned Store and active handler jobs before releasing the OS writer lock. A second session for the same directory
-fails rather than racing these files. Call owner teardown outside the Store's own job;
+fails rather than racing these files. Call owner teardown outside the Store's own job and
+the session's handler jobs, including handler boundary callbacks, since teardown joins them;
 mobile applications should use suspending teardown on an appropriate dispatcher instead
 of blocking the UI thread. Disk I/O here is intentionally synchronous inside `StateSaver`.
 
