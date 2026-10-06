@@ -71,14 +71,7 @@ jobs:
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: |
-            status=0
-            ./gradlew :resource-soak:connectedAndroidDeviceTest -PsoakSeconds="$SOAK_SECONDS" --max-workers=2 --console=plain || status=$?
-            mkdir -p verification/resource-soak/build/reports/resource-soak-device
-            adb pull /sdcard/Android/data/koma.resources.soak.test/files/. verification/resource-soak/build/reports/resource-soak-device/ || true
-            exit "$status"
-      - name: Validate Android measurements
-        run: python3 verification/resource-soak/verify-report.py verification/resource-soak/build/reports/resource-soak-device/resource-soak-android Android "$SOAK_SECONDS"
+          script: bash verification/resource-soak/run-android.sh "$SOAK_SECONDS"
       - name: Upload Android measurements and test results
         if: always()
         uses: actions/upload-artifact@v4

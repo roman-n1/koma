@@ -20,12 +20,12 @@ Long-run reports are the useful stability evidence; a short smoke checks the har
 # Five minutes on the local iOS simulator:
 ./gradlew :resource-soak:iosSimulatorArm64Test -PsoakSeconds=300
 # A connected physical Android device or running emulator:
-./gradlew :resource-soak:connectedAndroidDeviceTest -PsoakSeconds=300
+bash verification/resource-soak/run-android.sh 300
 # Compile the same workload for a physical iOS target:
 ./gradlew :resource-soak:compileKotlinIosArm64 -PsoakSeconds=300
 ```
 
-The Android connected-test command works with an authorized USB device (`adb devices`). Select
+The Android script works with an authorized USB device (`adb devices`). Select
 one device with `ANDROID_SERIAL` if necessary. Running the native workload on a physical iPhone
 requires an application/test host that calls `runResourceSoak`; the iOS compile command alone
 does not run it. Run this blocking test owner outside the UI thread, and set
@@ -110,6 +110,9 @@ harness smoke check and reports zero for unavailable native/PSS metrics.
 
 ## Reports and interpreting a failure
 
+Android runs the assembled test APK with `am instrument`, pulls reports while the APK is still
+installed, checks the instrumentation's positive test count and success, then uninstalls its
+test package. This avoids AGP/UTP's cleanup deleting app-owned reports before collection.
 CI validates the requested duration, actual device metadata, successful measurements, both
 recording modes and enough steady samples. It fails if instrumentation/native tests ran zero
 cases or left no report. Measurement execution is never reused from Gradle's task cache.
