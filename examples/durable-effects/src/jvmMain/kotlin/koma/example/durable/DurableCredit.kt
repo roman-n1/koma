@@ -27,6 +27,9 @@ import koma.statechart.machine.Machine
 import koma.statechart.machine.MachineSnapshot
 import koma.statechart.machine.MachineStore
 import koma.statechart.machine.MailboxConfig
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.async
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -116,6 +119,19 @@ internal fun durableReplace(path: Path, text: String) {
 class DiskOutbox(private val path: Path) : StateSaver<MachineSnapshot<Outbox>> {
     val durable = MutableStateFlow(read())
     val savedRevision = MutableStateFlow(0L)
+    private val barriers = mutableMapOf<CompletableDeferred<Unit>, (Outbox) -> Boolean>()
+
+    /** Register before dispatch: later saves must not hide a successful durable completion. */
+    internal suspend fun awaitSaved(predicate: (Outbox) -> Boolean, dispatch: () -> Unit) {
+        val barrier = CompletableDeferred<Unit>()
+        synchronized(barriers) { barriers[barrier] = predicate }
+        try {
+            dispatch()
+            barrier.await()
+        } finally {
+            synchronized(barriers) { barriers.remove(barrier) }
+        }
+    }
 
     private fun read(): Outbox = if (!Files.exists(path)) Outbox() else {
         val decoded = storageJson.decodeFromString<DomainFile>(Files.readString(path))
@@ -129,10 +145,15 @@ class DiskOutbox(private val path: Path) : StateSaver<MachineSnapshot<Outbox>> {
         durableReplace(path, storageJson.encodeToString(DomainFile(outbox = state.context)))
         durable.value = state.context // Publish only after persistence actually succeeded.
         savedRevision.value = state.revision
+        synchronized(barriers) {
+            barriers.filterValues { it(state.context) }.keys.forEach { it.complete(Unit) }
+        }
     }
 }
 
 class DiskLedger(private val path: Path) {
+    // Test seam inside the synchronous ledger operation, immediately before its real commit.
+    internal var beforeCommit: () -> Unit = {}
     fun read(): Ledger = if (!Files.exists(path)) Ledger() else {
         val decoded = storageJson.decodeFromString<LedgerFile>(Files.readString(path))
         require(decoded.schema == 1) { "Unsupported ledger schema" }
@@ -148,6 +169,7 @@ class DiskLedger(private val path: Path) {
             return false
         }
         val next = Ledger(Math.addExact(previous.balance, intent.amount), previous.receipts + (intent.id to intent.amount))
+        beforeCommit()
         durableReplace(path, storageJson.encodeToString(LedgerFile(ledger = next)))
         return true
     }
@@ -173,6 +195,8 @@ private fun acquireSessionFiles(directory: Path): SessionFiles {
 /** One owner/collector. Close a screen's subscription separately from this retained Store. */
 class CreditSession private constructor(private val files: SessionFiles) : AutoCloseable {
     constructor(directory: Path) : this(acquireSessionFiles(directory))
+    @Volatile private var closed = false
+    internal val isClosing: Boolean get() = closed
     private val ownerJob = SupervisorJob()
     private val scope = CoroutineScope(Dispatchers.Default + ownerJob)
     val saver = files.saver
@@ -193,14 +217,28 @@ class CreditSession private constructor(private val files: SessionFiles) : AutoC
     }
 
     suspend fun request(intent: CreditIntent) = withTimeout(10_000) {
-        val before = saver.savedRevision.value
-        store.dispatch(CreditAction.Request(intent))
-        saver.savedRevision.first { it > before }
-        saver.durable.first { it.pending == intent || it.completed == intent }
+        saver.awaitSaved({ it.pending == intent || it.completed == intent }) {
+            store.dispatch(CreditAction.Request(intent))
+        }
     }
 
     /** Hooks are test seams at real commit boundaries; production uses the default empty hook. */
-    suspend fun handle(delivery: Delivery<ApplyCredit>, boundary: (Boundary) -> Unit = {}) = withTimeout(10_000) {
+    suspend fun handle(delivery: Delivery<ApplyCredit>, boundary: (Boundary) -> Unit = {}) {
+        val handler = synchronized(this) {
+            check(!closed) { "CreditSession is closed" }
+            scope.async { handleOwned(delivery, boundary) }
+        }
+        try {
+            handler.await()
+        } finally {
+            // Screen cancellation must also stop (and join) the retained owner's handler.
+            // A blocking filesystem operation may finish despite cancellation; keep ownership
+            // until it returns, so a new session cannot write alongside it.
+            withContext(NonCancellable) { handler.cancelAndJoin() }
+        }
+    }
+
+    private suspend fun handleOwned(delivery: Delivery<ApplyCredit>, boundary: (Boundary) -> Unit) = withTimeout(10_000) {
         val intent = delivery.event.intent
         // StateSaver failures do not abort a Koma commit. Never apply an unpersisted intent.
         if (saver.durable.value.completed == intent) {
@@ -212,17 +250,23 @@ class CreditSession private constructor(private val files: SessionFiles) : AutoC
         boundary(Boundary.BeforeEffect)
         withContext(Dispatchers.IO) { ledger.apply(intent) }
         boundary(Boundary.AfterEffect)
-        store.dispatch(CreditAction.Applied(intent))
-        saver.durable.first { it.pending == null && it.completed == intent }
+        saver.awaitSaved({ it.completed == intent }) {
+            store.dispatch(CreditAction.Applied(intent))
+        }
         boundary(Boundary.AfterDomainAck)
         check(delivery.acknowledge()) { "Mailbox no longer owns the delivery" }
         boundary(Boundary.AfterMailboxAck)
     }
 
     // CLI owner teardown runs outside the Store's job and waits before releasing the writer lock.
+    @Synchronized
     override fun close() {
-        store.close()
-        runBlocking { ownerJob.cancelAndJoin() }
-        files.close()
+        if (closed) return
+        closed = true
+        try {
+            store.close()
+        } finally {
+            try { runBlocking { ownerJob.cancelAndJoin() } } finally { files.close() }
+        }
     }
 }

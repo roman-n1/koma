@@ -5,7 +5,14 @@ import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.take
@@ -165,6 +172,84 @@ class DurableEffectProcessTest {
         assertFailsWith<IllegalArgumentException> { DiskOutbox(directory.resolve("domain.json")) }
         Files.writeString(directory.resolve("ledger.json"), "{\"schema\":2,\"ledger\":{}}")
         assertFailsWith<IllegalArgumentException> { DiskLedger(directory.resolve("ledger.json")).apply(intent) }
+    }
+
+    @Test fun closeKeepsTheWriterLockUntilABlockingExternalHandlerActuallyFinishes() = withDirectory { directory ->
+        runBlocking {
+            CreditSession(directory).use { session ->
+                session.start(); session.request(intent)
+                val entered = CountDownLatch(1)
+                val release = CountDownLatch(1)
+                session.ledger.beforeCommit = {
+                    entered.countDown()
+                    check(release.await(10, TimeUnit.SECONDS)) { "Test did not release ledger commit" }
+                }
+                val subscriber = launch {
+                    session.store.mailbox.subscribe().take(1).collect { session.handle(it) }
+                }
+                var closing: CompletableFuture<Void>? = null
+                try {
+                    assertTrue(withContext(Dispatchers.IO) { entered.await(10, TimeUnit.SECONDS) })
+                    closing = CompletableFuture.runAsync { session.close() }
+                    withTimeout(10_000) { while (!session.isClosing) delay(5) }
+                    assertFalse(closing.isDone, "Close must await the blocking ledger operation")
+                    assertFailsWith<java.nio.channels.OverlappingFileLockException> { CreditSession(directory) }
+                    release.countDown()
+                    withContext(Dispatchers.IO) { closing.get(10, TimeUnit.SECONDS) }
+                    withTimeout(10_000) { subscriber.join() }
+                    // The operation can finish after cancellation, but cannot race a new owner.
+                    assertEquals(25L, session.ledger.read().balance)
+                    CreditSession(directory).use { restarted ->
+                        restarted.start()
+                        withTimeout(10_000) { restarted.store.mailbox.subscribe().take(1).collect { restarted.handle(it) } }
+                        assertEquals(25L, restarted.ledger.read().balance)
+                        assertEquals(intent, restarted.saver.durable.value.completed)
+                    }
+                } finally {
+                    release.countDown()
+                    closing?.let { withContext(Dispatchers.IO) { it.get(10, TimeUnit.SECONDS) } }
+                    subscriber.cancelAndJoin()
+                }
+            }
+        }
+    }
+
+    @Test fun completionBarrierRemembersDurableAEvenWhenRequestBAndCompletionBOverwriteTheLatestState() = withDirectory { directory ->
+        runBlocking {
+            val saver = DiskOutbox(directory.resolve("domain.json"))
+            val next = CreditIntent("invoice-43", 10)
+            val completedA = async(start = CoroutineStart.UNDISPATCHED) {
+                saver.awaitSaved({ it.completed == intent }) {}
+            }
+            // All real disk saves happen before the awaiting coroutine can resume. StateFlow
+            // exposes only completed B by then; completion A must remain a one-shot signal.
+            saver.save(creditMachine.initialSnapshot(Outbox(completed = intent)))
+            saver.save(creditMachine.initialSnapshot(Outbox(pending = next, completed = intent)))
+            saver.save(creditMachine.initialSnapshot(Outbox(completed = next)))
+            assertEquals(next, saver.durable.value.completed)
+            withTimeout(10_000) { completedA.await() }
+        }
+    }
+
+    @Test fun theNextPendingIntentDoesNotPreventAcknowledgingTheCompletedDelivery() = withDirectory { directory ->
+        runBlocking {
+            CreditSession(directory).use { session ->
+                session.start(); session.request(intent)
+                val next = CreditIntent("invoice-43", 10)
+                withTimeout(10_000) {
+                    session.store.mailbox.subscribe().take(1).collect { delivery ->
+                        session.handle(delivery) {
+                            if (it == Boundary.AfterDomainAck) runBlocking { session.request(next) }
+                        }
+                    }
+                }
+                assertEquals(next, session.saver.durable.value.pending)
+                assertEquals(listOf(next), session.store.mailbox.pending.map { it.event.intent })
+                withTimeout(10_000) { session.store.mailbox.subscribe().take(1).collect { session.handle(it) } }
+                assertEquals(35L, session.ledger.read().balance)
+                assertTrue(session.store.mailbox.pending.isEmpty())
+            }
+        }
     }
 
     @Test fun aSecondSessionCannotWriteTheSameFilesAndCloseReleasesOwnership() = withDirectory { directory ->

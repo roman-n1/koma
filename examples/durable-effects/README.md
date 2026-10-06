@@ -48,7 +48,9 @@ startup / emit ApplyCredit when restored context has pending
 
 See [DurableCredit.kt](src/jvmMain/kotlin/koma/example/durable/DurableCredit.kt). A screen owns
 one mailbox subscription and calls `session.handle(delivery)`; cancelling that subscription
-leaves the Store and its pending deliveries alive for the next screen.
+leaves the Store and its pending deliveries alive for the next screen. Each handler runs as a
+child of the session owner; cancelling the screen cancels and joins that handler. A blocking
+ledger write can finish despite cancellation, so teardown waits for it before releasing ownership.
 
 1. Check that the business intent was actually persisted. Koma publishes its committed state
    before calling `StateSaver.save`, and reports a saver failure without rolling back the
@@ -56,13 +58,15 @@ leaves the Store and its pending deliveries alive for the next screen.
 2. Apply the credit using the business id. `DiskLedger` writes the new balance **and** its
    receipt in one atomic snapshot. A matching receipt turns redelivery into a no-op; reusing
    an id for another amount is rejected.
-3. Dispatch `Applied(intent)` and wait for `DiskOutbox.durable` to confirm that completion
-   reached disk. Observing `store.currentState` alone would not establish durability.
+3. Register a one-shot persistence barrier, dispatch `Applied(intent)`, and wait for a
+   successful `DiskOutbox.save` containing that completion. A later request can set `pending`
+   again, and a later completion can replace the latest `completed`; neither erases the
+   already-signalled barrier. Observing `store.currentState` alone would not establish durability.
 4. Acknowledge the mailbox delivery.
 
 If a screen left after step 3, a new subscriber verifies the receipt and acknowledges the
 existing delivery. It need not run the credit again. The CLI closes the Store and waits for
-its owned jobs before releasing the OS writer lock. A second session for the same directory
+its owned Store and active handler jobs before releasing the OS writer lock. A second session for the same directory
 fails rather than racing these files. Call owner teardown outside the Store's own job;
 mobile applications should use suspending teardown on an appropriate dispatcher instead
 of blocking the UI thread. Disk I/O here is intentionally synchronous inside `StateSaver`.
@@ -106,4 +110,5 @@ with `Runtime.halt` at the boundaries above, skipping `close` and `finally`. Two
 JVMs then use only the saved files and verify a single credit. Additional cases cover repeated
 screen reentry, reentry after a durable domain acknowledgement, real filesystem write failures
 before the effect and during domain acknowledgement, payload mismatch, corrupted and incompatible
-schemas, and exclusive ownership. These tests run in the existing JVM CI job.
+schemas, exclusive ownership while a cancelled handler is still blocked in the ledger commit,
+and a durable completion followed by a newer pending/completed intent before its waiter resumes. These tests run in the existing JVM CI job.
