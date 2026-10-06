@@ -18,6 +18,7 @@ plugins {
 @OptIn(kotlinx.validation.ExperimentalBCVApi::class)
 apiValidation {
     ignoredProjects += "time-travel-example" // runnable debug application, not a published API
+    ignoredProjects += "resource-soak" // device verification harness, not a published API
     klib {
         enabled = true
     }
