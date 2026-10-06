@@ -4,12 +4,15 @@ import koma.core.Action
 import koma.core.Event
 import koma.statechart.*
 import kotlin.test.*
+import kotlin.time.Duration.Companion.seconds
 
 class InvocationTest {
     private data object Open : Action
     private data object Close : Action
     private data object Finish : Action
     private data object Finished : Event
+    private data object Ping : Action
+    private data object Again : Event
     private val idle = StateId("idle")
     private val active = StateId("active")
     private val working = StateId("working")
@@ -60,5 +63,83 @@ class InvocationTest {
         assertTrue(failed.outcome is DecisionOutcome.Failed)
         assertTrue(failed.parentDecisions.isEmpty())
         assertTrue(failed.childDecisions.isEmpty())
+    }
+
+    @Test fun temporaryParentAndChildWorkIsFilteredBeforeCompositeCommit() {
+        val owningParent = Machine<Int, Action, String, Event>(parent.id, parent.version,
+            parent.chart.copy(transitions = parent.chart.transitions + Transition(active, idle, Trigger.After(10.seconds)))) {
+            onEnter(active) { command("parent-fetch") }
+        }
+        val immediateChild = Machine<Int, Action, String, Event>(child.id, child.version,
+            child.chart.copy(transitions = child.chart.transitions + Transition(working, done, Trigger.After(5.seconds)))) {
+            onEnter(working) { command("child-fetch"); event(Finished) }
+        }
+        val composition = InvokedMachine(owningParent, active, immediateChild, { it.context }, toParent = { Close })
+        val base = started(composition)
+        val result = composition.decide(base, InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
+        assertTrue(result.outcome is DecisionOutcome.Handled)
+        assertTrue(result.snapshot.parent.isActive(idle))
+        assertNull(result.snapshot.child)
+        assertTrue(result.parentCommands.isEmpty())
+        assertTrue(result.parentTimers.isEmpty())
+        assertTrue(result.childCommands.isEmpty())
+        assertTrue(result.childTimers.isEmpty())
+        assertTrue(result.childCancellations.single().scopes.isNotEmpty())
+    }
+
+    @Test fun queuedChildEventsCannotReopenTheirExpiredOwner() {
+        val emitting = Machine<Int, Action, String, Event>(child.id, child.version, child.chart) {
+            onEnter(working) { event(Finished); event(Again) }
+        }
+        val composition = InvokedMachine(parent, active, emitting, { it.context }, toParent = {
+            when (it) { Finished -> Close; Again -> Open; else -> null }
+        })
+        val result = composition.decide(started(composition), InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
+        assertTrue(result.snapshot.parent.isActive(idle))
+        assertNull(result.snapshot.child)
+        assertEquals(1, result.childDecisions.size)
+    }
+
+    @Test fun feedbackLimitRollsBackBothMachinesAndAllIntents() {
+        val bouncingParent = Machine<Int, Action, String, Event>(parent.id, parent.version, parent.chart) {
+            onAction(active, ActionMatcher.of<Ping>("ping")) { context++; command("parent-work"); event(Again) }
+        }
+        val bouncingChild = Machine<Int, Action, String, Event>(child.id, child.version, child.chart) {
+            onEnter(working) { event(Again) }
+            onAction(working, ActionMatcher.of<Ping>("ping")) { context++; command("child-work"); event(Again) }
+        }
+        val composition = InvokedMachine(bouncingParent, active, bouncingChild, { it.context },
+            toParent = { Ping }, toChild = { Ping }, maxDeliveries = 4)
+        val base = started(composition)
+        val result = composition.decide(base, InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
+        assertSame(base, result.snapshot)
+        assertEquals(4, ((result.outcome as DecisionOutcome.Failed).cause as InvocationLimitException).limit)
+        assertTrue(result.parentDecisions.isEmpty())
+        assertTrue(result.childDecisions.isEmpty())
+        assertTrue(result.childCancellations.isEmpty())
+        assertTrue(result.parentCommands.isEmpty())
+        assertTrue(result.childCommands.isEmpty())
+    }
+
+    @Test fun throwingEventMapperRollsBackBeforeTheChildCanRun() {
+        val emitting = Machine<Int, Action, String, Event>(child.id, child.version, child.chart) {
+            onEnter(working) { command("child-work"); event(Finished) }
+        }
+        val failure = IllegalStateException("mapping failed")
+        val composition = InvokedMachine(parent, active, emitting, { it.context }, toParent = { throw failure })
+        val base = started(composition)
+        val result = composition.decide(base, InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
+        assertSame(base, result.snapshot)
+        assertSame(failure, (result.outcome as DecisionOutcome.Failed).cause)
+        assertTrue(result.childCommands.isEmpty())
+    }
+
+    @Test fun restoredChildMustHaveBeenStartedByItsOwner() {
+        val composition = invocation()
+        val opened = composition.decide(started(composition), InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero))).snapshot
+        val malformed = opened.copy(child = child.initialSnapshot(0))
+        assertFailsWith<IllegalArgumentException> {
+            composition.decide(malformed, InvocationInput.Child(opened.owner!!, MachineInput.Dispatch(Finish, MachineTime.Zero)))
+        }
     }
 }

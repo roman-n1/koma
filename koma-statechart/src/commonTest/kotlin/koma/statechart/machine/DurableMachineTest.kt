@@ -29,9 +29,11 @@ class DurableMachineTest {
     private class Storage<C, CMD> : DurableMachineStorage<C, CMD> {
         var saved: DurableCheckpoint<C, CMD>? = null
         var fail = false
+        var conflict = false
         override suspend fun load() = saved
         override suspend fun commit(expectedGeneration: Long?, checkpoint: DurableCheckpoint<C, CMD>): Boolean {
             if (fail) { fail = false; error("disk failed") }
+            if (conflict) return false
             if (saved?.generation != expectedGeneration) return false
             saved = checkpoint
             return true
@@ -123,6 +125,128 @@ class DurableMachineTest {
         val restored = DurableMachine(machine, storage) { null }.initialize(100, MachineTime.Zero)
         assertEquals(first.ephemeralCommands, restored.ephemeralCommands)
         assertEquals(0, restored.checkpoint.snapshot.context)
+    }
+
+    @Test fun completedReceiptCleanupPersistsWorkCreatedByAutomaticTransitions() = runTest {
+        val chart = StateChartDefinition(active, listOf(AtomicState(active), AtomicState(left)), listOf(
+            Transition(active, left, Trigger.Eventless, guard = "retry-completed"),
+        ))
+        val retryMachine = Machine<Int, Action, Pay, Event>(machine.id, machine.version, chart) {
+            onEnter(active) { command(Pay(10)) }
+            onAction(active, ActionMatcher.of<Retry>("retry")) { context++; command(Pay(10)) }
+            guard("retry-completed") { snapshot, _ -> snapshot.context == 1 && snapshot.commands.isEmpty() }
+            onEnter(left) { command(Pay(20)) }
+        }
+        val storage = Storage<Int, Pay>()
+        val durable = DurableMachine(retryMachine, storage) { if (it.amount == 10) IdempotencyKey("same") else null }
+        durable.initialize(0, MachineTime.Zero)
+        durable.executeNext(DurableCommandHandler { _, _, _ -> null }) { MachineTime.Zero }
+        val committed = durable.commit(MachineInput.Dispatch(Retry, MachineTime.Zero))
+        assertTrue(committed.checkpoint.snapshot.isActive(left))
+        assertEquals(Pay(20), committed.ephemeralCommands.single().command)
+        assertEquals(committed.ephemeralCommands, durable.initialize(0, MachineTime.Zero).ephemeralCommands)
+        assertNull(durable.executeNext(DurableCommandHandler { _, _, _ -> error("Receipt must suppress IO") }) { MachineTime.Zero })
+    }
+
+    @Test fun receiptCleanupFailureRollsBackWithTheOriginalCause() = runTest {
+        val failure = IllegalStateException("automatic cleanup failed")
+        val retryMachine = Machine<Int, Action, Pay, Event>(machine.id, machine.version,
+            StateChartDefinition(active, listOf(AtomicState(active), AtomicState(left)), listOf(
+                Transition(active, left, Trigger.Eventless, guard = "cleanup", effect = "fail"),
+            ))) {
+            onEnter(active) { command(Pay(10)) }
+            onAction(active, ActionMatcher.of<Retry>("retry")) { context++; command(Pay(10)) }
+            guard("cleanup") { snapshot, _ -> snapshot.context == 1 && snapshot.commands.isEmpty() }
+            effect("fail") { _, _ -> throw failure }
+        }
+        val storage = Storage<Int, Pay>()
+        val durable = DurableMachine(retryMachine, storage) { IdempotencyKey("same") }
+        durable.initialize(0, MachineTime.Zero)
+        durable.executeNext(DurableCommandHandler { _, _, _ -> null }) { MachineTime.Zero }
+        val before = storage.saved
+        assertSame(failure, assertFailsWith<IllegalStateException> { durable.commit(MachineInput.Dispatch(Retry, MachineTime.Zero)) })
+        assertSame(before, storage.saved)
+    }
+
+    @Test fun restoreRejectsMalformedPayloadOwnershipAndOutboxAliases() = runTest {
+        val storage = Storage<Int, Pay>()
+        val durable = runner(storage)
+        durable.initialize(0, MachineTime.Zero)
+        val base = storage.saved!!
+        val command = base.outbox.values.single()
+        val ordinary = CommandRegistration(command.registration, command.command,
+            base.snapshot.commands.getValue(command.registration).scope)
+        val otherKey = IdempotencyKey("other")
+        val cases = listOf(
+            "unissued alias" to base.copy(outbox = mapOf(command.key to command.copy(registrations = command.registrations + CommandId(999)))),
+            "missing original registration" to base.copy(outbox = mapOf(command.key to command.copy(registrations = emptySet()))),
+            "two outbox owners" to base.copy(outbox = base.outbox + (otherKey to command.copy(key = otherKey))),
+            "ordinary and durable owners" to base.copy(ephemeral = mapOf(ordinary.id to ordinary)),
+            "wrong ordinary lane" to base.copy(outbox = emptyMap(), ephemeral = mapOf(ordinary.id to ordinary.copy(lane = LaneId("wrong"), policy = ConcurrencyPolicy.Latest))),
+            "completed receipt owns live work" to base.copy(outbox = mapOf(command.key to command.copy(status = DurableStatus.Completed))),
+            "unstarted checkpoint" to base.copy(snapshot = machine.initialSnapshot(0), outbox = emptyMap()),
+        )
+        for ((label, invalid) in cases) {
+            storage.saved = invalid
+            assertFailsWith<IllegalArgumentException>(label) { durable.restore() }
+        }
+    }
+
+    @Test fun cachedCommandFeedbackIsBoundedAndRollsBackTheEntireCommit() = runTest {
+        val retryMachine = Machine<Int, Action, Pay, Event>(machine.id, machine.version,
+            StateChartDefinition(active, listOf(AtomicState(active)), listOf(
+                Transition(active, active, Trigger.Eventless, guard = "cleanup"),
+            ))) {
+            onEnter(active) { command(Pay(10)) }
+            onAction(active, ActionMatcher.of<Retry>("retry")) { context++; command(Pay(10)) }
+            guard("cleanup") { snapshot, _ -> snapshot.context > 0 && snapshot.commands.isEmpty() }
+        }
+        val storage = Storage<Int, Pay>()
+        val durable = DurableMachine(retryMachine, storage, maxReceiptCompletions = 3) { IdempotencyKey("same") }
+        durable.initialize(0, MachineTime.Zero)
+        durable.executeNext(DurableCommandHandler { _, _, _ -> null }) { MachineTime.Zero }
+        val before = storage.saved
+        val failure = assertFailsWith<IllegalStateException> { durable.commit(MachineInput.Dispatch(Retry, MachineTime.Zero)) }
+        assertTrue(failure.message.orEmpty().contains("3 receipt completions"))
+        assertSame(before, storage.saved)
+    }
+
+    @Test fun reservationConflictPreventsExternalIo() = runTest {
+        val storage = Storage<Int, Pay>()
+        val durable = runner(storage)
+        durable.initialize(0, MachineTime.Zero)
+        val before = storage.saved
+        var calls = 0
+        val handler = DurableCommandHandler<Pay, Action> { _, _, _ -> calls++; null }
+        storage.conflict = true
+        assertFailsWith<DurableConflictException> { durable.executeNext(handler) { MachineTime.Zero } }
+        assertSame(before, storage.saved)
+        assertEquals(0, calls)
+        storage.conflict = false
+        durable.executeNext(handler) { MachineTime.Zero }
+        assertEquals(1, calls)
+    }
+
+    @Test fun failedResultDecisionKeepsTheOutboxPendingAndCanBeRetried() = runTest {
+        val failure = IllegalStateException("result failed")
+        val failingMachine = Machine<Int, Action, Pay, Event>(machine.id, machine.version, machine.chart) {
+            onEnter(active) { command(Pay(10)) }
+            onAction(active, ActionMatcher.of<Applied>("applied")) { context++; command(Pay(20)); throw failure }
+        }
+        val storage = Storage<Int, Pay>()
+        val durable = DurableMachine(failingMachine, storage) { IdempotencyKey("same") }
+        val initial = durable.initialize(0, MachineTime.Zero).checkpoint.snapshot
+        assertSame(failure, assertFailsWith<IllegalStateException> {
+            durable.executeNext(DurableCommandHandler { _, _, _ -> Applied }) { MachineTime.Zero }
+        })
+        assertEquals(initial, storage.saved!!.snapshot)
+        assertEquals(DurableStatus.Pending, storage.saved!!.outbox.values.single().status)
+        assertEquals(1L, storage.saved!!.outbox.values.single().attempts)
+        val completed = durable.executeNext(DurableCommandHandler { _, _, _ -> Leave }) { MachineTime.Zero }!!
+        assertTrue(completed.checkpoint.snapshot.isActive(left))
+        assertEquals(DurableStatus.Completed, completed.checkpoint.outbox.values.single().status)
+        assertEquals(2L, completed.checkpoint.outbox.values.single().attempts)
+        assertTrue(completed.ephemeralCommands.isEmpty())
     }
 
     @Test fun semanticMigrationValidatesConfigurationWorkAndInvariants() {

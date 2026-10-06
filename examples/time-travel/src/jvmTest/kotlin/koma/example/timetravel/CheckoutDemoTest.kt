@@ -76,11 +76,12 @@ class CheckoutDemoTest {
     fun recordingWaitsForCommittedObserversBeforeFinalizingTheFiles() = runBlocking {
         val parent = Files.createTempDirectory("koma-checkout-observer-")
         val entered = CompletableDeferred<Unit>()
+        val flushed = CompletableDeferred<Unit>()
         val release = CountDownLatch(1)
         try {
             withTimeout(20_000) {
                 val recording = async(Dispatchers.Default) {
-                    CheckoutDemo.record(parent, AtomicInteger()) {
+                    CheckoutDemo.record(parent, AtomicInteger(), onJournalFlushed = { flushed.complete(Unit) }) {
                         entered.complete(Unit)
                         check(release.await(15, TimeUnit.SECONDS)) { "Test did not release the summary observer" }
                     }
@@ -89,13 +90,11 @@ class CheckoutDemoTest {
                     entered.await() // The summary StateFlow already says 100; its file observer has not run.
                     assertNull(withTimeoutOrNull(250) { recording.await() }, "A published snapshot must not finalize recording before observers finish")
                     assertFalse(recording.isCompleted)
+                    flushed.await() // A real sink write and flush has completed on the independent writer.
                     val directory = Files.list(parent).use { it.findFirst().orElseThrow() }
                     val journals = JournalFiles(FileSegmentStorage(directory.toString()))
-                    withTimeout(5_000) {
-                        // Synchronize with the independent writer instead of assuming it has
-                        // opened/flushed a segment by the time the Store observer is reached.
-                        while (journals.read(RuntimeSessionId("checkout-demo-run")).marks.none { it is SegmentMark.Unfinished }) delay(10)
-                    }
+                    assertTrue(journals.read(RuntimeSessionId("checkout-demo-run")).marks.any { it is SegmentMark.Unfinished },
+                        "The flushed journal must remain unfinished while a committed observer is held")
                     release.countDown()
                     val recorded = recording.await()
                     val loaded = CheckoutDemo.load(recorded.directory)

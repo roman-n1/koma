@@ -1365,6 +1365,7 @@ public final class koma/statechart/machine/DurableConflictException : java/lang/
 }
 
 public final class koma/statechart/machine/DurableMachine {
+	public fun <init> (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/DurableMachineStorage;ILkotlin/jvm/functions/Function1;)V
 	public fun <init> (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/DurableMachineStorage;Lkotlin/jvm/functions/Function1;)V
 	public final fun commit (Lkoma/statechart/machine/MachineInput;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun dueTimers-tNtYl1c (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;

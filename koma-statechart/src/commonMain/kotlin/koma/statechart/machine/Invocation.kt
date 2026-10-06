@@ -61,7 +61,7 @@ class InvokedMachine<PC, PA : Action, PCMD, PE : Event, CC, CA : Action, CCMD, C
         require((base.child == null) == (base.owner == null)) { "[Koma] Child snapshot and owner must coexist" }
         require(base.owner == base.parent.activations[node]) { "[Koma] Invocation owner does not match parent activation" }
         require(parent.validateSnapshot(base.parent).isEmpty()) { "[Koma] Invalid parent invocation snapshot" }
-        base.child?.let { require(child.validateSnapshot(it).isEmpty()) { "[Koma] Invalid child invocation snapshot" } }
+        base.child?.let { require(it.isStarted && child.validateSnapshot(it).isEmpty()) { "[Koma] Invalid child invocation snapshot" } }
         var parentSnapshot = base.parent
         var childSnapshot = base.child
         var owner = base.owner

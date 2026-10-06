@@ -1188,6 +1188,7 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
 
 final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/DurableMachine { // koma.statechart.machine/DurableMachine|null[0]
     constructor <init>(koma.statechart.machine/Machine<#A, #B, #C, #D>, koma.statechart.machine/DurableMachineStorage<#A, #C>, kotlin/Function1<#C, koma.statechart.machine/IdempotencyKey?>) // koma.statechart.machine/DurableMachine.<init>|<init>(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>;koma.statechart.machine.DurableMachineStorage<1:0,1:2>;kotlin.Function1<1:2,koma.statechart.machine.IdempotencyKey?>){}[0]
+    constructor <init>(koma.statechart.machine/Machine<#A, #B, #C, #D>, koma.statechart.machine/DurableMachineStorage<#A, #C>, kotlin/Int, kotlin/Function1<#C, koma.statechart.machine/IdempotencyKey?>) // koma.statechart.machine/DurableMachine.<init>|<init>(koma.statechart.machine.Machine<1:0,1:1,1:2,1:3>;koma.statechart.machine.DurableMachineStorage<1:0,1:2>;kotlin.Int;kotlin.Function1<1:2,koma.statechart.machine.IdempotencyKey?>){}[0]
 
     final val machine // koma.statechart.machine/DurableMachine.machine|{}machine[0]
         final fun <get-machine>(): koma.statechart.machine/Machine<#A, #B, #C, #D> // koma.statechart.machine/DurableMachine.machine.<get-machine>|<get-machine>(){}[0]

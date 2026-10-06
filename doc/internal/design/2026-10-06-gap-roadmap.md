@@ -46,6 +46,7 @@ Machine definitions when adopting new transition semantics or changing rules.
 Semantics details: [model testing](2026-10-06-model-based-testing.md),
 [automatic transitions](2026-10-06-automatic-transitions.md),
 [durability](2026-10-06-durable-workflow.md), [invocation](2026-10-06-invocation.md).
+Follow-up: [contract review, reproduced findings and regression coverage](2026-10-06-contract-review.md).
 
 ## Verification
 

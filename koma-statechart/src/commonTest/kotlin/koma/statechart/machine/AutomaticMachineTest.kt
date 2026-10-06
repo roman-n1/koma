@@ -1,4 +1,4 @@
-@file:OptIn(koma.core.ExperimentalKomaApi::class)
+@file:OptIn(koma.core.ExperimentalKomaApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 package koma.statechart.machine
 
 import koma.core.Action
@@ -6,6 +6,8 @@ import koma.core.Event
 import koma.statechart.*
 import koma.test.startAndAwait
 import koma.test.dispatchAndAwait
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
@@ -175,5 +177,56 @@ class AutomaticMachineTest {
         assertEquals(start.activations, result.snapshot.activations)
         assertTrue(result.snapshot.timers.isEmpty())
         assertTrue(result.timersScheduled.isEmpty())
+    }
+
+    @Test fun failingAutomaticStepDiscardsEveryMachineIntent() {
+        val failure = IllegalStateException("automatic effect failed")
+        val chart = StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(checking), FinalState(done)), listOf(
+            Transition(idle, checking, matcher),
+            Transition(checking, done, Trigger.Eventless, effect = "fail"),
+            Transition(checking, idle, Trigger.After(5.seconds)),
+        ))
+        val machine = Machine<Int, Go, String, Event>(DefinitionId("rollback"), DefinitionVersion("1"), chart) {
+            onEnter(checking) { context++; command("must-not-run"); event(object : Event {}) }
+            effect("fail") { _, _ -> throw failure }
+        }
+        val base = machine.decide(machine.initialSnapshot(0), MachineInput.Start(MachineTime.Zero)).snapshot
+        val result = machine.decide(base, MachineInput.Dispatch(Go, MachineTime.Zero))
+        assertSame(base, result.snapshot)
+        assertSame(failure, (result.outcome as DecisionOutcome.Failed).cause)
+        assertTrue(result.commands.isEmpty())
+        assertTrue(result.effects.isEmpty())
+        assertTrue(result.timersScheduled.isEmpty())
+        assertTrue(result.cancelledScopes.isEmpty())
+    }
+
+    @Test fun failedChartMacrostepKeepsTheOldActivityAndDiscardsTransientLaunches() = runTest {
+        var starts = 0
+        var stops = 0
+        var transientRuns = 0
+        val failures = mutableListOf<Exception>()
+        val failure = IllegalStateException("automatic effect failed")
+        val chart = StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(checking), FinalState(done)), listOf(
+            Transition(idle, checking, matcher), Transition(checking, done, Trigger.Eventless, effect = "fail"),
+        ))
+        val store = StateChartStore<Int, Go, Event>(chart, 0, coroutineContext) {
+            activity(idle) { starts++; try { awaitCancellation() } finally { stops++ } }
+            onEnter(checking) { context++; launch { transientRuns++ } }
+            effect("fail") { _, _ -> throw failure }
+            store { recover<IllegalStateException> { failures += error } }
+        }
+        try {
+            store.startAndAwait()
+            runCurrent()
+            val base = store.currentState
+            store.dispatchAndAwait(Go)
+            runCurrent()
+            assertEquals(base, store.currentState)
+            assertEquals(listOf<Exception>(failure), failures)
+            assertEquals(1, starts)
+            assertEquals(0, stops)
+            assertEquals(0, transientRuns)
+        } finally { store.close(); runCurrent() }
+        assertEquals(1, stops)
     }
 }

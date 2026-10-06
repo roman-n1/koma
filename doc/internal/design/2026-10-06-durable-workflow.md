@@ -9,12 +9,24 @@ atomically compare-and-swaps one complete snapshot plus outbox and receipt set.
 * Initialize and every accepted input persist before any returned intents execute. A storage
   failure/CAS conflict releases no command or effect for execution. The generation is storage
   concurrency, independent of the machine revision. Existing snapshots are validated on load.
+* DurableCommit decisions are an ordered trace. Execute ordinary commands from ephemeralCommands,
+  schedule timers from the final checkpoint snapshot, and apply cancellation intents to work
+  already running. Do not launch durable or transient commands from the raw decision trace.
 * A command classifier returns a stable business `IdempotencyKey` for durable work, or null
   for ordinary activation-scoped work. Durable registrations are moved to the outbox in the
   same commit as the snapshot. Exit cancels ordinary work; durable operations remain pending.
 * Retrying a key with unequal command data is rejected. Completed entries retain the original
   command as a receipt, so they are not silently reused. Receipt pruning belongs to the app's
   retry horizon and storage policy, not to automatic garbage collection.
+* Suppressing an already completed key decides `CommandCompleted`, including its automatic
+  transitions. Any newly created work is classified and persisted in the same transaction.
+  A failure preserves the original cause and leaves storage unchanged. `maxReceiptCompletions`
+  (default 100, positive) bounds chained receipt completions separately from each Machine's
+  microstep limit; overflow also rolls back the entire storage commit.
+* Restored outbox aliases must be issued positive command ids, include the original registration,
+  and have exactly one payload owner. Completed receipts cannot own live command registrations;
+  ordinary payload registrations must match both scope and lane in the snapshot. Restored
+  checkpoints must contain a started Machine.
 * Before external execution the attempt counter is persisted. The handler receives the same
   key and payload on retry. It must use a transactional local receipt or a remote service's
   idempotency support. This is at-least-once delivery with logical deduplication, not an

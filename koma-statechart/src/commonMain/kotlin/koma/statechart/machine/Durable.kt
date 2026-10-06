@@ -51,7 +51,12 @@ fun interface DurableCommandHandler<CMD, A : Action> {
 /** Nothing may execute from a commit that lost its storage compare-and-swap. */
 class DurableConflictException : IllegalStateException("[Koma] Durable checkpoint changed concurrently")
 
-/** Committed intents; the caller executes ordinary commands/effects/timers only after this returns. */
+/**
+ * Committed data; the caller executes work only after persistence succeeds.
+ * [decisions] is the ordered trace, including durable registrations and temporary work. Start
+ * ordinary commands from [ephemeralCommands], and schedule only timers in [checkpoint]'s final
+ * snapshot. Apply trace cancellation intents to previously running work; deliver events in order.
+ */
 data class DurableCommit<C, CMD, E : Event>(
     val checkpoint: DurableCheckpoint<C, CMD>,
     val decisions: List<Decision<C, CMD, E>>,
@@ -67,20 +72,36 @@ data class DurableCommit<C, CMD, E : Event>(
 class DurableMachine<C, A : Action, CMD, E : Event>(
     val machine: Machine<C, A, CMD, E>,
     private val storage: DurableMachineStorage<C, CMD>,
+    private val maxReceiptCompletions: Int,
     private val keyOf: (CMD) -> IdempotencyKey?,
 ) {
+    /** Uses the default receipt completion bound, preserving the original constructor contract. */
+    constructor(
+        machine: Machine<C, A, CMD, E>,
+        storage: DurableMachineStorage<C, CMD>,
+        keyOf: (CMD) -> IdempotencyKey?,
+    ) : this(machine, storage, 100, keyOf)
+
+    init { require(maxReceiptCompletions > 0) { "[Koma] Receipt completion limit must be positive" } }
     private val commits = Mutex()
     private val execution = Mutex()
     private val source = SourceId("durable:${machine.id.value}")
 
     private fun validate(checkpoint: DurableCheckpoint<C, CMD>) {
         require(checkpoint.generation >= 0) { "[Koma] Negative storage generation" }
+        require(checkpoint.snapshot.isStarted) { "[Koma] Durable checkpoint must be started" }
         val issues = machine.validateSnapshot(checkpoint.snapshot)
         require(issues.isEmpty()) { "[Koma] Invalid durable snapshot: ${issues.joinToString()}" }
-        require(checkpoint.ephemeral.all { (id, command) -> id == command.id && checkpoint.snapshot.commands[id]?.scope == command.scope }) { "[Koma] Invalid ephemeral registrations" }
+        require(checkpoint.ephemeral.all { (id, command) -> id == command.id && checkpoint.snapshot.commands[id] == CommandRecord(command.scope, command.lane) }) { "[Koma] Invalid ephemeral registrations" }
         val durableIds = checkpoint.outbox.values.filter { it.status == DurableStatus.Pending }.flatMap { it.registrations }.toSet()
         require(checkpoint.snapshot.commands.keys.all { it in checkpoint.ephemeral || it in durableIds }) { "[Koma] Command payload missing from durable checkpoint" }
-        require(checkpoint.outbox.all { (key, command) -> key == command.key && command.attempts >= 0 && command.registrations.isNotEmpty() }) { "[Koma] Invalid outbox" }
+        require(checkpoint.outbox.all { (key, command) ->
+            key == command.key && command.attempts >= 0 && command.registration in command.registrations &&
+                command.registrations.all { it.value > 0 && it.value <= checkpoint.snapshot.counters.commands } &&
+                (command.status != DurableStatus.Completed || command.registrations.none { it in checkpoint.snapshot.commands })
+        }) { "[Koma] Invalid outbox" }
+        val aliases = checkpoint.outbox.values.flatMap { it.registrations }
+        require(aliases.toSet().size == aliases.size && aliases.none { it in checkpoint.ephemeral }) { "[Koma] Command registration has multiple payload owners" }
     }
 
     /** Loads and validates the persisted checkpoint; no enter hooks or commands are repeated. */
@@ -113,19 +134,27 @@ class DurableMachine<C, A : Action, CMD, E : Event>(
         var snapshot = base.snapshot
         val accepted = decisions.toMutableList()
         val ephemeral = mutableListOf<CommandRegistration<CMD>>()
-        for (registration in decisions.flatMap { it.commands }) {
+        // A receipt completion is a real Machine input: automatic transitions may create more
+        // commands. Classify those too, before the single atomic storage commit.
+        val pending = ArrayDeque(decisions.flatMap { it.commands })
+        var receiptCompletions = 0
+        while (pending.isNotEmpty()) {
+            val registration = pending.removeFirst()
             val key = keyOf(registration.command)
             if (key == null) {
-                if (registration.id in base.snapshot.commands) ephemeral += registration
+                ephemeral += registration
             } else {
                 val previous = outbox[key]
                 require(previous == null || previous.command == registration.command) { "[Koma] Idempotency key reused with different command: ${key.value}" }
                 if (previous == null) outbox[key] = DurableCommand(key, registration.command, registration.id)
                 else if (previous.status == DurableStatus.Pending) outbox[key] = previous.copy(registrations = previous.registrations + registration.id)
                 else {
+                    check(++receiptCompletions <= maxReceiptCompletions) { "[Koma] Durable commit exceeded $maxReceiptCompletions receipt completions" }
                     val completion = machine.decide(snapshot, MachineInput.CommandCompleted(registration.id, base.now))
+                    if (completion.outcome is DecisionOutcome.Failed) throw completion.outcome.cause
                     accepted += completion
                     snapshot = completion.snapshot
+                    pending.addAll(completion.commands)
                 }
             }
         }
