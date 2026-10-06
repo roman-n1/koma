@@ -1,6 +1,7 @@
 package koma.soak
 
 import androidx.test.platform.app.InstrumentationRegistry
+import java.io.File
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -10,7 +11,9 @@ import org.junit.runner.RunWith
 class AndroidReports {
     @Test fun resourceBudgetsOnAndroid() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().context
-        SoakPlatform.reportDirectory = requireNotNull(context.getExternalFilesDir(null)).absolutePath + "/resource-soak-android"
+        val reports = File(context.filesDir, "resource-soak-android")
+        check(!reports.exists() || reports.deleteRecursively()) { "Cannot remove previous benchmark reports" }
+        SoakPlatform.reportDirectory = reports.absolutePath
         runResourceSoak()
     }
 }

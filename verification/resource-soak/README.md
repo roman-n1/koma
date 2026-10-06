@@ -110,7 +110,8 @@ harness smoke check and reports zero for unavailable native/PSS metrics.
 
 ## Reports and interpreting a failure
 
-Android runs the assembled test APK with `am instrument`, pulls reports while the APK is still
+Android runs the assembled test APK with `am instrument`, copies its private reports with
+`adb exec-out run-as` while the APK is still
 installed, checks the instrumentation's positive test count and success, then uninstalls its
 test package. This avoids AGP/UTP's cleanup deleting app-owned reports before collection.
 CI validates the requested duration, actual device metadata, successful measurements, both
@@ -118,9 +119,11 @@ recording modes and enough steady samples. It fails if instrumentation/native te
 cases or left no report. Measurement execution is never reused from Gradle's task cache.
 CI uploads `report.json`, `samples.csv` and test reports even on failure. Native/JVM reports
 are under `verification/resource-soak/build/reports/resource-soak/ios` and `.../jvm`. Android
-writes app-owned external files under
-`/sdcard/Android/data/koma.resources.soak.test/files/resource-soak-android`; CI pulls them into its
-artifact directory. Files from a failed batch are retained for diagnosis.
+writes app-private files under `files/resource-soak-android` in the test package; CI copies them
+into its artifact directory before uninstall. The test clears its previous benchmark directory
+from inside the application UID, avoiding scoped external-storage permission assumptions.
+Files from a failed batch are retained for diagnosis. A negative-path test uses a real journal
+file and a stalled sink to verify that a recording-drain timeout still closes its writer and file.
 
 A failed budget includes observed values and units. Diagnose the report before changing a
 threshold: an overloaded CI runner, a platform/runtime change and an actual library regression

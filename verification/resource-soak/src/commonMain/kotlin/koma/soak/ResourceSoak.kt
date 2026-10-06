@@ -291,22 +291,26 @@ private suspend fun runBatch(batch: Int): BatchResult {
         withTimeout(10_000) { while (inFlight.any { it.value != 0 }) delay(10) }
     } finally {
         withContext(NonCancellable) {
-            stores.forEach { it.close() }
-            withTimeout(10_000) { owner.cancelAndJoin() }
-            stores.forEach { store ->
-                val pending = (store as StoreInternalApi<MachineSnapshot<History>, Message, Render>).awaitIdle(1.seconds)
-                pendingAfterClose += pending.inputs
-                mailboxAfterClose += store.mailbox.pending.size
-                check(pending.isIdle && store.mailbox.pending.isEmpty())
+            try {
+                stores.forEach { it.close() }
+            } finally {
+                try {
+                    withTimeout(10_000) { owner.cancelAndJoin() }
+                } finally {
+                    closeRecordingResources(session, sink, writerOwner)
+                }
             }
-            check(commands.value == 0)
-            withTimeout(10_000) { session?.close() }
-            sink.close()
-            withTimeout(10_000) { writerOwner.cancelAndJoin() }
-            check(storage.outputs.value == 0)
-            check(owner.children.none() && writerOwner.children.none())
         }
     }
+    // Assertions follow all release attempts, so a regression never skips writer/file cleanup.
+    stores.forEach { store ->
+        val pending = (store as StoreInternalApi<MachineSnapshot<History>, Message, Render>).awaitIdle(1.seconds)
+        pendingAfterClose += pending.inputs
+        mailboxAfterClose += store.mailbox.pending.size
+        check(pending.isIdle && store.mailbox.pending.isEmpty())
+    }
+    check(commands.value == 0 && storage.outputs.value == 0)
+    check(owner.children.none() && writerOwner.children.none())
     val (count, p95, p99) = latencies.summary()
     check(count == accepted) { "Accepted inputs did not all commit: $accepted offered, $count committed" }
     check(errors.value.isEmpty()) { errors.value.joinToString() }
