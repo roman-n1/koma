@@ -28,7 +28,10 @@ interface SegmentStorage {
 
 /**
  * An open segment being appended to. [flush] hands what was written to the platform (the OS, not
- * necessarily the disk); [close] flushes and releases the handle.
+ * necessarily the disk); [close] flushes and releases the handle. Successful flush makes
+ * complete frames visible to a fresh process on [FileSegmentStorage]. Buffered writes can be
+ * lost when a process is killed. Neither flush nor close promises persistence through power
+ * loss: the JVM implementation does not call `fsync`, and iOS uses `fflush`.
  */
 interface SegmentOutput : AutoCloseable {
     fun write(bytes: ByteArray)

@@ -5,7 +5,7 @@
 // - Show manifest properties: true
 // - Show declarations: true
 
-// Library unique name: <io.github.roman-n1:koma-core>
+// Library unique name: <io.github.koma-kt:koma-core>
 open annotation class koma.core/ExperimentalKomaApi : kotlin/Annotation { // koma.core/ExperimentalKomaApi|null[0]
     constructor <init>() // koma.core/ExperimentalKomaApi.<init>|<init>(){}[0]
 }

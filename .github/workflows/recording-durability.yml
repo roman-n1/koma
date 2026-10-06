@@ -1,0 +1,48 @@
+name: Recording filesystem durability
+
+on:
+  pull_request:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-filesystem:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v5
+      - name: Create isolated 8 MiB filesystem
+        shell: bash
+        run: |
+          directory="$RUNNER_TEMP/koma-enospc"
+          mkdir -p "$directory"
+          sudo mount -t tmpfs -o size=8M,mode=1777 tmpfs "$directory"
+          touch "$directory/.koma-bounded-filesystem"
+          echo "KOMA_ENOSPC_DIRECTORY=$directory" >> "$GITHUB_ENV"
+      - name: Process kill and actual ENOSPC regression tests
+        shell: bash
+        run: |
+          test -n "$KOMA_ENOSPC_DIRECTORY"
+          test -f "$KOMA_ENOSPC_DIRECTORY/.koma-bounded-filesystem"
+          ./gradlew :koma-timetravel:jvmTest --tests '*RecordingDurabilityJvmTest' --rerun-tasks
+      - name: Unmount isolated filesystem
+        if: always()
+        shell: bash
+        run: |
+          directory="$RUNNER_TEMP/koma-enospc"
+          if mountpoint -q "$directory"; then sudo umount "$directory"; fi
+      - name: Upload test diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: recording-durability-reports
+          path: koma-timetravel/build/reports/tests/jvmTest

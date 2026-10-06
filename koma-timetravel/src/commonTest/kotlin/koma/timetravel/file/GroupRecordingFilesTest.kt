@@ -33,6 +33,7 @@ import koma.observability.file.SegmentMark
 import koma.timetravel.GroupRecorder
 import koma.timetravel.GroupReplaySession
 import koma.timetravel.GroupRoute
+import koma.timetravel.Recording
 import koma.timetravel.RecordingCodec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -218,6 +219,63 @@ class GroupRecordingFilesTest {
         assertEquals(listOf(groupId), GroupRecordingFiles(live.storage).groups())
         assertEquals(setOf(pingId, pongId), RecordingFiles(live.storage).stores().toSet())
         assertEquals(0L, live.files.dropped)
+    }
+
+    @Test
+    fun memberFilesAheadOfTheOrder_areTrimmedToEverySurvivingPrefix() = runTest {
+        val live = Live(this)
+        kicks(live, 3)
+        live.close()
+        val whole = live.recorder.recording()
+        val name = GroupRecordingFileFormat.segmentName(groupId, 0)
+        val bytes = live.storage.read(name)
+        val decoded = GroupRecordingFileFormat.decodeSegment(name, bytes)
+        val header = checkNotNull(decoded.header)
+        for (count in 1 until decoded.entries.size) {
+            val prefix = GroupRecordingFileFormat.header(header) +
+                decoded.entries.take(count).fold(byteArrayOf()) { acc, entry -> acc + GroupRecordingFileFormat.entryFrame(entry) }
+            live.storage.delete(name)
+            live.storage.append(name).use { it.write(prefix) } // no END: order writer died first
+            val contents = GroupRecordingFiles(live.storage).read(groupId, codecs)
+            val read = checkNotNull(contents.recording)
+            assertEquals(whole.order.take(count), read.order, "prefix $count")
+            for ((member, recording) in read.members) {
+                val covered = read.order.count { it.store == member }
+                assertEquals(whole.members.getValue(member).steps.take(covered), recording.steps)
+                assertEquals(whole.members.getValue(member).start, recording.start, "prefix $count: $member checkpoint")
+            }
+            assertTrue(contents.marks.any { it is RecordingFileMark.Damaged && it.mark is SegmentMark.Unfinished })
+            assertEquals(emptyList(), GroupReplaySession(machines, read).verify(), "prefix $count")
+        }
+    }
+
+    @Test
+    fun rotatedMemberAheadOfTheOnlyOrderPrefix_reportsThatItsOlderCheckpointIsMissing() = runTest {
+        val live = Live(this)
+        kicks(live, 3)
+        live.close()
+        val whole = live.recorder.recording()
+        val orderName = GroupRecordingFileFormat.segmentName(groupId, 0)
+        val order = GroupRecordingFileFormat.decodeSegment(orderName, live.storage.read(orderName))
+        // Keep both Start entries and the first ping Kick; pong's file now begins after step 1.
+        val entries = order.entries.take(3)
+        assertEquals(listOf(pingId, pongId, pingId), entries.map { it.store })
+        live.storage.delete(orderName)
+        live.storage.append(orderName).use { output ->
+            output.write(GroupRecordingFileFormat.header(checkNotNull(order.header)))
+            entries.forEach { output.write(GroupRecordingFileFormat.entryFrame(it)) }
+        }
+        val pongRecording = whole.members.getValue(pongId) as Recording<PongCtx, PongAct, NoCommand, PongEv>
+        live.storage.delete(RecordingFileFormat.segmentName(pongId, 0))
+        live.storage.append(RecordingFileFormat.segmentName(pongId, 1)).use { output ->
+            output.write(RecordingFileFormat.header(pong.id, pong.version, pongId, 1, 2))
+            output.write(RecordingFileFormat.checkpointFrame(pongCodec.encodeCheckpoint(pongRecording.checkpointAt(2))))
+            pongRecording.steps.drop(2).forEach { output.write(RecordingFileFormat.stepFrame(pongCodec.encodeStep(it))) }
+            output.write(Framing.END)
+        }
+        val contents = GroupRecordingFiles(live.storage).read(groupId, codecs)
+        assertEquals(null, contents.recording, "An unavailable checkpoint must not become a future state")
+        assertTrue(contents.marks.any { it is RecordingFileMark.StartMismatch && it.store == pongId })
     }
 
     @Test

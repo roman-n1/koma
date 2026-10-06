@@ -69,3 +69,8 @@ kotlin {
 publishConvention {
     artifactId = "koma-timetravel"
 }
+
+// ENOSPC is opt-in on a bounded CI mount; cached ordinary JVM results must not skip that mode.
+tasks.withType<Test>().configureEach {
+    inputs.property("komaEnospcDirectory", providers.environmentVariable("KOMA_ENOSPC_DIRECTORY").orElse(""))
+}
