@@ -233,9 +233,10 @@ object RecordingDurabilityProcess {
         }
         if (cut == "frame" || cut.startsWith("rotation")) {
             assertTrue(damaged.any { it is SegmentMark.TruncatedTail }, damaged.toString())
-        } else if (cut != "buffered") {
+        } else if (cut != "buffered" && cut != "full") {
             assertTrue(damaged.any { it is SegmentMark.Unfinished }, damaged.toString())
         }
+        if (cut == "full") assertTrue(damaged.isNotEmpty(), "Failed writes must leave a marked tail")
         assertTrue(damaged.none { it is SegmentMark.Corrupt }, damaged.toString())
     }
 
@@ -264,13 +265,20 @@ object RecordingDurabilityProcess {
         }
         assertEquals(0L, Files.getFileStore(directory.toPath()).usableSpace)
         if (journal != null) {
-            val failure = assertFailsWith<IOException> { journal.write(journalRecord(2)); journal.flush() }
+            val failure = assertFailsWith<IOException> { journal.write(journalRecord(2).copy(entry = JournalEntry.FailureReported(InputId(2), FailureDescriptor("disk-full", "x".repeat(32_768), null)))); journal.flush() }
             assertTrue(failure.message.orEmpty().contains("No space left on device"))
             journal.write(journalRecord(3))
             journal.close()
         } else {
             val input = MachineInput.Dispatch(Add("x".repeat(32_768)), MachineTime(1.milliseconds))
-            observer!!.onCommitted(null, input, machine.decide(decision.snapshot, input))
+            var snapshot = decision.snapshot
+            // A short order frame can still fit the already allocated last filesystem page
+            // even with usableSpace == 0. Drive it across that page boundary, not a fake quota.
+            repeat(if (kind == "group") 300 else 1) {
+                val next = machine.decide(snapshot, input)
+                observer!!.onCommitted(null, input, next)
+                snapshot = next.snapshot
+            }
             withTimeout(10_000) { while (failures.size < (if (kind == "group") 2 else 1)) delay(5) }
             sink?.close() ?: group!!.close()
             assertEquals(if (kind == "group") 2 else 1, failures.size)
