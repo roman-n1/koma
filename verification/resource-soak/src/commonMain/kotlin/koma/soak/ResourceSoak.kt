@@ -141,11 +141,12 @@ data class BatchResult(val batch: Int, val recording: Boolean, val accepted: Lon
     val pendingInputsAfterClose: Int, val commandsAfterClose: Int, val mailboxAfterClose: Int)
 
 @Serializable
-data class Sample(val elapsedMillis: Long, val result: BatchResult, val memory: MemorySample)
+data class Sample(val startedMillis: Long, val elapsedMillis: Long, val result: BatchResult, val memory: MemorySample)
 
 @Serializable
 data class BudgetReport(val metadata: Map<String, String>, val budgets: Map<String, Long>, val samples: List<Sample>,
-    val heapGrowthBytes: Long, val nativeGrowthBytes: Long, val residentGrowthBytes: Long, val threadGrowth: Long, val failures: List<String>)
+    val warmupSamples: List<Sample>, val plateauEvaluated: Boolean, val memoryGrowthByMode: Map<String, MemoryGrowth>?,
+    val heapGrowthBytes: Long?, val nativeGrowthBytes: Long?, val residentGrowthBytes: Long?, val threadGrowth: Long?, val failures: List<String>)
 
 private val budgets = mapOf("storeCount" to STORES.toLong(), "admissionPending" to ADMISSION.toLong(),
     "mailboxRetained" to MAILBOX.toLong(), "journalRetained" to RETAINED_RECORDS.toLong(), "writerQueueConfigured" to WRITER_QUEUE.toLong(),
@@ -158,48 +159,62 @@ private val budgets = mapOf("storeCount" to STORES.toLong(), "admissionPending" 
 suspend fun runResourceSoak() {
     val started = TimeSource.Monotonic.markNow()
     val samples = mutableListOf<Sample>()
+    val warmupSamples = mutableListOf<Sample>()
     val failures = mutableListOf<String>()
+    val assessPerformance = SOAK_SECONDS >= 30
     val warmupSeconds = minOf(30, SOAK_SECONDS / 5)
     val minimumBatches = if (SOAK_SECONDS < 30) 3 else 12
-    val minimumSamples = if (SOAK_SECONDS < 30) 2 else 6
+    val minimumSamples = if (SOAK_SECONDS < 30) 2 else MINIMUM_PLATEAU_SAMPLES_PER_MODE * 2
     SoakPlatform.afterGc()
     var batch = 0
+    fun hasModeCoverage() = !assessPerformance || listOf(false, true).all { mode ->
+        samples.count { it.result.recording == mode } >= MINIMUM_PLATEAU_SAMPLES_PER_MODE
+    }
     try {
-        while (started.elapsedNow() < SOAK_SECONDS.seconds || batch < minimumBatches || samples.size < minimumSamples) {
+        while (started.elapsedNow() < SOAK_SECONDS.seconds || batch < minimumBatches || samples.size < minimumSamples || !hasModeCoverage()) {
+            val batchStarted = started.elapsedNow()
             val result = runBatch(batch)
             val memory = SoakPlatform.afterGc()
-            if (batch > 0 && started.elapsedNow() >= warmupSeconds.seconds) samples += Sample(started.elapsedNow().inWholeMilliseconds, result, memory)
+            val sample = Sample(batchStarted.inWholeMilliseconds, started.elapsedNow().inWholeMilliseconds, result, memory)
+            if (batch > 0 && batchStarted >= warmupSeconds.seconds) {
+                samples += sample
+                if (assessPerformance) {
+                    check(result.p95Micros <= budgets.getValue("p95Micros") && result.p99Micros <= budgets.getValue("p99Micros")) {
+                        "Steady latency budget exceeded in batch $batch: p95=${result.p95Micros} us, p99=${result.p99Micros} us"
+                    }
+                }
+            } else warmupSamples += sample
             batch++
         }
     } catch (failure: Throwable) {
         failures += failure.toString()
         throw failure
     } finally {
-        fun growth(select: (MemorySample) -> Long): Long {
-            if (samples.size < minimumSamples) return 0
-            val window = maxOf(1, samples.size / 3)
-            fun median(values: List<Long>) = values.sorted()[values.size / 2]
-            return median(samples.takeLast(window).map { select(it.memory) }) - median(samples.take(window).map { select(it.memory) })
-        }
-        val heapGrowth = growth { it.heapBytes }
-        val nativeGrowth = growth { it.nativeBytes }
-        val residentGrowth = growth { it.residentBytes }
-        val threadGrowth = growth { it.threads.toLong() }
-        if (samples.size < minimumSamples) failures += "Insufficient post-warmup memory samples"
-        if (heapGrowth > budgets.getValue("heapPlateauGrowthBytes")) failures += "Managed heap did not plateau: +$heapGrowth bytes"
-        if (nativeGrowth > budgets.getValue("nativePlateauGrowthBytes")) failures += "Native heap did not plateau: +$nativeGrowth bytes"
-        if (residentGrowth > budgets.getValue("residentPlateauGrowthBytes")) failures += "Resident memory did not plateau: +$residentGrowth bytes"
-        if (threadGrowth > 16) failures += "OS thread count did not plateau: +$threadGrowth threads"
+        val growthByMode = if (assessPerformance) memoryGrowthByMode(samples) else null
+        val heapGrowth = growthByMode?.values?.maxOf { it.heapBytes }
+        val nativeGrowth = growthByMode?.values?.maxOf { it.nativeBytes }
+        val residentGrowth = growthByMode?.values?.maxOf { it.residentBytes }
+        val threadGrowth = growthByMode?.values?.maxOf { it.threads }
+        if (samples.size < minimumSamples) failures += "Insufficient measurement samples"
+        if (assessPerformance && growthByMode == null) failures += "Insufficient comparable post-warmup samples: need at least $MINIMUM_PLATEAU_SAMPLES_PER_MODE per recording mode"
+        if (heapGrowth != null && heapGrowth > budgets.getValue("heapPlateauGrowthBytes")) failures += "Managed heap did not plateau: +$heapGrowth bytes"
+        if (nativeGrowth != null && nativeGrowth > budgets.getValue("nativePlateauGrowthBytes")) failures += "Native heap did not plateau: +$nativeGrowth bytes"
+        if (residentGrowth != null && residentGrowth > budgets.getValue("residentPlateauGrowthBytes")) failures += "Resident memory did not plateau: +$residentGrowth bytes"
+        if (threadGrowth != null && threadGrowth > 16) failures += "OS thread count did not plateau: +$threadGrowth threads"
         val report = BudgetReport(SoakPlatform.metadata() + mapOf("durationSeconds" to SOAK_SECONDS.toString(), "warmupSeconds" to warmupSeconds.toString(),
             "dispatcher" to "Dispatchers.Default", "slowWriteMillis" to "2", "latency" to "accepted offer to committed decision; bounded rolling tail per batch",
-            "memorySampling" to "after Store/writer teardown and two requested GCs; first/last-third medians", "sourceCount" to "0"),
-            budgets + ("threadPlateauGrowth" to 16L), samples, heapGrowth, nativeGrowth, residentGrowth, threadGrowth, failures)
+            "assessment" to if (assessPerformance) "steady-soak" else "harness-smoke",
+            "memorySampling" to "after teardown and two requested GCs; same-recording-mode first/last-third medians; worst mode growth", "sourceCount" to "0"),
+            budgets + ("threadPlateauGrowth" to 16L), samples, warmupSamples, growthByMode != null, growthByMode, heapGrowth, nativeGrowth, residentGrowth, threadGrowth, failures)
         val json = Json { prettyPrint = true }.encodeToString(report)
         SoakPlatform.writeReport("report.json", json)
-        val csv = "elapsed_ms,batch,recording,accepted,rejected,p95_us,p99_us,inflight_sampled_highwater,core_pending_sampled_highwater,mailbox_sampled_highwater,retained_highwater,sink_busy_highwater,dropped,bytes_written,heap_bytes,native_bytes,resident_bytes,threads,jobs_after_close,outputs_after_close,pending_inputs_after_close,commands_after_close,mailbox_after_close\n" +
-            samples.joinToString("\n") { s -> s.result.run { "${s.elapsedMillis},${this.batch},$recording,$accepted,$rejected,$p95Micros,$p99Micros,$sampledInFlightHighWater,$sampledCorePendingHighWater,$sampledMailboxHighWater,$retainedHighWater,$sinkBusyHighWater,$droppedForSinks,$bytesWritten,${s.memory.heapBytes},${s.memory.nativeBytes},${s.memory.residentBytes},${s.memory.threads},$jobsAfterClose,$outputsAfterClose,$pendingInputsAfterClose,$commandsAfterClose,$mailboxAfterClose" } }
+        val csv = "phase,started_ms,elapsed_ms,batch,recording,accepted,rejected,p95_us,p99_us,inflight_sampled_highwater,core_pending_sampled_highwater,mailbox_sampled_highwater,retained_highwater,sink_busy_highwater,dropped,bytes_written,heap_bytes,native_bytes,resident_bytes,threads,jobs_after_close,outputs_after_close,pending_inputs_after_close,commands_after_close,mailbox_after_close\n" +
+            (warmupSamples + samples).sortedBy { it.result.batch }.joinToString("\n") { s -> s.result.run {
+                val phase = if (s in warmupSamples) "warmup" else if (assessPerformance) "steady" else "smoke"
+                "$phase,${s.startedMillis},${s.elapsedMillis},${this.batch},$recording,$accepted,$rejected,$p95Micros,$p99Micros,$sampledInFlightHighWater,$sampledCorePendingHighWater,$sampledMailboxHighWater,$retainedHighWater,$sinkBusyHighWater,$droppedForSinks,$bytesWritten,${s.memory.heapBytes},${s.memory.nativeBytes},${s.memory.residentBytes},${s.memory.threads},$jobsAfterClose,$outputsAfterClose,$pendingInputsAfterClose,$commandsAfterClose,$mailboxAfterClose"
+            } }
         SoakPlatform.writeReport("samples.csv", csv)
-        println("SOAK_REPORT ${SoakPlatform.reportDirectory}/report.json (${samples.size} steady samples)")
+        println("SOAK_REPORT ${SoakPlatform.reportDirectory}/report.json (${samples.size} ${if (assessPerformance) "steady" else "smoke"} samples, ${warmupSamples.size} warmup)")
         check(failures.isEmpty()) { failures.joinToString("; ") }
     }
 }
@@ -317,7 +332,6 @@ private suspend fun runBatch(batch: Int): BatchResult {
     check(inFlightHigh <= ADMISSION + 1) { "Accepted in-flight exceeded admission bound: $inFlightHigh" }
     check(corePendingHigh <= ADMISSION + 8) { "Core pending input budget exceeded: $corePendingHigh" }
     check(mailboxHigh <= MAILBOX && retainedHigh <= RETAINED_RECORDS && sinkHigh.value <= 1)
-    check(p95 <= budgets.getValue("p95Micros") && p99 <= budgets.getValue("p99Micros")) { "Latency budget exceeded: p95=$p95 us, p99=$p99 us" }
     val stats = session?.stats
     check(stats == null || stats.sinkFailures == 0L && stats.policyFailures == 0L)
     if (recording) check(storage.bytes.value > 0 && stats!!.droppedForSinks > 0) { "Slow disk pressure was not exercised" }
