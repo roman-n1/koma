@@ -87,9 +87,9 @@ class ReplaySession<C, A : Action, CMD, E : Event>(
      */
     fun stepForward(): ReplayStep<C, A, CMD, E>? {
         val step = next ?: return null
-        val mismatch = replay(position, snapshot, step)
+        val decision = machine.decide(snapshot, step.input)
+        val mismatch = replay(position, snapshot, step, decision)
         return if (mismatch == null) {
-            val decision = machine.decide(snapshot, step.input)
             position++
             ReplayStep.Matched(position - 1, decision)
         } else {
@@ -131,6 +131,13 @@ class ReplaySession<C, A : Action, CMD, E : Event>(
         return null
     }
 
+    /** Invariant violations at the selected checkpoint, usable by an inspector without replay. */
+    fun checkInvariants(): List<koma.statechart.machine.InvariantViolation> = machine.checkInvariants(snapshot)
+
+    /** Explains the next recorded input through one pure decision; does not move the cursor. */
+    fun explainNext(): koma.statechart.machine.ExplainedDecision<C, CMD, E>? =
+        next?.let { machine.decideExplained(snapshot, it.input) }
+
     /** The executor's state at [position]; see [Recording.checkpointAt]. */
     val checkpoint: ExecutorCheckpoint<C, CMD> get() = recording.checkpointAt(position)
 
@@ -141,14 +148,13 @@ class ReplaySession<C, A : Action, CMD, E : Event>(
      */
     fun branch(): Branch<C, A, CMD, E> = Branch(machine, checkpoint, recording)
 
-    private fun replay(index: Int, base: MachineSnapshot<C>, step: RecordedStep<C, A, CMD, E>): ReplayMismatch<C, A, CMD, E>? {
+    private fun replay(index: Int, base: MachineSnapshot<C>, step: RecordedStep<C, A, CMD, E>, actual: Decision<C, CMD, E> = machine.decide(base, step.input)): ReplayMismatch<C, A, CMD, E>? {
         val differences = mutableListOf<String>()
         val input = step.input
         if (input is MachineInput.TimerFired) {
             val timer = base.timers[input.timer]
             if (timer != null && input.now < timer.deadline) differences += "timer ${input.timer} fired at ${input.now}, before its deadline ${timer.deadline}"
         }
-        val actual = machine.decide(base, input)
         when (step) {
             is RecordedStep.Committed -> {
                 if (actual.outcome != DecisionOutcome.Handled) {

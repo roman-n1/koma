@@ -160,6 +160,10 @@ class StateChartRuntime<S : State>(
     private val guards: Map<String, (S, Action) -> Boolean> = emptyMap(),
 ) {
     init {
+        require(definition.transitions.none { definition.node(it.source) is FinalState }) { "[Koma] Final states cannot have outgoing transitions" }
+        require(definition.transitions.filter { it.trigger == Trigger.Completion }.all {
+            definition.node(it.source) is CompoundState || definition.node(it.source) is ParallelState
+        }) { "[Koma] Completion transitions need a compound or parallel source" }
         val missing = definition.transitions.mapNotNull { it.guard }.distinct().filter { it !in guards }
         require(missing.isEmpty()) { "[Koma] Missing guard implementations: ${missing.joinToString()}" }
         val malformed = definition.hierarchyIssues() + definition.historyIssues()
@@ -192,9 +196,15 @@ class StateChartRuntime<S : State>(
      * [state] is only passed to guards. [configuration] must come from [initialConfiguration], an
      * earlier step or [StateChartDefinition.configurationOf].
      */
-    fun step(configuration: StateConfiguration, state: S, action: Action): StepResult {
+    fun step(configuration: StateConfiguration, state: S, action: Action): StepResult =
+        stepObserved(configuration, state, action, null)
+
+    internal fun stepObserved(
+        configuration: StateConfiguration, state: S, action: Action,
+        observe: ((Transition, Boolean?, Exception?) -> Unit)?,
+    ): StepResult {
         val taken = definition.selectTransitions(configuration) { transition ->
-            transition.on?.matches(action) == true && transition.guard.let { it == null || guards.getValue(it)(state, action) }
+            transition.on?.matches(action) == true && enabled(transition, state, action, observe)
         }
         if (taken.isEmpty()) return StepResult.Ignored
         return transitioned(configuration, taken)
@@ -212,12 +222,48 @@ class StateChartRuntime<S : State>(
      *
      * @throws IllegalArgumentException if [timer] is not a [Trigger.After] transition of [definition]
      */
-    fun fire(configuration: StateConfiguration, state: S, timer: Transition): StepResult {
+    fun fire(configuration: StateConfiguration, state: S, timer: Transition): StepResult =
+        fireObserved(configuration, state, timer, null)
+
+    internal fun fireObserved(
+        configuration: StateConfiguration, state: S, timer: Transition,
+        observe: ((Transition, Boolean?, Exception?) -> Unit)?,
+    ): StepResult {
         require(timer.isTimer) { "[Koma] Not a timer: $timer" }
         require(timer in definition.transitions) { "[Koma] Timer is not declared in the chart: $timer" }
         if (timer.source !in configuration.active) return StepResult.Ignored
-        if (timer.guard?.let { guards.getValue(it)(state, TimerFired(timer)) } == false) return StepResult.Ignored
+        if (!enabled(timer, state, TimerFired(timer), observe)) return StepResult.Ignored
         return transitioned(configuration, listOf(timer))
+    }
+
+    /** One automatic microstep: eventless transitions first, then completion transitions. */
+    fun automaticStep(configuration: StateConfiguration, state: S): StepResult = automaticObserved(configuration, state, null)
+
+    internal fun automaticObserved(configuration: StateConfiguration, state: S, observe: ((Transition, Boolean?, Exception?) -> Unit)?): StepResult {
+        for (completion in listOf(false, true)) {
+            val trigger = if (completion) Trigger.Completion else Trigger.Eventless
+            val action = AutomaticTransition(completion)
+            val taken = definition.selectTransitions(configuration) { transition ->
+                transition.trigger == trigger && (!completion || definition.isComplete(configuration, transition.source)) &&
+                    enabled(transition, state, action, observe)
+            }
+            if (taken.isNotEmpty()) return transitioned(configuration, taken)
+        }
+        return StepResult.Ignored
+    }
+
+    private fun enabled(
+        transition: Transition, state: S, action: Action,
+        observe: ((Transition, Boolean?, Exception?) -> Unit)?,
+    ): Boolean {
+        val result = try {
+            transition.guard?.let { guards.getValue(it)(state, action) }
+        } catch (error: Exception) {
+            observe?.invoke(transition, null, error)
+            throw error
+        }
+        observe?.invoke(transition, result, null)
+        return result != false
     }
 
     private fun transitioned(configuration: StateConfiguration, taken: List<Transition>): StepResult.Transitioned {

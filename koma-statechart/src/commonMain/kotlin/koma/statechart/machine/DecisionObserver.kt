@@ -161,3 +161,16 @@ private class DecisionJournal<C, A : Action, CMD, E : Event>(
         is ConcurrencyPolicy.Parallel -> "Parallel(${policy.limit})"
     }
 }
+
+/** Opt-in live decision diagnostics. Metadata only; never copies action/context payloads. */
+interface DecisionExplanationObserver {
+    /** Called under the decision lock before commit/ignored/failed callbacks; never call the Store back. */
+    fun onExplained(input: InputId?, explanation: DecisionExplanation)
+}
+
+/** Observes actual live guard evaluations without a second decision or extra guard invocations. */
+fun <C, A : Action, CMD, E : Event> decisionDiagnostics(
+    consume: (InputId?, DecisionExplanation) -> Unit,
+): DecisionObserver<C, A, CMD, E> = object : DecisionObserver<C, A, CMD, E>, DecisionExplanationObserver {
+    override fun onExplained(input: InputId?, explanation: DecisionExplanation) = consume(input, explanation)
+}

@@ -1,3 +1,107 @@
+public final class koma/statechart/test/CoverageMetric {
+	public fun <init> (Ljava/util/Set;Ljava/util/Set;)V
+	public final fun component1 ()Ljava/util/Set;
+	public final fun component2 ()Ljava/util/Set;
+	public final fun copy (Ljava/util/Set;Ljava/util/Set;)Lkoma/statechart/test/CoverageMetric;
+	public static synthetic fun copy$default (Lkoma/statechart/test/CoverageMetric;Ljava/util/Set;Ljava/util/Set;ILjava/lang/Object;)Lkoma/statechart/test/CoverageMetric;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCovered ()Ljava/util/Set;
+	public final fun getExpected ()Ljava/util/Set;
+	public final fun getMissing ()Ljava/util/Set;
+	public final fun getPercent ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/test/ExplorationKt {
+	public static final fun explore-XgRl53w (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/test/MachineInputGenerator;Lkoma/statechart/test/ExplorationStrategy;IIIJ)Lkoma/statechart/test/ExplorationReport;
+	public static synthetic fun explore-XgRl53w$default (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/test/MachineInputGenerator;Lkoma/statechart/test/ExplorationStrategy;IIIJILjava/lang/Object;)Lkoma/statechart/test/ExplorationReport;
+	public static final fun withTimers (Lkoma/statechart/test/MachineInputGenerator;)Lkoma/statechart/test/MachineInputGenerator;
+}
+
+public final class koma/statechart/test/ExplorationReport {
+	public fun <init> (IJLkoma/statechart/test/MachineCoverage;Ljava/util/List;ZILjava/util/List;)V
+	public synthetic fun <init> (IJLkoma/statechart/test/MachineCoverage;Ljava/util/List;ZILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun assertSuccess ()V
+	public final fun component1 ()I
+	public final fun component2 ()J
+	public final fun component3 ()Lkoma/statechart/test/MachineCoverage;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Z
+	public final fun component6 ()I
+	public final fun component7 ()Ljava/util/List;
+	public final fun copy (IJLkoma/statechart/test/MachineCoverage;Ljava/util/List;ZILjava/util/List;)Lkoma/statechart/test/ExplorationReport;
+	public static synthetic fun copy$default (Lkoma/statechart/test/ExplorationReport;IJLkoma/statechart/test/MachineCoverage;Ljava/util/List;ZILjava/util/List;ILjava/lang/Object;)Lkoma/statechart/test/ExplorationReport;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCoverage ()Lkoma/statechart/test/MachineCoverage;
+	public final fun getDecisions ()I
+	public final fun getFailures ()Ljava/util/List;
+	public final fun getInvariantsChecked ()J
+	public final fun getMaxDepth ()I
+	public final fun getScenarios ()Ljava/util/List;
+	public final fun getTruncated ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/statechart/test/ExplorationStrategy {
+}
+
+public final class koma/statechart/test/ExplorationStrategy$BreadthFirst : koma/statechart/test/ExplorationStrategy {
+	public static final field INSTANCE Lkoma/statechart/test/ExplorationStrategy$BreadthFirst;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/test/ExplorationStrategy$RandomWalk : koma/statechart/test/ExplorationStrategy {
+	public fun <init> (II)V
+	public synthetic fun <init> (IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun copy (II)Lkoma/statechart/test/ExplorationStrategy$RandomWalk;
+	public static synthetic fun copy$default (Lkoma/statechart/test/ExplorationStrategy$RandomWalk;IIILjava/lang/Object;)Lkoma/statechart/test/ExplorationStrategy$RandomWalk;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRuns ()I
+	public final fun getSeed ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/test/GuardOutcome {
+	public synthetic fun <init> (IZLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-bvNF3-I ()I
+	public final fun component2 ()Z
+	public final fun copy-gfj2leY (IZ)Lkoma/statechart/test/GuardOutcome;
+	public static synthetic fun copy-gfj2leY$default (Lkoma/statechart/test/GuardOutcome;IZILjava/lang/Object;)Lkoma/statechart/test/GuardOutcome;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getResult ()Z
+	public final fun getTransition-bvNF3-I ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/test/MachineCoverage {
+	public fun <init> (Lkoma/statechart/test/CoverageMetric;Lkoma/statechart/test/CoverageMetric;Lkoma/statechart/test/CoverageMetric;Lkoma/statechart/test/CoverageMetric;)V
+	public final fun component1 ()Lkoma/statechart/test/CoverageMetric;
+	public final fun component2 ()Lkoma/statechart/test/CoverageMetric;
+	public final fun component3 ()Lkoma/statechart/test/CoverageMetric;
+	public final fun component4 ()Lkoma/statechart/test/CoverageMetric;
+	public final fun copy (Lkoma/statechart/test/CoverageMetric;Lkoma/statechart/test/CoverageMetric;Lkoma/statechart/test/CoverageMetric;Lkoma/statechart/test/CoverageMetric;)Lkoma/statechart/test/MachineCoverage;
+	public static synthetic fun copy$default (Lkoma/statechart/test/MachineCoverage;Lkoma/statechart/test/CoverageMetric;Lkoma/statechart/test/CoverageMetric;Lkoma/statechart/test/CoverageMetric;Lkoma/statechart/test/CoverageMetric;ILjava/lang/Object;)Lkoma/statechart/test/MachineCoverage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getGuards ()Lkoma/statechart/test/CoverageMetric;
+	public final fun getStates ()Lkoma/statechart/test/CoverageMetric;
+	public final fun getTimers ()Lkoma/statechart/test/CoverageMetric;
+	public final fun getTransitions ()Lkoma/statechart/test/CoverageMetric;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/statechart/test/MachineInputGenerator {
+	public abstract fun inputs-oBfz2fI (Lkoma/statechart/machine/MachineSnapshot;J)Ljava/util/List;
+}
+
 public final class koma/statechart/test/MachinePendingWork {
 	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;Ljava/util/List;)V
 	public final fun component1 ()Ljava/util/List;
@@ -18,6 +122,19 @@ public final class koma/statechart/test/MachinePendingWork {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/statechart/test/MachineScenario {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Lkoma/statechart/test/MachineScenario;
+	public static synthetic fun copy$default (Lkoma/statechart/test/MachineScenario;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lkoma/statechart/test/MachineScenario;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInputs ()Ljava/util/List;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/statechart/test/MachineTestDriver {
 	public fun <init> (Lkoma/statechart/machine/Machine;Ljava/lang/Object;Lkotlinx/coroutines/test/TestScope;Lkoma/statechart/test/ScriptedCommandHandler;Lkoma/statechart/machine/AdmissionPolicy;Lkoma/statechart/machine/MailboxConfig;Lkotlin/jvm/functions/Function1;)V
 	public synthetic fun <init> (Lkoma/statechart/machine/Machine;Ljava/lang/Object;Lkotlinx/coroutines/test/TestScope;Lkoma/statechart/test/ScriptedCommandHandler;Lkoma/statechart/machine/AdmissionPolicy;Lkoma/statechart/machine/MailboxConfig;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -28,6 +145,7 @@ public final class koma/statechart/test/MachineTestDriver {
 	public final fun assertActive (Ljava/util/Set;)V
 	public final fun assertActive-VJ8MipU (Ljava/lang/String;[Ljava/lang/String;)V
 	public final fun assertContext (Ljava/lang/Object;)V
+	public final fun assertInvariants ()V
 	public final fun assertNoPendingWork (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun close ()V
 	public final fun complete-L4hFu2M (JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -61,12 +179,52 @@ public final class koma/statechart/test/ScriptedCommandHandler : koma/statechart
 	public final fun getStarted ()Ljava/util/List;
 }
 
+public final class koma/statechart/test/SequenceFailure {
+	public fun <init> (Ljava/util/List;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;Lkoma/observability/FailureDescriptor;)V
+	public synthetic fun <init> (Ljava/util/List;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;Lkoma/observability/FailureDescriptor;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Lkoma/observability/FailureDescriptor;
+	public final fun copy (Ljava/util/List;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;Lkoma/observability/FailureDescriptor;)Lkoma/statechart/test/SequenceFailure;
+	public static synthetic fun copy$default (Lkoma/statechart/test/SequenceFailure;Ljava/util/List;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;Lkoma/observability/FailureDescriptor;ILjava/lang/Object;)Lkoma/statechart/test/SequenceFailure;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDecisionFailure ()Lkoma/observability/FailureDescriptor;
+	public final fun getIdentities ()Ljava/util/Set;
+	public final fun getInputs ()Ljava/util/List;
+	public final fun getSnapshot ()Lkoma/statechart/machine/MachineSnapshot;
+	public final fun getViolations ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/statechart/test/SettleKt {
 	public static final fun assertNoPendingWork (Lkoma/statechart/machine/MachineStore;Lkoma/test/StoreRecorder;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun assertNoPendingWork$default (Lkoma/statechart/machine/MachineStore;Lkoma/test/StoreRecorder;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static final fun pendingWork (Lkoma/statechart/machine/ExecutorCheckpoint;)Lkoma/statechart/test/MachinePendingWork;
 	public static final fun settle-8Mi8wO0 (Lkoma/statechart/machine/MachineStore;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun settle-8Mi8wO0$default (Lkoma/statechart/machine/MachineStore;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class koma/statechart/test/ShrinkReport {
+	public fun <init> (Lkoma/statechart/test/SequenceFailure;IZ)V
+	public final fun component1 ()Lkoma/statechart/test/SequenceFailure;
+	public final fun component2 ()I
+	public final fun component3 ()Z
+	public final fun copy (Lkoma/statechart/test/SequenceFailure;IZ)Lkoma/statechart/test/ShrinkReport;
+	public static synthetic fun copy$default (Lkoma/statechart/test/ShrinkReport;Lkoma/statechart/test/SequenceFailure;IZILjava/lang/Object;)Lkoma/statechart/test/ShrinkReport;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAttempts ()I
+	public final fun getFailure ()Lkoma/statechart/test/SequenceFailure;
+	public final fun getTruncated ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/test/ShrinkingKt {
+	public static final fun replaySequence (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;)Lkoma/statechart/test/SequenceFailure;
+	public static final fun shrink (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;I)Lkoma/statechart/test/ShrinkReport;
+	public static synthetic fun shrink$default (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/MachineSnapshot;Ljava/util/List;IILjava/lang/Object;)Lkoma/statechart/test/ShrinkReport;
 }
 
 public final class koma/statechart/test/VirtualMachineClock : koma/statechart/machine/MachineClock {

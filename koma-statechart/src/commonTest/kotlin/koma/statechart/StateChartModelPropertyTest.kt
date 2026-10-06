@@ -105,6 +105,9 @@ class StateChartModelPropertyTest {
     private fun renameIssue(issue: ValidationIssue, f: (StateId) -> StateId): ValidationIssue {
         fun Transition.r() = copy(source = f(source), target = f(target))
         return when (issue) {
+            is ValidationIssue.TransitionFromFinal -> ValidationIssue.TransitionFromFinal(issue.transition.r())
+            is ValidationIssue.InvalidCompletionSource -> ValidationIssue.InvalidCompletionSource(issue.transition.r())
+            is ValidationIssue.AmbiguousAutomaticTransitions -> ValidationIssue.AmbiguousAutomaticTransitions(f(issue.source), issue.trigger, issue.transitions.map { it.r() })
             is ValidationIssue.DuplicateStateId -> ValidationIssue.DuplicateStateId(f(issue.id))
             is ValidationIssue.UnknownInitialState -> ValidationIssue.UnknownInitialState(f(issue.id))
             is ValidationIssue.UnknownTransitionSource -> ValidationIssue.UnknownTransitionSource(issue.transition.r())
@@ -244,6 +247,9 @@ class StateChartModelPropertyTest {
                 is ValidationIssue.InvalidHistoryDefault,
                 is ValidationIssue.TransitionFromHistory,
                 -> error("seed $seed: hierarchy issue in a flat chart: $issue")
+                is ValidationIssue.TransitionFromFinal,
+                is ValidationIssue.InvalidCompletionSource,
+                is ValidationIssue.AmbiguousAutomaticTransitions,
                 is ValidationIssue.NonPositiveDelay,
                 is ValidationIssue.AmbiguousTimers,
                 -> error("seed $seed: timer issue in a chart without timers: $issue")

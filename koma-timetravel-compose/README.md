@@ -116,3 +116,9 @@ map branch effects to local member actions; recorded bridge metadata cannot reco
 those functions. External sources use scripted `BranchInput.Feed` data. While the workflow
 screen owns the cursor, do not move its replay session externally. Returning leaves all
 recorded checkpoints untouched; starting another experiment creates a fresh branch.
+
+The replay position also contains `StateChartPanel`: an interactive diagram with active and
+previous nodes, selectable transitions, timer details and actual guard outcomes. The explicit
+“Explain next input / check invariants” button computes one pure decision and checks the selected
+snapshot; composition itself never executes guards or business IO. The panel renders metadata,
+with context/action payloads left to an application's explicit projection.

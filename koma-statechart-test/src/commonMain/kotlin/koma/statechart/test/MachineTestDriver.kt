@@ -99,7 +99,9 @@ class MachineTestDriver<C, A : Action, CMD, E : Event>(
     /** Waits until the store is idle and returns the executor's checkpoint; see [MachineStore.settle]. */
     suspend fun settle(timeout: Duration = 10.seconds): ExecutorCheckpoint<C, CMD> {
         scheduler.runCurrent()
-        return store.settle(timeout)
+        val checkpoint = store.settle(timeout)
+        assertInvariants()
+        return checkpoint
     }
 
     /** Runs everything the scheduler has, timers included, then settles. */
@@ -168,6 +170,21 @@ class MachineTestDriver<C, A : Action, CMD, E : Event>(
      */
     fun assertContext(expected: C) {
         if (snapshot.context != expected) throw AssertionError("[Koma] Expected the context $expected, but it is ${snapshot.context}")
+    }
+
+    private var checkedSnapshots = 0
+
+    /** Checks every newly recorded stable snapshot, including transient states between settles. */
+    fun assertInvariants() {
+        val states = recorder.states
+        while (checkedSnapshots < states.size) {
+            val state = states[checkedSnapshots]
+            if (state.isStarted) {
+                val violations = machine.checkInvariants(state)
+                if (violations.isNotEmpty()) throw AssertionError("[Koma] Invariants violated at revision ${state.revision}: ${violations.map { it.name }}")
+            }
+            checkedSnapshots++
+        }
     }
 
     /** The end-of-test check; see [MachineStore.assertNoPendingWork]. */

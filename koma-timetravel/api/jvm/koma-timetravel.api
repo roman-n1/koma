@@ -444,6 +444,8 @@ public final class koma/timetravel/ReplayMismatch {
 public final class koma/timetravel/ReplaySession {
 	public fun <init> (Lkoma/statechart/machine/Machine;Lkoma/timetravel/Recording;)V
 	public final fun branch ()Lkoma/timetravel/Branch;
+	public final fun checkInvariants ()Ljava/util/List;
+	public final fun explainNext ()Lkoma/statechart/machine/ExplainedDecision;
 	public final fun getCheckpoint ()Lkoma/statechart/machine/ExecutorCheckpoint;
 	public final fun getLength ()I
 	public final fun getMachine ()Lkoma/statechart/machine/Machine;

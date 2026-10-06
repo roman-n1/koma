@@ -167,6 +167,14 @@ interface ChartLaunchScope<C, A : Action, E : Event> {
  */
 @KomaStoreDsl
 class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
+    internal var maxMicrosteps = 100
+
+    /** Bounds automatic transitions per input; lifecycle changes are staged until stability. */
+    fun maxMicrosteps(limit: Int) {
+        require(limit > 0) { "[Koma] Microstep limit must be positive" }
+        maxMicrosteps = limit
+    }
+
     internal val guards = mutableMapOf<String, (ChartState<C>, Action) -> Boolean>()
     internal val effects = mutableMapOf<String, (C, Action) -> C>()
     internal val enterHooks = mutableMapOf<StateId, MutableList<suspend ChartEnterScope<C, A, E>.() -> Unit>>()
@@ -194,6 +202,9 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
     fun effect(label: String, effect: (context: C, action: Action) -> C) {
         require(effects.put(label, effect) == null) { "[Koma] Effect '$label' is implemented twice" }
     }
+
+    fun guard(key: GuardKey, guard: (ChartState<C>, Action) -> Boolean) = guard(key.name, guard)
+    fun effect(key: EffectKey, effect: (C, Action) -> C) = effect(key.name, effect)
 
     /**
      * Adds a hook run whenever [id] is entered, outermost nodes first; hooks of one node run in
@@ -408,51 +419,82 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
             launches.clear()
         }
         activations.putAll(entered)
-        launches.forEach(tasks::trySend)
-        active.forEach(::startActivities)
         val expected = timersOf(active)
         val timers = if (state.timers.running.keys == expected.toSet()) state.timers else issue(ChartTimers(issued = state.timers.issued), expected)
-        expected.forEach { schedule(it, timers.running.getValue(it)) }
-        val next = state.copy(context = context, timers = timers)
+        var next = state.copy(context = context, timers = timers)
+        if (failure == null) {
+            try {
+                val automatic = runtime.automaticStep(next.configuration, next)
+                if (automatic is StepResult.Transitioned) {
+                    next = takeStep(next, automatic, AutomaticTransition(automatic.transitions.first().trigger == Trigger.Completion), this) { event(it) }
+                }
+            } catch (error: Exception) {
+                failure = error
+                next = state.copy(timers = timers)
+                launches.clear()
+            }
+        }
+        launches.filter { it.activation in activations.values }.forEach(tasks::trySend)
+        active.filter { activations[it] === entered[it] }.forEach(::startActivities)
+        expected.filter { next.timers.running[it] == timers.running[it] }.forEach { schedule(it, timers.running.getValue(it)) }
         if (next != restored) nextState { next }
         failure?.let { error -> launch { transaction { throw error } } }
     }
 
     /** Runs the hooks and effects of [result] and returns the state to commit. */
     private suspend fun takeStep(state: ChartState<C>, result: StepResult.Transitioned, action: Action, storeScope: StoreScope, emit: suspend (E) -> Unit): ChartState<C> {
-        var context = state.context
-        val entered = linkedMapOf<StateId, Job>()
+        var current = state
+        var step: StepResult.Transitioned = result
+        var stepAction = action
+        val working = activations.toMutableMap()
+        val created = mutableListOf<Job>()
+        val cancelled = mutableListOf<Job>()
         val launches = mutableListOf<Task>()
+        val automatic = if (action is AutomaticTransition) result.transitions.toMutableList() else mutableListOf()
+        var microsteps = if (action is AutomaticTransition) 1 else 0
         try {
-            for (id in result.exited) {
-                for (hook in config.exitHooks[id].orEmpty()) {
-                    val scope = ExitScope(id, action, context, storeScope, emit)
-                    scope.hook()
-                    context = scope.context
+            while (true) {
+                var context = current.context
+                for (id in step.exited) {
+                    for (hook in config.exitHooks[id].orEmpty()) {
+                        val scope = ExitScope(id, stepAction, context, storeScope, emit)
+                        scope.hook()
+                        context = scope.context
+                    }
+                    working.remove(id)?.let(cancelled::add)
                 }
+                for (transition in step.transitions) {
+                    transition.effect?.let { context = config.effects.getValue(it)(context, stepAction) }
+                }
+                for (id in step.entered) {
+                    val activation = Job()
+                    created += activation
+                    working[id] = activation
+                    context = enter(id, activation, context, stepAction, launches, storeScope, emit)
+                }
+                val timers = issue(current.timers.copy(running = current.timers.running - timersOf(step.exited).toSet()), timersOf(step.entered))
+                current = ChartState(step.configuration, context, timers)
+                val next = runtime.automaticStep(current.configuration, current)
+                if (next !is StepResult.Transitioned) break
+                if (microsteps >= config.maxMicrosteps) throw MicrostepLimitException(config.maxMicrosteps, automatic + next.transitions)
+                automatic += next.transitions
+                microsteps++
+                step = next
+                stepAction = AutomaticTransition(next.transitions.first().trigger == Trigger.Completion)
             }
-            for (transition in result.transitions) {
-                transition.effect?.let { context = config.effects.getValue(it)(context, action) }
-            }
-            for (id in result.entered) {
-                val activation = Job()
-                entered[id] = activation
-                context = enter(id, activation, context, action, launches, storeScope, emit)
-            }
-        } catch (e: Throwable) {
-            entered.values.forEach { it.cancel() }
-            throw e
+        } catch (error: Throwable) {
+            created.forEach { it.cancel() }
+            throw error
         }
-        result.exited.forEach { activations.remove(it)?.cancel() }
-        activations.putAll(entered)
-        // Work launched by enter hooks starts only now that every hook of the step has succeeded.
-        launches.forEach(tasks::trySend)
-        result.entered.forEach(::startActivities)
-        val cancelled = timersOf(result.exited)
-        val started = timersOf(result.entered)
-        val timers = issue(state.timers.copy(running = state.timers.running - cancelled.toSet()), started)
-        started.forEach { schedule(it, timers.running.getValue(it)) }
-        return ChartState(result.configuration, context, timers)
+        val entered = working.filter { (id, job) -> activations[id] !== job }.keys
+        cancelled.forEach { it.cancel() }
+        activations.clear()
+        activations.putAll(working)
+        launches.filter { it.activation.isActive }.forEach(tasks::trySend)
+        entered.forEach(::startActivities)
+        current.timers.running.filter { (index, token) -> state.timers.running[index] != token }
+            .forEach { (index, token) -> schedule(index, token) }
+        return current
     }
 
     private suspend fun enter(
@@ -519,7 +561,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         }
         val timer = definition.transitions[index]
         val next = when (val result = runtime.fire(state.configuration, state, timer)) {
-            is StepResult.Transitioned -> takeStep(state, result, TimerFired(timer), scope) { scope.event(it) }
+            is StepResult.Transitioned -> takeStep(state.copy(timers = state.timers.copy(running = state.timers.running - index)), result, TimerFired(timer), scope) { scope.event(it) }
             StepResult.Ignored -> state.copy(timers = state.timers.copy(running = state.timers.running - index))
         }
         scope.nextState { next }
