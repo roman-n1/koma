@@ -33,6 +33,7 @@ import koma.observability.file.SegmentMark
 import koma.timetravel.GroupRecorder
 import koma.timetravel.GroupReplaySession
 import koma.timetravel.GroupRoute
+import koma.timetravel.Recording
 import koma.timetravel.RecordingCodec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -246,6 +247,35 @@ class GroupRecordingFilesTest {
             assertTrue(contents.marks.any { it is RecordingFileMark.Damaged && it.mark is SegmentMark.Unfinished })
             assertEquals(emptyList(), GroupReplaySession(machines, read).verify(), "prefix $count")
         }
+    }
+
+    @Test
+    fun rotatedMemberAheadOfTheOnlyOrderPrefix_reportsThatItsOlderCheckpointIsMissing() = runTest {
+        val live = Live(this)
+        kicks(live, 3)
+        live.close()
+        val whole = live.recorder.recording()
+        val orderName = GroupRecordingFileFormat.segmentName(groupId, 0)
+        val order = GroupRecordingFileFormat.decodeSegment(orderName, live.storage.read(orderName))
+        // Keep both Start entries and the first ping Kick; pong's file now begins after step 1.
+        val entries = order.entries.take(3)
+        assertEquals(listOf(pingId, pongId, pingId), entries.map { it.store })
+        live.storage.delete(orderName)
+        live.storage.append(orderName).use { output ->
+            output.write(GroupRecordingFileFormat.header(checkNotNull(order.header)))
+            entries.forEach { output.write(GroupRecordingFileFormat.entryFrame(it)) }
+        }
+        val pongRecording = whole.members.getValue(pongId) as Recording<PongCtx, PongAct, NoCommand, PongEv>
+        live.storage.delete(RecordingFileFormat.segmentName(pongId, 0))
+        live.storage.append(RecordingFileFormat.segmentName(pongId, 1)).use { output ->
+            output.write(RecordingFileFormat.header(pong.id, pong.version, pongId, 1, 2))
+            output.write(RecordingFileFormat.checkpointFrame(pongCodec.encodeCheckpoint(pongRecording.checkpointAt(2))))
+            pongRecording.steps.drop(2).forEach { output.write(RecordingFileFormat.stepFrame(pongCodec.encodeStep(it))) }
+            output.write(Framing.END)
+        }
+        val contents = GroupRecordingFiles(live.storage).read(groupId, codecs)
+        assertEquals(null, contents.recording, "An unavailable checkpoint must not become a future state")
+        assertTrue(contents.marks.any { it is RecordingFileMark.StartMismatch && it.store == pongId })
     }
 
     @Test

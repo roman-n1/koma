@@ -226,6 +226,9 @@ read them after the writer is killed. Unflushed buffered bytes may be absent. A 
 is discarded and reported as `TruncatedTail`; an intact segment without END is `Unfinished`.
 Rotation is not atomic: the preceding segment remains readable if the next header is interrupted.
 Recording and group readers return the continuous range their files still cover, for replay.
+The group reader trims member steps beyond the surviving order. If rotation removed the
+checkpoint needed for a member with no entries in that range, it reports `StartMismatch` and
+returns no group recording, instead of substituting a newer state.
 
 This is a **process interruption contract**, not a power-loss guarantee. JVM/Android use
 `BufferedOutputStream.flush()` and iOS uses `fflush()`; neither requests `fsync`. A failure from
