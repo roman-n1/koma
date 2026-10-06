@@ -487,6 +487,12 @@ pagination transport.
 
 ### Effects in Compose
 
+Retained effects survive screen recreation with a live Store. `StateSaver` does not persist
+the mailbox across process death. For that boundary, keep a pending business intent in durable
+domain context and use a stable business id for idempotent handling. The
+[durable outbox example](../examples/durable-effects/README.md) uses real process crashes to
+check effect/acknowledgement ordering and explains the required external transaction boundary.
+
 [koma-statechart-compose](../koma-statechart-compose/README.md) subscribes a composition to the
 mailbox: `MailboxEffect(store.mailbox) { delivery -> … }` runs the block for each `Delivery`, one
 at a time, oldest first, and the block acknowledges it once the UI did what the effect asked. The

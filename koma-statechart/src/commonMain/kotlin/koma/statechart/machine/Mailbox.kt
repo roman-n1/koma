@@ -139,6 +139,11 @@ interface EffectListener<in E : Event> {
  * them. The mailbox lives with the Store, so it survives the UI: a subscriber that collects
  * [subscribe] after a recreation gets what the previous one never acknowledged. The effects
  * still pending are part of the Store's checkpoint.
+ *
+ * A `StateSaver` persists the machine snapshot, not this mailbox. After process death a new
+ * Store starts with an empty mailbox; its [EffectId] values are local to that run and can repeat.
+ * Durable delivery needs application-owned pending business intents in saved context and an
+ * idempotent external handler keyed by a stable business id. Startup can re-emit those intents.
  */
 interface EffectMailbox<E : Event> {
     /** The effects waiting or being handled, oldest first. */

@@ -19,6 +19,7 @@ The original Store DSL remains available.
 | Keep I/O separate from decisions and replay them | [A pure Machine below](#3-a-machine-makes-decisions-io-runs-afterward) |
 | Connect a Store to Compose | [koma-compose](koma-compose/README.md) |
 | Reproduce a bug from a saved run | [The runnable Time Travel example](examples/time-travel/README.md) |
+| Handle retained effects across process death | [The durable outbox example](examples/durable-effects/README.md) |
 | Look up the full original Store DSL | [Store API guide](doc/guides/store-api.md) |
 
 ## 1. A Store for a counter
@@ -200,6 +201,7 @@ Every library module has its own README with setup, examples and its contract.
 | [koma-timetravel](koma-timetravel/README.md) | Recording, codecs, checkpoints, replay and isolated branches |
 | [koma-timetravel-compose](koma-timetravel-compose/README.md) | Inspector UI and group replay/experiment controls |
 | [time-travel-example](examples/time-travel/README.md) | Runnable JVM debug application; not a published library |
+| [durable-effects-example](examples/durable-effects/README.md) | Runnable JVM outbox and idempotent-effect application; not a published library |
 
 ## Installation
 
