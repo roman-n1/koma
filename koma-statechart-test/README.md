@@ -102,3 +102,30 @@ choices. Breadth-first search keeps different contexts/history even when active 
 Neither coverage nor a successful bounded run proves safety beyond supplied payloads and depth.
 `MachineTestDriver` also checks every recorded stable snapshot on settle, including transient
 commits between two calls. Runtime-enforced violations appear in the driver's `failures` list.
+
+## Actual test coverage and generated plans
+
+`driver.coverage` accumulates actual transitions, successful macrostep entries, timer transitions
+and guard true/false outcomes without evaluating guards twice. Merge reports from tests of the
+same definition/version with `coverage.merge(other)`, print `coverage.describe(machine.chart)`
+and assert all or selected transitions with `coverage.assertTransitionsCovered(required)`.
+`MachineCoverageRecorder(machine)` is the equivalent observer for a directly constructed Store.
+
+```kotlin
+val plan = machine.generateTestPlan(initial, inputs, maxDepth = 10, maxDecisions = 10_000)
+plan.assertReady(requireOptimal = true)
+val result = machine.runPlan(initial, plan)
+result.assertSuccess()
+```
+
+The planner minimizes scenario count within the discovered executable prefixes. Selection has
+its own budget and reports `selectionOptimal`; exhausted discovery, unreachable declarations,
+missing payloads and invariant failures remain explicit. `ExplorationStrategy.AllTransitions`
+stops as soon as every declared transition has actually fired; breadth-first search can discover
+longer scenarios combining branches. `driver.generateTestPlan(inputs)` and `driver.verifyPlan(plan)`
+are independent pure-model operations, leaving its live Store and scripted IO untouched.
+
+`machine.runScenario(initial, MachineScenario(name, inputs))` also runs saved regression prefixes.
+Shrinking accepts an optional `preservesFailure` matcher for distinct bugs of the same exception
+type. Match domain context/inputs/identities; exception messages are omitted by default.
+See the [contracts and examples](../doc/internal/design/2026-10-06-derived-behavioural-features.md).

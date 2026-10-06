@@ -20,8 +20,8 @@ data class DefinitionDiff(
         addedStates.forEach { add("+ state ${it.id}") }
         removedStates.forEach { add("- state ${it.id}") }
         changedStates.forEach { add("~ state ${it.before.id}: ${it.before} -> ${it.after}") }
-        removedTransitions.forEach { add("- ${it.source} --${it.trigger}--> ${it.target}") }
-        addedTransitions.forEach { add("+ ${it.source} --${it.trigger}--> ${it.target}") }
+        removedTransitions.forEach { add("- ${it.behaviourLabel()}") }
+        addedTransitions.forEach { add("+ ${it.behaviourLabel()}") }
         if (initialChanged) add("~ initial state changed")
         if (transitionOrderChanged) add("~ transition identity/order changed")
         if (snapshotMigrationRequired) add("Persisted snapshots need migration review")
@@ -40,10 +40,14 @@ fun StateChartDefinition.diffTo(next: StateChartDefinition): DefinitionDiff {
         childrenOf(state.id).filter { it !is HistoryState }.map { it.id }.toSet() !=
             next.childrenOf(state.id).filter { it !is HistoryState }.map { it.id }.toSet()
     }
+    // Timer records persist TransitionId indices, activation and deadline. Reordering, removing
+    // or changing one cannot be declared snapshot-compatible merely because its nodes survived.
+    val timerDefinitionsChanged = transitions.withIndex().filter { it.value.isTimer } !=
+        next.transitions.withIndex().filter { it.value.isTimer }
     return DefinitionDiff(added, removed, changed,
         next.transitions - transitions.toSet(), transitions - next.transitions.toSet(),
         initial != next.initial, transitions != next.transitions,
-        removed.isNotEmpty() || changed.isNotEmpty() || parallelRegionsChanged,
+        removed.isNotEmpty() || changed.isNotEmpty() || parallelRegionsChanged || timerDefinitionsChanged,
         this != next,
     )
 }

@@ -571,6 +571,41 @@ public final class koma/statechart/TransitionKind : java/lang/Enum {
 	public static fun values ()[Lkoma/statechart/TransitionKind;
 }
 
+public final class koma/statechart/TransitionMatrix {
+	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public final fun cell-VJ8MipU (Ljava/lang/String;Lkoma/statechart/Trigger;)Ljava/util/List;
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;Ljava/util/List;)Lkoma/statechart/TransitionMatrix;
+	public static synthetic fun copy$default (Lkoma/statechart/TransitionMatrix;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lkoma/statechart/TransitionMatrix;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEntries ()Ljava/util/List;
+	public final fun getStates ()Ljava/util/List;
+	public final fun getTriggers ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun toMarkdown ()Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+	public final fun toTransitionTableMarkdown ()Ljava/lang/String;
+}
+
+public final class koma/statechart/TransitionMatrixEntry {
+	public fun <init> (ILkoma/statechart/Transition;)V
+	public final fun component1 ()I
+	public final fun component2 ()Lkoma/statechart/Transition;
+	public final fun copy (ILkoma/statechart/Transition;)Lkoma/statechart/TransitionMatrixEntry;
+	public static synthetic fun copy$default (Lkoma/statechart/TransitionMatrixEntry;ILkoma/statechart/Transition;ILjava/lang/Object;)Lkoma/statechart/TransitionMatrixEntry;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIndex ()I
+	public final fun getTransition ()Lkoma/statechart/Transition;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/TransitionMatrixKt {
+	public static final fun transitionMatrix (Lkoma/statechart/StateChartDefinition;)Lkoma/statechart/TransitionMatrix;
+}
+
 public abstract interface class koma/statechart/Trigger {
 }
 
@@ -899,6 +934,43 @@ public final class koma/statechart/machine/AbandonReason : java/lang/Enum {
 	public static fun values ()[Lkoma/statechart/machine/AbandonReason;
 }
 
+public final class koma/statechart/machine/ActionAvailability : java/lang/Enum {
+	public static final field Blocked Lkoma/statechart/machine/ActionAvailability;
+	public static final field Executable Lkoma/statechart/machine/ActionAvailability;
+	public static final field GuardFailed Lkoma/statechart/machine/ActionAvailability;
+	public static final field NotStarted Lkoma/statechart/machine/ActionAvailability;
+	public static final field Undeclared Lkoma/statechart/machine/ActionAvailability;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lkoma/statechart/machine/ActionAvailability;
+	public static fun values ()[Lkoma/statechart/machine/ActionAvailability;
+}
+
+public final class koma/statechart/machine/ActionDeclaration {
+	public synthetic fun <init> (Ljava/lang/String;Lkoma/statechart/machine/TransitionId;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Lkoma/statechart/machine/TransitionId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-LbxWZow ()Ljava/lang/String;
+	public final fun component2-45YK4nA ()Lkoma/statechart/machine/TransitionId;
+	public final fun copy-I-0oyhk (Ljava/lang/String;Lkoma/statechart/machine/TransitionId;)Lkoma/statechart/machine/ActionDeclaration;
+	public static synthetic fun copy-I-0oyhk$default (Lkoma/statechart/machine/ActionDeclaration;Ljava/lang/String;Lkoma/statechart/machine/TransitionId;ILjava/lang/Object;)Lkoma/statechart/machine/ActionDeclaration;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getNode-LbxWZow ()Ljava/lang/String;
+	public final fun getTransition-45YK4nA ()Lkoma/statechart/machine/TransitionId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/ActionRejectionReason : java/lang/Enum {
+	public static final field DecisionFailed Lkoma/statechart/machine/ActionRejectionReason;
+	public static final field GuardFailed Lkoma/statechart/machine/ActionRejectionReason;
+	public static final field GuardRejected Lkoma/statechart/machine/ActionRejectionReason;
+	public static final field IgnoredInput Lkoma/statechart/machine/ActionRejectionReason;
+	public static final field NoMatchingAction Lkoma/statechart/machine/ActionRejectionReason;
+	public static final field NotStarted Lkoma/statechart/machine/ActionRejectionReason;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lkoma/statechart/machine/ActionRejectionReason;
+	public static fun values ()[Lkoma/statechart/machine/ActionRejectionReason;
+}
+
 public final class koma/statechart/machine/Activation {
 	public synthetic fun <init> (Ljava/lang/String;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-LbxWZow ()Ljava/lang/String;
@@ -975,6 +1047,71 @@ public final class koma/statechart/machine/AdmissionPolicy$Unbounded : koma/stat
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/AvailableAction {
+	public fun <init> (Lkoma/core/Action;Lkoma/statechart/machine/ActionAvailability;Lkoma/statechart/machine/DecisionExplanation;Lkoma/statechart/machine/RejectionExplanation;)V
+	public synthetic fun <init> (Lkoma/core/Action;Lkoma/statechart/machine/ActionAvailability;Lkoma/statechart/machine/DecisionExplanation;Lkoma/statechart/machine/RejectionExplanation;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkoma/core/Action;
+	public final fun component2 ()Lkoma/statechart/machine/ActionAvailability;
+	public final fun component3 ()Lkoma/statechart/machine/DecisionExplanation;
+	public final fun component4 ()Lkoma/statechart/machine/RejectionExplanation;
+	public final fun copy (Lkoma/core/Action;Lkoma/statechart/machine/ActionAvailability;Lkoma/statechart/machine/DecisionExplanation;Lkoma/statechart/machine/RejectionExplanation;)Lkoma/statechart/machine/AvailableAction;
+	public static synthetic fun copy$default (Lkoma/statechart/machine/AvailableAction;Lkoma/core/Action;Lkoma/statechart/machine/ActionAvailability;Lkoma/statechart/machine/DecisionExplanation;Lkoma/statechart/machine/RejectionExplanation;ILjava/lang/Object;)Lkoma/statechart/machine/AvailableAction;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lkoma/core/Action;
+	public final fun getAvailability ()Lkoma/statechart/machine/ActionAvailability;
+	public final fun getRejection ()Lkoma/statechart/machine/RejectionExplanation;
+	public final fun getSelection ()Lkoma/statechart/machine/DecisionExplanation;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/AvailableActions {
+	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;)Lkoma/statechart/machine/AvailableActions;
+	public static synthetic fun copy$default (Lkoma/statechart/machine/AvailableActions;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lkoma/statechart/machine/AvailableActions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActions ()Ljava/util/List;
+	public final fun getBlocked ()Ljava/util/List;
+	public final fun getDeclared ()Ljava/util/List;
+	public final fun getExecutable ()Ljava/util/List;
+	public final fun getUndeclared ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/AvailableActionsKt {
+	public static final fun availableActions (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/MachineSnapshot;Ljava/lang/Iterable;)Lkoma/statechart/machine/AvailableActions;
+	public static final fun explainWhyRejected (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/ExplainedDecision;)Lkoma/statechart/machine/RejectionExplanation;
+	public static final fun explainWhyRejected-IpI11cQ (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/MachineSnapshot;Lkoma/core/Action;J)Lkoma/statechart/machine/RejectionExplanation;
+}
+
+public final class koma/statechart/machine/BehaviouralDiff {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/DefinitionDiff;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-i1OI-TI ()Ljava/lang/String;
+	public final fun component2-BnUQ-xA ()Ljava/lang/String;
+	public final fun component3-BnUQ-xA ()Ljava/lang/String;
+	public final fun component4 ()Lkoma/statechart/DefinitionDiff;
+	public final fun copy-t9WGeAk (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/DefinitionDiff;)Lkoma/statechart/machine/BehaviouralDiff;
+	public static synthetic fun copy-t9WGeAk$default (Lkoma/statechart/machine/BehaviouralDiff;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkoma/statechart/DefinitionDiff;ILjava/lang/Object;)Lkoma/statechart/machine/BehaviouralDiff;
+	public final fun describe ()Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDefinition-i1OI-TI ()Ljava/lang/String;
+	public final fun getFrom-BnUQ-xA ()Ljava/lang/String;
+	public final fun getImplementationsCompared ()Z
+	public final fun getModel ()Lkoma/statechart/DefinitionDiff;
+	public final fun getSnapshotMigrationReviewRequired ()Z
+	public final fun getTo-BnUQ-xA ()Ljava/lang/String;
+	public final fun getVersionBumpRequired ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/BehaviouralDiffKt {
+	public static final fun behaviouralDiffTo (Lkoma/statechart/machine/Machine;Lkoma/statechart/machine/Machine;)Lkoma/statechart/machine/BehaviouralDiff;
 }
 
 public final class koma/statechart/machine/BridgeMessage {
@@ -1259,6 +1396,31 @@ public final class koma/statechart/machine/DecisionOutcome$Ignored : koma/statec
 	public static synthetic fun copy$default (Lkoma/statechart/machine/DecisionOutcome$Ignored;Lkoma/statechart/machine/IgnoreReason;ILjava/lang/Object;)Lkoma/statechart/machine/DecisionOutcome$Ignored;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getReason ()Lkoma/statechart/machine/IgnoreReason;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class koma/statechart/machine/DecisionTraceObserver : koma/statechart/machine/DecisionObserver {
+	public abstract fun onDecided-3Z6dAtM (Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/ExplainedDecision;)V
+}
+
+public final class koma/statechart/machine/DecisionTraceObserver$DefaultImpls {
+	public static fun onClosed (Lkoma/statechart/machine/DecisionTraceObserver;Ljava/util/List;Ljava/util/List;)V
+	public static fun onCommitted-3Z6dAtM (Lkoma/statechart/machine/DecisionTraceObserver;Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/Decision;)V
+	public static fun onFailed-3Z6dAtM (Lkoma/statechart/machine/DecisionTraceObserver;Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/observability/FailureDescriptor;)V
+	public static fun onIgnored-3Z6dAtM (Lkoma/statechart/machine/DecisionTraceObserver;Lkoma/core/InputId;Lkoma/statechart/machine/MachineInput;Lkoma/statechart/machine/IgnoreReason;)V
+	public static fun onRejected (Lkoma/statechart/machine/DecisionTraceObserver;Lkoma/core/Action;Lkoma/statechart/machine/Admission$Rejected;)V
+}
+
+public final class koma/statechart/machine/DeclaredAction {
+	public fun <init> (Lkoma/statechart/ActionMatcher;Ljava/util/List;)V
+	public final fun component1 ()Lkoma/statechart/ActionMatcher;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Lkoma/statechart/ActionMatcher;Ljava/util/List;)Lkoma/statechart/machine/DeclaredAction;
+	public static synthetic fun copy$default (Lkoma/statechart/machine/DeclaredAction;Lkoma/statechart/ActionMatcher;Ljava/util/List;ILjava/lang/Object;)Lkoma/statechart/machine/DeclaredAction;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDeclarations ()Ljava/util/List;
+	public final fun getMatcher ()Lkoma/statechart/ActionMatcher;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -1576,6 +1738,21 @@ public final class koma/statechart/machine/GuardEvaluation {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class koma/statechart/machine/GuardRejection {
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-bvNF3-I ()I
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy-KG0BqJM (ILjava/lang/String;Ljava/lang/String;)Lkoma/statechart/machine/GuardRejection;
+	public static synthetic fun copy-KG0BqJM$default (Lkoma/statechart/machine/GuardRejection;ILjava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lkoma/statechart/machine/GuardRejection;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getLabel ()Ljava/lang/String;
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getTransition-bvNF3-I ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class koma/statechart/machine/IdempotencyKey {
 	public static final synthetic fun box-impl (Ljava/lang/String;)Lkoma/statechart/machine/IdempotencyKey;
 	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
@@ -1831,10 +2008,12 @@ public final class koma/statechart/machine/Machine {
 	public final fun checkInvariants (Lkoma/statechart/machine/MachineSnapshot;)Ljava/util/List;
 	public final fun decide (Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/machine/MachineInput;)Lkoma/statechart/machine/Decision;
 	public final fun decideExplained (Lkoma/statechart/machine/MachineSnapshot;Lkoma/statechart/machine/MachineInput;)Lkoma/statechart/machine/ExplainedDecision;
+	public final fun declaredActions (Lkoma/statechart/machine/MachineSnapshot;)Ljava/util/List;
 	public final fun getChart ()Lkoma/statechart/StateChartDefinition;
 	public final fun getId-i1OI-TI ()Ljava/lang/String;
 	public final fun getInvariants ()Ljava/util/List;
 	public final fun getVersion-BnUQ-xA ()Ljava/lang/String;
+	public final fun guardRejectionReason (Ljava/lang/String;)Ljava/lang/String;
 	public final fun initialSnapshot (Ljava/lang/Object;)Lkoma/statechart/machine/MachineSnapshot;
 	public final fun isComplete (Lkoma/statechart/machine/MachineSnapshot;)Z
 }
@@ -1856,7 +2035,9 @@ public final class koma/statechart/machine/MachineBuilder {
 	public final fun effect (Ljava/lang/String;Lkotlin/jvm/functions/Function2;)V
 	public final fun effect-Mik8a1M (Ljava/lang/String;Lkotlin/jvm/functions/Function2;)V
 	public final fun enforceInvariants ()V
+	public final fun guard (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function2;)V
 	public final fun guard (Ljava/lang/String;Lkotlin/jvm/functions/Function2;)V
+	public final fun guard-2b0QJhk (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function2;)V
 	public final fun guard-5o0AjsQ (Ljava/lang/String;Lkotlin/jvm/functions/Function2;)V
 	public final fun invariant (Ljava/lang/String;Lkotlin/jvm/functions/Function1;)V
 	public final fun maxMicrosteps (I)V
@@ -2224,6 +2405,25 @@ public final class koma/statechart/machine/PendingEffect {
 	public final fun getHandling ()Z
 	public final fun getId-q-9P1Rc ()J
 	public final fun getPolicy ()Lkoma/statechart/machine/EffectPolicy;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class koma/statechart/machine/RejectionExplanation {
+	public fun <init> (Lkoma/statechart/machine/ActionRejectionReason;Lkoma/statechart/machine/DecisionExplanation;Ljava/util/List;Lkoma/observability/FailureDescriptor;)V
+	public synthetic fun <init> (Lkoma/statechart/machine/ActionRejectionReason;Lkoma/statechart/machine/DecisionExplanation;Ljava/util/List;Lkoma/observability/FailureDescriptor;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lkoma/statechart/machine/ActionRejectionReason;
+	public final fun component2 ()Lkoma/statechart/machine/DecisionExplanation;
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Lkoma/observability/FailureDescriptor;
+	public final fun copy (Lkoma/statechart/machine/ActionRejectionReason;Lkoma/statechart/machine/DecisionExplanation;Ljava/util/List;Lkoma/observability/FailureDescriptor;)Lkoma/statechart/machine/RejectionExplanation;
+	public static synthetic fun copy$default (Lkoma/statechart/machine/RejectionExplanation;Lkoma/statechart/machine/ActionRejectionReason;Lkoma/statechart/machine/DecisionExplanation;Ljava/util/List;Lkoma/observability/FailureDescriptor;ILjava/lang/Object;)Lkoma/statechart/machine/RejectionExplanation;
+	public final fun describe ()Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFailure ()Lkoma/observability/FailureDescriptor;
+	public final fun getGuards ()Ljava/util/List;
+	public final fun getReason ()Lkoma/statechart/machine/ActionRejectionReason;
+	public final fun getSelection ()Lkoma/statechart/machine/DecisionExplanation;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

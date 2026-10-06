@@ -282,11 +282,13 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     private val innerApi: StoreInternalApi<MachineSnapshot<C>, MachineInput<A>, E>
         get() = inner as StoreInternalApi<MachineSnapshot<C>, MachineInput<A>, E>
 
+    @Suppress("UNCHECKED_CAST")
     private inline fun decide(snapshot: MachineSnapshot<C>, input: MachineInput<A>, inputId: InputId?, commit: (MachineSnapshot<C>) -> Unit) {
-        val explained = if (observers.any { it is DecisionExplanationObserver }) machine.decideExplained(snapshot, input) else null
+        val explained = if (observers.any { it is DecisionExplanationObserver || it is DecisionTraceObserver<*, *, *, *> }) machine.decideExplained(snapshot, input) else null
         val decision = explained?.decision ?: machine.decide(snapshot, input)
         if (explained != null) observe { observer ->
             (observer as? DecisionExplanationObserver)?.onExplained(inputId, explained.explanation)
+            (observer as? DecisionTraceObserver<C, A, CMD, E>)?.onDecided(inputId, input, explained)
         }
         when (val outcome = decision.outcome) {
             DecisionOutcome.Handled -> {
