@@ -129,6 +129,13 @@ recording.since(checkpoint)              // the run from the checkpoint on: repl
 
 ## Inspecting a run
 
+Generated or shrunk model-test inputs can become a recording without running a live Store:
+`machine.recordInputs(initialSnapshot, scenario.inputs)` decides each input once and retains
+ignored and failed steps for `ReplaySession`. For a started workflow, supply an authentic
+`ExecutorCheckpoint` with unfinished command payloads instead of a snapshot. Input time must
+not move backwards. This experimental debug helper executes no commands or events; the
+application owns serialization and redaction of the supplied data.
+
 ```kotlin
 val inspector = Inspector.of(session, recordings = mapOf(StoreInstanceId("list-7") to recorder.recording()))
 // or, after a process death: Inspector.of(JournalFiles(storage), sessionId, recordings)

@@ -17,6 +17,35 @@ final enum class koma.statechart.machine/AbandonReason : kotlin/Enum<koma.statec
     final fun values(): kotlin/Array<koma.statechart.machine/AbandonReason> // koma.statechart.machine/AbandonReason.values|values#static(){}[0]
 }
 
+final enum class koma.statechart.machine/ActionAvailability : kotlin/Enum<koma.statechart.machine/ActionAvailability> { // koma.statechart.machine/ActionAvailability|null[0]
+    enum entry Blocked // koma.statechart.machine/ActionAvailability.Blocked|null[0]
+    enum entry Executable // koma.statechart.machine/ActionAvailability.Executable|null[0]
+    enum entry GuardFailed // koma.statechart.machine/ActionAvailability.GuardFailed|null[0]
+    enum entry NotStarted // koma.statechart.machine/ActionAvailability.NotStarted|null[0]
+    enum entry Undeclared // koma.statechart.machine/ActionAvailability.Undeclared|null[0]
+
+    final val entries // koma.statechart.machine/ActionAvailability.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.statechart.machine/ActionAvailability> // koma.statechart.machine/ActionAvailability.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.statechart.machine/ActionAvailability // koma.statechart.machine/ActionAvailability.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.statechart.machine/ActionAvailability> // koma.statechart.machine/ActionAvailability.values|values#static(){}[0]
+}
+
+final enum class koma.statechart.machine/ActionRejectionReason : kotlin/Enum<koma.statechart.machine/ActionRejectionReason> { // koma.statechart.machine/ActionRejectionReason|null[0]
+    enum entry DecisionFailed // koma.statechart.machine/ActionRejectionReason.DecisionFailed|null[0]
+    enum entry GuardFailed // koma.statechart.machine/ActionRejectionReason.GuardFailed|null[0]
+    enum entry GuardRejected // koma.statechart.machine/ActionRejectionReason.GuardRejected|null[0]
+    enum entry IgnoredInput // koma.statechart.machine/ActionRejectionReason.IgnoredInput|null[0]
+    enum entry NoMatchingAction // koma.statechart.machine/ActionRejectionReason.NoMatchingAction|null[0]
+    enum entry NotStarted // koma.statechart.machine/ActionRejectionReason.NotStarted|null[0]
+
+    final val entries // koma.statechart.machine/ActionRejectionReason.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<koma.statechart.machine/ActionRejectionReason> // koma.statechart.machine/ActionRejectionReason.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): koma.statechart.machine/ActionRejectionReason // koma.statechart.machine/ActionRejectionReason.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<koma.statechart.machine/ActionRejectionReason> // koma.statechart.machine/ActionRejectionReason.values|values#static(){}[0]
+}
+
 final enum class koma.statechart.machine/CandidateDisposition : kotlin/Enum<koma.statechart.machine/CandidateDisposition> { // koma.statechart.machine/CandidateDisposition|null[0]
     enum entry ConflictLost // koma.statechart.machine/CandidateDisposition.ConflictLost|null[0]
     enum entry GuardFailed // koma.statechart.machine/CandidateDisposition.GuardFailed|null[0]
@@ -146,6 +175,10 @@ abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: 
     open fun onFailed(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.observability/FailureDescriptor) // koma.statechart.machine/DecisionObserver.onFailed|onFailed(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.observability.FailureDescriptor){}[0]
     open fun onIgnored(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/IgnoreReason) // koma.statechart.machine/DecisionObserver.onIgnored|onIgnored(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.IgnoreReason){}[0]
     open fun onRejected(#B, koma.statechart.machine/Admission.Rejected) // koma.statechart.machine/DecisionObserver.onRejected|onRejected(1:1;koma.statechart.machine.Admission.Rejected){}[0]
+}
+
+abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/DecisionTraceObserver : koma.statechart.machine/DecisionObserver<#A, #B, #C, #D> { // koma.statechart.machine/DecisionTraceObserver|null[0]
+    abstract fun onDecided(koma.core/InputId?, koma.statechart.machine/MachineInput<#B>, koma.statechart.machine/ExplainedDecision<#A, #C, #D>) // koma.statechart.machine/DecisionTraceObserver.onDecided|onDecided(koma.core.InputId?;koma.statechart.machine.MachineInput<1:1>;koma.statechart.machine.ExplainedDecision<1:0,1:2,1:3>){}[0]
 }
 
 abstract interface <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/MachineStore : koma.core/Store<koma.statechart.machine/MachineSnapshot<#A>, #B, #D> { // koma.statechart.machine/MachineStore|null[0]
@@ -1098,6 +1131,50 @@ sealed interface koma.statechart/ValidationIssue { // koma.statechart/Validation
     }
 }
 
+final class <#A: koma.core/Action> koma.statechart.machine/AvailableAction { // koma.statechart.machine/AvailableAction|null[0]
+    constructor <init>(#A, koma.statechart.machine/ActionAvailability, koma.statechart.machine/DecisionExplanation, koma.statechart.machine/RejectionExplanation? = ...) // koma.statechart.machine/AvailableAction.<init>|<init>(1:0;koma.statechart.machine.ActionAvailability;koma.statechart.machine.DecisionExplanation;koma.statechart.machine.RejectionExplanation?){}[0]
+
+    final val action // koma.statechart.machine/AvailableAction.action|{}action[0]
+        final fun <get-action>(): #A // koma.statechart.machine/AvailableAction.action.<get-action>|<get-action>(){}[0]
+    final val availability // koma.statechart.machine/AvailableAction.availability|{}availability[0]
+        final fun <get-availability>(): koma.statechart.machine/ActionAvailability // koma.statechart.machine/AvailableAction.availability.<get-availability>|<get-availability>(){}[0]
+    final val rejection // koma.statechart.machine/AvailableAction.rejection|{}rejection[0]
+        final fun <get-rejection>(): koma.statechart.machine/RejectionExplanation? // koma.statechart.machine/AvailableAction.rejection.<get-rejection>|<get-rejection>(){}[0]
+    final val selection // koma.statechart.machine/AvailableAction.selection|{}selection[0]
+        final fun <get-selection>(): koma.statechart.machine/DecisionExplanation // koma.statechart.machine/AvailableAction.selection.<get-selection>|<get-selection>(){}[0]
+
+    final fun component1(): #A // koma.statechart.machine/AvailableAction.component1|component1(){}[0]
+    final fun component2(): koma.statechart.machine/ActionAvailability // koma.statechart.machine/AvailableAction.component2|component2(){}[0]
+    final fun component3(): koma.statechart.machine/DecisionExplanation // koma.statechart.machine/AvailableAction.component3|component3(){}[0]
+    final fun component4(): koma.statechart.machine/RejectionExplanation? // koma.statechart.machine/AvailableAction.component4|component4(){}[0]
+    final fun copy(#A = ..., koma.statechart.machine/ActionAvailability = ..., koma.statechart.machine/DecisionExplanation = ..., koma.statechart.machine/RejectionExplanation? = ...): koma.statechart.machine/AvailableAction<#A> // koma.statechart.machine/AvailableAction.copy|copy(1:0;koma.statechart.machine.ActionAvailability;koma.statechart.machine.DecisionExplanation;koma.statechart.machine.RejectionExplanation?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/AvailableAction.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.machine/AvailableAction.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.machine/AvailableAction.toString|toString(){}[0]
+}
+
+final class <#A: koma.core/Action> koma.statechart.machine/AvailableActions { // koma.statechart.machine/AvailableActions|null[0]
+    constructor <init>(kotlin.collections/List<koma.statechart.machine/DeclaredAction>, kotlin.collections/List<koma.statechart.machine/AvailableAction<#A>>) // koma.statechart.machine/AvailableActions.<init>|<init>(kotlin.collections.List<koma.statechart.machine.DeclaredAction>;kotlin.collections.List<koma.statechart.machine.AvailableAction<1:0>>){}[0]
+
+    final val actions // koma.statechart.machine/AvailableActions.actions|{}actions[0]
+        final fun <get-actions>(): kotlin.collections/List<koma.statechart.machine/AvailableAction<#A>> // koma.statechart.machine/AvailableActions.actions.<get-actions>|<get-actions>(){}[0]
+    final val blocked // koma.statechart.machine/AvailableActions.blocked|{}blocked[0]
+        final fun <get-blocked>(): kotlin.collections/List<koma.statechart.machine/AvailableAction<#A>> // koma.statechart.machine/AvailableActions.blocked.<get-blocked>|<get-blocked>(){}[0]
+    final val declared // koma.statechart.machine/AvailableActions.declared|{}declared[0]
+        final fun <get-declared>(): kotlin.collections/List<koma.statechart.machine/DeclaredAction> // koma.statechart.machine/AvailableActions.declared.<get-declared>|<get-declared>(){}[0]
+    final val executable // koma.statechart.machine/AvailableActions.executable|{}executable[0]
+        final fun <get-executable>(): kotlin.collections/List<koma.statechart.machine/AvailableAction<#A>> // koma.statechart.machine/AvailableActions.executable.<get-executable>|<get-executable>(){}[0]
+    final val undeclared // koma.statechart.machine/AvailableActions.undeclared|{}undeclared[0]
+        final fun <get-undeclared>(): kotlin.collections/List<koma.statechart.machine/AvailableAction<#A>> // koma.statechart.machine/AvailableActions.undeclared.<get-undeclared>|<get-undeclared>(){}[0]
+
+    final fun component1(): kotlin.collections/List<koma.statechart.machine/DeclaredAction> // koma.statechart.machine/AvailableActions.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<koma.statechart.machine/AvailableAction<#A>> // koma.statechart.machine/AvailableActions.component2|component2(){}[0]
+    final fun copy(kotlin.collections/List<koma.statechart.machine/DeclaredAction> = ..., kotlin.collections/List<koma.statechart.machine/AvailableAction<#A>> = ...): koma.statechart.machine/AvailableActions<#A> // koma.statechart.machine/AvailableActions.copy|copy(kotlin.collections.List<koma.statechart.machine.DeclaredAction>;kotlin.collections.List<koma.statechart.machine.AvailableAction<1:0>>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/AvailableActions.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.machine/AvailableActions.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.machine/AvailableActions.toString|toString(){}[0]
+}
+
 final class <#A: koma.core/Event> koma.statechart.machine/MailboxConfig { // koma.statechart.machine/MailboxConfig|null[0]
     constructor <init>(kotlin/Function1<#A, koma.statechart.machine/EffectPolicy> = ..., kotlin/Int = ..., kotlin.collections/List<koma.statechart.machine/EffectListener<#A>> = ...) // koma.statechart.machine/MailboxConfig.<init>|<init>(kotlin.Function1<1:0,koma.statechart.machine.EffectPolicy>;kotlin.Int;kotlin.collections.List<koma.statechart.machine.EffectListener<1:0>>){}[0]
 
@@ -1213,6 +1290,8 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
     final fun checkInvariants(koma.statechart.machine/MachineSnapshot<#A>): kotlin.collections/List<koma.statechart.machine/InvariantViolation> // koma.statechart.machine/Machine.checkInvariants|checkInvariants(koma.statechart.machine.MachineSnapshot<1:0>){}[0]
     final fun decide(koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.machine/MachineInput<#B>): koma.statechart.machine/Decision<#A, #C, #D> // koma.statechart.machine/Machine.decide|decide(koma.statechart.machine.MachineSnapshot<1:0>;koma.statechart.machine.MachineInput<1:1>){}[0]
     final fun decideExplained(koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.machine/MachineInput<#B>): koma.statechart.machine/ExplainedDecision<#A, #C, #D> // koma.statechart.machine/Machine.decideExplained|decideExplained(koma.statechart.machine.MachineSnapshot<1:0>;koma.statechart.machine.MachineInput<1:1>){}[0]
+    final fun declaredActions(koma.statechart.machine/MachineSnapshot<#A>): kotlin.collections/List<koma.statechart.machine/DeclaredAction> // koma.statechart.machine/Machine.declaredActions|declaredActions(koma.statechart.machine.MachineSnapshot<1:0>){}[0]
+    final fun guardRejectionReason(kotlin/String): kotlin/String? // koma.statechart.machine/Machine.guardRejectionReason|guardRejectionReason(kotlin.String){}[0]
     final fun initialSnapshot(#A): koma.statechart.machine/MachineSnapshot<#A> // koma.statechart.machine/Machine.initialSnapshot|initialSnapshot(1:0){}[0]
     final fun isComplete(koma.statechart.machine/MachineSnapshot<#A>): kotlin/Boolean // koma.statechart.machine/Machine.isComplete|isComplete(koma.statechart.machine.MachineSnapshot<1:0>){}[0]
 }
@@ -1222,7 +1301,9 @@ final class <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.co
     final fun effect(kotlin/String, kotlin/Function2<#A, koma.core/Action, #A>) // koma.statechart.machine/MachineBuilder.effect|effect(kotlin.String;kotlin.Function2<1:0,koma.core.Action,1:0>){}[0]
     final fun enforceInvariants() // koma.statechart.machine/MachineBuilder.enforceInvariants|enforceInvariants(){}[0]
     final fun guard(koma.statechart/GuardKey, kotlin/Function2<koma.statechart.machine/MachineSnapshot<#A>, koma.core/Action, kotlin/Boolean>) // koma.statechart.machine/MachineBuilder.guard|guard(koma.statechart.GuardKey;kotlin.Function2<koma.statechart.machine.MachineSnapshot<1:0>,koma.core.Action,kotlin.Boolean>){}[0]
+    final fun guard(koma.statechart/GuardKey, kotlin/String, kotlin/Function2<koma.statechart.machine/MachineSnapshot<#A>, koma.core/Action, kotlin/Boolean>) // koma.statechart.machine/MachineBuilder.guard|guard(koma.statechart.GuardKey;kotlin.String;kotlin.Function2<koma.statechart.machine.MachineSnapshot<1:0>,koma.core.Action,kotlin.Boolean>){}[0]
     final fun guard(kotlin/String, kotlin/Function2<koma.statechart.machine/MachineSnapshot<#A>, koma.core/Action, kotlin/Boolean>) // koma.statechart.machine/MachineBuilder.guard|guard(kotlin.String;kotlin.Function2<koma.statechart.machine.MachineSnapshot<1:0>,koma.core.Action,kotlin.Boolean>){}[0]
+    final fun guard(kotlin/String, kotlin/String, kotlin/Function2<koma.statechart.machine/MachineSnapshot<#A>, koma.core/Action, kotlin/Boolean>) // koma.statechart.machine/MachineBuilder.guard|guard(kotlin.String;kotlin.String;kotlin.Function2<koma.statechart.machine.MachineSnapshot<1:0>,koma.core.Action,kotlin.Boolean>){}[0]
     final fun invariant(kotlin/String, kotlin/Function1<koma.statechart.machine/MachineSnapshot<#A>, kotlin/Boolean>) // koma.statechart.machine/MachineBuilder.invariant|invariant(kotlin.String;kotlin.Function1<koma.statechart.machine.MachineSnapshot<1:0>,kotlin.Boolean>){}[0]
     final fun maxMicrosteps(kotlin/Int) // koma.statechart.machine/MachineBuilder.maxMicrosteps|maxMicrosteps(kotlin.Int){}[0]
     final fun onAction(koma.statechart/StateId, koma.statechart/ActionMatcher, kotlin/Function1<koma.statechart.machine/MachineActionScope<#A, #B, #C, #D>, kotlin/Unit>) // koma.statechart.machine/MachineBuilder.onAction|onAction(koma.statechart.StateId;koma.statechart.ActionMatcher;kotlin.Function1<koma.statechart.machine.MachineActionScope<1:0,1:1,1:2,1:3>,kotlin.Unit>){}[0]
@@ -1728,6 +1809,22 @@ final class <#A: out kotlin/Any?> koma.statechart.machine/CommandRegistration { 
     final fun toString(): kotlin/String // koma.statechart.machine/CommandRegistration.toString|toString(){}[0]
 }
 
+final class koma.statechart.machine/ActionDeclaration { // koma.statechart.machine/ActionDeclaration|null[0]
+    constructor <init>(koma.statechart/StateId, koma.statechart.machine/TransitionId? = ...) // koma.statechart.machine/ActionDeclaration.<init>|<init>(koma.statechart.StateId;koma.statechart.machine.TransitionId?){}[0]
+
+    final val node // koma.statechart.machine/ActionDeclaration.node|{}node[0]
+        final fun <get-node>(): koma.statechart/StateId // koma.statechart.machine/ActionDeclaration.node.<get-node>|<get-node>(){}[0]
+    final val transition // koma.statechart.machine/ActionDeclaration.transition|{}transition[0]
+        final fun <get-transition>(): koma.statechart.machine/TransitionId? // koma.statechart.machine/ActionDeclaration.transition.<get-transition>|<get-transition>(){}[0]
+
+    final fun component1(): koma.statechart/StateId // koma.statechart.machine/ActionDeclaration.component1|component1(){}[0]
+    final fun component2(): koma.statechart.machine/TransitionId? // koma.statechart.machine/ActionDeclaration.component2|component2(){}[0]
+    final fun copy(koma.statechart/StateId = ..., koma.statechart.machine/TransitionId? = ...): koma.statechart.machine/ActionDeclaration // koma.statechart.machine/ActionDeclaration.copy|copy(koma.statechart.StateId;koma.statechart.machine.TransitionId?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/ActionDeclaration.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.machine/ActionDeclaration.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.machine/ActionDeclaration.toString|toString(){}[0]
+}
+
 final class koma.statechart.machine/Activation { // koma.statechart.machine/Activation|null[0]
     constructor <init>(koma.statechart/StateId, koma.statechart.machine/ActivationId) // koma.statechart.machine/Activation.<init>|<init>(koma.statechart.StateId;koma.statechart.machine.ActivationId){}[0]
 
@@ -1742,6 +1839,35 @@ final class koma.statechart.machine/Activation { // koma.statechart.machine/Acti
     final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/Activation.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // koma.statechart.machine/Activation.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // koma.statechart.machine/Activation.toString|toString(){}[0]
+}
+
+final class koma.statechart.machine/BehaviouralDiff { // koma.statechart.machine/BehaviouralDiff|null[0]
+    constructor <init>(koma.statechart.machine/DefinitionId, koma.statechart.machine/DefinitionVersion, koma.statechart.machine/DefinitionVersion, koma.statechart/DefinitionDiff) // koma.statechart.machine/BehaviouralDiff.<init>|<init>(koma.statechart.machine.DefinitionId;koma.statechart.machine.DefinitionVersion;koma.statechart.machine.DefinitionVersion;koma.statechart.DefinitionDiff){}[0]
+
+    final val definition // koma.statechart.machine/BehaviouralDiff.definition|{}definition[0]
+        final fun <get-definition>(): koma.statechart.machine/DefinitionId // koma.statechart.machine/BehaviouralDiff.definition.<get-definition>|<get-definition>(){}[0]
+    final val from // koma.statechart.machine/BehaviouralDiff.from|{}from[0]
+        final fun <get-from>(): koma.statechart.machine/DefinitionVersion // koma.statechart.machine/BehaviouralDiff.from.<get-from>|<get-from>(){}[0]
+    final val implementationsCompared // koma.statechart.machine/BehaviouralDiff.implementationsCompared|{}implementationsCompared[0]
+        final fun <get-implementationsCompared>(): kotlin/Boolean // koma.statechart.machine/BehaviouralDiff.implementationsCompared.<get-implementationsCompared>|<get-implementationsCompared>(){}[0]
+    final val model // koma.statechart.machine/BehaviouralDiff.model|{}model[0]
+        final fun <get-model>(): koma.statechart/DefinitionDiff // koma.statechart.machine/BehaviouralDiff.model.<get-model>|<get-model>(){}[0]
+    final val snapshotMigrationReviewRequired // koma.statechart.machine/BehaviouralDiff.snapshotMigrationReviewRequired|{}snapshotMigrationReviewRequired[0]
+        final fun <get-snapshotMigrationReviewRequired>(): kotlin/Boolean // koma.statechart.machine/BehaviouralDiff.snapshotMigrationReviewRequired.<get-snapshotMigrationReviewRequired>|<get-snapshotMigrationReviewRequired>(){}[0]
+    final val to // koma.statechart.machine/BehaviouralDiff.to|{}to[0]
+        final fun <get-to>(): koma.statechart.machine/DefinitionVersion // koma.statechart.machine/BehaviouralDiff.to.<get-to>|<get-to>(){}[0]
+    final val versionBumpRequired // koma.statechart.machine/BehaviouralDiff.versionBumpRequired|{}versionBumpRequired[0]
+        final fun <get-versionBumpRequired>(): kotlin/Boolean // koma.statechart.machine/BehaviouralDiff.versionBumpRequired.<get-versionBumpRequired>|<get-versionBumpRequired>(){}[0]
+
+    final fun component1(): koma.statechart.machine/DefinitionId // koma.statechart.machine/BehaviouralDiff.component1|component1(){}[0]
+    final fun component2(): koma.statechart.machine/DefinitionVersion // koma.statechart.machine/BehaviouralDiff.component2|component2(){}[0]
+    final fun component3(): koma.statechart.machine/DefinitionVersion // koma.statechart.machine/BehaviouralDiff.component3|component3(){}[0]
+    final fun component4(): koma.statechart/DefinitionDiff // koma.statechart.machine/BehaviouralDiff.component4|component4(){}[0]
+    final fun copy(koma.statechart.machine/DefinitionId = ..., koma.statechart.machine/DefinitionVersion = ..., koma.statechart.machine/DefinitionVersion = ..., koma.statechart/DefinitionDiff = ...): koma.statechart.machine/BehaviouralDiff // koma.statechart.machine/BehaviouralDiff.copy|copy(koma.statechart.machine.DefinitionId;koma.statechart.machine.DefinitionVersion;koma.statechart.machine.DefinitionVersion;koma.statechart.DefinitionDiff){}[0]
+    final fun describe(): kotlin/String // koma.statechart.machine/BehaviouralDiff.describe|describe(){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/BehaviouralDiff.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.machine/BehaviouralDiff.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.machine/BehaviouralDiff.toString|toString(){}[0]
 }
 
 final class koma.statechart.machine/BridgeMessage { // koma.statechart.machine/BridgeMessage|null[0]
@@ -1846,6 +1972,22 @@ final class koma.statechart.machine/DecisionExplanation { // koma.statechart.mac
     final fun toString(): kotlin/String // koma.statechart.machine/DecisionExplanation.toString|toString(){}[0]
 }
 
+final class koma.statechart.machine/DeclaredAction { // koma.statechart.machine/DeclaredAction|null[0]
+    constructor <init>(koma.statechart/ActionMatcher, kotlin.collections/List<koma.statechart.machine/ActionDeclaration>) // koma.statechart.machine/DeclaredAction.<init>|<init>(koma.statechart.ActionMatcher;kotlin.collections.List<koma.statechart.machine.ActionDeclaration>){}[0]
+
+    final val declarations // koma.statechart.machine/DeclaredAction.declarations|{}declarations[0]
+        final fun <get-declarations>(): kotlin.collections/List<koma.statechart.machine/ActionDeclaration> // koma.statechart.machine/DeclaredAction.declarations.<get-declarations>|<get-declarations>(){}[0]
+    final val matcher // koma.statechart.machine/DeclaredAction.matcher|{}matcher[0]
+        final fun <get-matcher>(): koma.statechart/ActionMatcher // koma.statechart.machine/DeclaredAction.matcher.<get-matcher>|<get-matcher>(){}[0]
+
+    final fun component1(): koma.statechart/ActionMatcher // koma.statechart.machine/DeclaredAction.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<koma.statechart.machine/ActionDeclaration> // koma.statechart.machine/DeclaredAction.component2|component2(){}[0]
+    final fun copy(koma.statechart/ActionMatcher = ..., kotlin.collections/List<koma.statechart.machine/ActionDeclaration> = ...): koma.statechart.machine/DeclaredAction // koma.statechart.machine/DeclaredAction.copy|copy(koma.statechart.ActionMatcher;kotlin.collections.List<koma.statechart.machine.ActionDeclaration>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/DeclaredAction.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.machine/DeclaredAction.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.machine/DeclaredAction.toString|toString(){}[0]
+}
+
 final class koma.statechart.machine/DurableConflictException : kotlin/IllegalStateException { // koma.statechart.machine/DurableConflictException|null[0]
     constructor <init>() // koma.statechart.machine/DurableConflictException.<init>|<init>(){}[0]
 }
@@ -1895,6 +2037,25 @@ final class koma.statechart.machine/GuardEvaluation { // koma.statechart.machine
     final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/GuardEvaluation.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // koma.statechart.machine/GuardEvaluation.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // koma.statechart.machine/GuardEvaluation.toString|toString(){}[0]
+}
+
+final class koma.statechart.machine/GuardRejection { // koma.statechart.machine/GuardRejection|null[0]
+    constructor <init>(koma.statechart.machine/TransitionId, kotlin/String, kotlin/String?) // koma.statechart.machine/GuardRejection.<init>|<init>(koma.statechart.machine.TransitionId;kotlin.String;kotlin.String?){}[0]
+
+    final val label // koma.statechart.machine/GuardRejection.label|{}label[0]
+        final fun <get-label>(): kotlin/String // koma.statechart.machine/GuardRejection.label.<get-label>|<get-label>(){}[0]
+    final val reason // koma.statechart.machine/GuardRejection.reason|{}reason[0]
+        final fun <get-reason>(): kotlin/String? // koma.statechart.machine/GuardRejection.reason.<get-reason>|<get-reason>(){}[0]
+    final val transition // koma.statechart.machine/GuardRejection.transition|{}transition[0]
+        final fun <get-transition>(): koma.statechart.machine/TransitionId // koma.statechart.machine/GuardRejection.transition.<get-transition>|<get-transition>(){}[0]
+
+    final fun component1(): koma.statechart.machine/TransitionId // koma.statechart.machine/GuardRejection.component1|component1(){}[0]
+    final fun component2(): kotlin/String // koma.statechart.machine/GuardRejection.component2|component2(){}[0]
+    final fun component3(): kotlin/String? // koma.statechart.machine/GuardRejection.component3|component3(){}[0]
+    final fun copy(koma.statechart.machine/TransitionId = ..., kotlin/String = ..., kotlin/String? = ...): koma.statechart.machine/GuardRejection // koma.statechart.machine/GuardRejection.copy|copy(koma.statechart.machine.TransitionId;kotlin.String;kotlin.String?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/GuardRejection.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.machine/GuardRejection.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.machine/GuardRejection.toString|toString(){}[0]
 }
 
 final class koma.statechart.machine/InvariantViolation { // koma.statechart.machine/InvariantViolation|null[0]
@@ -2046,6 +2207,29 @@ final class koma.statechart.machine/MessageId { // koma.statechart.machine/Messa
     final fun hashCode(): kotlin/Int // koma.statechart.machine/MessageId.hashCode|hashCode(){}[0]
     final fun toRef(): koma.observability/MessageRef // koma.statechart.machine/MessageId.toRef|toRef(){}[0]
     final fun toString(): kotlin/String // koma.statechart.machine/MessageId.toString|toString(){}[0]
+}
+
+final class koma.statechart.machine/RejectionExplanation { // koma.statechart.machine/RejectionExplanation|null[0]
+    constructor <init>(koma.statechart.machine/ActionRejectionReason, koma.statechart.machine/DecisionExplanation, kotlin.collections/List<koma.statechart.machine/GuardRejection> = ..., koma.observability/FailureDescriptor? = ...) // koma.statechart.machine/RejectionExplanation.<init>|<init>(koma.statechart.machine.ActionRejectionReason;koma.statechart.machine.DecisionExplanation;kotlin.collections.List<koma.statechart.machine.GuardRejection>;koma.observability.FailureDescriptor?){}[0]
+
+    final val failure // koma.statechart.machine/RejectionExplanation.failure|{}failure[0]
+        final fun <get-failure>(): koma.observability/FailureDescriptor? // koma.statechart.machine/RejectionExplanation.failure.<get-failure>|<get-failure>(){}[0]
+    final val guards // koma.statechart.machine/RejectionExplanation.guards|{}guards[0]
+        final fun <get-guards>(): kotlin.collections/List<koma.statechart.machine/GuardRejection> // koma.statechart.machine/RejectionExplanation.guards.<get-guards>|<get-guards>(){}[0]
+    final val reason // koma.statechart.machine/RejectionExplanation.reason|{}reason[0]
+        final fun <get-reason>(): koma.statechart.machine/ActionRejectionReason // koma.statechart.machine/RejectionExplanation.reason.<get-reason>|<get-reason>(){}[0]
+    final val selection // koma.statechart.machine/RejectionExplanation.selection|{}selection[0]
+        final fun <get-selection>(): koma.statechart.machine/DecisionExplanation // koma.statechart.machine/RejectionExplanation.selection.<get-selection>|<get-selection>(){}[0]
+
+    final fun component1(): koma.statechart.machine/ActionRejectionReason // koma.statechart.machine/RejectionExplanation.component1|component1(){}[0]
+    final fun component2(): koma.statechart.machine/DecisionExplanation // koma.statechart.machine/RejectionExplanation.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<koma.statechart.machine/GuardRejection> // koma.statechart.machine/RejectionExplanation.component3|component3(){}[0]
+    final fun component4(): koma.observability/FailureDescriptor? // koma.statechart.machine/RejectionExplanation.component4|component4(){}[0]
+    final fun copy(koma.statechart.machine/ActionRejectionReason = ..., koma.statechart.machine/DecisionExplanation = ..., kotlin.collections/List<koma.statechart.machine/GuardRejection> = ..., koma.observability/FailureDescriptor? = ...): koma.statechart.machine/RejectionExplanation // koma.statechart.machine/RejectionExplanation.copy|copy(koma.statechart.machine.ActionRejectionReason;koma.statechart.machine.DecisionExplanation;kotlin.collections.List<koma.statechart.machine.GuardRejection>;koma.observability.FailureDescriptor?){}[0]
+    final fun describe(): kotlin/String // koma.statechart.machine/RejectionExplanation.describe|describe(){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart.machine/RejectionExplanation.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart.machine/RejectionExplanation.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart.machine/RejectionExplanation.toString|toString(){}[0]
 }
 
 final class koma.statechart.machine/RequestReply { // koma.statechart.machine/RequestReply|null[0]
@@ -2502,6 +2686,44 @@ final class koma.statechart/TransitionBuilder { // koma.statechart/TransitionBui
     final fun internal() // koma.statechart/TransitionBuilder.internal|internal(){}[0]
 }
 
+final class koma.statechart/TransitionMatrix { // koma.statechart/TransitionMatrix|null[0]
+    constructor <init>(kotlin.collections/List<koma.statechart/StateId>, kotlin.collections/List<koma.statechart/Trigger>, kotlin.collections/List<koma.statechart/TransitionMatrixEntry>) // koma.statechart/TransitionMatrix.<init>|<init>(kotlin.collections.List<koma.statechart.StateId>;kotlin.collections.List<koma.statechart.Trigger>;kotlin.collections.List<koma.statechart.TransitionMatrixEntry>){}[0]
+
+    final val entries // koma.statechart/TransitionMatrix.entries|{}entries[0]
+        final fun <get-entries>(): kotlin.collections/List<koma.statechart/TransitionMatrixEntry> // koma.statechart/TransitionMatrix.entries.<get-entries>|<get-entries>(){}[0]
+    final val states // koma.statechart/TransitionMatrix.states|{}states[0]
+        final fun <get-states>(): kotlin.collections/List<koma.statechart/StateId> // koma.statechart/TransitionMatrix.states.<get-states>|<get-states>(){}[0]
+    final val triggers // koma.statechart/TransitionMatrix.triggers|{}triggers[0]
+        final fun <get-triggers>(): kotlin.collections/List<koma.statechart/Trigger> // koma.statechart/TransitionMatrix.triggers.<get-triggers>|<get-triggers>(){}[0]
+
+    final fun cell(koma.statechart/StateId, koma.statechart/Trigger): kotlin.collections/List<koma.statechart/TransitionMatrixEntry> // koma.statechart/TransitionMatrix.cell|cell(koma.statechart.StateId;koma.statechart.Trigger){}[0]
+    final fun component1(): kotlin.collections/List<koma.statechart/StateId> // koma.statechart/TransitionMatrix.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<koma.statechart/Trigger> // koma.statechart/TransitionMatrix.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<koma.statechart/TransitionMatrixEntry> // koma.statechart/TransitionMatrix.component3|component3(){}[0]
+    final fun copy(kotlin.collections/List<koma.statechart/StateId> = ..., kotlin.collections/List<koma.statechart/Trigger> = ..., kotlin.collections/List<koma.statechart/TransitionMatrixEntry> = ...): koma.statechart/TransitionMatrix // koma.statechart/TransitionMatrix.copy|copy(kotlin.collections.List<koma.statechart.StateId>;kotlin.collections.List<koma.statechart.Trigger>;kotlin.collections.List<koma.statechart.TransitionMatrixEntry>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart/TransitionMatrix.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart/TransitionMatrix.hashCode|hashCode(){}[0]
+    final fun toMarkdown(): kotlin/String // koma.statechart/TransitionMatrix.toMarkdown|toMarkdown(){}[0]
+    final fun toString(): kotlin/String // koma.statechart/TransitionMatrix.toString|toString(){}[0]
+    final fun toTransitionTableMarkdown(): kotlin/String // koma.statechart/TransitionMatrix.toTransitionTableMarkdown|toTransitionTableMarkdown(){}[0]
+}
+
+final class koma.statechart/TransitionMatrixEntry { // koma.statechart/TransitionMatrixEntry|null[0]
+    constructor <init>(kotlin/Int, koma.statechart/Transition) // koma.statechart/TransitionMatrixEntry.<init>|<init>(kotlin.Int;koma.statechart.Transition){}[0]
+
+    final val index // koma.statechart/TransitionMatrixEntry.index|{}index[0]
+        final fun <get-index>(): kotlin/Int // koma.statechart/TransitionMatrixEntry.index.<get-index>|<get-index>(){}[0]
+    final val transition // koma.statechart/TransitionMatrixEntry.transition|{}transition[0]
+        final fun <get-transition>(): koma.statechart/Transition // koma.statechart/TransitionMatrixEntry.transition.<get-transition>|<get-transition>(){}[0]
+
+    final fun component1(): kotlin/Int // koma.statechart/TransitionMatrixEntry.component1|component1(){}[0]
+    final fun component2(): koma.statechart/Transition // koma.statechart/TransitionMatrixEntry.component2|component2(){}[0]
+    final fun copy(kotlin/Int = ..., koma.statechart/Transition = ...): koma.statechart/TransitionMatrixEntry // koma.statechart/TransitionMatrixEntry.copy|copy(kotlin.Int;koma.statechart.Transition){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // koma.statechart/TransitionMatrixEntry.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // koma.statechart/TransitionMatrixEntry.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // koma.statechart/TransitionMatrixEntry.toString|toString(){}[0]
+}
+
 final value class koma.statechart.machine/ActivationId { // koma.statechart.machine/ActivationId|null[0]
     constructor <init>(kotlin/Long) // koma.statechart.machine/ActivationId.<init>|<init>(kotlin.Long){}[0]
 
@@ -2685,11 +2907,16 @@ final fun (koma.statechart/StateChartDefinition).koma.statechart/shortestPathTo(
 final fun (koma.statechart/StateChartDefinition).koma.statechart/toMermaid(): kotlin/String // koma.statechart/toMermaid|toMermaid@koma.statechart.StateChartDefinition(){}[0]
 final fun (koma.statechart/StateChartDefinition).koma.statechart/toMermaid(kotlin.collections/Set<koma.statechart/StateId>): kotlin/String // koma.statechart/toMermaid|toMermaid@koma.statechart.StateChartDefinition(kotlin.collections.Set<koma.statechart.StateId>){}[0]
 final fun (koma.statechart/StateChartDefinition).koma.statechart/transitionCoveragePaths(): kotlin.collections/List<koma.statechart/StateChartPath> // koma.statechart/transitionCoveragePaths|transitionCoveragePaths@koma.statechart.StateChartDefinition(){}[0]
+final fun (koma.statechart/StateChartDefinition).koma.statechart/transitionMatrix(): koma.statechart/TransitionMatrix // koma.statechart/transitionMatrix|transitionMatrix@koma.statechart.StateChartDefinition(){}[0]
 final fun (koma.statechart/StateChartDefinition).koma.statechart/validate(kotlin.collections/List<koma.core/Action> = ...): kotlin.collections/List<koma.statechart/ValidationIssue> // koma.statechart/validate|validate@koma.statechart.StateChartDefinition(kotlin.collections.List<koma.core.Action>){}[0]
 final fun <#A: koma.core/Event> (koma.observability/RecordingSession).koma.statechart.machine/effectsOf(koma.observability/StoreInstanceId, kotlin/Function1<#A, koma.observability/Payload<#A>> = ...): koma.statechart.machine/EffectListener<#A> // koma.statechart.machine/effectsOf|effectsOf@koma.observability.RecordingSession(koma.observability.StoreInstanceId;kotlin.Function1<0:0,koma.observability.Payload<0:0>>){0§<koma.core.Event>}[0]
 final fun <#A: koma.core/State, #B: koma.core/Action, #C: koma.core/Event> (koma.statechart/StoreConfiguration<#A, #B, #C>).koma.statechart/recordTo(koma.observability/RecordingSession, koma.observability/StoreInstanceId, koma.observability/PayloadPolicy<#A, #B, #C> = ...) // koma.statechart/recordTo|recordTo@koma.statechart.StoreConfiguration<0:0,0:1,0:2>(koma.observability.RecordingSession;koma.observability.StoreInstanceId;koma.observability.PayloadPolicy<0:0,0:1,0:2>){0§<koma.core.State>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: koma.core/Event> koma.statechart/StateChartStore(koma.statechart/StateChartDefinition, #A, kotlin.coroutines/CoroutineContext? = ..., kotlin/Function1<koma.statechart/StateChartStoreBuilder<#A, #B, #C>, kotlin/Unit> = ...): koma.core/Store<koma.statechart/ChartState<#A>, #B, #C> // koma.statechart/StateChartStore|StateChartStore(koma.statechart.StateChartDefinition;0:0;kotlin.coroutines.CoroutineContext?;kotlin.Function1<koma.statechart.StateChartStoreBuilder<0:0,0:1,0:2>,kotlin.Unit>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.observability/RecordingSession).koma.statechart.machine/decisionsOf(koma.observability/StoreInstanceId, kotlin/Function1<#C, koma.observability/Payload<#C>> = ..., kotlin/Function1<#B, koma.observability/Payload<#B>> = ...): koma.statechart.machine/DecisionObserver<#A, #B, #C, #D> // koma.statechart.machine/decisionsOf|decisionsOf@koma.observability.RecordingSession(koma.observability.StoreInstanceId;kotlin.Function1<0:2,koma.observability.Payload<0:2>>;kotlin.Function1<0:1,koma.observability.Payload<0:1>>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.machine/availableActions(koma.statechart.machine/MachineSnapshot<#A>, kotlin.collections/Iterable<#B>): koma.statechart.machine/AvailableActions<#B> // koma.statechart.machine/availableActions|availableActions@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>;kotlin.collections.Iterable<0:1>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.machine/behaviouralDiffTo(koma.statechart.machine/Machine<*, *, *, *>): koma.statechart.machine/BehaviouralDiff // koma.statechart.machine/behaviouralDiffTo|behaviouralDiffTo@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.Machine<*,*,*,*>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.machine/explainWhyRejected(koma.statechart.machine/ExplainedDecision<#A, #C, #D>): koma.statechart.machine/RejectionExplanation? // koma.statechart.machine/explainWhyRejected|explainWhyRejected@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.ExplainedDecision<0:0,0:2,0:3>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.machine/explainWhyRejected(koma.statechart.machine/MachineSnapshot<#A>, #B, koma.statechart.machine/MachineTime): koma.statechart.machine/RejectionExplanation? // koma.statechart.machine/explainWhyRejected|explainWhyRejected@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>;0:1;koma.statechart.machine.MachineTime){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> (koma.statechart.machine/Machine<#A, #B, #C, #D>).koma.statechart.machine/validateSnapshot(koma.statechart.machine/MachineSnapshot<#A>): kotlin.collections/List<kotlin/String> // koma.statechart.machine/validateSnapshot|validateSnapshot@koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>(koma.statechart.machine.MachineSnapshot<0:0>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/Machine(koma.statechart.machine/DefinitionId, koma.statechart.machine/DefinitionVersion, koma.statechart/StateChartDefinition, kotlin/Function1<koma.statechart.machine/MachineBuilder<#A, #B, #C, #D>, kotlin/Unit> = ...): koma.statechart.machine/Machine<#A, #B, #C, #D> // koma.statechart.machine/Machine|Machine(koma.statechart.machine.DefinitionId;koma.statechart.machine.DefinitionVersion;koma.statechart.StateChartDefinition;kotlin.Function1<koma.statechart.machine.MachineBuilder<0:0,0:1,0:2,0:3>,kotlin.Unit>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]
 final fun <#A: kotlin/Any?, #B: koma.core/Action, #C: kotlin/Any?, #D: koma.core/Event> koma.statechart.machine/MachineStore(koma.statechart.machine/Machine<#A, #B, #C, #D>, #A, koma.statechart.machine/CommandHandler<#C, #B>, kotlinx.coroutines/CoroutineScope, koma.statechart.machine/MachineClock = ..., kotlin.coroutines/CoroutineContext? = ..., koma.statechart.machine/AdmissionPolicy = ..., kotlin.collections/List<koma.statechart.machine/DecisionObserver<#A, #B, #C, #D>> = ..., koma.statechart.machine/MailboxConfig<#D> = ..., kotlin/Function1<koma.statechart/StoreConfiguration<koma.statechart.machine/MachineSnapshot<#A>, koma.statechart.machine/MachineInput<#B>, #D>, kotlin/Unit> = ...): koma.statechart.machine/MachineStore<#A, #B, #C, #D> // koma.statechart.machine/MachineStore|MachineStore(koma.statechart.machine.Machine<0:0,0:1,0:2,0:3>;0:0;koma.statechart.machine.CommandHandler<0:2,0:1>;kotlinx.coroutines.CoroutineScope;koma.statechart.machine.MachineClock;kotlin.coroutines.CoroutineContext?;koma.statechart.machine.AdmissionPolicy;kotlin.collections.List<koma.statechart.machine.DecisionObserver<0:0,0:1,0:2,0:3>>;koma.statechart.machine.MailboxConfig<0:3>;kotlin.Function1<koma.statechart.StoreConfiguration<koma.statechart.machine.MachineSnapshot<0:0>,koma.statechart.machine.MachineInput<0:1>,0:3>,kotlin.Unit>){0§<kotlin.Any?>;1§<koma.core.Action>;2§<kotlin.Any?>;3§<koma.core.Event>}[0]

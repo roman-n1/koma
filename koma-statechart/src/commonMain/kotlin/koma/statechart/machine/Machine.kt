@@ -160,6 +160,7 @@ class MachineBuilder<C, A : Action, CMD, E : Event> internal constructor() {
     }
 
     internal val guards = mutableMapOf<String, (MachineSnapshot<C>, Action) -> Boolean>()
+    internal val guardRejections = mutableMapOf<String, String>()
     internal val effects = mutableMapOf<String, (C, Action) -> C>()
     internal val entries = mutableMapOf<StateId, MutableList<MachineEnterScope<C, A, CMD, E>.() -> Unit>>()
     internal val exits = mutableMapOf<StateId, MutableList<MachineExitScope<C, A, E>.() -> Unit>>()
@@ -177,6 +178,13 @@ class MachineBuilder<C, A : Action, CMD, E : Event> internal constructor() {
         require(guards.put(label, guard) == null) { "[Koma] Guard '$label' is implemented twice" }
     }
 
+    /** Implements a guard with an application-supplied explanation for its false branch. */
+    fun guard(label: String, rejectionReason: String, guard: (MachineSnapshot<C>, Action) -> Boolean) {
+        require(rejectionReason.isNotBlank()) { "[Koma] Guard rejection reason must not be blank" }
+        guard(label, guard)
+        guardRejections[label] = rejectionReason
+    }
+
     /**
      * Implements the effect [label] of transitions: a pure update of the context, run after the
      * exit hooks and before the enter hooks of the step.
@@ -189,6 +197,8 @@ class MachineBuilder<C, A : Action, CMD, E : Event> internal constructor() {
 
     /** Typed implementation key, shared with the model-building DSL. */
     fun guard(key: koma.statechart.GuardKey, guard: (MachineSnapshot<C>, Action) -> Boolean) = guard(key.name, guard)
+    /** Typed guard key with an application-supplied explanation for its false branch. */
+    fun guard(key: koma.statechart.GuardKey, rejectionReason: String, guard: (MachineSnapshot<C>, Action) -> Boolean) = guard(key.name, rejectionReason, guard)
     /** Typed reducer key, shared with the model-building DSL. */
     fun effect(key: koma.statechart.EffectKey, effect: (C, Action) -> C) = effect(key.name, effect)
 
@@ -283,12 +293,50 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
     }
 
     private val guards: Map<String, (MachineSnapshot<C>, Action) -> Boolean> = config.guards.toMap()
+    private val guardRejections: Map<String, String> = config.guardRejections.toMap()
     private val effects: Map<String, (C, Action) -> C> = config.effects.toMap()
     private val entries: Map<StateId, List<MachineEnterScope<C, A, CMD, E>.() -> Unit>> = config.entries.mapValues { it.value.toList() }
     private val exits: Map<StateId, List<MachineExitScope<C, A, E>.() -> Unit>> = config.exits.mapValues { it.value.toList() }
     private val handlers: Map<StateId, List<MachineBuilder.ActionHandler<C, A, CMD, E>>> = config.handlers.mapValues { it.value.toList() }
 
     private val runtime = StateChartRuntime<MachineSnapshot<C>>(chart, { chart.activeLeaves(it.configuration).first() }, guards)
+
+    /** Application-authored guard metadata; reading it never evaluates the guard. */
+    fun guardRejectionReason(label: String): String? = guardRejections[label]
+
+    /** Declared action matchers from active transitions and handlers; no guards or rules run. */
+    fun declaredActions(snapshot: MachineSnapshot<C>): List<DeclaredAction> {
+        require(snapshot.definition == id && snapshot.version == version) { "[Koma] Snapshot belongs to another machine or version" }
+        val actions = linkedMapOf<ActionMatcher, MutableList<ActionDeclaration>>()
+        for ((index, transition) in chart.transitions.withIndex()) {
+            val matcher = transition.on ?: continue
+            if (transition.source in snapshot.configuration.active) {
+                actions.getOrPut(matcher) { mutableListOf() } += ActionDeclaration(transition.source, TransitionId(index))
+            }
+        }
+        for (node in chart.inEntryOrder(snapshot.configuration.active)) for (handler in handlers[node].orEmpty()) {
+            actions.getOrPut(handler.matcher) { mutableListOf() } += ActionDeclaration(node)
+        }
+        return actions.map { (matcher, declarations) -> DeclaredAction(matcher, declarations.toList()) }
+    }
+
+    /** Selection-only query shared with action availability. No reducers, hooks or handlers run. */
+    internal fun selectAction(snapshot: MachineSnapshot<C>, action: A): ActionSelection {
+        require(snapshot.definition == id && snapshot.version == version) { "[Koma] Snapshot belongs to another machine or version" }
+        val trace = SelectionTrace()
+        if (!snapshot.isStarted) return ActionSelection(trace.explanation(snapshot.configuration.active, emptyList()), notStarted = true)
+        trace.candidates += chart.transitions.withIndex().filter {
+            it.value.source in snapshot.configuration.active && it.value.on?.matches(action) == true
+        }.map { TransitionId(it.index) }
+        return try {
+            val result = runtime.stepObserved(snapshot.configuration, snapshot, action, observer(trace))
+            if (result is StepResult.Transitioned) trace.selected = result.transitions.map { TransitionId(chart.transitions.indexOf(it)) }
+            else trace.handledBy = findHandler(snapshot, action)?.first
+            ActionSelection(trace.explanation(snapshot.configuration.active, trace.selected))
+        } catch (error: Exception) {
+            ActionSelection(trace.explanation(snapshot.configuration.active, trace.selected), failure = FailureDescriptor.of(error))
+        }
+    }
 
     init {
         val missing = chart.transitions.mapNotNull { it.effect }.distinct().filter { it !in effects }
@@ -427,12 +475,17 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
      * the configuration and the activations stay as they are.
      */
     private fun handle(base: MachineSnapshot<C>, input: MachineInput<A>, action: Action, trace: SelectionTrace?): Decision<C, CMD, E>? {
+        val (node, handler) = findHandler(base, action) ?: return null
+        trace?.handledBy = node
+        val step = Step(base, input, action)
+        step.handle(node, handler.rule)
+        return step.decision(configuration = base.configuration, transitions = emptyList())
+    }
+
+    private fun findHandler(base: MachineSnapshot<C>, action: Action): Pair<StateId, MachineBuilder.ActionHandler<C, A, CMD, E>>? {
         for (node in chart.inEntryOrder(base.configuration.active).asReversed()) {
             val handler = handlers[node]?.firstOrNull { it.matcher.matches(action) } ?: continue
-            trace?.handledBy = node
-            val step = Step(base, input, action)
-            step.handle(node, handler.rule)
-            return step.decision(configuration = base.configuration, transitions = emptyList())
+            return node to handler
         }
         return null
     }

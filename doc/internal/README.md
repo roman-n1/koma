@@ -4,6 +4,7 @@ This is the place for documents that record the thinking and specifications behi
 It is not documentation for users.
 
 - [Gap analysis: six implementation waves and contracts](./design/2026-10-06-gap-roadmap.md)
+- [Derived behavioural features: first seven, version diff and transition matrix](./design/2026-10-06-derived-behavioural-features.md)
 - [Time Travel and structured logging: implementation handoff](./design/2026-09-29-time-travel-logging-handoff.md)
 
 As a policy, the format is kept light. Being able to keep it up takes priority.

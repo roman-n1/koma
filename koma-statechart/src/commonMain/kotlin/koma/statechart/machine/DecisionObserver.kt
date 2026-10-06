@@ -168,6 +168,12 @@ interface DecisionExplanationObserver {
     fun onExplained(input: InputId?, explanation: DecisionExplanation)
 }
 
+/** Opt-in typed trace of the one actual decision, including failed and ignored decisions. */
+interface DecisionTraceObserver<C, A : Action, CMD, E : Event> : DecisionObserver<C, A, CMD, E> {
+    /** Called before commit/outcome callbacks; never call the Store back or mutate snapshot data. */
+    fun onDecided(input: InputId?, machineInput: MachineInput<A>, explained: ExplainedDecision<C, CMD, E>)
+}
+
 /** Observes actual live guard evaluations without a second decision or extra guard invocations. */
 fun <C, A : Action, CMD, E : Event> decisionDiagnostics(
     consume: (InputId?, DecisionExplanation) -> Unit,
