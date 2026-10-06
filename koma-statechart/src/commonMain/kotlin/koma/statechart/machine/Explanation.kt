@@ -14,6 +14,7 @@ data class GuardEvaluation(
 
 /** Why a matching transition from an active node did or did not fire. */
 enum class CandidateDisposition {
+    /** Selected at least once in this macrostep attempt; later guard failures remain in [GuardEvaluation]. */
     Selected,
     GuardRejected,
     GuardFailed,
@@ -67,8 +68,8 @@ internal class SelectionTrace {
             active.toSet(),
             candidates.map { id ->
                 TransitionCandidate(id, when {
-                    guards.any { it.transition == id && it.failure != null } -> CandidateDisposition.GuardFailed
                     id in selected -> CandidateDisposition.Selected
+                    guards.any { it.transition == id && it.failure != null } -> CandidateDisposition.GuardFailed
                     id in enabled -> CandidateDisposition.ConflictLost
                     guards.any { it.transition == id && it.result == false } -> CandidateDisposition.GuardRejected
                     guardFailed -> CandidateDisposition.NotVisited

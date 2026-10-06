@@ -197,6 +197,9 @@ Every library module has its own README with setup, examples and its contract.
 | [koma-statechart](koma-statechart/README.md) | Declarative model, validation, diagrams, chart runtime and pure Machines |
 | [koma-statechart-compose](koma-statechart-compose/README.md) | Retained Machine effects delivered to Compose |
 | [koma-statechart-test](koma-statechart-test/README.md) | Scripted commands, virtual time and Machine test driver |
+| [koma-diagnostics](koma-diagnostics/README.md) | KMP causal traces for decisions, commands, timers and bridge effects |
+| [koma-diagnostics-sdk](koma-diagnostics-sdk/README.md) | Optional OpenTelemetry and Sentry adapters for JVM/Android |
+| [koma-diagnostics-crashlytics](koma-diagnostics-crashlytics/README.md) | Optional Android Crashlytics adapter |
 | [koma-observability](koma-observability/README.md) | Ordered, bounded diagnostic journal and file storage |
 | [koma-timetravel](koma-timetravel/README.md) | Recording, codecs, checkpoints, replay and isolated branches |
 | [koma-timetravel-compose](koma-timetravel-compose/README.md) | Inspector UI and group replay/experiment controls |
@@ -250,8 +253,8 @@ releases. The original Store DSL, Compose helpers, messaging, logging and test s
 The pure chart/Machine data model, journal and recording formats have a stable API/format
 policy. Evolving Store-adapter configuration, external-source integration, replay and inspector
 APIs retain experimental markers; see the [stability boundary](doc/internal/adr/2026-10-01-stable-core.md).
-The supported statechart subset does not yet include eventless/completion transitions, final
-states, internal transitions or SCXML `invoke`. Device measurements and messenger integration
+The supported subset includes eventless/completion transitions, final states, internal
+transitions and cancellable invocation. Device measurements and messenger integration
 remain separate work. The [divergence inventory](doc/internal/design/2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400)
 records the individual changes and their route back upstream.
 
@@ -260,6 +263,7 @@ records the individual changes and their route back upstream.
 - [Store API guide](doc/guides/store-api.md): recovery, launch/transaction, persistence, policies and full plugin examples.
 - [Device resource budgets](verification/resource-soak/README.md): required Android/iOS soak runs, resource cleanup, memory plateau and commit latency reports.
 - [Internal documentation](doc/internal/README.md): architecture, decisions, review evidence and roadmap.
+- [IntelliJ plugin](tooling/intellij-plugin/README.md): K2 gutter, model Find Usages and diagram navigation.
 - [Build conventions](build-logic/README.md): coordinates, publishing and project setup.
 - Validation: `./gradlew jvmTest apiCheck checkDebugGraph`; the CI also tests Android, iOS, JS and Wasm.
 - Published artifacts: `scripts/verify-published-consumer.sh jvm` builds an

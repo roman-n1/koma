@@ -14,7 +14,10 @@ class SnapshotMigration<From, To>(
 }
 
 /** Checks restored data before it can allocate work or accept new inputs. */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.validateSnapshot(snapshot: MachineSnapshot<C>): List<String> = buildList {
+fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.validateSnapshot(snapshot: MachineSnapshot<C>): List<String> =
+    validateSnapshotStructure(snapshot) + checkInvariantsForRestore(snapshot)
+
+internal fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.validateSnapshotStructure(snapshot: MachineSnapshot<C>): List<String> = buildList {
     if (snapshot.definition != id) add("definition differs")
     if (snapshot.version != version) add("version differs")
     if (snapshot.revision < 0) add("negative revision")
@@ -32,7 +35,6 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.validateSnapshot(snaps
         id.value <= 0 || id.value > snapshot.counters.timers || transition?.isTimer != true || snapshot.activations[transition.source] != record.activation
     }) add("invalid timers")
     if (listOf(snapshot.counters.activations, snapshot.counters.commands, snapshot.counters.timers, snapshot.counters.effects).any { it < 0 }) add("negative counters")
-    addAll(checkInvariantsForRestore(snapshot))
 }
 
 private fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.checkInvariantsForRestore(snapshot: MachineSnapshot<C>): List<String> =

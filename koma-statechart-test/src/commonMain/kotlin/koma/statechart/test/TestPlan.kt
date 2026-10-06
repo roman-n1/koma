@@ -48,26 +48,26 @@ data class TestPlanResult<C, A : Action>(
     }
 }
 
-private data class Selection(val indices: List<Int>, val attempts: Int, val optimal: Boolean)
+internal data class Selection(val indices: List<Int>, val attempts: Int, val optimal: Boolean)
 
 /** Bounded exact set cover, seeded by a complete greedy cover so budget exhaustion never drops coverage. */
-private fun <A : Action> selectScenarios(candidates: List<ScenarioCoverage<A>>, target: Set<TransitionId>, maxAttempts: Int): Selection {
+internal fun <T> selectCoverage(candidates: List<Set<T>>, lengths: List<Int>, target: Set<T>, maxAttempts: Int): Selection {
     if (target.isEmpty()) return Selection(emptyList(), 0, true)
     var remaining = target
     val greedy = mutableListOf<Int>()
     while (remaining.isNotEmpty()) {
         val best = candidates.indices.maxWithOrNull(compareBy<Int>(
-            { (candidates[it].transitions intersect remaining).size }, { -candidates[it].scenario.inputs.size }, { -it },
+            { (candidates[it] intersect remaining).size }, { -lengths[it] }, { -it },
         )) ?: error("[Koma] No scenario covers $remaining")
-        check(candidates[best].transitions.any { it in remaining }) { "[Koma] Scenario coverage is inconsistent" }
+        check(candidates[best].any { it in remaining }) { "[Koma] Scenario coverage is inconsistent" }
         greedy += best
-        remaining = remaining - candidates[best].transitions
+        remaining = remaining - candidates[best]
     }
     var best = greedy.toList()
     var attempts = 0
     var exhausted = false
-    val visited = mutableMapOf<Set<TransitionId>, Int>()
-    fun search(missing: Set<TransitionId>, chosen: List<Int>) {
+    val visited = mutableMapOf<Set<T>, Int>()
+    fun search(missing: Set<T>, chosen: List<Int>) {
         if (attempts >= maxAttempts) { exhausted = true; return }
         attempts++
         if (missing.isEmpty()) {
@@ -78,14 +78,12 @@ private fun <A : Action> selectScenarios(candidates: List<ScenarioCoverage<A>>, 
         val previous = visited[missing]
         if (previous != null && previous <= chosen.size) return
         visited[missing] = chosen.size
-        val next = missing.minWithOrNull(compareBy<TransitionId>(
-            { id -> candidates.count { id in it.transitions } }, { it.index },
-        ))!!
-        val choices = candidates.indices.filter { next in candidates[it].transitions }
-            .sortedWith(compareByDescending<Int> { (candidates[it].transitions intersect missing).size }
-                .thenBy { candidates[it].scenario.inputs.size }.thenBy { it })
+        val next = missing.minByOrNull { id -> candidates.count { id in it } }!!
+        val choices = candidates.indices.filter { next in candidates[it] }
+            .sortedWith(compareByDescending<Int> { (candidates[it] intersect missing).size }
+                .thenBy { lengths[it] }.thenBy { it })
         for (index in choices) {
-            search(missing - candidates[index].transitions, chosen + index)
+            search(missing - candidates[index], chosen + index)
             if (exhausted) return
         }
     }
@@ -114,7 +112,7 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.generateTestPlan(
     val report = explore(initial, generator, strategy, maxDepth, maxDecisions, maxFailures, now)
     val target = report.coverage.transitions.covered intersect report.coverage.transitions.expected
     val candidates = report.coverageScenarios.filter { it.transitions.isNotEmpty() }
-    val selection = selectScenarios(candidates, target, maxSelectionAttempts)
+    val selection = selectCoverage(candidates.map { it.transitions }, candidates.map { it.scenario.inputs.size }, target, maxSelectionAttempts)
     val selected = if (target.isEmpty()) listOf(report.scenarios.minByOrNull { it.inputs.size } ?: MachineScenario("initial", emptyList()))
         else selection.indices.map { candidates[it].scenario }
     return MachineTestPlan(id, version, selected, report.coverage.transitions.expected, report.coverage.transitions.missing,

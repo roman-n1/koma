@@ -753,6 +753,14 @@ exposes a `StateFlow`, and marks evicted ancestry incomplete. Group bridge causa
 in the journal's cross-store message references. Production journal payload policy still defaults
 to metadata only; application projections/codecs own redaction before recording payloads.
 
+`whyNot(snapshot, action)` validates structure and explains selection eligibility without
+reducers or IO. `whyNot(explained)` and `whyThisTransition(explained, transitionId)` reuse
+the actual observations. Selection during an attempted automatic macrostep is distinct from
+a committed transition; a later failure can roll it back.
+
+For bounded command/timer/bridge causality shared across Stores, use the optional
+[koma-diagnostics](../koma-diagnostics/README.md) hub and platform SDK sinks.
+
 ## Durable workflow and migrations
 
 `DurableMachine(machine, storage, keyOf)` wraps the pure machine with an atomic snapshot/outbox
@@ -767,6 +775,10 @@ Recovery restores deadlines, outbox and ordinary command payloads. `dueTimers(no
 timers; `initialize` on an existing checkpoint returns ordinary registrations to restart. Supply
 logical time that continues from the checkpoint rather than resetting on process restart.
 Persisted outbox schemas and receipt retention remain application storage responsibilities.
+
+`checkpoint.recoveryContract()` reports cancel-on-exit registrations, durable idempotent
+operations, completed receipts, timers and persisted effects. Ordinary command repeat safety
+is unknown; durable retry assumes the application's business idempotency contract.
 
 `SnapshotMigration<OldContext, NewContext>` changes model version, configuration/context and
 work explicitly. `newMachine.migrateSnapshot(oldSnapshot, migration)` validates the result's
@@ -787,3 +799,15 @@ microsteps; work that started and stopped in the same composite decision is filt
 Use `MachineGroup` for independently executing/persisted stores and failure isolation; its
 consistent checkpoint and bridge contracts remain unchanged. See the semantics documents under
 `doc/internal/design/2026-10-06-*.md` for transaction and lifecycle details.
+
+## Behavioural queries and reachability
+
+`chart.query(TransitionQuery(sources = setOf(node), includeDescendants = true))` returns
+matching declaration rows without running guards or effects. `chart.impactTo(nextChart)`
+reports conservative affected states, transition identities and referenced guard/effect labels.
+
+`chart.analyzeReachability(maxConfigurations, maxEdges)` explores structural configurations
+and history, with dead ends separated from terminal configurations. Guards, context and IO
+are opaque. A truncated search reports `structurallyUnreachable = null`; unvisited states are
+not proof of impossibility. See the [five-wave contracts](../doc/internal/design/2026-10-06-competitive-roadmap.md)
+for payload-based verification, exported runtime frames, IDE navigation and CI review.

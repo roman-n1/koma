@@ -129,3 +129,26 @@ are independent pure-model operations, leaving its live Store and scripted IO un
 Shrinking accepts an optional `preservesFailure` matcher for distinct bugs of the same exception
 type. Match domain context/inputs/identities; exception messages are omitted by default.
 See the [contracts and examples](../doc/internal/design/2026-10-06-derived-behavioural-features.md).
+
+## Coverage targets, payloads and CI artifacts
+
+Use `machine.inputGenerator(listOf(actionGenerator<Context, Act>("action") { snapshot, now ->
+payloads(snapshot, now) }))` to provide a finite payload domain. Blocked actions are retained
+by default so false guard outcomes can be observed. Timers use their actual ids/deadlines;
+`constraint` filters inputs and `extraInputs` supplies application-owned command responses.
+
+The targeted `generateTestPlan(initial, inputs, target)` overload supports `CoverageTarget`
+for all states, transitions, guard outcomes, timer/history paths, explicit error states and
+custom target states. Combine obligations with `chart.requirements(target)` and
+`CoverageTarget.Custom`. Execute with `runPlan(initial, plan).assertSuccess()`; missing
+coverage and incomplete discovery remain explicit. `exploreDetailed` exposes actual prefix
+state/guard observations without a second decision. Driver `explore` and targeted plan helpers
+use an independent pure model and leave its live Store untouched.
+
+`machine.behaviouralSnapshot(coverage, sources)` exports a versioned `.koma.json` model,
+with optional active/selected transition data for the IDE. `behaviouralReviewArtifacts(before,
+after)` produces diff, coverage, Mermaid and transition-matrix files. Keep the baseline in Git
+and compare with the PR base revision. See the executable
+[review exporter](../verification/behaviour-review/src/jvmMain/kotlin/koma/review/Review.kt),
+[IDE plugin](../tooling/intellij-plugin/README.md) and
+[five-wave contracts](../doc/internal/design/2026-10-06-competitive-roadmap.md).
