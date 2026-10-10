@@ -35,7 +35,9 @@ target-11 bytecode calling newer Java APIs is detected. Locally set
 `ACTRON_CONSUMER_JAVA11_HOME=/path/to/jdk-11` to do the same; otherwise the local smoke uses the
 Gradle runtime and reports that limitation. `tooling` separately compiles MachineTestDriver, actron-test helpers and
 the Time Travel inspector. Graph checks require all eleven modules to be consumed and reject
-source-project substitution, mixed fork versions and test/debug modules in the app graph.
+source-project substitution, mixed fork versions, upstream Koma dependencies anywhere in the
+resolved graph, and test/debug modules in the app graph. Actron does not support source,
+binary or runtime interoperability with upstream Koma 4.0.0.
 
 The CI workflow runs JVM, Android, JS, Wasm and both iOS architectures independently. Web and
 iOS checks compile consumer APIs; they do not run a browser UI or a physical-device app. JVM

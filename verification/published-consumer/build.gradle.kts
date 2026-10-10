@@ -25,6 +25,10 @@ tasks.register("verifyPublishedGraphs") {
             val configuration = project(projectName).configurations.getByName(configurationName)
             val components = configuration.incoming.resolutionResult.allComponents.map { it.id }
             check(components.none { it is ProjectComponentIdentifier && it.projectPath != projectName }) { "Source project substitution in $projectName" }
+            val upstream = components.filterIsInstance<ModuleComponentIdentifier>().filter {
+                it.group == "io.github.koma-kt" || it.module.startsWith("koma-")
+            }
+            check(upstream.isEmpty()) { "Unsupported upstream Koma dependencies in $projectName: $upstream" }
             val actron = components.filterIsInstance<ModuleComponentIdentifier>().filter { it.group == forkGroup }
             check(actron.all { it.version == forkVersion }) { "Wrong fork version in $projectName: $actron" }
             return actron.map { it.module.removeSuffix("-$suffix") }.toSet()

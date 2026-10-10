@@ -24,17 +24,18 @@ together. Reinstall the IDE plugin under its new ID. The core Kotlin/Native, JS 
 library identity now belongs to Actron too; do not substitute Actron for a Koma dependency
 inside a previously compiled JAR or klib.
 
-A staged migration may retain upstream Koma for an old component and use Actron for a new
-one. Their types are distinct: a `koma.core.Store` cannot be passed to an Actron API.
-The [migration isolation fixture](../../verification/binary-consumer/README.md) exercises
-this boundary with a frozen upstream consumer and a new Actron consumer.
+Actron evolves independently of upstream Koma 4.0.0. Source, binary and runtime
+interoperability are unsupported, including running frozen Koma consumers alongside Actron.
+Migrate consumers to Actron and recompile them. Their types are distinct: a `koma.core.Store`
+cannot be passed to an Actron API. Actron's published-consumer checks reject upstream Koma
+dependencies in the resolved production and tooling graphs.
 
 The frozen journal/recording file magic bytes (`KOMAJRNL`, `KOMARECD`, `KOMAGRPO`) and
 format versions are retained so a branding change does not invalidate file framing.
 Regenerate exported model/coverage artifacts using Actron. Review application-owned
 persistence codecs and serialized type names before reusing old recordings or saved state;
-the package rename does not promise compatibility for those payloads. Keep old recordings
-and their matching Koma runtime until they have been migrated and verified.
+the package rename does not promise compatibility for those payloads. Migrate and verify
+application-owned payload codecs before loading historical data with Actron.
 
 The GitHub repository is now [roman-n1/actron](https://github.com/roman-n1/actron).
 Update existing clones with `git remote set-url origin https://github.com/roman-n1/actron.git`.

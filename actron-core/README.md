@@ -102,7 +102,6 @@ decisions are needed. Core's Kotlin state objects and chart nodes are different 
 - [Fork differences](../README.md#what-differs-from-the-original-project) and
   [stability boundary](../doc/internal/adr/2026-10-01-stable-core.md).
 
-The [migration isolation check](../verification/binary-consumer/README.md) runs a frozen
-upstream Koma 4.0.0 client alongside an Actron Store. Actron has distinct packages and klib
-identity; migrating a consumer requires recompilation. See the
+Actron has distinct packages and klib identity. Compatibility and runtime interoperability
+with upstream Koma 4.0.0 are unsupported; migrating a consumer requires recompilation. See the
 [migration guide](../doc/guides/migrating-from-koma.md).

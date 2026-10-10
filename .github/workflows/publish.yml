@@ -7,13 +7,11 @@ jobs:
     uses: ./.github/workflows/gradle.yml
   consumer:
     uses: ./.github/workflows/published-consumer.yml
-  binary:
-    uses: ./.github/workflows/binary-consumer.yml
   publish:
     # GitHub-only releases must not attempt a Maven upload. Enable after configuring secrets.
     if: vars.MAVEN_CENTRAL_PUBLISH_ENABLED == 'true'
     name: Release build and publish
-    needs: [test, consumer, binary]
+    needs: [test, consumer]
     runs-on: macOS-latest
     steps:
       - name: Check out code

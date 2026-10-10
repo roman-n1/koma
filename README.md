@@ -295,6 +295,10 @@ model, pure decision machines, structured recording and Time Travel.
 The original Store DSL remains available under the `actron.*` packages.
 See [Migrating from Koma](doc/guides/migrating-from-koma.md) for the breaking rename.
 
+Actron evolves independently. Source, binary and runtime interoperability with upstream
+Koma 4.0.0 are unsupported; consumers must migrate to Actron and recompile. Compatibility
+with Koma does not constrain Actron's API or releases.
+
 The comparison is with the recorded **upstream base 4.0.0**, not a claim about future upstream
 releases. The original Store DSL, Compose helpers, messaging, logging and test support remain.
 
@@ -329,5 +333,4 @@ records the individual changes and their route back upstream.
   [independent Maven consumer](verification/published-consumer/README.md); CI also compiles its
   Android, JS, Wasm and iOS variants.
 
-A frozen upstream Koma client running alongside Actron is checked by the
-[migration isolation fixture](verification/binary-consumer/README.md) on JVM, JS, Wasm and iOS.
+Published-consumer checks reject upstream Koma dependencies in Actron's dependency graphs.
