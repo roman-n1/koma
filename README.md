@@ -226,7 +226,8 @@ Every library module has its own README with setup, examples and its contract.
 ## Installation
 
 Actron's configured coordinates are **`io.github.roman-n1:<module>:5.0.0-alpha.1`**.
-For development, use a local checkout/composite build:
+GitHub releases provide source archives and may include an IDE plugin ZIP. Maven Central
+publication is separate; for development, use a local checkout/composite build:
 
 ```kotlin
 // settings.gradle.kts in your application
