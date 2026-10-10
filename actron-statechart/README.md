@@ -154,7 +154,7 @@ val content = StateId("Content")
 val error = StateId("Error")
 
 // The first transition whose guard holds is taken, so retry comes before giveUp.
-val retry = Transition(loading, loading, ActionMatcher.of<ListAction.Failed>("Failed"), guard = "canRetry", effect = "countAttempt")
+val retry = Transition(loading, loading, ActionMatcher.of<ListAction.Failed>("Failed"), guard = GuardKey("canRetry"), effect = EffectKey("countAttempt"))
 val giveUp = Transition(loading, error, ActionMatcher.of<ListAction.Failed>("Failed"))
 
 val listChart = StateChartDefinition(
@@ -162,10 +162,10 @@ val listChart = StateChartDefinition(
     states = listOf(AtomicState(idle), AtomicState(loading), AtomicState(content), AtomicState(error)),
     transitions = listOf(
         Transition(idle, loading, ActionMatcher.of<ListAction.Load>("Load")),
-        Transition(loading, content, ActionMatcher.of<ListAction.Loaded>("Loaded"), effect = "storeItems"),
+        Transition(loading, content, ActionMatcher.of<ListAction.Loaded>("Loaded"), effect = EffectKey("storeItems")),
         retry,
         giveUp,
-        Transition(error, loading, ActionMatcher.of<ListAction.Load>("Load"), effect = "resetAttempts"),
+        Transition(error, loading, ActionMatcher.of<ListAction.Load>("Load"), effect = EffectKey("resetAttempts")),
     ),
 )
 ```
@@ -300,8 +300,8 @@ val transitions = listOf(
     Transition(chats, settings, ActionMatcher.of<MessengerAction.OpenSettings>("OpenSettings")),
     Transition(settings, chatsHistory, ActionMatcher.of<MessengerAction.CloseSettings>("CloseSettings")),
     // Timers: fire after the source has been active for the delay; cancelled when it is exited.
-    Transition(backoff, connecting, Trigger.After(2.seconds), guard = "quickReconnect"),
-    Transition(backoff, connecting, Trigger.After(30.seconds), guard = "slowReconnect"),
+    Transition(backoff, connecting, Trigger.After(2.seconds), guard = GuardKey("quickReconnect")),
+    Transition(backoff, connecting, Trigger.After(30.seconds), guard = GuardKey("slowReconnect")),
 )
 ```
 

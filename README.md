@@ -182,8 +182,8 @@ val counterChart = StateChartDefinition(
     initial = counting,
     states = listOf(AtomicState(counting)),
     transitions = listOf(
-        Transition(counting, counting, ActionMatcher.of<CounterAction.Increment>("Increment"), effect = "increment"),
-        Transition(counting, counting, ActionMatcher.of<CounterAction.Decrement>("Decrement"), effect = "decrement"),
+        Transition(counting, counting, ActionMatcher.of<CounterAction.Increment>("Increment"), effect = EffectKey("increment")),
+        Transition(counting, counting, ActionMatcher.of<CounterAction.Decrement>("Decrement"), effect = EffectKey("decrement")),
     ),
 )
 

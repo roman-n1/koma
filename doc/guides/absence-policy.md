@@ -42,6 +42,7 @@ replace old nullable arguments and return values:
 | `StateSaver(save = ..., restore = { null })` | `StateSaver(save = ..., restore = { initial -> initial })` |
 | Nullable fields in `StorePatch` | `StorePatchBuilder` DSL or configuration commands |
 | `LaunchControl.CancelPrevious(null)` | `LaunchControl.CancelPrevious()` |
+| Nullable guard/effect labels | `GuardCondition.Unconditional` / `GuardKey`, `TransitionEffect.NoEffect` / `EffectKey` |
 | Nullable state parent / command lane / retry limit | `StateParent.Root`, `CommandLane.Independent`, `RetryBudget.Unlimited` |
 | Bridge mapping returning `Action?` | `EventRoute` / route callback `(event, carry) -> Unit`; invoke `carry` only for a routed event |
 | Durable storage returning `Checkpoint?` | `read(accept): Boolean`; report exactly one authentic checkpoint when returning `true` |
