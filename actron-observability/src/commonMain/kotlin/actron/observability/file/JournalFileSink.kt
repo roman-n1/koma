@@ -47,37 +47,58 @@ class JournalFileSink(
     private val config: JournalFileConfig = JournalFileConfig(),
 ) : JournalSink {
     private val lock = Mutex()
-    private var session: RuntimeSessionId? = null
-    private var group: MachineGroupId? = null
-    private var mode: ExecutionMode? = null
+    private sealed interface SessionBinding {
+        data object Unbound : SessionBinding
+        data class Bound(val session: RuntimeSessionId, val group: MachineGroupId, val mode: ExecutionMode) : SessionBinding
+    }
+    private var binding: SessionBinding = SessionBinding.Unbound
     private var index = -1
-    private var output: SegmentOutput? = null
+    private sealed interface SegmentWriter {
+        data object Detached : SegmentWriter
+        data class Active(val output: SegmentOutput) : SegmentWriter
+    }
+    private var writer: SegmentWriter = SegmentWriter.Detached
     private var segmentBytes = 0
     private var segmentRecords = 0
     private var unflushed = 0
     private var closed = false
 
-    /** The segment being written, or `null` before the first record and after [close]. */
-    val activeSegment: String?
-        get() = locked { if (output != null) JournalFileFormat.segmentName(checkNotNull(session), index) else null }
+    /** The observed lifecycle of the writer. */
+    val activeSegment: SegmentActivity
+        get() = locked {
+            if (writer is SegmentWriter.Active) {
+                val current = binding
+                check(current is SessionBinding.Bound)
+                SegmentActivity.Writing(JournalFileFormat.segmentName(current.session, index))
+            }
+            else if (closed) SegmentActivity.Closed else SegmentActivity.AwaitingFirstRecord
+        }
 
     /** The session's segments present in the storage, oldest first. */
     val segments: List<String>
         get() {
-            val session = locked { session } ?: return emptyList()
-            return storage.list().mapNotNull { info -> JournalFileFormat.parseSegmentName(info.name)?.takeIf { it.first == session }?.let { it.second to info.name } }
-                .sortedBy { it.first }.map { it.second }
+            val readSegments: () -> List<String> = locked {
+                val current = binding
+                if (current is SessionBinding.Unbound) ({ emptyList() }) else {
+                    check(current is SessionBinding.Bound)
+                    ({
+                    JournalFileFormat.namedSegments(storage, current.session)
+                        .sortedBy { it.first }.map { it.second }
+                    })
+                }
+            }
+            return readSegments()
         }
 
     override suspend fun write(record: JournalRecord<*, *, *>) {
         locked {
             if (closed) return
-            val session = session
-            if (session != null) require(record.session == session && record.group == group) {
-                "[Actron] JournalFileSink writes session $session group $group; got ${record.session} ${record.group}"
+            val current = binding
+            if (current is SessionBinding.Bound) require(record.session == current.session && record.group == current.group) {
+                "[Actron] JournalFileSink writes session ${current.session} group ${current.group}; got ${record.session} ${record.group}"
             }
             try {
-                if (session == null) begin(record)
+                if (current is SessionBinding.Unbound) begin(record)
                 val frame = JournalFileFormat.frame(record)
                 if (segmentRecords > 0 && segmentBytes + frame.size > config.maxSegmentBytes) {
                     finish()
@@ -85,7 +106,9 @@ class JournalFileSink(
                     open()
                     retain()
                 }
-                val output = checkNotNull(output)
+                val active = writer
+                check(active is SegmentWriter.Active)
+                val output = active.output
                 output.write(frame)
                 segmentBytes += frame.size
                 segmentRecords++
@@ -104,7 +127,8 @@ class JournalFileSink(
     fun flush() {
         locked {
             try {
-                output?.flush()
+                val active = writer
+                if (active is SegmentWriter.Active) active.output.flush()
                 unflushed = 0
             } catch (t: Throwable) {
                 abort(t)
@@ -123,18 +147,18 @@ class JournalFileSink(
     }
 
     private fun begin(record: JournalRecord<*, *, *>) {
-        session = record.session
-        group = record.group
-        mode = record.mode
+        binding = SessionBinding.Bound(record.session, record.group, record.mode)
         // After the session's own segments, should the same session id write again.
-        index = storage.list().mapNotNull { JournalFileFormat.parseSegmentName(it.name) }.filter { it.first == record.session }.maxOfOrNull { it.second }?.plus(1) ?: 0
+        index = JournalFileFormat.namedSegments(storage, record.session).maxOfOrNull { it.first }?.plus(1) ?: 0
         open()
     }
 
     private fun open() {
-        val header = JournalFileFormat.header(checkNotNull(session), checkNotNull(group), checkNotNull(mode), index)
-        val output = storage.append(JournalFileFormat.segmentName(checkNotNull(session), index))
-        this.output = output
+        val current = binding
+        check(current is SessionBinding.Bound)
+        val header = JournalFileFormat.header(current.session, current.group, current.mode, index)
+        val output = storage.append(JournalFileFormat.segmentName(current.session, index))
+        writer = SegmentWriter.Active(output)
         output.write(header)
         segmentBytes = header.size
         segmentRecords = 0
@@ -142,13 +166,15 @@ class JournalFileSink(
     }
 
     private fun finish() {
-        val output = output ?: return
-        this.output = null
-        var failure: Throwable? = null
+        val active = writer
+        if (active !is SegmentWriter.Active) return
+        val output = active.output
+        writer = SegmentWriter.Detached
+        var failure: Result<Unit> = Result.success(Unit)
         try {
             output.write(JournalFileFormat.END)
         } catch (t: Throwable) {
-            failure = t
+            failure = Result.failure(t)
             throw t
         } finally {
             closeOutput(output, failure)
@@ -157,27 +183,31 @@ class JournalFileSink(
 
     private fun abort(failure: Throwable) {
         closed = true
-        val output = output ?: return
-        this.output = null
-        closeOutput(output, failure)
+        val active = writer
+        if (active !is SegmentWriter.Active) return
+        writer = SegmentWriter.Detached
+        closeOutput(active.output, Result.failure(failure))
     }
 
-    private fun closeOutput(output: SegmentOutput, failure: Throwable?) {
+    private fun closeOutput(output: SegmentOutput, failure: Result<Unit>) {
         try {
             output.close()
         } catch (t: Throwable) {
-            if (failure == null) throw t
-            if (failure !== t) failure.addSuppressed(t)
+            failure.fold(
+                onSuccess = { throw t },
+                onFailure = { primary -> if (primary !== t) primary.addSuppressed(t) },
+            )
         }
     }
 
     private fun retain() {
-        val session = checkNotNull(session)
-        val mine = storage.list().mapNotNull { info -> JournalFileFormat.parseSegmentName(info.name)?.takeIf { it.first == session }?.let { it.second to info.name } }.sortedBy { it.first }
+        val current = binding
+        check(current is SessionBinding.Bound)
+        val mine = JournalFileFormat.namedSegments(storage, current.session).sortedBy { it.first }
         for ((_, name) in mine.dropLast(config.maxSegments)) storage.delete(name)
     }
 
-    private inline fun <T> locked(block: () -> T): T {
+    private inline fun <T : Any> locked(block: () -> T): T {
         while (!lock.tryLock()) {
             // Spin: the holder writes one frame, or flushes.
         }
@@ -187,4 +217,11 @@ class JournalFileSink(
             lock.unlock()
         }
     }
+}
+
+/** Observation of a segment writer's lifecycle. */
+sealed interface SegmentActivity {
+    data object AwaitingFirstRecord : SegmentActivity
+    data object Closed : SegmentActivity
+    data class Writing(val name: String) : SegmentActivity
 }

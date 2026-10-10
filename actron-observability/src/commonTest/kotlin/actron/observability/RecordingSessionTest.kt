@@ -45,7 +45,7 @@ class RecordingSessionTest {
 
     private fun List<JournalRecord<*, *, *>>.groupSeqs() = map { it.groupSeq.value }
 
-    private fun List<JournalRecord<*, *, *>>.storeSeqs(store: StoreInstanceId) = filter { it.store == store }.map { it.storeSeq?.value }
+    private fun List<JournalRecord<*, *, *>>.storeSeqs(store: StoreInstanceId) = filter { it.store == store }.map { kotlin.test.assertIs<actron.observability.StoreSeq>(it.storeSeq).value }
 
     /**
      * What a sink may rely on: records arrive in order, every hole in the sequence is followed by a
@@ -78,14 +78,14 @@ class RecordingSessionTest {
         session.publish(a, JournalEntry.StoreClosed)
         session.publish(b, JournalEntry.StoreClosed)
         session.publish(a, JournalEntry.StoreClosed)
-        session.publishRecord(null, JournalEntry.RecordingStopped)
+        session.publishRecord(RecordSubject.Session, JournalEntry.RecordingStopped)
         runCurrent()
 
         val records = session.records()
         assertEquals(listOf(1L, 2L, 3L, 4L), records.groupSeqs())
         assertEquals(listOf(1L, 2L), records.storeSeqs(a))
         assertEquals(listOf(1L), records.storeSeqs(b))
-        assertNull(records.last().storeSeq, "a record of the session has no store sequence")
+        assertEquals(RecordOrdinal.Session, records.last().storeSeq, "a record of the session uses group order")
         assertEquals(records, sink.records, "the sink sees the same records in the same order")
         assertTrue(records.zipWithNext().all { (x, y) -> x.elapsed <= y.elapsed }, "elapsed never decreases along the sequence")
         assertEquals(JOURNAL_FORMAT_VERSION, records.first().formatVersion)
@@ -138,7 +138,7 @@ class RecordingSessionTest {
         runCurrent()
 
         assertTrue(sink.records.count { it.entry is JournalEntry.JournalGap } >= 2)
-        assertTrue(sink.records.filter { it.entry is JournalEntry.JournalGap }.all { it.store == null })
+        assertTrue(sink.records.filter { it.entry is JournalEntry.JournalGap }.all { it.store == RecordSubject.Session })
         assertEveryHoleIsExplained(sink.records, session.stats)
         assertEquals((1L..session.stats.published).toList(), session.records().groupSeqs(), "the retained records are complete; gaps are about the sinks")
         writerScope.cancel()
@@ -229,7 +229,7 @@ class RecordingSessionTest {
 
         assertEquals(listOf(1L, 2L, 3L), sink.records.groupSeqs())
         assertEquals(JournalEntry.RecordingStopped, sink.records.last().entry)
-        assertNull(session.publish(a, JournalEntry.StoreClosed))
+        session.publish(a, JournalEntry.StoreClosed)
         assertEquals(1, session.stats.publishedAfterStop)
         assertEquals(3, session.records().size)
         session.close()

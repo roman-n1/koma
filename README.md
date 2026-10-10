@@ -15,6 +15,15 @@ to make decisions you can record, verify and replay.
 
 **Model behavior. Control state. Replay time.**
 
+**Totally null-free domain model. Enforced in CI.** Actron's own values and domain contracts
+are non-null. Absence has behavior: lifecycle phases, domain outcomes and operations replace
+nullable values. `Optional`, `Option`, `Maybe` and renamed value/empty containers are forbidden.
+CI checks both Kotlin source and compiler-resolved types, including inferred types and nested
+generic arguments. The nullable baseline is empty; the strict policy prevents new debt and
+cannot be removed relative to the base branch. Readers for old recordings remain supported.
+See the [null-free API and enforcement policy](doc/guides/absence-policy.md) for migration,
+the language-required `equals` signature and external integration boundaries.
+
 [Get started](#1-a-store-for-a-counter) · [Try Time Travel](#4-time-travel-from-a-real-saved-run) ·
 [Installation](#installation) · [Migrating from Koma](doc/guides/migrating-from-koma.md)
 
@@ -40,19 +49,6 @@ without running the network calls again.
 That gives a bug report a concrete next step: **open the recording, find the decision, try an
 alternative.** Deterministic replay requires the pure Machine path and compatible definitions
 and codecs. Replay, branching and inspector APIs are currently experimental.
-
-### Toward a null-free library
-
-Actron is moving toward behavior that needs neither nullable contracts nor optional containers.
-**CI prevents new explicit nullable constructs in library implementations.** The Kotlin source
-check rejects new `null` literals, nullable types, `!!`, `lateinit`, and `Optional` / `Option` /
-`Maybe` containers, including aliased imports. Existing occurrences are tracked in a baseline
-that may only shrink.
-
-The migration is still in progress. Once the baseline reaches zero, strict mode prevents new
-findings and CI rejects a return to the migration baseline. Kotlin's required `equals(Any?)`
-signature is exempt; inferred types and external APIs still need review. See the
-[absence policy](doc/guides/absence-policy.md) for the check's scope, limitations and API migration guide.
 
 ### Start small. Make complexity explicit.
 
@@ -186,8 +182,8 @@ val counterChart = StateChartDefinition(
     initial = counting,
     states = listOf(AtomicState(counting)),
     transitions = listOf(
-        Transition(counting, counting, ActionMatcher.of<CounterAction.Increment>("Increment"), effect = "increment"),
-        Transition(counting, counting, ActionMatcher.of<CounterAction.Decrement>("Decrement"), effect = "decrement"),
+        Transition(counting, counting, ActionMatcher.of<CounterAction.Increment>("Increment"), effect = EffectKey("increment")),
+        Transition(counting, counting, ActionMatcher.of<CounterAction.Decrement>("Decrement"), effect = EffectKey("decrement")),
     ),
 )
 
@@ -299,6 +295,10 @@ model, pure decision machines, structured recording and Time Travel.
 The original Store DSL remains available under the `actron.*` packages.
 See [Migrating from Koma](doc/guides/migrating-from-koma.md) for the breaking rename.
 
+Actron evolves independently. Source, binary and runtime interoperability with upstream
+Koma 4.0.0 are unsupported; consumers must migrate to Actron and recompile. Compatibility
+with Koma does not constrain Actron's API or releases.
+
 The comparison is with the recorded **upstream base 4.0.0**, not a claim about future upstream
 releases. The original Store DSL, Compose helpers, messaging, logging and test support remain.
 
@@ -333,5 +333,4 @@ records the individual changes and their route back upstream.
   [independent Maven consumer](verification/published-consumer/README.md); CI also compiles its
   Android, JS, Wasm and iOS variants.
 
-A frozen upstream Koma client running alongside Actron is checked by the
-[migration isolation fixture](verification/binary-consumer/README.md) on JVM, JS, Wasm and iOS.
+Published-consumer checks reject upstream Koma dependencies in Actron's dependency graphs.

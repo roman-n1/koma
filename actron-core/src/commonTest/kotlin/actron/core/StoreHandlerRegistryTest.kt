@@ -108,19 +108,20 @@ class StoreHandlerRegistryTest {
     }
 
     @Test
-    fun handlersFromLegacyConstructorsHaveNoMatcher() {
-        // Inline code compiled against Actron 4.0.0 still calls the constructors without metadata.
+    fun predicateHandlersKeepExplicitTypeMetadata() {
         val stateHandler = StoreBuilder.StateHandler<(AppState) -> Boolean, EnterScope<AppState, AppEvent, AppState>>(
             predicate = { true },
             handler = { },
+            matcher = HandlerMatcher(AppState::class),
         )
         val threadedHandler = StoreBuilder.StateHandlerConfig.ThreadedHandler<(AppAction) -> Boolean, ActionScope<AppState, AppAction, AppEvent, AppState>>(
             dispatcher = kotlin.coroutines.EmptyCoroutineContext,
             predicate = { true },
             handler = { },
+            inputType = AppAction::class,
         )
 
-        assertNull(stateHandler.matcher)
-        assertNull(threadedHandler.inputType)
+        assertEquals(HandlerMatcher(AppState::class), stateHandler.matcher)
+        assertEquals(AppAction::class, threadedHandler.inputType)
     }
 }

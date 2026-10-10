@@ -45,8 +45,21 @@ fun interface StoreProbe<S : State, A : Action, E : Event> {
  * Unlike the rest of the probe API, the id itself is public rather than internal: journals built
  * on the probe expose it as the identity of an input, and the fork's journal is stable API.
  */
+sealed interface InputAttribution {
+    /** Add a correlation only when the producer can identify the originating input. */
+    fun correlate(block: (InputId) -> Unit)
+    fun describe(): String
+
+    data object Unattributed : InputAttribution {
+        override fun correlate(block: (InputId) -> Unit) = Unit
+        override fun describe(): String = "unattributed"
+    }
+}
+
 @JvmInline
-value class InputId(val value: Long) {
+value class InputId(val value: Long) : InputAttribution {
+    override fun correlate(block: (InputId) -> Unit) = block(this)
+    override fun describe(): String = "#$value"
     override fun toString(): String = "#$value"
 }
 
@@ -72,7 +85,7 @@ sealed interface InputKind<out A : Action> {
      *
      * @property origin The input whose handler launched the coroutine, when known
      */
-    data class Transaction(val origin: InputId?) : InputKind<Nothing>
+    data class Transaction(val origin: InputAttribution) : InputKind<Nothing>
 
     /**
      * The `recover {}` pass for a launched coroutine that failed, run under the Store lock once
@@ -81,7 +94,7 @@ sealed interface InputKind<out A : Action> {
      * @property error The failure of the launch
      * @property origin The input whose handler launched the coroutine, when known
      */
-    data class Recovery(val error: Throwable, val origin: InputId?) : InputKind<Nothing>
+    data class Recovery(val error: Throwable, val origin: InputAttribution) : InputKind<Nothing>
 }
 
 /**
@@ -194,9 +207,9 @@ sealed interface StoreTrace<out S : State, out A : Action, out E : Event> {
      * [event] was emitted to collectors; the plugins' `onEvent` runs after this trace.
      *
      * @property input The input being processed, or the input whose handler launched the coroutine
-     * that emitted the event; `null` when unknown
+     * that emitted the event; [InputAttribution.Unattributed] when unknown
      */
-    data class EventEmitted<out E : Event>(val input: InputId?, val event: E) : StoreTrace<Nothing, Nothing, E>
+    data class EventEmitted<out E : Event>(val input: InputAttribution, val event: E) : StoreTrace<Nothing, Nothing, E>
 
     /**
      * [error] is about to be passed to the Store's [ExceptionHandler]. It is recorded once per
@@ -204,9 +217,9 @@ sealed interface StoreTrace<out S : State, out A : Action, out E : Event> {
      * does not lose it.
      *
      * @property input The input being processed, or the input whose handler launched the failing
-     * coroutine; `null` when unknown, for example a failing [StateSaver.restore]
+     * coroutine; [InputAttribution.Unattributed] when unknown, for example a failing [StateSaver.restore]
      */
-    data class FailureReported(val input: InputId?, val error: Throwable) : StoreTrace<Nothing, Nothing, Nothing>
+    data class FailureReported(val input: InputAttribution, val error: Throwable) : StoreTrace<Nothing, Nothing, Nothing>
 
     /**
      * Processing of [input] ended with [outcome]; [ordinal] matches its [ProcessingStarted].
@@ -223,7 +236,7 @@ sealed interface StoreTrace<out S : State, out A : Action, out E : Event> {
 }
 
 /**
- * The [InputId] the current coroutine works for, or `null` outside a Store.
+ * The current input attribution; [InputAttribution.Unattributed] outside a Store.
  *
  * Inside a handler, hook or transaction it is the input being processed; inside a coroutine a
  * handler or plugin launched, the input that was being processed when it was launched. One
@@ -232,4 +245,4 @@ sealed interface StoreTrace<out S : State, out A : Action, out E : Event> {
  * their own records to the Store's [StoreTrace]s.
  */
 @InternalActronApi
-suspend fun currentInputId(): InputId? = currentCoroutineContext()[InputOrigin]?.input
+suspend fun currentInputId(): InputAttribution = currentCoroutineContext()[InputOrigin]?.input ?: InputAttribution.Unattributed

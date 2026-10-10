@@ -12,7 +12,7 @@ import actron.statechart.machine.*
  * This debug artifact retains supplied context/action/command data; codecs/redaction belong to the app.
  */
 @ExperimentalActronApi
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.recordInputs(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.recordInputs(
     start: ExecutorCheckpoint<C, CMD>, inputs: List<MachineInput<A>>,
 ): Recording<C, A, CMD, E> {
     require(start.snapshot.definition == id && start.snapshot.version == version) { "[Actron] Recording checkpoint belongs to another machine or version" }
@@ -36,7 +36,7 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.recordInputs(
 
 /** Whole generated/shrunk run from an unstarted snapshot; started workflows require the checkpoint overload. */
 @ExperimentalActronApi
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.recordInputs(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.recordInputs(
     initial: MachineSnapshot<C>, inputs: List<MachineInput<A>>,
 ): Recording<C, A, CMD, E> {
     require(!initial.isStarted) { "[Actron] Use an executor checkpoint to record a started workflow" }

@@ -25,7 +25,7 @@ import kotlin.time.Duration.Companion.seconds
  * @throws IllegalStateException if the store is not idle after [timeout]
  */
 @ExperimentalActronApi
-suspend fun <C, A : Action, CMD, E : Event> MachineStore<C, A, CMD, E>.settle(timeout: Duration = 10.seconds): ExecutorCheckpoint<C, CMD> {
+suspend fun <C : Any, A : Action, CMD : Any, E : Event> MachineStore<C, A, CMD, E>.settle(timeout: Duration = 10.seconds): ExecutorCheckpoint<C, CMD> {
     awaitIdle(timeout)
     return checkpoint()
 }
@@ -41,7 +41,7 @@ suspend fun <C, A : Action, CMD, E : Event> MachineStore<C, A, CMD, E>.settle(ti
  * @property effects The effects waiting in the mailbox or being handled unacknowledged
  */
 @ExperimentalActronApi
-data class MachinePendingWork<CMD>(
+data class MachinePendingWork<CMD : Any>(
     val running: List<CommandRegistration<CMD>>,
     val queued: List<CommandRegistration<CMD>>,
     val ending: List<CommandId>,
@@ -61,11 +61,11 @@ data class MachinePendingWork<CMD>(
 
 /** The work this checkpoint holds; see [MachinePendingWork]. */
 @ExperimentalActronApi
-fun <C, CMD> ExecutorCheckpoint<C, CMD>.pendingWork(): MachinePendingWork<CMD> = MachinePendingWork(
+fun <C : Any, CMD : Any> ExecutorCheckpoint<C, CMD>.pendingWork(): MachinePendingWork<CMD> = MachinePendingWork(
     running = lanes.running.values.toList(),
     queued = lanes.queued.values.flatten(),
     ending = ending.keys.toList(),
-    timers = snapshot.timers.keys.associateWith { checkNotNull(remaining(it)) },
+    timers = snapshot.timers.mapValues { (_, timer) -> timer.deadline - now },
     effects = effects,
 )
 
@@ -79,10 +79,15 @@ fun <C, CMD> ExecutorCheckpoint<C, CMD>.pendingWork(): MachinePendingWork<CMD> =
  * @throws AssertionError with everything pending
  */
 @ExperimentalActronApi
-suspend fun <C, A : Action, CMD, E : Event> MachineStore<C, A, CMD, E>.assertNoPendingWork(recorder: StoreRecorder<MachineSnapshot<C>, A, E>? = null) {
+suspend fun <C : Any, A : Action, CMD : Any, E : Event> MachineStore<C, A, CMD, E>.assertNoPendingWork() = assertPending(emptyList())
+
+@ExperimentalActronApi
+suspend fun <C : Any, A : Action, CMD : Any, E : Event> MachineStore<C, A, CMD, E>.assertNoPendingWork(recorder: StoreRecorder<MachineSnapshot<C>, A, E>) = assertPending(recorder.unconsumedEvents)
+
+@OptIn(ExperimentalActronApi::class)
+private suspend fun <C : Any, A : Action, CMD : Any, E : Event> MachineStore<C, A, CMD, E>.assertPending(unreceived: List<E>) {
     val store = pendingWork()
     val machine = checkpoint().pendingWork()
-    val unreceived = recorder?.unconsumedEvents.orEmpty()
     if (store.isIdle && machine.isIdle && unreceived.isEmpty()) return
     throw AssertionError(
         "[Actron] The machine has pending work: ${store.inputs} input(s) pending, ${store.launches} launch(es) running; executor: $machine" +

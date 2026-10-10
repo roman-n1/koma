@@ -116,7 +116,7 @@ class CheckpointTest {
         }
     }
 
-    private fun <C, CMD> ExecutorCheckpoint<C, CMD>.state() = Triple(snapshot, lanes, ending)
+    private fun <C : Any, CMD : Any> ExecutorCheckpoint<C, CMD>.state() = Triple(snapshot, lanes, ending)
 
     @Test
     fun onceTheExecutorHasSettled_itsCheckpointIsTheOneTheRecordingCarriesForward() = runTest {

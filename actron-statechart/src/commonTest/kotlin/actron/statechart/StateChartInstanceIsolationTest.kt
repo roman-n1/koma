@@ -24,7 +24,7 @@ class StateChartInstanceIsolationTest {
         val active = StateId("Active")
         val done = StateId("Done")
         val definition = StateChartDefinition(active, listOf(AtomicState(active), AtomicState(done)), listOf(
-            Transition(active, active, ActionMatcher.of<Refresh>("Refresh"), effect = "increment"),
+            Transition(active, active, ActionMatcher.of<Refresh>("Refresh"), effect = actron.statechart.EffectKey("increment")),
             Transition(active, done, Trigger.After(100.milliseconds)),
         ))
         val scopes = mutableMapOf<String, ChartLaunchScope<Int, Refresh, Output>>()

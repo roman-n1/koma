@@ -247,7 +247,7 @@ class StateChartHistoryTest {
                 ValidationIssue.HistoryParent(sending, chatHistory),
                 ValidationIssue.AtomicParent(StateId("OnAtomic"), inbox),
                 ValidationIssue.UnknownParent(StateId("Orphan"), StateId("Ghost")),
-                ValidationIssue.HistoryAsInitial(null, chatHistory),
+                ValidationIssue.HistoryAsInitial(StateParent.Root, chatHistory),
                 ValidationIssue.HistoryAsInitial(main, mainHistory),
                 ValidationIssue.InvalidHistoryDefault(mainHistory, main),
                 ValidationIssue.InvalidHistoryDefault(chatHistory, sending),

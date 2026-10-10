@@ -174,7 +174,7 @@ object PersistentRestoreProcess {
             StateChartDefinition(ready, listOf(AtomicState(ready)), emptyList())
         } else {
             StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(waiting), AtomicState(done)), listOf(
-                Transition(idle, waiting, ActionMatcher.of<Begin>("begin"), effect = "remember"),
+                Transition(idle, waiting, ActionMatcher.of<Begin>("begin"), effect = actron.statechart.EffectKey("remember")),
                 Transition(waiting, done, Trigger.After(5.seconds)),
             ))
         }
@@ -261,7 +261,7 @@ object PersistentRestoreProcess {
         val initial = if (upgraded) ready else idle
         val version = if (upgraded) "2" else "1"
         val definition = StateChartDefinition(initial, listOf(AtomicState(initial), AtomicState(waiting), AtomicState(done)), listOf(
-            Transition(initial, waiting, ActionMatcher.of<Begin>("begin"), effect = "remember"),
+            Transition(initial, waiting, ActionMatcher.of<Begin>("begin"), effect = actron.statechart.EffectKey("remember")),
             Transition(initial, done, Trigger.After(10.seconds)),
             Transition(waiting, done, Trigger.After(5.seconds)),
         ))
@@ -411,8 +411,8 @@ private fun DataOutputStream.machineState(value: MachineSnapshot<Int>) {
     value.commands.forEach { (id, record) ->
         writeLong(id.value)
         writeLong(record.scope.value)
-        writeBoolean(record.lane != null)
-        record.lane?.let { writeUTF(it.value) }
+        writeBoolean(record.lane is LaneId)
+        (record.lane as? LaneId)?.let { writeUTF(it.value) }
     }
     writeInt(value.timers.size)
     value.timers.forEach { (id, record) ->
@@ -433,7 +433,7 @@ private fun DataInputStream.machineState(): MachineSnapshot<Int> {
     val activations = List(readInt()) { StateId(readUTF()) to ActivationId(readLong()) }.toMap()
     val commands = List(readInt()) {
         val id = CommandId(readLong())
-        id to CommandRecord(ActivationId(readLong()), if (readBoolean()) LaneId(readUTF()) else null)
+        id to CommandRecord(ActivationId(readLong()), if (readBoolean()) LaneId(readUTF()) else actron.statechart.machine.CommandLane.Independent)
     }.toMap()
     val timers = List(readInt()) {
         TimerId(readLong()) to TimerRecord(TransitionId(readInt()), ActivationId(readLong()), MachineTime(readLong().milliseconds))

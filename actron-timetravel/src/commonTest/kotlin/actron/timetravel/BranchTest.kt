@@ -90,10 +90,10 @@ class BranchTest {
         root,
         listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root), AtomicState(content, parent = root)),
         listOf(
-            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
-            Transition(loading, idle, Trigger.After(10.seconds), effect = "timeout"),
+            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("store")),
+            Transition(loading, idle, Trigger.After(10.seconds), effect = actron.statechart.EffectKey("timeout")),
             Transition(content, loading, ActionMatcher.of<Act.Refresh>("Refresh")),
         ),
     )
@@ -180,7 +180,7 @@ class BranchTest {
         branch.dispatch(Act.Load("dogs"))
         val dogs = branch.awaiting.single()
         assertEquals(Fetch("dogs"), dogs.command)
-        assertNull(branch.reuseRecordedAnswers(dogs.id), "Fetch(dogs) was never recorded; no fallback to anything")
+        assertEquals(emptyList(), branch.reuseRecordedAnswers(dogs.id), "Fetch(dogs) was never recorded; no fallback to anything")
         branch.answer(dogs.id, Act.Loaded(listOf("rex")))
         assertEquals(listOf("rex"), branch.snapshot.context.items)
         // The answer moved the machine out of Loading, which ends the command's activation: it is
@@ -321,7 +321,7 @@ class BranchTest {
 
         assertEquals(checkpoint, branch.checkpoint)
         assertEquals(listOf(Fetch("cats")), branch.awaiting.map { it.command })
-        assertNull(branch.reuseRecordedAnswers(branch.awaiting.single().id), "no recording: the caller answers")
+        assertEquals(emptyList(), branch.reuseRecordedAnswers(branch.awaiting.single().id), "no recording: the caller answers")
         branch.answer(branch.awaiting.single().id, Act.Loaded(listOf("garfield")))
         assertTrue(branch.snapshot.isActive(content))
         assertEquals(listOf("garfield"), branch.snapshot.context.items)

@@ -64,7 +64,7 @@ class FileSegmentStorageJvmTest {
             for (record in records) sink.write(record)
             sink.flush()
             // Not closed: the process dies here, three bytes into the last frame.
-            val active = File(nested, checkNotNull(sink.activeSegment))
+            val active = File(nested, assertIs<SegmentActivity.Writing>(sink.activeSegment).name)
             RandomAccessFile(active, "rw").use { it.setLength(it.length() - 3) }
 
             val files = JournalFiles(FileSegmentStorage(nested))

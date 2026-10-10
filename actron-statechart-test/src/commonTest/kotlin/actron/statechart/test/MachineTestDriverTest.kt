@@ -86,7 +86,7 @@ class MachineTestDriverTest {
         listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root), AtomicState(content, parent = root)),
         listOf(
             Transition(idle, loading, ActionMatcher.of<Act.Load>("Load")),
-            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "count"),
+            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("count")),
             Transition(loading, idle, Trigger.After(10.seconds)),
             Transition(content, loading, ActionMatcher.of<Act.Load>("Load")),
         ),

@@ -322,11 +322,11 @@ class MessengerChartTest {
         runCurrent()
         assertEquals(path.startLeaves, store.leaves, "path $index start")
         path.transitions.forEachIndexed { step, transition ->
-            val delay = transition.after
+            val delay = (transition.trigger as? actron.statechart.Trigger.After)?.delay
             if (delay != null) {
                 advance(delay)
             } else {
-                send(store, sampleActions.first { transition.on!!.matches(it) })
+                send(store, sampleActions.first { (transition.trigger as? actron.statechart.Trigger.OnAction)?.matcher!!.matches(it) })
             }
             assertEquals(path.activeLeaves[step], store.leaves, "path $index step $step: $transition")
         }

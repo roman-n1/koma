@@ -61,7 +61,7 @@ class InspectorScreenTest {
     private fun journal(): List<JournalRecord<*, *, *>> {
         var seq = 0L
         fun record(entry: JournalEntry<*, *, *>, forStore: StoreInstanceId? = store) =
-            JournalRecord(JOURNAL_FORMAT_VERSION, RuntimeSessionId("run"), MachineGroupId("chat"), forStore, ExecutionMode.Live, GroupSeq(++seq), forStore?.let { StoreSeq(seq) }, seq.milliseconds, entry)
+            JournalRecord(JOURNAL_FORMAT_VERSION, RuntimeSessionId("run"), MachineGroupId("chat"), forStore ?: actron.observability.RecordSubject.Session, ExecutionMode.Live, GroupSeq(++seq), forStore?.let { StoreSeq(seq) } ?: actron.observability.RecordOrdinal.Session, seq.milliseconds, entry)
         return listOf(
             record(JournalEntry.StoreRegistered(Capability.InspectOnly)),
             record(JournalEntry.InputAccepted(InputId(1), InputDescriptor.Startup)),
@@ -110,7 +110,7 @@ class InspectorScreenTest {
     private val idle = StateId("Idle")
     private val machine = Machine<Ctx, Act, Nothing, Nothing>(
         DefinitionId("counter"), DefinitionVersion("1"),
-        StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, ActionMatcher.of<Act.Inc>("Inc"), effect = "inc"))),
+        StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, ActionMatcher.of<Act.Inc>("Inc"), effect = actron.statechart.EffectKey("inc")))),
     ) { effect("inc") { c, _ -> c.copy(n = c.n + 1) } }
 
     private fun recording(): Recording<Ctx, Act, Nothing, Nothing> {

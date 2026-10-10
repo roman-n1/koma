@@ -62,63 +62,80 @@ import kotlin.time.Duration.Companion.seconds
  */
 @ExperimentalActronApi
 @Composable
-fun InspectorScreen(state: InspectorState, replay: ReplayControls<*, *, *, *>? = null, branch: BranchControls? = null, modifier: Modifier = Modifier) {
-    InspectorScreenContent(state, replay, null, branch, modifier)
-}
+fun InspectorScreen(state: InspectorState, modifier: Modifier = Modifier) = InspectorScreenContent(
+    state, state.mode, modifier, navigation = {}, timeline = { TimelinePanel(state, it) }, widePosition = { PositionPanel(state, it) }, stackedPosition = { PositionPanel(state, it) },
+)
 
-/** A group's recording on one cursor; all members are restored at the same global position. */
 @ExperimentalActronApi
 @Composable
-fun InspectorScreen(state: InspectorState, groupReplay: GroupReplayControls, branch: BranchControls? = null, modifier: Modifier = Modifier) {
-    InspectorScreenContent(state, null, groupReplay, branch, modifier)
-}
+fun InspectorScreen(state: InspectorState, replay: ReplayControls<*, *, *, *>, modifier: Modifier = Modifier) = InspectorScreenContent(
+    state, state.mode, modifier, navigation = { ReplayBar(replay, state) }, timeline = { TimelinePanel(state, it) }, widePosition = { PositionPanel(state, replay, it) }, stackedPosition = { PositionPanel(state, replay, it) },
+)
 
-/** Replay, experiment from the current group position, then return to recorded history. */
+@ExperimentalActronApi
+@Composable
+fun InspectorScreen(state: InspectorState, branch: BranchControls, modifier: Modifier = Modifier) = InspectorScreenContent(
+    state, state.mode, modifier, navigation = {}, timeline = { TimelinePanel(state, it) }, widePosition = { BranchPanel(branch, it) }, stackedPosition = { PositionPanel(state, it) }, afterPosition = { BranchPanel(branch, it) },
+)
+
+/** A group's recording on one cursor; all members share one global position. */
+@ExperimentalActronApi
+@Composable
+fun InspectorScreen(state: InspectorState, groupReplay: GroupReplayControls, modifier: Modifier = Modifier) = InspectorScreenContent(
+    state, state.mode, modifier, navigation = { GroupReplayBar(groupReplay) }, timeline = { GroupTimelinePanel(groupReplay, state.filter, it) }, widePosition = { GroupPositionPanel(groupReplay, it) }, stackedPosition = { GroupPositionPanel(groupReplay, it) },
+)
+
+@ExperimentalActronApi
+@Composable
+fun InspectorScreen(state: InspectorState, groupReplay: GroupReplayControls, branch: BranchControls, modifier: Modifier = Modifier) = InspectorScreenContent(
+    state, state.mode, modifier, navigation = { GroupReplayBar(groupReplay) }, timeline = { GroupTimelinePanel(groupReplay, state.filter, it) }, widePosition = { BranchPanel(branch, it) }, stackedPosition = { GroupPositionPanel(groupReplay, it) }, afterPosition = { BranchPanel(branch, it) },
+)
+
+/** Replay, experiment from the current group checkpoint, then return to recorded history. */
 @ExperimentalActronApi
 @Composable
 fun InspectorScreen(state: InspectorState, timeTravel: GroupTimeTravelControls, modifier: Modifier = Modifier) {
-    InspectorScreenContent(state, null, timeTravel.replay, timeTravel.branch, modifier, timeTravel)
+    val travel = timeTravel.travel
+    if (travel is GroupTravel.Experiment) InspectorScreenContent(
+        state, timeTravel.mode, modifier, showTimeline = false,
+        navigation = { GroupTimeTravelBar(timeTravel) }, timeline = { GroupTimelinePanel(timeTravel.replay, state.filter, it) },
+        widePosition = { BranchPanel(travel.branch, it) }, stackedPosition = { GroupPositionPanel(timeTravel.replay, it) }, afterPosition = { BranchPanel(travel.branch, it) },
+    ) else InspectorScreenContent(
+        state, timeTravel.mode, modifier, navigation = { GroupTimeTravelBar(timeTravel); GroupReplayBar(timeTravel.replay) },
+        timeline = { GroupTimelinePanel(timeTravel.replay, state.filter, it) }, widePosition = { GroupPositionPanel(timeTravel.replay, it) }, stackedPosition = { GroupPositionPanel(timeTravel.replay, it) },
+    )
 }
 
 @OptIn(ExperimentalActronApi::class)
 @Composable
-private fun InspectorScreenContent(state: InspectorState, replay: ReplayControls<*, *, *, *>?, groupReplay: GroupReplayControls?, branch: BranchControls?, modifier: Modifier, timeTravel: GroupTimeTravelControls? = null) {
-    val showReplay = timeTravel?.branch == null
+private fun InspectorScreenContent(
+    state: InspectorState, mode: InspectorMode, modifier: Modifier,
+    navigation: @Composable () -> Unit,
+    timeline: @Composable (Modifier) -> Unit,
+    widePosition: @Composable (Modifier) -> Unit,
+    stackedPosition: @Composable (Modifier) -> Unit,
+    afterPosition: @Composable (Modifier) -> Unit = {},
+    showTimeline: Boolean = true,
+) {
     Surface(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            ModeBarContent(state, timeTravel?.mode ?: state.mode)
-            if (timeTravel != null) GroupTimeTravelBar(timeTravel)
-            if (replay != null) ReplayBar(replay, state)
-            if (groupReplay != null && showReplay) GroupReplayBar(groupReplay)
+            ModeBarContent(state, mode)
+            navigation()
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                if (maxWidth >= 900.dp) {
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        StoresPanel(state, modifier = Modifier.weight(1f).fillMaxSize())
-                        if (showReplay) {
-                            VerticalRule()
-                            if (groupReplay != null) GroupTimelinePanel(groupReplay, state.storeFilter, modifier = Modifier.weight(2f).fillMaxSize()) else TimelinePanel(state, modifier = Modifier.weight(2f).fillMaxSize())
-                        }
-                        VerticalRule()
-                        when {
-                            branch != null -> BranchPanel(branch, modifier = Modifier.weight(2f).fillMaxSize())
-                            groupReplay != null -> GroupPositionPanel(groupReplay, modifier = Modifier.weight(2f).fillMaxSize())
-                            else -> PositionPanel(state, replay, modifier = Modifier.weight(2f).fillMaxSize())
-                        }
+                if (maxWidth >= 900.dp) Row(modifier = Modifier.fillMaxSize()) {
+                    StoresPanel(state, modifier = Modifier.weight(1f).fillMaxSize())
+                    if (showTimeline) { VerticalRule(); timeline(Modifier.weight(2f).fillMaxSize()) }
+                    VerticalRule()
+                    widePosition(Modifier.weight(2f).fillMaxSize())
+                } else Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    StoresPanel(state, modifier = Modifier.fillMaxWidth())
+                    if (showTimeline) {
+                        HorizontalDivider()
+                        timeline(Modifier.fillMaxWidth().height(360.dp))
+                        HorizontalDivider()
+                        stackedPosition(Modifier.fillMaxWidth())
                     }
-                } else {
-                    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        StoresPanel(state, modifier = Modifier.fillMaxWidth())
-                        if (showReplay) {
-                            HorizontalDivider()
-                            if (groupReplay != null) GroupTimelinePanel(groupReplay, state.storeFilter, modifier = Modifier.fillMaxWidth().height(360.dp)) else TimelinePanel(state, modifier = Modifier.fillMaxWidth().height(360.dp))
-                            HorizontalDivider()
-                            if (groupReplay != null) GroupPositionPanel(groupReplay, modifier = Modifier.fillMaxWidth()) else PositionPanel(state, replay, modifier = Modifier.fillMaxWidth())
-                        }
-                        if (branch != null) {
-                            HorizontalDivider()
-                            BranchPanel(branch, modifier = Modifier.fillMaxWidth())
-                        }
-                    }
+                    afterPosition(Modifier.fillMaxWidth())
                 }
             }
         }
@@ -141,7 +158,9 @@ private fun ModeBarContent(state: InspectorState, mode: InspectorMode, modifier:
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text(mode.name.uppercase(), fontWeight = FontWeight.Bold, color = Color.White)
-        Text("session ${inspector.session ?: "-"}  group ${inspector.group ?: "-"}  records ${inspector.records.size}", color = Color.White)
+        var run = "session -  group -"
+        inspector.withRun { session, group, _ -> run = "session $session  group $group" }
+        Text("$run  records ${inspector.records.size}", color = Color.White)
         Text(InspectorText.completeness(inspector.completeness), fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.testTag("completeness"))
     }
 }
@@ -155,7 +174,7 @@ fun StoresPanel(state: InspectorState, modifier: Modifier = Modifier) {
         Heading("Stores")
         val groupReasons = inspector.completeness.reasons.filter { it !in inspector.stores.flatMap { s -> s.completeness.reasons } }
         for (reason in groupReasons) ReasonLine(InspectorText.reason(reason))
-        for (store in inspector.stores) StoreCard(store, selected = state.storeFilter == store.id, replay = inspector.replayability(store.id)) { state.toggleFilter(store.id) }
+        for (store in inspector.stores) StoreCard(store, selected = state.filter == StoreFilter.Single(store.id), replay = inspector.replayability(store.id)) { state.toggleFilter(store.id) }
         if (inspector.stores.isEmpty()) Text("no Stores in this journal", style = MaterialTheme.typography.bodySmall)
     }
 }
@@ -170,11 +189,15 @@ private fun StoreCard(store: StoreView, selected: Boolean, replay: Availability,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(store.id.value, fontWeight = FontWeight.Bold)
-            Text(store.capability?.name ?: "unregistered", style = MaterialTheme.typography.bodySmall)
+            var capability = "unregistered"
+            store.withCapability { capability = it.name }
+            Text(capability, style = MaterialTheme.typography.bodySmall)
             Text(InspectorText.completeness(store.completeness), style = MaterialTheme.typography.bodySmall, color = if (store.completeness.isComplete) Color(0xFF2E7D32) else Color(0xFFC62828))
         }
+        var revision = "-"
+        store.withRevision { revision = it.toString() }
         Text(
-            "records ${store.records}  processings ${store.processings}  revision ${store.revision ?: "-"}  ${if (store.closed) "closed" else "open"}  recording ${recordingLabel(store)}",
+            "records ${store.records}  processings ${store.processings}  revision $revision  ${if (store.closed) "closed" else "open"}  recording ${recordingLabel(store)}",
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
         )
@@ -186,6 +209,7 @@ private fun StoreCard(store: StoreView, selected: Boolean, replay: Availability,
     }
 }
 
+@OptIn(ExperimentalActronApi::class)
 private fun recordingLabel(store: StoreView): String = when (val status = store.recording) {
     actron.timetravel.inspect.RecordingStatus.Unrecorded -> "none"
     is actron.timetravel.inspect.RecordingStatus.Attached -> "attached (${status.steps} steps)"
@@ -198,11 +222,12 @@ private fun recordingLabel(store: StoreView): String = when (val status = store.
 fun TimelinePanel(state: InspectorState, modifier: Modifier = Modifier) {
     val visible = state.visibleTimeline
     Column(modifier = modifier.padding(8.dp)) {
-        Heading("Timeline" + (state.storeFilter?.let { " of $it" } ?: "") + " (${visible.size})")
+        val filter = state.filter
+        Heading("Timeline" + (if (filter is StoreFilter.Single) " of ${filter.store}" else "") + " (${visible.size})")
         LazyColumn(modifier = Modifier.fillMaxSize().testTag("timeline")) {
             itemsIndexed(visible, key = { _, indexed -> indexed.index }) { _, indexed ->
                 val (index, item) = indexed
-                val selected = state.selected == index
+                val selected = state.selection == InspectorSelection.Position(index)
                 Text(
                     InspectorText.line(item),
                     fontFamily = FontFamily.Monospace,
@@ -226,33 +251,38 @@ fun TimelinePanel(state: InspectorState, modifier: Modifier = Modifier) {
  */
 @ExperimentalActronApi
 @Composable
-fun PositionPanel(state: InspectorState, replay: ReplayControls<*, *, *, *>? = null, modifier: Modifier = Modifier) {
-    val item = state.selectedItem
+fun PositionPanel(state: InspectorState, modifier: Modifier = Modifier) = PositionPanelContent(state, modifier) {}
+
+@ExperimentalActronApi
+@Composable
+fun PositionPanel(state: InspectorState, replay: ReplayControls<*, *, *, *>, modifier: Modifier = Modifier) = PositionPanelContent(state, modifier) {
+    Spacer(Modifier.height(8.dp))
+    OutlinedButton(onClick = { replay.explainNext() }, modifier = Modifier.testTag("explain-next")) { Text("Explain next input / check invariants") }
+    val inspection = replay.inspection
+    if (inspection is ChartInspection.Decided) Text(inspection.outcome)
+    StateChartPanel(replay.session.machine.chart, replay.snapshot,
+        previousActive = replay.session.recording.snapshotAt((replay.position - 1).coerceAtLeast(0)).configuration.active,
+        inspection = inspection)
+    DefinitionPanel(replay.mermaid(), "Definition of ${replay.store} at ${replay.position}", tag = "definition")
+}
+
+@OptIn(ExperimentalActronApi::class)
+@Composable
+private fun PositionPanelContent(state: InspectorState, modifier: Modifier, extra: @Composable () -> Unit) {
+    val selection = state.selection
     Column(modifier = modifier.padding(8.dp).verticalScroll(rememberScrollState())) {
         Column(modifier = Modifier.semantics(mergeDescendants = true) {}.testTag("position")) {
-            Heading("Position" + (state.selected?.let { " $it" } ?: ""))
-            if (item == null) {
-                Text("select a position of the timeline", style = MaterialTheme.typography.bodySmall)
-            } else {
-                val lines = InspectorText.detail(item)
-                for ((index, line) in lines.withIndex()) {
-                    Text(line, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal)
-                }
-                if (item is TimelineItem.Processing && item.recorded == null) {
+            Heading("Position" + (if (selection is InspectorSelection.Position) " ${selection.index}" else ""))
+            if (selection is InspectorSelection.Position && selection.index in state.inspector.timeline.indices) {
+                val item = state.inspector.timeline[selection.index]
+                for ((index, line) in InspectorText.detail(item).withIndex()) Text(line, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, fontWeight = if (index == 0) FontWeight.Bold else FontWeight.Normal)
+                if (item is TimelineItem.Processing && item.attachment is actron.timetravel.inspect.ProcessingAttachment.JournalOnly) {
                     Spacer(Modifier.height(8.dp))
                     Text("snapshots are what the journal kept; attach the Store's recording to see the machine's", style = MaterialTheme.typography.bodySmall, color = Color(0xFF8E24AA))
                 }
-            }
+            } else Text("select a position of the timeline", style = MaterialTheme.typography.bodySmall)
         }
-        if (replay != null) {
-            Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = { replay.explainNext() }, modifier = Modifier.testTag("explain-next")) { Text("Explain next input / check invariants") }
-            replay.explanationOutcome?.let { Text(it) }
-            StateChartPanel(replay.session.machine.chart, replay.snapshot,
-                previous = replay.session.recording.snapshotAt((replay.position - 1).coerceAtLeast(0)).configuration,
-                explanation = replay.explanation, violations = replay.invariantViolations)
-            DefinitionPanel(replay.mermaid(), "Definition of ${replay.store} at ${replay.position}", tag = "definition")
-        }
+        extra()
     }
 }
 
@@ -282,7 +312,8 @@ fun BranchPanel(branch: BranchControls, modifier: Modifier = Modifier) {
             Heading("Branch")
             OutlinedButton(onClick = { branch.advance(1.seconds) }, modifier = Modifier.testTag("branch-advance")) { Text("advance 1s") }
         }
-        branch.problem?.let { Text("! $it", style = MaterialTheme.typography.bodySmall, color = Color(0xFFC62828), modifier = Modifier.testTag("branch-problem")) }
+        val request = branch.request
+        if (request is BranchRequest.Refused) { Text("! ${request.reason}", style = MaterialTheme.typography.bodySmall, color = Color(0xFFC62828), modifier = Modifier.testTag("branch-problem")) }
         for (store in branch.members) BranchMemberCard(branch, store)
         Heading("Decisions (${branch.decisions.size})")
         for (decision in branch.decisions) {
@@ -315,7 +346,7 @@ private fun BranchMemberCard(branch: BranchControls, store: StoreInstanceId) {
         for (registration in branch.awaiting(store)) {
             val id = registration.id
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.testTag("branch-awaiting-${store.value}-${id.value}")) {
-                Text("awaiting c${id.value} ${registration.command}${registration.lane?.let { " in ${it.value}" } ?: ""}", fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 12.dp))
+                Text("awaiting c${id.value} ${registration.command}${(registration.lane as? actron.statechart.machine.LaneId)?.let { " in ${it.value}" } ?: ""}", fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 12.dp))
                 OutlinedButton(onClick = { branch.complete(store, id) }, modifier = Modifier.testTag("branch-complete-${store.value}-${id.value}")) { Text("complete") }
                 OutlinedButton(onClick = { branch.fail(store, id) }, modifier = Modifier.testTag("branch-fail-${store.value}-${id.value}")) { Text("fail") }
                 for (input in inputs) if (input is BranchInput.Answer) {
@@ -331,28 +362,31 @@ private fun BranchMemberCard(branch: BranchControls, store: StoreInstanceId) {
 @ExperimentalActronApi
 @Composable
 fun ReplayBar(replay: ReplayControls<*, *, *, *>, state: InspectorState, modifier: Modifier = Modifier) {
-    var seeking by remember { mutableStateOf<Float?>(null) }
+    var seeking by remember { mutableStateOf<SeekGesture>(SeekGesture.Idle) }
     Column(modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).testTag("replay-bar")) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { replay.stepBackward(); state.select(null) }, enabled = replay.canStepBackward, modifier = Modifier.testTag("replay-back")) { Text("◀ back") }
-            OutlinedButton(onClick = { replay.stepForward(); state.select(null) }, enabled = replay.canStepForward && replay.divergence == null, modifier = Modifier.testTag("replay-forward")) { Text("forward ▶") }
+            OutlinedButton(onClick = { replay.stepBackward(); state.clearSelection() }, enabled = replay.canStepBackward, modifier = Modifier.testTag("replay-back")) { Text("◀ back") }
+            OutlinedButton(onClick = { replay.stepForward(); state.clearSelection() }, enabled = replay.canStepForward && replay.movement is ReplayMovement.Open, modifier = Modifier.testTag("replay-forward")) { Text("forward ▶") }
             OutlinedButton(onClick = { replay.verify() }, modifier = Modifier.testTag("replay-verify")) { Text("verify") }
             Text("${replay.position} / ${replay.length} of ${replay.store}", modifier = Modifier.padding(top = 12.dp).testTag("replay-position"))
         }
         Slider(
-            value = seeking ?: replay.position.toFloat(),
-            onValueChange = { seeking = it },
+            value = if (seeking is SeekGesture.Dragging) (seeking as SeekGesture.Dragging).value else replay.position.toFloat(),
+            onValueChange = { seeking = SeekGesture.Dragging(it) },
             onValueChangeFinished = {
-                seeking?.let { replay.seek(it.toInt()) }
-                seeking = null
-                state.select(null)
+                val gesture = seeking
+                if (gesture is SeekGesture.Dragging) replay.seek(gesture.value.toInt())
+                seeking = SeekGesture.Idle
+                state.clearSelection()
             },
             valueRange = 0f..replay.length.toFloat().coerceAtLeast(1f),
             steps = (replay.length - 1).coerceAtLeast(0),
             modifier = Modifier.fillMaxWidth().testTag("replay-seek"),
         )
-        replay.forwardUnavailable?.let { Text("forward disabled: $it", style = MaterialTheme.typography.bodySmall, color = Color(0xFF8E24AA), modifier = Modifier.testTag("replay-why")) }
-        replay.verdict?.let { Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("replay-verdict")) }
+        val availability = replay.forwardAvailability
+        if (availability is Availability.Unavailable) for (why in availability.reasons) { Text("forward disabled: $why", style = MaterialTheme.typography.bodySmall, color = Color(0xFF8E24AA), modifier = Modifier.testTag("replay-why")) }
+        val verification = replay.verification
+        if (verification is ReplayVerification.Checked) { Text(verification.verdict, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("replay-verdict")) }
     }
 }
 

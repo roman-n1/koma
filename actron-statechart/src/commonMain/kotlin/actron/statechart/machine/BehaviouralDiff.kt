@@ -29,7 +29,7 @@ data class BehaviouralDiff(
 }
 
 /** Compares model data without invoking guards, reducers, invariants or hooks, including across context-type migrations. */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.behaviouralDiffTo(next: Machine<*, *, *, *>): BehaviouralDiff {
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.behaviouralDiffTo(next: Machine<*, *, *, *>): BehaviouralDiff {
     require(id == next.id) { "[Actron] Behavioural diff needs versions of the same logical machine" }
     return BehaviouralDiff(id, version, next.version, chart.diffTo(next.chart))
 }

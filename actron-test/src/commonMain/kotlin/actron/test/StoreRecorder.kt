@@ -99,11 +99,11 @@ class StoreRecorder<S : State, A : Action, E : Event> internal constructor() : P
 
     // The Store this recorder was started on; the lists are plain, so one recorder cannot serve
     // two Stores (their hook rounds are serialized per Store only).
-    private var owner: PluginScope<S, A>? = null
+    private var acceptsOwner: (PluginScope<S, A>) -> Boolean = { true }
 
     override suspend fun onStart(scope: PluginScope<S, A>, state: S) {
-        check(owner == null || owner === scope) { "[Actron] A StoreRecorder records one Store; create one per Store with createRecorder()" }
-        owner = scope
+        check(acceptsOwner(scope)) { "[Actron] A StoreRecorder records one Store; create one per Store with createRecorder()" }
+        acceptsOwner = { it === scope }
         recordedStates.add(state)
     }
 

@@ -1,11 +1,15 @@
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExperimentalActronApi
 import actron.core.InputId
 import actron.observability.FailureDescriptor
 import actron.observability.GroupSeq
+import actron.observability.JournalBoundary
+import actron.observability.JournalPublisher
 import actron.observability.JournalEntry
 import actron.observability.RecordingSession
 import actron.observability.StoreInstanceId
@@ -39,15 +43,37 @@ data class GroupCheckpoint(
     val members: Map<StoreInstanceId, ExecutorCheckpoint<*, *>>,
     val inFlight: List<BridgeMessage>,
     val held: Map<StoreInstanceId, Int>,
-    val boundary: GroupSeq?,
+    val boundary: JournalBoundary,
     val sources: Map<SourceId, SourceSnapshot> = emptyMap(),
 )
+
+/** The operational result of attempting a consistent group cut. */
+sealed interface GroupCut {
+    data class Ready(val checkpoint: GroupCheckpoint) : GroupCut
+    data class TimedOut(val stage: CutStage) : GroupCut
+    data class MemberUnavailable(val member: StoreInstanceId) : GroupCut
+}
+
+sealed interface CutStage {
+    data class PausingSource(val source: SourceId) : CutStage
+    data class SettlingMember(val member: StoreInstanceId) : CutStage
+}
 
 /** The role of a route in a request/reply pair; see [MachineGroup.requestReply]. */
 enum class PairRole { Request, Reply }
 
 /** A route's place in the request/reply pair named [name]; see [MachineGroup.requestReply]. */
-data class RoutePair(val name: String, val role: PairRole)
+sealed interface RouteProtocol {
+    val suffix: String
+
+    data object OneWay : RouteProtocol {
+        override val suffix: String = ""
+    }
+}
+
+data class RoutePair(val name: String, val role: PairRole) : RouteProtocol {
+    override val suffix: String get() = " ($name $role)"
+}
 
 /** The two routes of a request/reply pair named [name]; see [MachineGroup.requestReply]. */
 class RequestReply(val name: String, val request: MachineGroup.Route, val reply: MachineGroup.Route)
@@ -104,7 +130,7 @@ fun interface CutListener {
 // The sources are the experimental part of the group (their contract and [source]); the group
 // itself is stable and opts in without propagating.
 @OptIn(ExperimentalActronApi::class)
-class MachineGroup(private val session: RecordingSession? = null) {
+class MachineGroup(private val session: JournalPublisher = JournalPublisher.Disabled) {
     private val lock = Mutex()
     private val coordinating = Mutex()
     private val members = linkedMapOf<StoreInstanceId, Member<*, *, *, *>>()
@@ -120,11 +146,12 @@ class MachineGroup(private val session: RecordingSession? = null) {
      * A route of the bridge: effects of [from] that [map] turns into actions of [to]; [pair] is
      * its place in a request/reply pair, when it has one.
      */
-    class Route internal constructor(val from: StoreInstanceId, val to: StoreInstanceId, internal val map: (Event) -> Action?, val pair: RoutePair? = null) {
-        /** The action [event] becomes for [to], or `null` when the route does not carry it. */
-        fun mapEvent(event: Event): Action? = map(event)
+    class Route internal constructor(val from: StoreInstanceId, val to: StoreInstanceId, map: (Event, (Action) -> Unit) -> Unit, val pair: RouteProtocol = RouteProtocol.OneWay) {
+        private val mapping = EventRoute(map)
+        /** Prepares one synchronous action for [to], or filters [event] without calling [carry]. */
+        fun mapEvent(event: Event, carry: (Action) -> Unit): Boolean = mapping.mapEvent(event, carry)
 
-        override fun toString(): String = "$from -> $to" + (pair?.let { " (${it.name} ${it.role})" } ?: "")
+        override fun toString(): String = "$from -> $to" + pair.suffix
     }
 
     /** The routes the bridge carries now, in registration order. */
@@ -171,9 +198,9 @@ class MachineGroup(private val session: RecordingSession? = null) {
 
     /**
      * Routes the effects of [from] to [to]: each effect [map] returns an action for is delivered;
-     * `null` means the effect is not for [to].
+     * Omitting the carry callback leaves the effect unrouted.
      */
-    fun <E : Event, A : Action> route(from: StoreInstanceId, to: StoreInstanceId, map: (E) -> A?): Route = register(from, to, map, pair = null)
+    fun <E : Event, A : Action> route(from: StoreInstanceId, to: StoreInstanceId, map: (E, (A) -> Unit) -> Unit): Route = register(from, to, map, pair = RouteProtocol.OneWay)
 
     /**
      * A request and its reply as a pair of routes named [name]: the effects of [requester] that
@@ -191,18 +218,18 @@ class MachineGroup(private val session: RecordingSession? = null) {
         requester: Member<*, PA, *, RQ>,
         responder: Member<*, RA, *, RP>,
         name: String,
-        request: (RQ) -> RA?,
-        reply: (RP) -> PA?,
+        request: (RQ, (RA) -> Unit) -> Unit,
+        reply: (RP, (PA) -> Unit) -> Unit,
     ): RequestReply {
         val requestRoute = register(requester.id, responder.id, request, RoutePair(name, PairRole.Request))
         val replyRoute = register(responder.id, requester.id, reply, RoutePair(name, PairRole.Reply))
         return RequestReply(name, requestRoute, replyRoute)
     }
 
-    private fun <E : Event, A : Action> register(from: StoreInstanceId, to: StoreInstanceId, map: (E) -> A?, pair: RoutePair?): Route {
+    private fun <E : Event, A : Action> register(from: StoreInstanceId, to: StoreInstanceId, map: (E, (A) -> Unit) -> Unit, pair: RouteProtocol): Route {
         require(from != to) { "[Actron] A route goes to another member; $from -> $from" }
         @Suppress("UNCHECKED_CAST")
-        val route = Route(from, to, map as (Event) -> Action?, pair)
+        val route = Route(from, to, map as (Event, (Action) -> Unit) -> Unit, pair)
         locked {
             routeList += route
             routeHistoryList += route
@@ -212,9 +239,9 @@ class MachineGroup(private val session: RecordingSession? = null) {
 
     /**
      * Routes the effects of [from] to [to], the receiver's action type checked at compile time:
-     * [map] returns an action [to] accepts, or `null` for an effect that is not for it.
+     * [map] synchronously carries an action [to] accepts, or carries none for an unrelated effect.
      */
-    fun <E : Event, A : Action> route(from: Member<*, *, *, E>, to: Member<*, A, *, *>, map: (E) -> A?): Route = route(from.id, to.id, map)
+    fun <E : Event, A : Action> route(from: Member<*, *, *, E>, to: Member<*, A, *, *>, map: (E, (A) -> Unit) -> Unit): Route = route(from.id, to.id, map)
 
     /**
      * Stops routing along [route]: the effects decided from now on are not carried by it; the
@@ -230,7 +257,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
      *
      * @throws IllegalArgumentException if [id] is already a member
      */
-    fun <C, A : Action, CMD, E : Event> member(id: StoreInstanceId): Member<C, A, CMD, E> {
+    fun <C : Any, A : Action, CMD : Any, E : Event> member(id: StoreInstanceId): Member<C, A, CMD, E> {
         val member = Member<C, A, CMD, E>(id)
         locked {
             require(id !in members) { "[Actron] $id is already a member of this group" }
@@ -240,67 +267,74 @@ class MachineGroup(private val session: RecordingSession? = null) {
     }
 
     /**
-     * A consistent cut of the group, or `null` when a member did not settle within [timeout] or
-     * has closed; see the class documentation.
+     * A [GroupCut.Ready] checkpoint, a [GroupCut.TimedOut] stage or a [GroupCut.MemberUnavailable]
+     * result when a member has closed; see the class documentation.
      */
-    suspend fun checkpoint(timeout: Duration = 2.seconds): GroupCheckpoint? = coordinating.withLock {
-        val attached = locked { members.values.mapNotNull { member -> member.store?.takeIf { member.isReachable }?.let { member.id to it } } }
+    suspend fun checkpoint(timeout: Duration = 2.seconds): GroupCut = coordinating.withLock {
+        val attached = locked {
+            buildList<Pair<StoreInstanceId, MachineStoreImpl<*, *, *, *>>> {
+                for (member in members.values) member.withReachableStore { add(member.id to it) }
+            }
+        }
         val sources = locked { sourceList.toList() }
         val started = TimeSource.Monotonic.markNow()
         val paused = mutableListOf<ExternalSource>()
         var frozen = false
-        var failure: Throwable? = null
+        var failure: Result<Unit> = Result.success(Unit)
+        var primaryFailed = false
         try {
             // Sources first: once none feeds, what the members hold is all there is.
             for (source in sources) {
                 val remaining = timeout - started.elapsedNow()
-                if (remaining <= Duration.ZERO) return null
+                if (remaining <= Duration.ZERO) return@withLock GroupCut.TimedOut(CutStage.PausingSource(source.id))
                 val completed = withTimeoutOrNull(remaining) {
                     source.pause()
                     // Transfer ownership before leaving the timeout scope: prompt cancellation
                     // can discard its successful result even after pause has returned.
                     paused += source
-                }
-                if (completed == null) return null
+                    true
+                } ?: false
+                if (!completed) return@withLock GroupCut.TimedOut(CutStage.PausingSource(source.id))
             }
             for ((_, store) in attached) store.freeze()
             frozen = true
-            for ((_, store) in attached) {
+            for ((id, store) in attached) {
                 val remaining = timeout - started.elapsedNow()
-                if (remaining <= Duration.ZERO || !store.awaitIdle(remaining).isIdle) return null
+                if (remaining <= Duration.ZERO || !store.awaitIdle(remaining).isIdle) return@withLock GroupCut.TimedOut(CutStage.SettlingMember(id))
             }
             val cuts = attached.associate { (id, store) ->
                 id to try {
                     store.checkpoint()
                 } catch (e: IllegalStateException) {
-                    return null
+                    return@withLock GroupCut.MemberUnavailable(id)
                 }
             }
             val held = attached.associate { (id, store) -> id to store.heldInputs }
             val messages = locked { inFlightTargets.keys.toList() }
             val snapshots = sources.associate { it.id to it.snapshot() }
-            val boundary = session?.stats?.published?.takeIf { it > 0 }?.let(::GroupSeq)
-            session?.publish(JournalEntry.CheckpointCreated(attached.map { it.first }, sources.map { it.id.value }, messages.size))
+            val boundary = session.boundary
+            session.publish(JournalEntry.CheckpointCreated(attached.map { it.first }, sources.map { it.id.value }, messages.size))
             val checkpoint = GroupCheckpoint(cuts, messages, held, boundary, snapshots)
             // Still frozen: a listener sees the cut where the members' observers stand.
             for (listener in locked { cutListeners.toList() }) listener.onCut(checkpoint)
-            checkpoint
+            GroupCut.Ready(checkpoint)
         } catch (t: Throwable) {
-            failure = t
+            failure = Result.failure(t)
+            primaryFailed = true
             throw t
         } finally {
-            val primary = failure
             fun release(block: () -> Unit) {
                 try {
                     block()
                 } catch (t: Throwable) {
-                    val previous = failure
-                    if (previous == null) failure = t else if (previous !== t) previous.addSuppressed(t)
+                    if (failure.isSuccess) failure = Result.failure(t) else failure.onFailure { previous ->
+                        if (previous !== t) previous.addSuppressed(t)
+                    }
                 }
             }
             if (frozen) for ((_, store) in attached) release { store.thaw() }
             for (source in paused) release { source.resume() }
-            if (primary == null) failure?.let { throw it }
+            if (!primaryFailed) failure.onFailure { throw it }
         }
     }
 
@@ -310,15 +344,22 @@ class MachineGroup(private val session: RecordingSession? = null) {
      * until it [detach]es or its store closes; a message delivered to its store is in flight
      * until that store decides it or closes, and is dropped then.
      */
-    inner class Member<C, A : Action, CMD, E : Event> internal constructor(val id: StoreInstanceId) : DecisionObserver<C, A, CMD, E> {
-        internal var store: MachineStoreImpl<C, A, CMD, E>? = null
-            private set
+    inner class Member<C : Any, A : Action, CMD : Any, E : Event> internal constructor(val id: StoreInstanceId) : DecisionObserver<C, A, CMD, E> {
+        private var storeOpen: () -> Boolean = { false }
+        private var visitStore: ((MachineStoreImpl<C, A, CMD, E>) -> Unit) -> Unit = {}
 
         // Under the group's lock: the member left with [detach].
         private var detached = false
 
         // Under the lock: a store is attached and open, and the member has not left.
-        internal val isReachable: Boolean get() = store?.isClosed == false && !detached
+        internal val isReachable: Boolean get() = storeOpen() && !detached
+
+        // Called under the group lock: visits the exact attached instance, never a later replacement.
+        internal fun withReachableStore(visit: (MachineStoreImpl<C, A, CMD, E>) -> Unit): Boolean {
+            if (!isReachable) return false
+            visitStore(visit)
+            return true
+        }
 
         /** Whether a message can reach this member now: a store is attached that has not closed, and the member has not left. */
         val isAttached: Boolean get() = locked { isReachable }
@@ -332,14 +373,15 @@ class MachineGroup(private val session: RecordingSession? = null) {
         fun attach(store: MachineStore<C, A, CMD, E>) {
             require(store is MachineStoreImpl<C, A, CMD, E>) { "[Actron] Only a MachineStore built by MachineStore(...) can join a group" }
             locked {
-                this.store = store
+                storeOpen = { !store.isClosed }
+                visitStore = { visit -> visit(store) }
                 detached = false
             }
             // The store says when it closed, after nothing can be decided any more: what was
             // delivered to it and not decided never will be, whatever the member attached since.
             store.onClose {
                 val dropped = locked { takeInFlight(store) }
-                for (message in dropped) session?.publish(id, JournalEntry.BridgeDropped(message.id.toRef(), id, "StoreClosed"))
+                for (message in dropped) session.publish(id, JournalEntry.BridgeDropped(message.id.toRef(), id, "StoreClosed"))
             }
         }
 
@@ -353,53 +395,56 @@ class MachineGroup(private val session: RecordingSession? = null) {
             locked { detached = true }
         }
 
-        override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+        override fun onCommitted(input: InputAttribution, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
             decided(input, machineInput)
         }
 
-        override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) = decided(input, machineInput)
+        override fun onIgnored(input: InputAttribution, machineInput: MachineInput<A>, reason: IgnoreReason) = decided(input, machineInput)
 
-        override fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) = decided(input, machineInput)
+        override fun onFailed(input: InputAttribution, machineInput: MachineInput<A>, failure: FailureDescriptor) = decided(input, machineInput)
 
-        private fun decided(input: InputId?, machineInput: MachineInput<A>) {
+        private fun decided(input: InputAttribution, machineInput: MachineInput<A>) {
             if (machineInput !is MachineInput.BridgeReceived) return
             val (wasInFlight, gone) = locked {
-                (inFlightTargets.remove(BridgeMessage(machineInput.message, id)) != null) to !isReachable
+                val target = BridgeMessage(machineInput.message, id)
+                val booked = target in inFlightTargets
+                inFlightTargets.remove(target)
+                booked to !isReachable
             }
             // Dropped already (a closing store decided it all the same) or a member that left: not the group's story.
             if (!wasInFlight && gone) return
-            session?.publish(id, JournalEntry.BridgeReceived(input, machineInput.message.toRef()))
+            session.publish(id, JournalEntry.BridgeReceived(input, machineInput.message.toRef()))
         }
 
         // MachineStore routes only after every observer has recorded the sending decision.
-        internal fun send(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+        internal fun send(input: InputAttribution, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
             if (decision.effects.isEmpty()) return
             val routes = locked { if (detached) emptyList() else routeList.filter { it.from == id } }
             if (routes.isEmpty()) return
             // The bridge message this step decided, if it was one: what a reply replies to.
-            val cause = (machineInput as? MachineInput.BridgeReceived)?.message?.toRef()
+            val cause: actron.observability.MessageCause = if (machineInput is MachineInput.BridgeReceived) machineInput.message.toRef() else actron.observability.MessageCause.Unprompted
             for (effect in decision.effects) {
                 for (route in routes) {
-                    val action = route.map(effect.event) ?: continue
+                    route.mapEvent(effect.event) { action ->
                     val message = MessageId(id, effect.id)
                     // Booked under the lock together with the receiver's reachability: a store
                     // that closes meanwhile finds the message in flight and drops it, one that
                     // closed or left already gets nothing, and the receiver's decision finds the
                     // message in flight.
-                    val target = locked {
-                        val member = members[route.to]
-                        val store = member?.store
-                        val target = if (member == null || store == null || !member.isReachable) {
-                            null
-                        } else {
+                    val deliver: () -> Unit = locked {
+                        var delivery: () -> Unit = {}
+                        val booked = route.to in members && members.getValue(route.to).withReachableStore { store ->
                             inFlightTargets[BridgeMessage(message, route.to)] = store
-                            store
+                            session.publish(id, JournalEntry.BridgeSent(input, message.toRef(), route.to, delivered = true, cause = cause))
+                            delivery = { store.deliverUnchecked(message, action) }
                         }
-                        // Publish before delivery and before a close listener can drop it.
-                        session?.publish(id, JournalEntry.BridgeSent(input, message.toRef(), route.to, delivered = target != null, cause = cause))
-                        target
+                        if (!booked) {
+                            session.publish(id, JournalEntry.BridgeSent(input, message.toRef(), route.to, delivered = false, cause = cause))
+                        }
+                        delivery
                     }
-                    target?.deliverUnchecked(message, action)
+                    deliver()
+                    }
                 }
             }
         }
@@ -412,7 +457,7 @@ class MachineGroup(private val session: RecordingSession? = null) {
         return mine
     }
 
-    private inline fun <T> locked(block: () -> T): T {
+    private inline fun <T : Any> locked(block: () -> T): T {
         while (!lock.tryLock()) {
             // Spin: the holder touches a map.
         }

@@ -19,9 +19,9 @@ public final class actron/test/ActionMatchDiagnostics {
 	public final fun getMatchedHandlerCount ()I
 	public final fun getMatchedHandlerIndices ()Ljava/util/List;
 	public final fun getMatchedHandlers ()Ljava/util/List;
-	public final fun getSelectedHandlerIndex ()Ljava/lang/Integer;
 	public final fun getState ()Lactron/core/State;
 	public fun toString ()Ljava/lang/String;
+	public final fun withSelectedHandler (Lkotlin/jvm/functions/Function1;)V
 }
 
 public final class actron/test/ActionMatchDiagnosticsKt {
@@ -59,7 +59,7 @@ public final class actron/test/StateHandlerDescription {
 
 public final class actron/test/StoreExtensionsKt {
 	public static final fun assertNoPendingWork (Lactron/core/Store;Lactron/test/StoreRecorder;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun assertNoPendingWork$default (Lactron/core/Store;Lactron/test/StoreRecorder;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static final fun assertNoPendingWork (Lactron/core/Store;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun awaitIdle-8Mi8wO0 (Lactron/core/Store;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun awaitIdle-8Mi8wO0$default (Lactron/core/Store;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static final fun dispatchAndAwait (Lactron/core/Store;Lactron/core/Action;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

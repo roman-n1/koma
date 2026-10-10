@@ -9,15 +9,18 @@ fun interface Logger {
      *
      * @param severity The severity of the log
      * @param tag The tag for the log
-     * @param throwable Associated exception (if any)
      * @param message Provider for the log message. It may not be evaluated if logging is skipped.
      */
     fun log(
         severity: Severity,
         tag: String,
-        throwable: Throwable?,
         message: () -> String,
     )
+
+    /** Emits a failure with its exception; custom loggers receive the stack trace as text. */
+    fun log(severity: Severity, tag: String, throwable: Throwable, message: () -> String) {
+        log(severity, tag) { "${message()}\n${throwable.stackTraceToString()}" }
+    }
 
     /**
      * Supported log severity levels.

@@ -67,14 +67,14 @@ class ModelBasedTest {
         var calls = 0
         val machine = Machine<Boolean, Action, Nothing, Event>(DefinitionId("guard"), DefinitionVersion("1"),
             StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(done)), listOf(
-                Transition(idle, done, go, guard = "allowed"),
+                Transition(idle, done, go, guard = actron.statechart.GuardKey("allowed")),
                 Transition(idle, idle, go),
             ))) { guard("allowed") { snapshot, _ -> calls++; snapshot.context } }
         val start = machine.decide(machine.initialSnapshot(false), MachineInput.Start(MachineTime.Zero)).snapshot
         val explained = machine.decideExplained(start, MachineInput.Dispatch(Go, MachineTime.Zero))
         assertEquals(1, calls)
         assertEquals(listOf(CandidateDisposition.GuardRejected, CandidateDisposition.Selected), explained.explanation.candidates.map { it.disposition })
-        assertEquals(false, explained.explanation.guards.single().result)
+        assertEquals(actron.statechart.GuardCheck.Rejected, explained.explanation.guards.single().result)
         val report = machine.explore(machine.initialSnapshot(false), MachineInputGenerator { _, now -> listOf(MachineInput.Dispatch(Go, now)) }, maxDepth = 1)
         assertEquals(50.0, report.coverage.guards.percent)
         assertEquals(50.0, report.coverage.transitions.percent)
@@ -86,7 +86,7 @@ class ModelBasedTest {
         var calls = 0
         val machine = Machine<Unit, Action, Nothing, Event>(DefinitionId("hierarchy"), DefinitionVersion("1"),
             StateChartDefinition(root, listOf(CompoundState(root, idle), AtomicState(idle, root)), listOf(
-                Transition(root, root, go, guard = "outer"), Transition(idle, idle, go),
+                Transition(root, root, go, guard = actron.statechart.GuardKey("outer")), Transition(idle, idle, go),
             ))) {
             guard("outer") { _, _ -> calls++; true }
             onAction(root, tick) {}
@@ -96,7 +96,7 @@ class ModelBasedTest {
         assertEquals(0, calls)
         assertEquals(CandidateDisposition.PrioritySkipped, explanation.candidates.first().disposition)
         assertTrue(explanation.guards.isEmpty())
-        assertEquals(root, machine.decideExplained(snapshot, MachineInput.Dispatch(Tick, MachineTime.Zero)).explanation.handledBy)
+        assertEquals(ActionHandling.Handler(root), machine.decideExplained(snapshot, MachineInput.Dispatch(Tick, MachineTime.Zero)).explanation.handledBy)
         assertEquals(IgnoreReason.NoTransition, (machine.decideExplained(snapshot, MachineInput.Dispatch(Noise, MachineTime.Zero)).decision.outcome as DecisionOutcome.Ignored).reason)
     }
 
@@ -129,7 +129,7 @@ class ModelBasedTest {
             StateChartDefinition(idle, listOf(AtomicState(idle)), emptyList())) {
             invariant("throws") { error("predicate failed") }
         }
-        assertEquals("IllegalStateException", machine.checkInvariants(machine.initialSnapshot(Unit)).single().failure?.type)
+        assertEquals("IllegalStateException", (machine.checkInvariants(machine.initialSnapshot(Unit)).single() as actron.statechart.machine.InvariantViolation.Failed).failure.typeLabel)
         assertFailsWith<IllegalArgumentException> {
             Machine<Unit, Action, Nothing, Event>(machine.id, machine.version, machine.chart) {
                 invariant("duplicate") { true }; invariant("duplicate") { true }

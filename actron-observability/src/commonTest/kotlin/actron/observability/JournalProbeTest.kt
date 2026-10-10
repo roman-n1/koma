@@ -130,7 +130,7 @@ class JournalProbeTest {
         val records = session.records()
         assertTrue(records.all { it.store == StoreInstanceId("chat-1") && it.session == RuntimeSessionId("s") && it.group == MachineGroupId("g") })
         assertEquals((1L..records.size).toList(), records.map { it.groupSeq.value })
-        assertEquals((1L..records.size).toList(), records.map { it.storeSeq?.value })
+        assertEquals((1L..records.size).toList(), records.map { kotlin.test.assertIs<actron.observability.StoreSeq>(it.storeSeq).value })
         store.close()
     }
 
@@ -179,12 +179,12 @@ class JournalProbeTest {
 
         val finished = session.records().entries().filterIsInstance<JournalEntry.ProcessingFinished>()
         val recovered = finished.single { it.outcome.kind == OutcomeKind.Recovered }
-        assertEquals(FailureDescriptor(type = "IllegalStateException"), recovered.outcome.failure)
+        assertEquals(FailureDescriptor(type = "IllegalStateException"), kotlin.test.assertIs<OutcomeDescriptor.Failure>(recovered.outcome).failure)
         assertEquals(1, recovered.outcome.commits)
         val failed = finished.single { it.outcome.kind == OutcomeKind.Failed }
-        assertEquals(FailureDescriptor(type = "ArithmeticException"), failed.outcome.failure)
+        assertEquals(FailureDescriptor(type = "ArithmeticException"), kotlin.test.assertIs<OutcomeDescriptor.Failure>(failed.outcome).failure)
         val reported = session.records().entries().filterIsInstance<JournalEntry.FailureReported>()
-        assertEquals(listOf("ArithmeticException", "IllegalArgumentException"), reported.map { it.failure.type })
+        assertEquals(listOf("ArithmeticException", "IllegalArgumentException"), reported.map { it.failure.typeLabel })
         val discarded = session.records().entry<JournalEntry.InputDiscarded>()
         assertEquals(DiscardDescriptor(DiscardKind.Rejected, FailureDescriptor(type = "IllegalArgumentException")), discarded.reason)
         assertEquals(2, handled.size)
@@ -254,8 +254,8 @@ class JournalProbeTest {
         assertEquals((1L..records.size).toList(), records.map { it.groupSeq.value })
         val ofFirst = records.filter { it.store == StoreInstanceId("tab-1") }
         val ofSecond = records.filter { it.store == StoreInstanceId("tab-2") }
-        assertEquals((1L..ofFirst.size).toList(), ofFirst.map { it.storeSeq?.value })
-        assertEquals((1L..ofSecond.size).toList(), ofSecond.map { it.storeSeq?.value })
+        assertEquals((1L..ofFirst.size).toList(), ofFirst.map { kotlin.test.assertIs<actron.observability.StoreSeq>(it.storeSeq).value })
+        assertEquals((1L..ofSecond.size).toList(), ofSecond.map { kotlin.test.assertIs<actron.observability.StoreSeq>(it.storeSeq).value })
         assertTrue(ofSecond.size > ofFirst.size)
         assertEquals(AppState.Ready(1), first.currentState)
         assertEquals(AppState.Ready(2), second.currentState)

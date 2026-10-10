@@ -2,6 +2,8 @@
 
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
@@ -98,7 +100,7 @@ class TimerExitRaceTest {
             CommandHandler<Fetch, Act> { _, results -> sink = results; gate.await(); awaitCancellation() },
             executionScope, TestClock(testScheduler), dispatcher,
             observers = listOf(object : DecisionObserver<Unit, Act, Fetch, Nothing> {
-                override fun onIgnored(input: InputId?, machineInput: MachineInput<Act>, reason: IgnoreReason) {
+                override fun onIgnored(input: InputAttribution, machineInput: MachineInput<Act>, reason: IgnoreReason) {
                     ignored += machineInput to reason
                 }
             }),

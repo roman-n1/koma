@@ -28,7 +28,7 @@ class StoreHandlerRegistryPropertyTest {
     private fun Store<RtState, RtAction, RtEvent>.registry(): HandlerRegistry<RtState, RtAction> =
         (this as StoreImpl<RtState, RtAction, RtEvent>).handlerRegistry
 
-    private fun HandlerRegistry<RtState, RtAction>.of(kind: HandlerKind): List<HandlerMatcher?> = when (kind) {
+    private fun HandlerRegistry<RtState, RtAction>.of(kind: HandlerKind): List<HandlerMatcher> = when (kind) {
         HandlerKind.ENTER -> enter
         HandlerKind.ACTION -> action
         HandlerKind.EXIT -> exit
@@ -52,7 +52,7 @@ class StoreHandlerRegistryPropertyTest {
     }
 
     @Test
-    fun legacyHandlersLeaveNullAtExactlyTheirPositions() {
+    fun predicateHandlersExposeTheirDeclaredStateAtExactlyTheirPositions() {
         var legacySeen = 0
         repeat(400) { seed ->
             val program = RoutingProgram.random(Random(seed), maxBlocks = 12)
@@ -60,7 +60,7 @@ class StoreHandlerRegistryPropertyTest {
             for (kind in HandlerKind.entries) {
                 val legacyIds = program.blocks.filterIsInstance<Block.LegacyTop>().filter { it.kind == kind }.map { it.id }.toSet()
                 val expectedNullAt = program.planned(kind).withIndex().filter { it.value.id in legacyIds }.map { it.index }
-                val actualNullAt = registry.of(kind).withIndex().filter { it.value == null }.map { it.index }
+                val actualNullAt = registry.of(kind).withIndex().filter { it.index in expectedNullAt && it.value.stateType == RtState::class }.map { it.index }
                 assertEquals(expectedNullAt, actualNullAt, "seed=$seed kind=$kind")
                 legacySeen += legacyIds.size
             }
@@ -193,7 +193,7 @@ class StoreHandlerRegistryPropertyTest {
         assertEquals(listOf(HandlerMatcher(a, RtAction.P::class), HandlerMatcher(a, RtAction.Q::class)), registry.action)
         assertEquals(listOf(HandlerMatcher(a), HandlerMatcher(a)), registry.exit)
         assertEquals(listOf(HandlerMatcher(a, IllegalStateException::class), HandlerMatcher(a, Exception::class)), registry.recover)
-        assertNull(registry.enter.single()!!.inputType)
+        assertEquals(Unit::class, registry.enter.single().inputType)
     }
 
     @Test

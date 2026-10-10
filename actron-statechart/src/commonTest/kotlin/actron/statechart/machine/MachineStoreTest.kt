@@ -102,14 +102,14 @@ class MachineStoreTest {
             AtomicState(error, parent = session),
         ),
         transitions = listOf(
-            Transition(idle, loading, ActionMatcher.of<ListAction.Load>("Load"), effect = "rememberQuery"),
-            Transition(loading, content, ActionMatcher.of<ListAction.Loaded>("Loaded"), effect = "storeItems"),
-            Transition(loading, loading, ActionMatcher.of<ListAction.Failed>("Failed"), guard = "canRetry", effect = "countAttempt"),
+            Transition(idle, loading, ActionMatcher.of<ListAction.Load>("Load"), effect = actron.statechart.EffectKey("rememberQuery")),
+            Transition(loading, content, ActionMatcher.of<ListAction.Loaded>("Loaded"), effect = actron.statechart.EffectKey("storeItems")),
+            Transition(loading, loading, ActionMatcher.of<ListAction.Failed>("Failed"), guard = actron.statechart.GuardKey("canRetry"), effect = actron.statechart.EffectKey("countAttempt")),
             Transition(loading, error, ActionMatcher.of<ListAction.Failed>("Failed")),
             Transition(loading, error, Trigger.After(10.seconds)),
-            Transition(error, loading, ActionMatcher.of<ListAction.Load>("Load"), effect = "resetAttempts"),
+            Transition(error, loading, ActionMatcher.of<ListAction.Load>("Load"), effect = actron.statechart.EffectKey("resetAttempts")),
             Transition(content, loading, ActionMatcher.of<ListAction.Refresh>("Refresh")),
-            Transition(idle, idle, ActionMatcher.of<ListAction.Boom>("Boom"), guard = "boom"),
+            Transition(idle, idle, ActionMatcher.of<ListAction.Boom>("Boom"), guard = actron.statechart.GuardKey("boom")),
         ),
     )
 

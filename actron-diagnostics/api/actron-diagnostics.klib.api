@@ -21,29 +21,215 @@ abstract fun interface actron.diagnostics/DiagnosticSink { // actron.diagnostics
     abstract fun emit(actron.diagnostics/CausalTraceEvent) // actron.diagnostics/DiagnosticSink.emit|emit(actron.diagnostics.CausalTraceEvent){}[0]
 }
 
+sealed interface actron.diagnostics/TraceAssessment { // actron.diagnostics/TraceAssessment|null[0]
+    abstract val faults // actron.diagnostics/TraceAssessment.faults|{}faults[0]
+        abstract fun <get-faults>(): kotlin.collections/List<actron.diagnostics/TraceFault> // actron.diagnostics/TraceAssessment.faults.<get-faults>|<get-faults>(){}[0]
+    abstract val outcome // actron.diagnostics/TraceAssessment.outcome|{}outcome[0]
+        abstract fun <get-outcome>(): kotlin/String // actron.diagnostics/TraceAssessment.outcome.<get-outcome>|<get-outcome>(){}[0]
+
+    abstract fun withSelection(kotlin/Function1<actron.statechart.machine/DecisionExplanation, kotlin/Unit>) // actron.diagnostics/TraceAssessment.withSelection|withSelection(kotlin.Function1<actron.statechart.machine.DecisionExplanation,kotlin.Unit>){}[0]
+
+    final class Decided : actron.diagnostics/TraceAssessment { // actron.diagnostics/TraceAssessment.Decided|null[0]
+        constructor <init>(actron.statechart.machine/DecisionExplanation, kotlin/String, kotlin.collections/List<actron.diagnostics/TraceFault> = ...) // actron.diagnostics/TraceAssessment.Decided.<init>|<init>(actron.statechart.machine.DecisionExplanation;kotlin.String;kotlin.collections.List<actron.diagnostics.TraceFault>){}[0]
+
+        final val explanation // actron.diagnostics/TraceAssessment.Decided.explanation|{}explanation[0]
+            final fun <get-explanation>(): actron.statechart.machine/DecisionExplanation // actron.diagnostics/TraceAssessment.Decided.explanation.<get-explanation>|<get-explanation>(){}[0]
+        final val faults // actron.diagnostics/TraceAssessment.Decided.faults|{}faults[0]
+            final fun <get-faults>(): kotlin.collections/List<actron.diagnostics/TraceFault> // actron.diagnostics/TraceAssessment.Decided.faults.<get-faults>|<get-faults>(){}[0]
+        final val outcome // actron.diagnostics/TraceAssessment.Decided.outcome|{}outcome[0]
+            final fun <get-outcome>(): kotlin/String // actron.diagnostics/TraceAssessment.Decided.outcome.<get-outcome>|<get-outcome>(){}[0]
+
+        final fun component1(): actron.statechart.machine/DecisionExplanation // actron.diagnostics/TraceAssessment.Decided.component1|component1(){}[0]
+        final fun component2(): kotlin/String // actron.diagnostics/TraceAssessment.Decided.component2|component2(){}[0]
+        final fun component3(): kotlin.collections/List<actron.diagnostics/TraceFault> // actron.diagnostics/TraceAssessment.Decided.component3|component3(){}[0]
+        final fun copy(actron.statechart.machine/DecisionExplanation = ..., kotlin/String = ..., kotlin.collections/List<actron.diagnostics/TraceFault> = ...): actron.diagnostics/TraceAssessment.Decided // actron.diagnostics/TraceAssessment.Decided.copy|copy(actron.statechart.machine.DecisionExplanation;kotlin.String;kotlin.collections.List<actron.diagnostics.TraceFault>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceAssessment.Decided.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceAssessment.Decided.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceAssessment.Decided.toString|toString(){}[0]
+        final fun withSelection(kotlin/Function1<actron.statechart.machine/DecisionExplanation, kotlin/Unit>) // actron.diagnostics/TraceAssessment.Decided.withSelection|withSelection(kotlin.Function1<actron.statechart.machine.DecisionExplanation,kotlin.Unit>){}[0]
+    }
+
+    final class Receipt : actron.diagnostics/TraceAssessment { // actron.diagnostics/TraceAssessment.Receipt|null[0]
+        constructor <init>(kotlin/String, kotlin.collections/List<actron.diagnostics/TraceFault> = ...) // actron.diagnostics/TraceAssessment.Receipt.<init>|<init>(kotlin.String;kotlin.collections.List<actron.diagnostics.TraceFault>){}[0]
+
+        final val faults // actron.diagnostics/TraceAssessment.Receipt.faults|{}faults[0]
+            final fun <get-faults>(): kotlin.collections/List<actron.diagnostics/TraceFault> // actron.diagnostics/TraceAssessment.Receipt.faults.<get-faults>|<get-faults>(){}[0]
+        final val outcome // actron.diagnostics/TraceAssessment.Receipt.outcome|{}outcome[0]
+            final fun <get-outcome>(): kotlin/String // actron.diagnostics/TraceAssessment.Receipt.outcome.<get-outcome>|<get-outcome>(){}[0]
+
+        final fun component1(): kotlin/String // actron.diagnostics/TraceAssessment.Receipt.component1|component1(){}[0]
+        final fun component2(): kotlin.collections/List<actron.diagnostics/TraceFault> // actron.diagnostics/TraceAssessment.Receipt.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin.collections/List<actron.diagnostics/TraceFault> = ...): actron.diagnostics/TraceAssessment.Receipt // actron.diagnostics/TraceAssessment.Receipt.copy|copy(kotlin.String;kotlin.collections.List<actron.diagnostics.TraceFault>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceAssessment.Receipt.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceAssessment.Receipt.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceAssessment.Receipt.toString|toString(){}[0]
+        final fun withSelection(kotlin/Function1<actron.statechart.machine/DecisionExplanation, kotlin/Unit>) // actron.diagnostics/TraceAssessment.Receipt.withSelection|withSelection(kotlin.Function1<actron.statechart.machine.DecisionExplanation,kotlin.Unit>){}[0]
+    }
+}
+
+sealed interface actron.diagnostics/TraceLineage { // actron.diagnostics/TraceLineage|null[0]
+    abstract val incomplete // actron.diagnostics/TraceLineage.incomplete|{}incomplete[0]
+        abstract fun <get-incomplete>(): kotlin/Boolean // actron.diagnostics/TraceLineage.incomplete.<get-incomplete>|<get-incomplete>(){}[0]
+    abstract val parent // actron.diagnostics/TraceLineage.parent|{}parent[0]
+        abstract fun <get-parent>(): actron.diagnostics/TraceParent // actron.diagnostics/TraceLineage.parent.<get-parent>|<get-parent>(){}[0]
+    abstract val root // actron.diagnostics/TraceLineage.root|{}root[0]
+        abstract fun <get-root>(): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceLineage.root.<get-root>|<get-root>(){}[0]
+    abstract val trace // actron.diagnostics/TraceLineage.trace|{}trace[0]
+        abstract fun <get-trace>(): actron.diagnostics/TraceId // actron.diagnostics/TraceLineage.trace.<get-trace>|<get-trace>(){}[0]
+
+    final class Linked : actron.diagnostics/TraceLineage { // actron.diagnostics/TraceLineage.Linked|null[0]
+        constructor <init>(actron.diagnostics/TraceId, actron.diagnostics/TraceOrigin, actron.diagnostics/TraceOrigin, kotlin/Boolean) // actron.diagnostics/TraceLineage.Linked.<init>|<init>(actron.diagnostics.TraceId;actron.diagnostics.TraceOrigin;actron.diagnostics.TraceOrigin;kotlin.Boolean){}[0]
+
+        final val incomplete // actron.diagnostics/TraceLineage.Linked.incomplete|{}incomplete[0]
+            final fun <get-incomplete>(): kotlin/Boolean // actron.diagnostics/TraceLineage.Linked.incomplete.<get-incomplete>|<get-incomplete>(){}[0]
+        final val parent // actron.diagnostics/TraceLineage.Linked.parent|{}parent[0]
+            final fun <get-parent>(): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceLineage.Linked.parent.<get-parent>|<get-parent>(){}[0]
+        final val root // actron.diagnostics/TraceLineage.Linked.root|{}root[0]
+            final fun <get-root>(): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceLineage.Linked.root.<get-root>|<get-root>(){}[0]
+        final val trace // actron.diagnostics/TraceLineage.Linked.trace|{}trace[0]
+            final fun <get-trace>(): actron.diagnostics/TraceId // actron.diagnostics/TraceLineage.Linked.trace.<get-trace>|<get-trace>(){}[0]
+
+        final fun component1(): actron.diagnostics/TraceId // actron.diagnostics/TraceLineage.Linked.component1|component1(){}[0]
+        final fun component2(): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceLineage.Linked.component2|component2(){}[0]
+        final fun component3(): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceLineage.Linked.component3|component3(){}[0]
+        final fun component4(): kotlin/Boolean // actron.diagnostics/TraceLineage.Linked.component4|component4(){}[0]
+        final fun copy(actron.diagnostics/TraceId = ..., actron.diagnostics/TraceOrigin = ..., actron.diagnostics/TraceOrigin = ..., kotlin/Boolean = ...): actron.diagnostics/TraceLineage.Linked // actron.diagnostics/TraceLineage.Linked.copy|copy(actron.diagnostics.TraceId;actron.diagnostics.TraceOrigin;actron.diagnostics.TraceOrigin;kotlin.Boolean){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceLineage.Linked.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceLineage.Linked.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceLineage.Linked.toString|toString(){}[0]
+    }
+
+    final class Root : actron.diagnostics/TraceLineage { // actron.diagnostics/TraceLineage.Root|null[0]
+        constructor <init>(actron.diagnostics/TraceOrigin, actron.diagnostics/TraceId = ...) // actron.diagnostics/TraceLineage.Root.<init>|<init>(actron.diagnostics.TraceOrigin;actron.diagnostics.TraceId){}[0]
+
+        final val incomplete // actron.diagnostics/TraceLineage.Root.incomplete|{}incomplete[0]
+            final fun <get-incomplete>(): kotlin/Boolean // actron.diagnostics/TraceLineage.Root.incomplete.<get-incomplete>|<get-incomplete>(){}[0]
+        final val parent // actron.diagnostics/TraceLineage.Root.parent|{}parent[0]
+            final fun <get-parent>(): actron.diagnostics/TraceParent // actron.diagnostics/TraceLineage.Root.parent.<get-parent>|<get-parent>(){}[0]
+        final val root // actron.diagnostics/TraceLineage.Root.root|{}root[0]
+            final fun <get-root>(): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceLineage.Root.root.<get-root>|<get-root>(){}[0]
+        final val trace // actron.diagnostics/TraceLineage.Root.trace|{}trace[0]
+            final fun <get-trace>(): actron.diagnostics/TraceId // actron.diagnostics/TraceLineage.Root.trace.<get-trace>|<get-trace>(){}[0]
+
+        final fun component1(): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceLineage.Root.component1|component1(){}[0]
+        final fun component2(): actron.diagnostics/TraceId // actron.diagnostics/TraceLineage.Root.component2|component2(){}[0]
+        final fun copy(actron.diagnostics/TraceOrigin = ..., actron.diagnostics/TraceId = ...): actron.diagnostics/TraceLineage.Root // actron.diagnostics/TraceLineage.Root.copy|copy(actron.diagnostics.TraceOrigin;actron.diagnostics.TraceId){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceLineage.Root.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceLineage.Root.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceLineage.Root.toString|toString(){}[0]
+    }
+
+    final class Unresolved : actron.diagnostics/TraceLineage { // actron.diagnostics/TraceLineage.Unresolved|null[0]
+        constructor <init>(actron.diagnostics/TraceOrigin) // actron.diagnostics/TraceLineage.Unresolved.<init>|<init>(actron.diagnostics.TraceOrigin){}[0]
+
+        final val incomplete // actron.diagnostics/TraceLineage.Unresolved.incomplete|{}incomplete[0]
+            final fun <get-incomplete>(): kotlin/Boolean // actron.diagnostics/TraceLineage.Unresolved.incomplete.<get-incomplete>|<get-incomplete>(){}[0]
+        final val parent // actron.diagnostics/TraceLineage.Unresolved.parent|{}parent[0]
+            final fun <get-parent>(): actron.diagnostics/TraceParent // actron.diagnostics/TraceLineage.Unresolved.parent.<get-parent>|<get-parent>(){}[0]
+        final val root // actron.diagnostics/TraceLineage.Unresolved.root|{}root[0]
+            final fun <get-root>(): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceLineage.Unresolved.root.<get-root>|<get-root>(){}[0]
+        final val trace // actron.diagnostics/TraceLineage.Unresolved.trace|{}trace[0]
+            final fun <get-trace>(): actron.diagnostics/TraceId // actron.diagnostics/TraceLineage.Unresolved.trace.<get-trace>|<get-trace>(){}[0]
+
+        final fun component1(): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceLineage.Unresolved.component1|component1(){}[0]
+        final fun copy(actron.diagnostics/TraceOrigin = ...): actron.diagnostics/TraceLineage.Unresolved // actron.diagnostics/TraceLineage.Unresolved.copy|copy(actron.diagnostics.TraceOrigin){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceLineage.Unresolved.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceLineage.Unresolved.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceLineage.Unresolved.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.diagnostics/TraceParent { // actron.diagnostics/TraceParent|null[0]
+    abstract val linked // actron.diagnostics/TraceParent.linked|{}linked[0]
+        abstract fun <get-linked>(): kotlin/Boolean // actron.diagnostics/TraceParent.linked.<get-linked>|<get-linked>(){}[0]
+
+    abstract fun withParent(kotlin/Function1<actron.diagnostics/TraceOrigin, kotlin/Unit>) // actron.diagnostics/TraceParent.withParent|withParent(kotlin.Function1<actron.diagnostics.TraceOrigin,kotlin.Unit>){}[0]
+
+    final object Root : actron.diagnostics/TraceParent { // actron.diagnostics/TraceParent.Root|null[0]
+        final val linked // actron.diagnostics/TraceParent.Root.linked|{}linked[0]
+            final fun <get-linked>(): kotlin/Boolean // actron.diagnostics/TraceParent.Root.linked.<get-linked>|<get-linked>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceParent.Root.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceParent.Root.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceParent.Root.toString|toString(){}[0]
+        final fun withParent(kotlin/Function1<actron.diagnostics/TraceOrigin, kotlin/Unit>) // actron.diagnostics/TraceParent.Root.withParent|withParent(kotlin.Function1<actron.diagnostics.TraceOrigin,kotlin.Unit>){}[0]
+    }
+}
+
+sealed interface actron.diagnostics/TraceProvenance { // actron.diagnostics/TraceProvenance|null[0]
+    abstract fun attributes(kotlin.collections/MutableMap<kotlin/String, kotlin/String>) // actron.diagnostics/TraceProvenance.attributes|attributes(kotlin.collections.MutableMap<kotlin.String,kotlin.String>){}[0]
+
+    final class Bridge : actron.diagnostics/TraceProvenance { // actron.diagnostics/TraceProvenance.Bridge|null[0]
+        constructor <init>(actron.statechart.machine/MessageId) // actron.diagnostics/TraceProvenance.Bridge.<init>|<init>(actron.statechart.machine.MessageId){}[0]
+
+        final val message // actron.diagnostics/TraceProvenance.Bridge.message|{}message[0]
+            final fun <get-message>(): actron.statechart.machine/MessageId // actron.diagnostics/TraceProvenance.Bridge.message.<get-message>|<get-message>(){}[0]
+
+        final fun attributes(kotlin.collections/MutableMap<kotlin/String, kotlin/String>) // actron.diagnostics/TraceProvenance.Bridge.attributes|attributes(kotlin.collections.MutableMap<kotlin.String,kotlin.String>){}[0]
+        final fun component1(): actron.statechart.machine/MessageId // actron.diagnostics/TraceProvenance.Bridge.component1|component1(){}[0]
+        final fun copy(actron.statechart.machine/MessageId = ...): actron.diagnostics/TraceProvenance.Bridge // actron.diagnostics/TraceProvenance.Bridge.copy|copy(actron.statechart.machine.MessageId){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceProvenance.Bridge.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceProvenance.Bridge.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceProvenance.Bridge.toString|toString(){}[0]
+    }
+
+    final class Command : actron.diagnostics/TraceProvenance { // actron.diagnostics/TraceProvenance.Command|null[0]
+        constructor <init>(actron.statechart.machine/CommandId) // actron.diagnostics/TraceProvenance.Command.<init>|<init>(actron.statechart.machine.CommandId){}[0]
+
+        final val id // actron.diagnostics/TraceProvenance.Command.id|{}id[0]
+            final fun <get-id>(): actron.statechart.machine/CommandId // actron.diagnostics/TraceProvenance.Command.id.<get-id>|<get-id>(){}[0]
+
+        final fun attributes(kotlin.collections/MutableMap<kotlin/String, kotlin/String>) // actron.diagnostics/TraceProvenance.Command.attributes|attributes(kotlin.collections.MutableMap<kotlin.String,kotlin.String>){}[0]
+        final fun component1(): actron.statechart.machine/CommandId // actron.diagnostics/TraceProvenance.Command.component1|component1(){}[0]
+        final fun copy(actron.statechart.machine/CommandId = ...): actron.diagnostics/TraceProvenance.Command // actron.diagnostics/TraceProvenance.Command.copy|copy(actron.statechart.machine.CommandId){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceProvenance.Command.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceProvenance.Command.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceProvenance.Command.toString|toString(){}[0]
+    }
+
+    final class Timer : actron.diagnostics/TraceProvenance { // actron.diagnostics/TraceProvenance.Timer|null[0]
+        constructor <init>(actron.statechart.machine/TimerId) // actron.diagnostics/TraceProvenance.Timer.<init>|<init>(actron.statechart.machine.TimerId){}[0]
+
+        final val id // actron.diagnostics/TraceProvenance.Timer.id|{}id[0]
+            final fun <get-id>(): actron.statechart.machine/TimerId // actron.diagnostics/TraceProvenance.Timer.id.<get-id>|<get-id>(){}[0]
+
+        final fun attributes(kotlin.collections/MutableMap<kotlin/String, kotlin/String>) // actron.diagnostics/TraceProvenance.Timer.attributes|attributes(kotlin.collections.MutableMap<kotlin.String,kotlin.String>){}[0]
+        final fun component1(): actron.statechart.machine/TimerId // actron.diagnostics/TraceProvenance.Timer.component1|component1(){}[0]
+        final fun copy(actron.statechart.machine/TimerId = ...): actron.diagnostics/TraceProvenance.Timer // actron.diagnostics/TraceProvenance.Timer.copy|copy(actron.statechart.machine.TimerId){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceProvenance.Timer.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceProvenance.Timer.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceProvenance.Timer.toString|toString(){}[0]
+    }
+
+    final object Local : actron.diagnostics/TraceProvenance { // actron.diagnostics/TraceProvenance.Local|null[0]
+        final fun attributes(kotlin.collections/MutableMap<kotlin/String, kotlin/String>) // actron.diagnostics/TraceProvenance.Local.attributes|attributes(kotlin.collections.MutableMap<kotlin.String,kotlin.String>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceProvenance.Local.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.diagnostics/TraceProvenance.Local.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.diagnostics/TraceProvenance.Local.toString|toString(){}[0]
+    }
+}
+
 final class actron.diagnostics/BehaviouralDiagnosticException : kotlin/RuntimeException { // actron.diagnostics/BehaviouralDiagnosticException|null[0]
     constructor <init>(kotlin/String) // actron.diagnostics/BehaviouralDiagnosticException.<init>|<init>(kotlin.String){}[0]
 }
 
 final class actron.diagnostics/CausalTraceEvent { // actron.diagnostics/CausalTraceEvent|null[0]
-    constructor <init>(actron.diagnostics/TraceId, actron.statechart.machine/DefinitionId, actron.statechart.machine/DefinitionVersion, actron.diagnostics/TraceOrigin, actron.diagnostics/TraceOrigin, actron.diagnostics/TraceOrigin?, kotlin/String, actron.statechart.machine/MachineTime, actron.statechart.machine/CommandId?, actron.statechart.machine/TimerId?, kotlin.collections/List<actron.statechart.machine/TransitionId>, kotlin.collections/List<actron.statechart.machine/CommandId>, kotlin.collections/List<actron.statechart.machine/EffectId>, actron.statechart.machine/DecisionExplanation?, kotlin/String, kotlin/String?, kotlin/Boolean, actron.diagnostics/FailureSource? = ...) // actron.diagnostics/CausalTraceEvent.<init>|<init>(actron.diagnostics.TraceId;actron.statechart.machine.DefinitionId;actron.statechart.machine.DefinitionVersion;actron.diagnostics.TraceOrigin;actron.diagnostics.TraceOrigin;actron.diagnostics.TraceOrigin?;kotlin.String;actron.statechart.machine.MachineTime;actron.statechart.machine.CommandId?;actron.statechart.machine.TimerId?;kotlin.collections.List<actron.statechart.machine.TransitionId>;kotlin.collections.List<actron.statechart.machine.CommandId>;kotlin.collections.List<actron.statechart.machine.EffectId>;actron.statechart.machine.DecisionExplanation?;kotlin.String;kotlin.String?;kotlin.Boolean;actron.diagnostics.FailureSource?){}[0]
+    constructor <init>(actron.statechart.machine/DefinitionId, actron.statechart.machine/DefinitionVersion, actron.diagnostics/TraceOrigin, actron.diagnostics/TraceLineage, kotlin/String, actron.statechart.machine/MachineTime, actron.diagnostics/TraceProvenance, kotlin.collections/List<actron.statechart.machine/TransitionId>, kotlin.collections/List<actron.statechart.machine/CommandId>, kotlin.collections/List<actron.statechart.machine/EffectId>, actron.diagnostics/TraceAssessment) // actron.diagnostics/CausalTraceEvent.<init>|<init>(actron.statechart.machine.DefinitionId;actron.statechart.machine.DefinitionVersion;actron.diagnostics.TraceOrigin;actron.diagnostics.TraceLineage;kotlin.String;actron.statechart.machine.MachineTime;actron.diagnostics.TraceProvenance;kotlin.collections.List<actron.statechart.machine.TransitionId>;kotlin.collections.List<actron.statechart.machine.CommandId>;kotlin.collections.List<actron.statechart.machine.EffectId>;actron.diagnostics.TraceAssessment){}[0]
 
-    final val command // actron.diagnostics/CausalTraceEvent.command|{}command[0]
-        final fun <get-command>(): actron.statechart.machine/CommandId? // actron.diagnostics/CausalTraceEvent.command.<get-command>|<get-command>(){}[0]
+    final val assessment // actron.diagnostics/CausalTraceEvent.assessment|{}assessment[0]
+        final fun <get-assessment>(): actron.diagnostics/TraceAssessment // actron.diagnostics/CausalTraceEvent.assessment.<get-assessment>|<get-assessment>(){}[0]
     final val commands // actron.diagnostics/CausalTraceEvent.commands|{}commands[0]
         final fun <get-commands>(): kotlin.collections/List<actron.statechart.machine/CommandId> // actron.diagnostics/CausalTraceEvent.commands.<get-commands>|<get-commands>(){}[0]
     final val definition // actron.diagnostics/CausalTraceEvent.definition|{}definition[0]
         final fun <get-definition>(): actron.statechart.machine/DefinitionId // actron.diagnostics/CausalTraceEvent.definition.<get-definition>|<get-definition>(){}[0]
     final val effects // actron.diagnostics/CausalTraceEvent.effects|{}effects[0]
         final fun <get-effects>(): kotlin.collections/List<actron.statechart.machine/EffectId> // actron.diagnostics/CausalTraceEvent.effects.<get-effects>|<get-effects>(){}[0]
-    final val failureSource // actron.diagnostics/CausalTraceEvent.failureSource|{}failureSource[0]
-        final fun <get-failureSource>(): actron.diagnostics/FailureSource? // actron.diagnostics/CausalTraceEvent.failureSource.<get-failureSource>|<get-failureSource>(){}[0]
-    final val failureType // actron.diagnostics/CausalTraceEvent.failureType|{}failureType[0]
-        final fun <get-failureType>(): kotlin/String? // actron.diagnostics/CausalTraceEvent.failureType.<get-failureType>|<get-failureType>(){}[0]
     final val incomplete // actron.diagnostics/CausalTraceEvent.incomplete|{}incomplete[0]
         final fun <get-incomplete>(): kotlin/Boolean // actron.diagnostics/CausalTraceEvent.incomplete.<get-incomplete>|<get-incomplete>(){}[0]
     final val inputKind // actron.diagnostics/CausalTraceEvent.inputKind|{}inputKind[0]
         final fun <get-inputKind>(): kotlin/String // actron.diagnostics/CausalTraceEvent.inputKind.<get-inputKind>|<get-inputKind>(){}[0]
+    final val lineage // actron.diagnostics/CausalTraceEvent.lineage|{}lineage[0]
+        final fun <get-lineage>(): actron.diagnostics/TraceLineage // actron.diagnostics/CausalTraceEvent.lineage.<get-lineage>|<get-lineage>(){}[0]
     final val now // actron.diagnostics/CausalTraceEvent.now|{}now[0]
         final fun <get-now>(): actron.statechart.machine/MachineTime // actron.diagnostics/CausalTraceEvent.now.<get-now>|<get-now>(){}[0]
     final val origin // actron.diagnostics/CausalTraceEvent.origin|{}origin[0]
@@ -51,13 +237,11 @@ final class actron.diagnostics/CausalTraceEvent { // actron.diagnostics/CausalTr
     final val outcome // actron.diagnostics/CausalTraceEvent.outcome|{}outcome[0]
         final fun <get-outcome>(): kotlin/String // actron.diagnostics/CausalTraceEvent.outcome.<get-outcome>|<get-outcome>(){}[0]
     final val parent // actron.diagnostics/CausalTraceEvent.parent|{}parent[0]
-        final fun <get-parent>(): actron.diagnostics/TraceOrigin? // actron.diagnostics/CausalTraceEvent.parent.<get-parent>|<get-parent>(){}[0]
+        final fun <get-parent>(): actron.diagnostics/TraceParent // actron.diagnostics/CausalTraceEvent.parent.<get-parent>|<get-parent>(){}[0]
+    final val provenance // actron.diagnostics/CausalTraceEvent.provenance|{}provenance[0]
+        final fun <get-provenance>(): actron.diagnostics/TraceProvenance // actron.diagnostics/CausalTraceEvent.provenance.<get-provenance>|<get-provenance>(){}[0]
     final val root // actron.diagnostics/CausalTraceEvent.root|{}root[0]
         final fun <get-root>(): actron.diagnostics/TraceOrigin // actron.diagnostics/CausalTraceEvent.root.<get-root>|<get-root>(){}[0]
-    final val selection // actron.diagnostics/CausalTraceEvent.selection|{}selection[0]
-        final fun <get-selection>(): actron.statechart.machine/DecisionExplanation? // actron.diagnostics/CausalTraceEvent.selection.<get-selection>|<get-selection>(){}[0]
-    final val timer // actron.diagnostics/CausalTraceEvent.timer|{}timer[0]
-        final fun <get-timer>(): actron.statechart.machine/TimerId? // actron.diagnostics/CausalTraceEvent.timer.<get-timer>|<get-timer>(){}[0]
     final val trace // actron.diagnostics/CausalTraceEvent.trace|{}trace[0]
         final fun <get-trace>(): actron.diagnostics/TraceId // actron.diagnostics/CausalTraceEvent.trace.<get-trace>|<get-trace>(){}[0]
     final val transitions // actron.diagnostics/CausalTraceEvent.transitions|{}transitions[0]
@@ -65,36 +249,43 @@ final class actron.diagnostics/CausalTraceEvent { // actron.diagnostics/CausalTr
     final val version // actron.diagnostics/CausalTraceEvent.version|{}version[0]
         final fun <get-version>(): actron.statechart.machine/DefinitionVersion // actron.diagnostics/CausalTraceEvent.version.<get-version>|<get-version>(){}[0]
 
-    final fun component1(): actron.diagnostics/TraceId // actron.diagnostics/CausalTraceEvent.component1|component1(){}[0]
-    final fun component10(): actron.statechart.machine/TimerId? // actron.diagnostics/CausalTraceEvent.component10|component10(){}[0]
-    final fun component11(): kotlin.collections/List<actron.statechart.machine/TransitionId> // actron.diagnostics/CausalTraceEvent.component11|component11(){}[0]
-    final fun component12(): kotlin.collections/List<actron.statechart.machine/CommandId> // actron.diagnostics/CausalTraceEvent.component12|component12(){}[0]
-    final fun component13(): kotlin.collections/List<actron.statechart.machine/EffectId> // actron.diagnostics/CausalTraceEvent.component13|component13(){}[0]
-    final fun component14(): actron.statechart.machine/DecisionExplanation? // actron.diagnostics/CausalTraceEvent.component14|component14(){}[0]
-    final fun component15(): kotlin/String // actron.diagnostics/CausalTraceEvent.component15|component15(){}[0]
-    final fun component16(): kotlin/String? // actron.diagnostics/CausalTraceEvent.component16|component16(){}[0]
-    final fun component17(): kotlin/Boolean // actron.diagnostics/CausalTraceEvent.component17|component17(){}[0]
-    final fun component18(): actron.diagnostics/FailureSource? // actron.diagnostics/CausalTraceEvent.component18|component18(){}[0]
-    final fun component2(): actron.statechart.machine/DefinitionId // actron.diagnostics/CausalTraceEvent.component2|component2(){}[0]
-    final fun component3(): actron.statechart.machine/DefinitionVersion // actron.diagnostics/CausalTraceEvent.component3|component3(){}[0]
-    final fun component4(): actron.diagnostics/TraceOrigin // actron.diagnostics/CausalTraceEvent.component4|component4(){}[0]
-    final fun component5(): actron.diagnostics/TraceOrigin // actron.diagnostics/CausalTraceEvent.component5|component5(){}[0]
-    final fun component6(): actron.diagnostics/TraceOrigin? // actron.diagnostics/CausalTraceEvent.component6|component6(){}[0]
-    final fun component7(): kotlin/String // actron.diagnostics/CausalTraceEvent.component7|component7(){}[0]
-    final fun component8(): actron.statechart.machine/MachineTime // actron.diagnostics/CausalTraceEvent.component8|component8(){}[0]
-    final fun component9(): actron.statechart.machine/CommandId? // actron.diagnostics/CausalTraceEvent.component9|component9(){}[0]
-    final fun copy(actron.diagnostics/TraceId = ..., actron.statechart.machine/DefinitionId = ..., actron.statechart.machine/DefinitionVersion = ..., actron.diagnostics/TraceOrigin = ..., actron.diagnostics/TraceOrigin = ..., actron.diagnostics/TraceOrigin? = ..., kotlin/String = ..., actron.statechart.machine/MachineTime = ..., actron.statechart.machine/CommandId? = ..., actron.statechart.machine/TimerId? = ..., kotlin.collections/List<actron.statechart.machine/TransitionId> = ..., kotlin.collections/List<actron.statechart.machine/CommandId> = ..., kotlin.collections/List<actron.statechart.machine/EffectId> = ..., actron.statechart.machine/DecisionExplanation? = ..., kotlin/String = ..., kotlin/String? = ..., kotlin/Boolean = ..., actron.diagnostics/FailureSource? = ...): actron.diagnostics/CausalTraceEvent // actron.diagnostics/CausalTraceEvent.copy|copy(actron.diagnostics.TraceId;actron.statechart.machine.DefinitionId;actron.statechart.machine.DefinitionVersion;actron.diagnostics.TraceOrigin;actron.diagnostics.TraceOrigin;actron.diagnostics.TraceOrigin?;kotlin.String;actron.statechart.machine.MachineTime;actron.statechart.machine.CommandId?;actron.statechart.machine.TimerId?;kotlin.collections.List<actron.statechart.machine.TransitionId>;kotlin.collections.List<actron.statechart.machine.CommandId>;kotlin.collections.List<actron.statechart.machine.EffectId>;actron.statechart.machine.DecisionExplanation?;kotlin.String;kotlin.String?;kotlin.Boolean;actron.diagnostics.FailureSource?){}[0]
+    final fun component1(): actron.statechart.machine/DefinitionId // actron.diagnostics/CausalTraceEvent.component1|component1(){}[0]
+    final fun component10(): kotlin.collections/List<actron.statechart.machine/EffectId> // actron.diagnostics/CausalTraceEvent.component10|component10(){}[0]
+    final fun component11(): actron.diagnostics/TraceAssessment // actron.diagnostics/CausalTraceEvent.component11|component11(){}[0]
+    final fun component2(): actron.statechart.machine/DefinitionVersion // actron.diagnostics/CausalTraceEvent.component2|component2(){}[0]
+    final fun component3(): actron.diagnostics/TraceOrigin // actron.diagnostics/CausalTraceEvent.component3|component3(){}[0]
+    final fun component4(): actron.diagnostics/TraceLineage // actron.diagnostics/CausalTraceEvent.component4|component4(){}[0]
+    final fun component5(): kotlin/String // actron.diagnostics/CausalTraceEvent.component5|component5(){}[0]
+    final fun component6(): actron.statechart.machine/MachineTime // actron.diagnostics/CausalTraceEvent.component6|component6(){}[0]
+    final fun component7(): actron.diagnostics/TraceProvenance // actron.diagnostics/CausalTraceEvent.component7|component7(){}[0]
+    final fun component8(): kotlin.collections/List<actron.statechart.machine/TransitionId> // actron.diagnostics/CausalTraceEvent.component8|component8(){}[0]
+    final fun component9(): kotlin.collections/List<actron.statechart.machine/CommandId> // actron.diagnostics/CausalTraceEvent.component9|component9(){}[0]
+    final fun copy(actron.statechart.machine/DefinitionId = ..., actron.statechart.machine/DefinitionVersion = ..., actron.diagnostics/TraceOrigin = ..., actron.diagnostics/TraceLineage = ..., kotlin/String = ..., actron.statechart.machine/MachineTime = ..., actron.diagnostics/TraceProvenance = ..., kotlin.collections/List<actron.statechart.machine/TransitionId> = ..., kotlin.collections/List<actron.statechart.machine/CommandId> = ..., kotlin.collections/List<actron.statechart.machine/EffectId> = ..., actron.diagnostics/TraceAssessment = ...): actron.diagnostics/CausalTraceEvent // actron.diagnostics/CausalTraceEvent.copy|copy(actron.statechart.machine.DefinitionId;actron.statechart.machine.DefinitionVersion;actron.diagnostics.TraceOrigin;actron.diagnostics.TraceLineage;kotlin.String;actron.statechart.machine.MachineTime;actron.diagnostics.TraceProvenance;kotlin.collections.List<actron.statechart.machine.TransitionId>;kotlin.collections.List<actron.statechart.machine.CommandId>;kotlin.collections.List<actron.statechart.machine.EffectId>;actron.diagnostics.TraceAssessment){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/CausalTraceEvent.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.diagnostics/CausalTraceEvent.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.diagnostics/CausalTraceEvent.toString|toString(){}[0]
+    final fun withFailureType(kotlin/Function1<kotlin/String, kotlin/Unit>): kotlin/Boolean // actron.diagnostics/CausalTraceEvent.withFailureType|withFailureType(kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
 }
 
 final class actron.diagnostics/CausalTraceHub { // actron.diagnostics/CausalTraceHub|null[0]
     constructor <init>(kotlin/Int = ..., actron.diagnostics/DiagnosticSink = ...) // actron.diagnostics/CausalTraceHub.<init>|<init>(kotlin.Int;actron.diagnostics.DiagnosticSink){}[0]
 
-    final fun <#A1: kotlin/Any?, #B1: actron.core/Action, #C1: kotlin/Any?, #D1: actron.core/Event> observer(actron.statechart.machine/Machine<#A1, #B1, #C1, #D1>, actron.observability/StoreInstanceId): actron.statechart.machine/DecisionTraceObserver<#A1, #B1, #C1, #D1> // actron.diagnostics/CausalTraceHub.observer|observer(actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>;actron.observability.StoreInstanceId){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
-    final fun <#A1: kotlin/Any?, #B1: actron.core/Action, #C1: kotlin/Any?, #D1: actron.core/Event> recordPersisted(actron.statechart.machine/Machine<#A1, #B1, #C1, #D1>, actron.observability/StoreInstanceId, actron.core/InputId?, actron.statechart.machine/DurableCommit<#A1, #C1, #D1>, actron.statechart.machine/CommandId? = ...): actron.diagnostics/CausalTraceEvent // actron.diagnostics/CausalTraceHub.recordPersisted|recordPersisted(actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>;actron.observability.StoreInstanceId;actron.core.InputId?;actron.statechart.machine.DurableCommit<0:0,0:2,0:3>;actron.statechart.machine.CommandId?){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+    final fun <#A1: kotlin/Any, #B1: actron.core/Action, #C1: kotlin/Any, #D1: actron.core/Event> observer(actron.statechart.machine/Machine<#A1, #B1, #C1, #D1>, actron.observability/StoreInstanceId): actron.statechart.machine/DecisionTraceObserver<#A1, #B1, #C1, #D1> // actron.diagnostics/CausalTraceHub.observer|observer(actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>;actron.observability.StoreInstanceId){0§<kotlin.Any>;1§<actron.core.Action>;2§<kotlin.Any>;3§<actron.core.Event>}[0]
+    final fun <#A1: kotlin/Any, #B1: actron.core/Action, #C1: kotlin/Any, #D1: actron.core/Event> recordPersisted(actron.statechart.machine/Machine<#A1, #B1, #C1, #D1>, actron.observability/StoreInstanceId, actron.core/InputAttribution, actron.statechart.machine/DurableCommit<#A1, #C1, #D1>): actron.diagnostics/CausalTraceEvent // actron.diagnostics/CausalTraceHub.recordPersisted|recordPersisted(actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>;actron.observability.StoreInstanceId;actron.core.InputAttribution;actron.statechart.machine.DurableCommit<0:0,0:2,0:3>){0§<kotlin.Any>;1§<actron.core.Action>;2§<kotlin.Any>;3§<actron.core.Event>}[0]
+    final fun <#A1: kotlin/Any, #B1: actron.core/Action, #C1: kotlin/Any, #D1: actron.core/Event> recordPersisted(actron.statechart.machine/Machine<#A1, #B1, #C1, #D1>, actron.observability/StoreInstanceId, actron.core/InputAttribution, actron.statechart.machine/DurableCommit<#A1, #C1, #D1>, actron.statechart.machine/CommandId): actron.diagnostics/CausalTraceEvent // actron.diagnostics/CausalTraceHub.recordPersisted|recordPersisted(actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>;actron.observability.StoreInstanceId;actron.core.InputAttribution;actron.statechart.machine.DurableCommit<0:0,0:2,0:3>;actron.statechart.machine.CommandId){0§<kotlin.Any>;1§<actron.core.Action>;2§<kotlin.Any>;3§<actron.core.Event>}[0]
     final fun snapshot(): kotlin.collections/List<actron.diagnostics/CausalTraceEvent> // actron.diagnostics/CausalTraceHub.snapshot|snapshot(){}[0]
+}
+
+final class actron.diagnostics/TraceFault { // actron.diagnostics/TraceFault|null[0]
+    final val source // actron.diagnostics/TraceFault.source|{}source[0]
+        final fun <get-source>(): actron.diagnostics/FailureSource // actron.diagnostics/TraceFault.source.<get-source>|<get-source>(){}[0]
+
+    final fun toString(): kotlin/String // actron.diagnostics/TraceFault.toString|toString(){}[0]
+    final fun withType(kotlin/Function1<kotlin/String, kotlin/Unit>) // actron.diagnostics/TraceFault.withType|withType(kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
+
+    final object Companion { // actron.diagnostics/TraceFault.Companion|null[0]
+        final fun of(actron.diagnostics/FailureSource, actron.observability/FailureDescriptor): actron.diagnostics/TraceFault // actron.diagnostics/TraceFault.Companion.of|of(actron.diagnostics.FailureSource;actron.observability.FailureDescriptor){}[0]
+    }
 }
 
 final class actron.diagnostics/TraceId { // actron.diagnostics/TraceId|null[0]
@@ -110,23 +301,26 @@ final class actron.diagnostics/TraceId { // actron.diagnostics/TraceId|null[0]
     final fun toString(): kotlin/String // actron.diagnostics/TraceId.toString|toString(){}[0]
 }
 
-final class actron.diagnostics/TraceOrigin { // actron.diagnostics/TraceOrigin|null[0]
-    constructor <init>(actron.observability/StoreInstanceId, actron.core/InputId?, kotlin/Long) // actron.diagnostics/TraceOrigin.<init>|<init>(actron.observability.StoreInstanceId;actron.core.InputId?;kotlin.Long){}[0]
+final class actron.diagnostics/TraceOrigin : actron.diagnostics/TraceParent { // actron.diagnostics/TraceOrigin|null[0]
+    constructor <init>(actron.observability/StoreInstanceId, actron.core/InputAttribution, kotlin/Long) // actron.diagnostics/TraceOrigin.<init>|<init>(actron.observability.StoreInstanceId;actron.core.InputAttribution;kotlin.Long){}[0]
 
     final val input // actron.diagnostics/TraceOrigin.input|{}input[0]
-        final fun <get-input>(): actron.core/InputId? // actron.diagnostics/TraceOrigin.input.<get-input>|<get-input>(){}[0]
+        final fun <get-input>(): actron.core/InputAttribution // actron.diagnostics/TraceOrigin.input.<get-input>|<get-input>(){}[0]
+    final val linked // actron.diagnostics/TraceOrigin.linked|{}linked[0]
+        final fun <get-linked>(): kotlin/Boolean // actron.diagnostics/TraceOrigin.linked.<get-linked>|<get-linked>(){}[0]
     final val sequence // actron.diagnostics/TraceOrigin.sequence|{}sequence[0]
         final fun <get-sequence>(): kotlin/Long // actron.diagnostics/TraceOrigin.sequence.<get-sequence>|<get-sequence>(){}[0]
     final val store // actron.diagnostics/TraceOrigin.store|{}store[0]
         final fun <get-store>(): actron.observability/StoreInstanceId // actron.diagnostics/TraceOrigin.store.<get-store>|<get-store>(){}[0]
 
     final fun component1(): actron.observability/StoreInstanceId // actron.diagnostics/TraceOrigin.component1|component1(){}[0]
-    final fun component2(): actron.core/InputId? // actron.diagnostics/TraceOrigin.component2|component2(){}[0]
+    final fun component2(): actron.core/InputAttribution // actron.diagnostics/TraceOrigin.component2|component2(){}[0]
     final fun component3(): kotlin/Long // actron.diagnostics/TraceOrigin.component3|component3(){}[0]
-    final fun copy(actron.observability/StoreInstanceId = ..., actron.core/InputId? = ..., kotlin/Long = ...): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceOrigin.copy|copy(actron.observability.StoreInstanceId;actron.core.InputId?;kotlin.Long){}[0]
+    final fun copy(actron.observability/StoreInstanceId = ..., actron.core/InputAttribution = ..., kotlin/Long = ...): actron.diagnostics/TraceOrigin // actron.diagnostics/TraceOrigin.copy|copy(actron.observability.StoreInstanceId;actron.core.InputAttribution;kotlin.Long){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.diagnostics/TraceOrigin.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.diagnostics/TraceOrigin.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.diagnostics/TraceOrigin.toString|toString(){}[0]
+    final fun withParent(kotlin/Function1<actron.diagnostics/TraceOrigin, kotlin/Unit>) // actron.diagnostics/TraceOrigin.withParent|withParent(kotlin.Function1<actron.diagnostics.TraceOrigin,kotlin.Unit>){}[0]
 }
 
 final fun (actron.diagnostics/CausalTraceEvent).actron.diagnostics/attributes(): kotlin.collections/Map<kotlin/String, kotlin/String> // actron.diagnostics/attributes|attributes@actron.diagnostics.CausalTraceEvent(){}[0]

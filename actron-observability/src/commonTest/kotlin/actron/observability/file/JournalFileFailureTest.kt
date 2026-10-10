@@ -76,7 +76,7 @@ class JournalFileFailureTest {
         assertSame(failure, assertFailsWith<IllegalStateException> { sink.close() })
         sink.close()
         assertEquals(1, storage.closed)
-        assertNull(sink.activeSegment)
+        assertEquals(SegmentActivity.Closed, sink.activeSegment)
     }
 
     @Test
@@ -127,7 +127,7 @@ class JournalFileFailureTest {
         assertSame(failure, assertFailsWith<IllegalStateException> { sink.close() })
         sink.close()
         assertEquals(1, storage.closed)
-        assertNull(sink.activeSegment)
+        assertEquals(SegmentActivity.Closed, sink.activeSegment)
     }
 
     @Test

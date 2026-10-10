@@ -2,6 +2,10 @@
 
 package actron.timetravel.file
 
+import actron.timetravel.verify
+
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.observability.MachineGroupId
@@ -115,7 +119,7 @@ class RecordingFileFailureTest {
         fun step() {
             val input = if (snapshot.revision == 0L) MachineInput.Start(MachineTime.Zero) else MachineInput.Dispatch(Tick, MachineTime.Zero)
             val decision = machine.decide(snapshot, input)
-            observer.onCommitted(null, input, decision)
+            observer.onCommitted(InputAttribution.Unattributed, input, decision)
             snapshot = decision.snapshot
         }
         suspend fun close() {
@@ -307,7 +311,7 @@ class RecordingFileFailureTest {
         val recorder = GroupRecorder()
         val observer = recorder.member(memberId, machine, 0)
         val input = MachineInput.Start(MachineTime.Zero)
-        observer.onCommitted(null, input, machine.decide(machine.initialSnapshot(0), input))
+        observer.onCommitted(InputAttribution.Unattributed, input, machine.decide(machine.initialSnapshot(0), input))
         assertFailsWith<IllegalArgumentException> { recorder.member(memberId, machine, 0) }
         assertEquals(1, recorder.recording().members.getValue(memberId).length)
     }

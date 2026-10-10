@@ -2,6 +2,10 @@
 
 package actron.timetravel.file
 
+import actron.timetravel.verify
+
+import actron.core.InputAttribution
+
 import java.io.File
 import java.io.IOException
 import java.net.URLClassLoader
@@ -197,14 +201,14 @@ object RecordingDurabilityProcess {
         else GroupRecordingFileSink(MachineGroup(), groupId, storage, scope, config).member(member, machine, 0, codec)
         val start = MachineInput.Start(MachineTime(0.milliseconds))
         val first = machine.decide(machine.initialSnapshot(0), start)
-        observer.onCommitted(null, start, first)
+        observer.onCommitted(InputAttribution.Unattributed, start, first)
         // The group member must also flush before its order is interrupted; the second input is queued after that.
         if (kind == "group" && cut != "buffered") {
             val memberFile = File(directory, RecordingFileFormat.segmentName(member, 0))
             withTimeout(10_000) { while (!memberFile.exists() || memberFile.length() == 0L) delay(5) }
         }
         val add = MachineInput.Dispatch(Add(), MachineTime(1.milliseconds))
-        observer.onCommitted(null, add, machine.decide(first.snapshot, add))
+        observer.onCommitted(InputAttribution.Unattributed, add, machine.decide(first.snapshot, add))
         awaitCancellation()
     }
 
@@ -251,7 +255,7 @@ object RecordingDurabilityProcess {
         val observer = sink ?: group?.member(member, machine, 0, codec)
         val start = MachineInput.Start(MachineTime(0.milliseconds))
         val decision = machine.decide(machine.initialSnapshot(0), start)
-        journal?.write(journalRecord(1)) ?: observer!!.onCommitted(null, start, decision)
+        journal?.write(journalRecord(1)) ?: observer!!.onCommitted(InputAttribution.Unattributed, start, decision)
         // Wait for the actual frames to reach the filesystem before exhausting it.
         withTimeout(10_000) {
             while (storage.list().size < (if (kind == "group") 2 else 1) || storage.list().any { it.size == 0L }) delay(5)
@@ -265,7 +269,7 @@ object RecordingDurabilityProcess {
         }
         assertEquals(0L, Files.getFileStore(directory.toPath()).usableSpace)
         if (journal != null) {
-            val failure = assertFailsWith<IOException> { journal.write(journalRecord(2).copy(entry = JournalEntry.FailureReported(InputId(2), FailureDescriptor("disk-full", "x".repeat(32_768), null)))); journal.flush() }
+            val failure = assertFailsWith<IOException> { journal.write(journalRecord(2).copy(entry = JournalEntry.FailureReported(InputId(2), FailureDescriptor("disk-full", "x".repeat(32_768))))); journal.flush() }
             assertTrue(failure.message.orEmpty().contains("No space left on device"))
             journal.write(journalRecord(3))
             journal.close()
@@ -276,7 +280,7 @@ object RecordingDurabilityProcess {
             // even with usableSpace == 0. Drive it across that page boundary, not a fake quota.
             repeat(if (kind == "group") 300 else 1) {
                 val next = machine.decide(snapshot, input)
-                observer!!.onCommitted(null, input, next)
+                observer!!.onCommitted(InputAttribution.Unattributed, input, next)
                 snapshot = next.snapshot
             }
             withTimeout(10_000) { while (failures.size < (if (kind == "group") 2 else 1)) delay(5) }

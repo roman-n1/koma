@@ -79,8 +79,8 @@ class BranchControls(
     var decisions: List<BranchDecision> by mutableStateOf(emptyList())
         private set
 
-    /** Why the last request was refused (a command not awaiting), or `null`; cleared by the next one. */
-    var problem: String? by mutableStateOf(null)
+    /** Whether the last request was accepted or refused; a new request resets this state. */
+    var request: BranchRequest by mutableStateOf(BranchRequest.Ready)
         private set
 
     // Bumped by every change: reading it subscribes a composition to the branch's state.
@@ -131,16 +131,18 @@ class BranchControls(
         produce(store, "fail c${command.value}") { branch.fail(store, command, FailureDescriptor.of(IllegalStateException(reason))) }
 
     /** Moves every member's clock by [duration]; the timers that come due fire. */
-    fun advance(duration: Duration) = produce(null, "timer") { branch.advance(duration) }
+    fun advance(duration: Duration) = produce("timer", { true }) { branch.advance(duration) }
 
-    private fun produce(store: StoreInstanceId?, cause: String, act: () -> List<Decision<*, *, *>>) {
-        problem = null
+    private fun produce(store: StoreInstanceId, cause: String, act: () -> List<Decision<*, *, *>>) = produce(cause, { it == store }, act)
+
+    private fun produce(cause: String, ownsCause: (StoreInstanceId) -> Boolean, act: () -> List<Decision<*, *, *>>) {
+        request = BranchRequest.Ready
         val counts = branch.members.mapValues { (_, member) -> member.history.size }
         val last = branch.members.mapValues { (_, member) -> member.snapshot }.toMutableMap()
         val produced = try {
             act()
         } catch (e: IllegalArgumentException) {
-            problem = e.message
+            request = BranchRequest.Refused(e.message ?: "invalid branch request")
             return
         }
         // Which member made which decision: its history grew by it.
@@ -150,13 +152,18 @@ class BranchControls(
             val owner = fresh.entries.first { (_, list) -> list.any { it === decision } }.key
             val diff = SnapshotDiff.between(last.getValue(owner), decision.snapshot)
             last[owner] = decision.snapshot
-            BranchDecision(index++, owner, if (store == null || owner == store) cause else "bridge", decision, diff)
+            BranchDecision(index++, owner, if (ownsCause(owner)) cause else "bridge", decision, diff)
         }
         decisions = decisions + listed
         generation++
     }
 
     private fun member(store: StoreInstanceId): actron.timetravel.Branch<*, *, *, *> = requireNotNull(branch.members[store]) { "[Actron] $store is not a member of this branch" }
+}
+
+sealed interface BranchRequest {
+    data object Ready : BranchRequest
+    data class Refused(val reason: String) : BranchRequest
 }
 
 /** Text of a branch's decision for the panel. */

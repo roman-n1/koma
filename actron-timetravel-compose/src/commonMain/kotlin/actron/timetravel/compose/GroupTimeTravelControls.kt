@@ -31,29 +31,28 @@ class GroupTimeTravelControls(
     private val routes: List<GroupBranch.Route> = emptyList(),
     private val inputs: List<BranchInput> = emptyList(),
 ) {
-    var branch: BranchControls? by mutableStateOf(null)
+    var travel: GroupTravel by mutableStateOf(GroupTravel.Replaying)
         private set
-
-    /** Global prefix from which the current experiment began, or null in replay mode. */
-    var branchPosition: Int? by mutableStateOf(null)
-        private set
-
-    val mode: InspectorMode get() = if (branch == null) InspectorMode.Replay else InspectorMode.Branch
+    val mode: InspectorMode get() = if (travel is GroupTravel.Replaying) InspectorMode.Replay else InspectorMode.Branch
 
     /** Starts once from every member's current checkpoint, including its executor state. */
     fun branchHere() {
-        if (branch != null) return
+        if (travel is GroupTravel.Experiment) return
         val experiment = replay.session.branch(routes)
         val controls = BranchControls(experiment, replay.session.members.mapValues { it.value.machine }, inputs)
-        branchPosition = replay.position
-        branch = controls
+        travel = GroupTravel.Experiment(replay.position, controls)
     }
 
     /** Discards the experiment; a new [branchHere] starts fresh from the replay cursor. */
     fun returnToReplay() {
-        branch = null
-        branchPosition = null
+        travel = GroupTravel.Replaying
     }
+}
+
+@ExperimentalActronApi
+sealed interface GroupTravel {
+    data object Replaying : GroupTravel
+    data class Experiment(val position: Int, val branch: BranchControls) : GroupTravel
 }
 
 /** Makes the experiment's origin explicit and gives it a route back to recorded history. */
@@ -61,11 +60,12 @@ class GroupTimeTravelControls(
 @Composable
 fun GroupTimeTravelBar(controls: GroupTimeTravelControls, modifier: Modifier = Modifier) {
     Row(modifier = modifier.padding(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (controls.branch == null) {
+        val travel = controls.travel
+        if (travel is GroupTravel.Replaying) {
             OutlinedButton(onClick = controls::branchHere, modifier = Modifier.testTag("time-travel-branch")) { Text("branch here") }
-        } else {
+        } else if (travel is GroupTravel.Experiment) {
             OutlinedButton(onClick = controls::returnToReplay, modifier = Modifier.testTag("time-travel-return")) { Text("return to replay") }
-            Text("experiment from group position ${controls.branchPosition}; replay paused", modifier = Modifier.testTag("time-travel-origin"))
+            Text("experiment from group position ${travel.position}; replay paused", modifier = Modifier.testTag("time-travel-origin"))
         }
     }
 }

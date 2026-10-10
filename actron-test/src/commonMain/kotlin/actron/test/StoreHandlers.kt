@@ -12,29 +12,29 @@ import kotlin.reflect.KClass
  * A registered `enter {}` or `exit {}` handler, described by its state type.
  *
  * @property index Position of the handler in first-match order
- * @property stateType The state type given to `state<S2> {}`, or `null` if unknown
+ * @property stateType The state type given to `state<S2> {}`
  */
 data class StateHandlerDescription(
     val index: Int,
-    val stateType: KClass<*>?,
+    val stateType: KClass<*>,
 ) {
-    override fun toString(): String = "#$index state<${stateType?.simpleName ?: "?"}>"
+    override fun toString(): String = "#$index state<${stateType.simpleName ?: "?"}>"
 }
 
 /**
  * A registered `recover {}` handler, described by the types it was declared for.
  *
  * @property index Position of the handler in first-match order
- * @property stateType The state type given to `state<S2> {}`, or `null` if unknown
- * @property exceptionType The exception type given to `recover<T> {}`, or `null` if unknown
+ * @property stateType The state type given to `state<S2> {}`
+ * @property exceptionType The exception type given to `recover<T> {}`
  */
 data class RecoverHandlerDescription(
     val index: Int,
-    val stateType: KClass<*>?,
-    val exceptionType: KClass<*>?,
+    val stateType: KClass<*>,
+    val exceptionType: KClass<*>,
 ) {
     override fun toString(): String =
-        "#$index state<${stateType?.simpleName ?: "?"}> / recover<${exceptionType?.simpleName ?: "?"}>"
+        "#$index state<${stateType.simpleName ?: "?"}> / recover<${exceptionType.simpleName ?: "?"}>"
 }
 
 /**

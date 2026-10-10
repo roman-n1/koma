@@ -1,5 +1,7 @@
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExperimentalActronApi
@@ -27,7 +29,7 @@ import kotlinx.coroutines.launch
  * [checkpoint] needs. Commands and timers run as children of [parent] in a scope of their own,
  * cancelled by [close].
  */
-internal class CommandScheduler<C, A : Action, CMD, E : Event>(
+internal class CommandScheduler<C : Any, A : Action, CMD : Any, E : Event>(
     parent: CoroutineScope,
     initial: MachineSnapshot<C>,
     private val handler: CommandHandler<CMD, A>,
@@ -68,7 +70,7 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
      * Enqueues [decision]'s intents, made while processing [input]; returns at once. Safe to call
      * under the store's lock.
      */
-    fun apply(decision: Decision<C, CMD, E>, input: InputId?) {
+    fun apply(decision: Decision<C, CMD, E>, input: InputAttribution) {
         messages.trySend(Message.Apply(decision, input))
     }
 
@@ -98,13 +100,13 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
     }
 
     private sealed interface Message {
-        class Apply<C, CMD, E : Event>(val decision: Decision<C, CMD, E>, val input: InputId?) : Message
+        class Apply<C : Any, CMD : Any, E : Event>(val decision: Decision<C, CMD, E>, val input: InputAttribution) : Message
 
         class Finished(val command: CommandId) : Message
 
         class TimerDone(val timer: TimerId) : Message
 
-        class Checkpoint<C, CMD>(val reply: CompletableDeferred<ExecutorCheckpoint<C, CMD>>) : Message
+        class Checkpoint<C : Any, CMD : Any>(val reply: CompletableDeferred<ExecutorCheckpoint<C, CMD>>) : Message
     }
 
     private fun handle(message: Message) {
@@ -128,7 +130,7 @@ internal class CommandScheduler<C, A : Action, CMD, E : Event>(
         }
     }
 
-    private fun carryOut(decision: Decision<C, CMD, E>, input: InputId?) {
+    private fun carryOut(decision: Decision<C, CMD, E>, input: InputAttribution) {
         lastSnapshot = decision.snapshot
         // Effects first: delivered after the commit, in decision order, before any command runs.
         mailbox.enqueue(input, decision.effects)

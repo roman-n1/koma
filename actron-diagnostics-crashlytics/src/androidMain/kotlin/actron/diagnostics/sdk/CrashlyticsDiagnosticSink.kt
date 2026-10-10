@@ -8,7 +8,7 @@ import actron.diagnostics.*
 class CrashlyticsDiagnosticSink(private val crashlytics: FirebaseCrashlytics) : DiagnosticSink {
     override fun emit(event: CausalTraceEvent) {
         crashlytics.log("Actron ${event.definition.value} ${event.inputKind} ${event.outcome}")
-        event.failureType?.let { failure ->
+        event.withFailureType { failure ->
             val keys = CustomKeysAndValues.Builder()
             event.attributes().forEach { (key, value) -> keys.putString(key, value) }
             // Per-report attributes avoid mixing global custom keys between concurrent Stores.

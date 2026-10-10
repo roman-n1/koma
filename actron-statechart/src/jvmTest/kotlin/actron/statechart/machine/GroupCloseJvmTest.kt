@@ -2,6 +2,8 @@
 
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import actron.core.Action
@@ -38,7 +40,7 @@ class GroupCloseJvmTest {
     fun closeWaitsForTheCommittedObserverBeforeDroppingMessages() = runTest {
         val root = StateId("root")
         val idle = StateId("idle")
-        val chart = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, ActionMatcher.of<Apply>("apply"), effect = "increment")))
+        val chart = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, ActionMatcher.of<Apply>("apply"), effect = actron.statechart.EffectKey("increment"))))
         val machine = Machine<Int, Apply, Nothing, Applied>(DefinitionId("counter"), DefinitionVersion("1"), chart) {
             effect("increment") { count, _ -> count + 1 }
             onEnter(idle) { if (context > 0) event(Applied) }
@@ -48,12 +50,12 @@ class GroupCloseJvmTest {
         val group = MachineGroup(session)
         val sender = group.member<Int, Apply, Nothing, Applied>(StoreInstanceId("sender"))
         val receiver = group.member<Int, Apply, Nothing, Applied>(StoreInstanceId("receiver"))
-        group.route(sender, receiver) { _: Applied -> Apply }
+        group.route(sender, receiver) { _: Applied, carry -> carry(Apply) }
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         val finished = CompletableDeferred<Unit>()
         val observer = object : DecisionObserver<Int, Apply, Nothing, Applied> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<Apply>, decision: Decision<Int, Nothing, Applied>) {
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<Apply>, decision: Decision<Int, Nothing, Applied>) {
                 if (machineInput is MachineInput.BridgeReceived) {
                     entered.countDown()
                     check(release.await(10, TimeUnit.SECONDS))

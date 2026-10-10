@@ -337,7 +337,7 @@ class AddressBookSearchPilotTest {
         assertEquals(listOf(StoreInstanceId("picker-search-tab-1"), StoreInstanceId("picker-search-tab-2")), stores)
         stores.forEach { store ->
             val own = records.filter { it.store == store }
-            assertEquals((1L..own.size).toList(), own.map { it.storeSeq?.value }, "dense per tab")
+            assertEquals((1L..own.size).toList(), own.map { kotlin.test.assertIs<actron.observability.StoreSeq>(it.storeSeq).value }, "dense per tab")
         }
         assertTrue(records.filter { it.store == stores.first() }.any { it.entry is JournalEntry.StoreClosed })
         val text = records.joinToString("\n") { JournalFormat.line(it) }

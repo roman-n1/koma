@@ -2,6 +2,8 @@
 
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
@@ -285,7 +287,7 @@ class MachineJournalTest {
     fun anObserverThatThrows_isReported_andTheStoreContinues() = runTest {
         val boom = IllegalStateException("observer")
         val h = harness(observer = object : DecisionObserver<Unit, Act, Fetch, Nothing> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<Act>, decision: Decision<Unit, Fetch, Nothing>) = throw boom
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<Act>, decision: Decision<Unit, Fetch, Nothing>) = throw boom
         })
 
         h.store.dispatch(Act.Load)

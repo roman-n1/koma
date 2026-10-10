@@ -66,7 +66,7 @@ class GroupReplayControlsTest {
         assertEquals(GroupReplayFixture.Ctx(11), controls.snapshot(GroupReplayFixture.b).context)
         val checkpoints = controls.members.map { controls.checkpoint(it) }
         controls.verify()
-        assertEquals(emptyList(), controls.verification)
+        assertEquals(emptyList(), controls.observedVerification)
         assertEquals(5, controls.position)
         assertEquals(checkpoints, controls.members.map { controls.checkpoint(it) })
         controls.stepBackward()
@@ -98,7 +98,7 @@ class GroupReplayControlsTest {
         assertTrue(checkNotNull(controls.forwardUnavailable).contains("root-2"))
         assertTrue(mismatch.mismatch.differences.any { it.contains("context") })
         controls.verify()
-        assertTrue(checkNotNull(controls.verification).isNotEmpty())
+        assertTrue(checkNotNull(controls.observedVerification).isNotEmpty())
         assertEquals(3, controls.position)
         controls.seek(2)
         assertNull(controls.divergence)
@@ -115,7 +115,7 @@ class GroupReplayControlsTest {
         assertEquals(0, controls.position)
         assertNull(controls.selected)
         assertFalse(controls.canStepForward)
-        assertEquals(emptyList(), controls.verification)
+        assertEquals(emptyList(), controls.observedVerification)
     }
 }
 
@@ -127,7 +127,7 @@ internal object GroupReplayFixture {
     data object Nothing : Event
     private val root = StateId("Root")
     private val idle = StateId("Idle")
-    private val chart = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, ActionMatcher.of<Inc>("Inc"), effect = "inc")))
+    private val chart = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, ActionMatcher.of<Inc>("Inc"), effect = actron.statechart.EffectKey("inc"))))
     fun machine(increment: Int = 1) = Machine<Ctx, Inc, Nothing, Nothing>(DefinitionId("group-counter"), DefinitionVersion("1"), chart) {
         effect("inc") { c, _ -> c.copy(n = c.n + increment) }
     }

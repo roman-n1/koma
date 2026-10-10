@@ -66,7 +66,7 @@ data class StateChartPath(
      * The actions to dispatch, in order: one per action step; timer steps are left out, so for a
      * path with timers this is shorter than [transitions] (see [triggers]).
      */
-    val actions: List<ActionMatcher> get() = transitions.mapNotNull { it.on }
+    val actions: List<ActionMatcher> get() = transitions.map { it.trigger }.filterIsInstance<Trigger.OnAction>().map { it.matcher }
 
     /**
      * What fires each step, in order: an action or a timer; as many as [transitions].
@@ -86,7 +86,7 @@ private fun requireConnected(start: StateId, transitions: List<Transition>): Lis
 
 /**
  * Returns a shortest path from the initial configuration to a configuration in which [target] is
- * active, or `null` when [target] never becomes active (see [reachableStates]). Guards and
+ * active, reported to the callback; false when [target] never becomes active (see [reachableStates]). Guards and
  * transition priority are ignored: in every configuration, any transition whose source is active
  * may be taken. For a flat chart this is a shortest path from [StateChartDefinition.initial] to
  * [target].
@@ -102,9 +102,11 @@ private fun requireConnected(start: StateId, transitions: List<Transition>): Lis
  * Among paths of equal length, the one found first by following transitions in declaration order
  * is returned, so the result is stable for a given definition.
  */
-fun StateChartDefinition.shortestPathTo(target: StateId): StateChartPath? {
+fun StateChartDefinition.shortestPathTo(target: StateId, accept: (StateChartPath) -> Unit): Boolean {
     val graph = configurationGraph
-    return graph.firstReaching[target]?.let { graph.pathTo(it) }
+    if (target !in graph.firstReaching) return false
+    accept(graph.pathTo(graph.firstReaching.getValue(target)))
+    return true
 }
 
 /**
@@ -120,10 +122,12 @@ fun StateChartDefinition.shortestPathTo(target: StateId): StateChartPath? {
  */
 fun StateChartDefinition.transitionCoveragePaths(): List<StateChartPath> {
     val graph = configurationGraph
-    val candidates = transitions.mapNotNull { transition ->
-        graph.firstReaching[transition.source]?.let { prefix ->
+    val candidates = buildList {
+        for (transition in transitions) {
+            if (transition.source !in graph.firstReaching) continue
+            val prefix = graph.firstReaching.getValue(transition.source)
             val step = graphStep(prefix.configuration, transition)
-            ReachedConfiguration(step.configuration, prefix.transitions + transition, prefix.leafSets + listOf(step.leaves(this)))
+            add(ReachedConfiguration(step.configuration, prefix.transitions + transition, prefix.leafSets + listOf(step.leaves(this@transitionCoveragePaths))))
         }
     }.distinctBy { it.transitions }
     return candidates

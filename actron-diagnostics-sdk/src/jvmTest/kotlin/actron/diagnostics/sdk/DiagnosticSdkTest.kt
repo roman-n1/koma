@@ -18,9 +18,11 @@ class DiagnosticSdkTest {
     private data object Go : Action
     private fun event(parent: TraceOrigin? = null, failure: String? = null): CausalTraceEvent {
         val origin = TraceOrigin(StoreInstanceId("s"), InputId(if (parent == null) 1 else 2), if (parent == null) 1 else 2)
-        return CausalTraceEvent(TraceId("trace"), DefinitionId("workflow"), DefinitionVersion("1"), origin, parent ?: origin, parent,
-            "dispatch", MachineTime.Zero, null, null, listOf(TransitionId(0)), listOf(CommandId(1)), emptyList(),
-            DecisionExplanation(emptySet(), emptyList(), emptyList()), if (failure == null) "handled" else "failed", failure, false)
+        val lineage = if (parent == null) TraceLineage.Root(origin, TraceId("trace")) else TraceLineage.Linked(TraceId("trace"), parent, parent, false)
+        val faults = failure?.let { listOf(TraceFault.of(FailureSource.Decision, actron.observability.FailureDescriptor(it))) }.orEmpty()
+        return CausalTraceEvent(DefinitionId("workflow"), DefinitionVersion("1"), origin, lineage,
+            "dispatch", MachineTime.Zero, TraceProvenance.Local, listOf(TransitionId(0)), listOf(CommandId(1)), emptyList(),
+            TraceAssessment.Decided(DecisionExplanation(emptySet(), emptyList(), emptyList()), if (failure == null) "handled" else "failed", faults))
     }
 
     @Test fun otelUsesExplicitParentForEndedSpansAndClosesEveryReceiptSpan() {

@@ -12,6 +12,7 @@ import actron.statechart.machine.MachineSnapshot
 import actron.statechart.machine.MessageId
 import actron.statechart.machine.SourceId
 import actron.statechart.machine.SourceSnapshot
+import actron.statechart.machine.EventRoute
 import kotlin.time.Duration
 
 /**
@@ -35,7 +36,10 @@ class GroupBranch(
     val sources: Map<SourceId, SourceSnapshot> = emptyMap(),
 ) {
     /** A route of the local bridge: effects of [from] that [map] turns into actions of [to]. */
-    class Route(val from: StoreInstanceId, val to: StoreInstanceId, val map: (Event) -> Action?)
+    class Route(val from: StoreInstanceId, val to: StoreInstanceId, map: (Event, (Action) -> Unit) -> Unit) {
+        private val mapping = EventRoute(map)
+        fun mapEvent(event: Event, carry: (Action) -> Unit): Boolean = mapping.mapEvent(event, carry)
+    }
 
     private val deliveries = mutableListOf<BridgeMessage>()
 
@@ -67,7 +71,7 @@ class GroupBranch(
     fun advance(duration: Duration): List<Decision<*, *, *>> =
         members.keys.flatMap { store -> produce(store) { it.advance(duration) } }
 
-    private fun produce(store: StoreInstanceId, act: (Branch<Any?, Action, Any?, Event>) -> Unit): List<Decision<*, *, *>> {
+    private fun produce(store: StoreInstanceId, act: (Branch<Any, Action, Any, Event>) -> Unit): List<Decision<*, *, *>> {
         val branch = branch(store)
         val before = branch.history.size
         act(branch)
@@ -83,11 +87,13 @@ class GroupBranch(
             for (effect in decision.effects) {
                 for (route in routes) {
                     if (route.from != from) continue
-                    val action = route.map(effect.event) ?: continue
-                    val target = members[route.to] ?: continue
-                    val message = MessageId(from, effect.id)
-                    deliveries += BridgeMessage(message, route.to)
-                    caused += produce(route.to) { it.deliver(message, action) }
+                    route.mapEvent(effect.event) { action ->
+                        if (route.to in members) {
+                            val message = MessageId(from, effect.id)
+                            deliveries += BridgeMessage(message, route.to)
+                            caused += produce(route.to) { it.deliver(message, action) }
+                        }
+                    }
                 }
             }
         }
@@ -95,6 +101,6 @@ class GroupBranch(
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun branch(store: StoreInstanceId): Branch<Any?, Action, Any?, Event> =
-        requireNotNull(members[store]) { "[Actron] $store is not a member of this branch" } as Branch<Any?, Action, Any?, Event>
+    private fun branch(store: StoreInstanceId): Branch<Any, Action, Any, Event> =
+        requireNotNull(members[store]) { "[Actron] $store is not a member of this branch" } as Branch<Any, Action, Any, Event>
 }

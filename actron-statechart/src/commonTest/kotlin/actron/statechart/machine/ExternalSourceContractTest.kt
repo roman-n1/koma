@@ -107,7 +107,7 @@ class ExternalSourceContractTest {
                 assertEquals(index + 1, f.pager.next, "rejection must preserve the pending page")
                 val cut = async { f.group.checkpoint() }
                 runCurrent()
-                val checkpoint = checkNotNull(cut.await())
+                val checkpoint = kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(cut.await()).checkpoint
                 assertEquals((0..index).toList(), checkpoint.members.getValue(f.id).snapshot.context)
                 assertEquals((index + 1).toString(), checkpoint.sources.getValue(f.pager.id).fields.getValue("next"))
             }
@@ -131,7 +131,7 @@ class ExternalSourceContractTest {
             f.pager.pauseGate = null
             val next = async { f.group.checkpoint() }
             runCurrent()
-            assertEquals(listOf(0), checkNotNull(next.await()).members.getValue(f.id).snapshot.context)
+            assertEquals(listOf(0), kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(next.await()).checkpoint.members.getValue(f.id).snapshot.context)
             assertEquals(1, f.pager.resumes)
         } finally { f.store.close() }
     }
@@ -155,7 +155,7 @@ class ExternalSourceContractTest {
             assertTrue(earlier.pager.paused && f.pager.paused)
             advanceTimeBy(101)
             runCurrent()
-            assertNull(cut.await())
+            kotlin.test.assertIs<actron.statechart.machine.GroupCut.TimedOut>(cut.await())
             assertFalse(earlier.pager.paused || f.pager.paused)
             assertEquals(1, earlier.pager.resumes)
             assertEquals(0, f.pager.resumes)
@@ -180,7 +180,7 @@ class ExternalSourceContractTest {
             assertTrue(pendingPage.isActive)
             f.pager.pauseGate!!.complete(Unit)
             runCurrent()
-            val checkpoint = checkNotNull(cut.await())
+            val checkpoint = kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(cut.await()).checkpoint
             assertEquals(listOf(0), checkpoint.members.getValue(f.id).snapshot.context)
             assertEquals("1", checkpoint.sources.getValue(f.pager.id).fields.getValue("next"))
             assertEquals(Admission.Accepted, pendingPage.await())

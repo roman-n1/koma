@@ -4,17 +4,18 @@ import actron.statechart.machine.TransitionId
 
 /** Model query uses declaration identities, not labels presumed to identify Kotlin code. */
 data class TransitionQuery(
-    val sources: Set<StateId>? = null, val targets: Set<StateId>? = null,
-    val trigger: Trigger? = null, val guard: String? = null, val effect: String? = null,
+    val sources: (StateId) -> Boolean = { true }, val targets: (StateId) -> Boolean = { true },
+    val trigger: (Trigger) -> Boolean = { true },
+    val guard: (GuardCondition) -> Boolean = { true }, val effect: (TransitionEffect) -> Boolean = { true },
     val includeDescendants: Boolean = false,
 )
 
 fun StateChartDefinition.query(query: TransitionQuery): List<TransitionMatrixEntry> = transitions.mapIndexed(::TransitionMatrixEntry).filter { entry ->
     val t = entry.transition
-    fun matches(id: StateId, candidates: Set<StateId>?): Boolean = candidates == null || id in candidates ||
-        (query.includeDescendants && ancestorsOf(id).any { it in candidates })
-    matches(t.source, query.sources) && matches(t.target, query.targets) && (query.trigger == null || t.trigger == query.trigger) &&
-        (query.guard == null || t.guard == query.guard) && (query.effect == null || t.effect == query.effect)
+    fun matches(id: StateId, candidates: (StateId) -> Boolean): Boolean = candidates(id) ||
+        (query.includeDescendants && ancestorsOf(id).any(candidates))
+    matches(t.source, query.sources) && matches(t.target, query.targets) && query.trigger(t.trigger) &&
+        query.guard(t.guard) && query.effect(t.effect)
 }
 
 /** Guards/priority/handlers/context are opaque. A complete result describes structural potential only. */
@@ -24,29 +25,30 @@ data class ReachabilityAnalysis(
     val deadEnds: List<StateConfiguration>, val terminal: List<StateConfiguration>, val truncated: Boolean,
 ) {
     /** Unknown when budgets stop search; never mislabels an unvisited node as proven unreachable. */
-    val structurallyUnreachable: Set<StateId>? get() = if (truncated) null else unreached
+    val structurallyUnreachable: Set<StateId> get() = if (truncated) emptySet() else unreached
 }
 
 /** Bounded configuration/history search. Automatic steps are edges, not a claim of runtime stable configurations. */
 fun StateChartDefinition.analyzeReachability(maxConfigurations: Int = 10_000, maxEdges: Int = 100_000): ReachabilityAnalysis {
     require(maxConfigurations > 0 && maxEdges > 0) { "[Actron] Analysis needs positive budgets" }
-    require(states.map { it.id }.distinct().size == states.size && node(initial) != null) { "[Actron] Analysis requires declared unique states" }
-    require(transitions.all { node(it.source) != null && node(it.target) != null }) { "[Actron] Analysis requires declared endpoints" }
+    require(states.map { it.id }.distinct().size == states.size && hasNode(initial)) { "[Actron] Analysis requires declared unique states" }
+    require(transitions.all { hasNode(it.source) && hasNode(it.target) }) { "[Actron] Analysis requires declared endpoints" }
     require(node(initial) !is HistoryState) { "[Actron] Initial state cannot be history" }
     // Validate only structure here: validate() itself enumerates the unbounded legacy graph.
     for (state in states) {
         val chain = linkedSetOf(state.id)
         var parent = state.parent
-        while (parent != null) {
+        while (parent is StateId) {
             require(chain.add(parent)) { "[Actron] Cyclic hierarchy" }
+            require(hasNode(parent)) { "[Actron] Undeclared parent" }
             val container = node(parent)
             require(container is CompoundState || container is ParallelState) { "[Actron] Invalid parent" }
             parent = container.parent
         }
-        if (state is CompoundState) require(node(state.initial)?.parent == state.id && node(state.initial) !is HistoryState) { "[Actron] Invalid compound initial" }
+        if (state is CompoundState) require(nodeSatisfies(state.initial) { it.parent == state.id && it !is HistoryState }) { "[Actron] Invalid compound initial" }
         if (state is ParallelState) require(childrenOf(state.id).any { it !is HistoryState }) { "[Actron] Empty parallel container" }
-        if (state is HistoryState && state.default != null) require(node(state.default) !is HistoryState &&
-            (if (state.deep) isDescendant(state.default, state.parent) else node(state.default)?.parent == state.parent)) { "[Actron] Invalid history default" }
+        if (state is HistoryState && state.default is StateId) require(nodeSatisfies(state.default) { it !is HistoryState &&
+            (if (state.deep) isDescendant(state.default, state.parent) else it.parent == state.parent) }) { "[Actron] Invalid history default" }
     }
     val first = initialConfiguration()
     val seen = linkedSetOf(first)
@@ -59,7 +61,7 @@ fun StateChartDefinition.analyzeReachability(maxConfigurations: Int = 10_000, ma
         val current = queue.removeFirst()
         val choices = transitions.filter { it.source in current.active }
         if (choices.isEmpty()) {
-            if (childrenOf(null).any { isComplete(current, it.id) }) terminal += current else dead += current
+            if (childrenOf().any { isComplete(current, it.id) }) terminal += current else dead += current
         }
         for (transition in choices) {
             if (edges++ >= maxEdges) { truncated = true; break }
@@ -94,5 +96,5 @@ fun StateChartDefinition.impactTo(next: StateChartDefinition): BehaviouralImpact
     }.mapTo(linkedSetOf()) { TransitionId(it.index) }
     val referenced = transitions.filterIndexed { index, _ -> TransitionId(index) in indices(this) } +
         next.transitions.filterIndexed { index, _ -> TransitionId(index) in indices(next) }
-    return BehaviouralImpact(changed, affected, indices(this), indices(next), referenced.mapNotNull { it.guard }.toSet(), referenced.mapNotNull { it.effect }.toSet())
+    return BehaviouralImpact(changed, affected, indices(this), indices(next), referenced.map { it.guard }.filterIsInstance<GuardKey>().mapTo(linkedSetOf()) { it.name }, referenced.map { it.effect }.filterIsInstance<EffectKey>().mapTo(linkedSetOf()) { it.name })
 }

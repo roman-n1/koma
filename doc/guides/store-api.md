@@ -665,7 +665,7 @@ You can also create a `StateSaver` instance with the `StateSaver()` factory func
 `restore(initialState)` returns a saved state or the supplied initial state. For a saver that
 only writes, use `StateSaver(save = { state -> persist(state) }, restore = { it })`.
 The restore contract does not return `null`; see the [absence policy](absence-policy.md)
-for the API migration and the ongoing removal of nullable contracts.
+for the breaking API migration and the strict source/compiler checks that prevent nullable contracts.
 
 ### Clear Pending Actions
 

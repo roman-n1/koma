@@ -230,13 +230,13 @@ class StateChartHierarchyConformanceTest {
         val covered = mutableListOf<Transition>()
         for ((from, to, action) in changes) {
             if (from == to) {
-                val first = reference.priority(from).firstOrNull { HierarchyReference.matches(it.on, action) }
+                val first = reference.priority(from).firstOrNull { HierarchyReference.matches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action) }
                 if (first != null && reference.leaf(reference.fire(reference.configurationOf(from), first).after) == from && first !in covered) covered += first
                 continue
             }
             if (reference.chart.states.none { it.id == to }) violations += ConformanceViolation.UndeclaredState(to)
             val candidates = reference.priority(from).filter { to in reference.fire(reference.configurationOf(from), it).entered }
-            val taken = candidates.firstOrNull { HierarchyReference.matches(it.on, action) }
+            val taken = candidates.firstOrNull { HierarchyReference.matches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action) }
             when {
                 taken != null -> if (taken !in covered) covered += taken
                 candidates.isEmpty() -> violations += ConformanceViolation.UndeclaredTransition(from, to, action)

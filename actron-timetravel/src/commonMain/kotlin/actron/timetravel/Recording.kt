@@ -1,5 +1,7 @@
 package actron.timetravel
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.InputId
@@ -18,17 +20,17 @@ import kotlinx.coroutines.sync.Mutex
 /**
  * One input a machine decided during a recorded run, with what came of it.
  */
-sealed interface RecordedStep<C, A : Action, CMD, E : Event> {
+sealed interface RecordedStep<C : Any, A : Action, CMD : Any, E : Event> {
     val input: MachineInput<A>
 
     /** The input was handled: [decision] holds the snapshot committed and every intent registered. */
-    data class Committed<C, A : Action, CMD, E : Event>(override val input: MachineInput<A>, val decision: Decision<C, CMD, E>) : RecordedStep<C, A, CMD, E>
+    data class Committed<C : Any, A : Action, CMD : Any, E : Event>(override val input: MachineInput<A>, val decision: Decision<C, CMD, E>) : RecordedStep<C, A, CMD, E>
 
     /** The input changed nothing. */
-    data class Ignored<C, A : Action, CMD, E : Event>(override val input: MachineInput<A>, val reason: IgnoreReason) : RecordedStep<C, A, CMD, E>
+    data class Ignored<C : Any, A : Action, CMD : Any, E : Event>(override val input: MachineInput<A>, val reason: IgnoreReason) : RecordedStep<C, A, CMD, E>
 
     /** A guard, reducer or rule threw; nothing was committed. */
-    data class Failed<C, A : Action, CMD, E : Event>(override val input: MachineInput<A>, val failure: FailureDescriptor) : RecordedStep<C, A, CMD, E>
+    data class Failed<C : Any, A : Action, CMD : Any, E : Event>(override val input: MachineInput<A>, val failure: FailureDescriptor) : RecordedStep<C, A, CMD, E>
 }
 
 /**
@@ -46,7 +48,7 @@ sealed interface RecordedStep<C, A : Action, CMD, E : Event> {
  * the live executor for a run recorded from there (see [since])
  * @property steps The inputs in processing order with their outcomes
  */
-class Recording<C, A : Action, CMD, E : Event>(
+class Recording<C : Any, A : Action, CMD : Any, E : Event>(
     val definition: DefinitionId,
     val version: DefinitionVersion,
     val start: ExecutorCheckpoint<C, CMD>,
@@ -140,7 +142,7 @@ class Recording<C, A : Action, CMD, E : Event>(
  * what was abandoned is ending until the machine deregisters it. What [Recording.checkpointAt]
  * carries forward, and what a recording file begins each segment with.
  */
-fun <C, A : Action, CMD, E : Event> ExecutorCheckpoint<C, CMD>.carriedPast(step: RecordedStep<C, A, CMD, E>): ExecutorCheckpoint<C, CMD> {
+fun <C : Any, A : Action, CMD : Any, E : Event> ExecutorCheckpoint<C, CMD>.carriedPast(step: RecordedStep<C, A, CMD, E>): ExecutorCheckpoint<C, CMD> {
     val now = maxOf(now, step.input.now)
     if (step !is RecordedStep.Committed) return copy(now = now)
     val decision = step.decision
@@ -178,6 +180,17 @@ sealed interface Compatibility {
     data class Unsupported(val reason: String) : Compatibility
 }
 
+/** Whether the recorder observed the beginning it was configured to replay from. */
+sealed interface RecordingOrigin {
+    fun withProblem(accept: (String) -> Unit): Boolean
+    data object InitialSnapshot : RecordingOrigin {
+        override fun withProblem(accept: (String) -> Unit): Boolean = false
+    }
+    data class UnknownBeginning(val reason: String) : RecordingOrigin {
+        override fun withProblem(accept: (String) -> Unit): Boolean { accept(reason); return true }
+    }
+}
+
 /**
  * Records the run of a `MachineStore` as a [Recording]: register it as one of the store's
  * observers. It keeps the live objects (inputs, snapshots, commands, events); it is a debug
@@ -186,13 +199,13 @@ sealed interface Compatibility {
  * The callbacks come serialized from the store; [recording] may be read from any thread and
  * returns a snapshot of what was recorded so far. A run that did not start from
  * `machine.initialSnapshot(context)` (a restored snapshot that was started over, for example)
- * is noticed at its first step and reported through [problem]: such a recording cannot be
+ * is noticed at its first step and reported through [origin]: such a recording cannot be
  * replayed from its initial snapshot.
  *
  * @param machine The machine of the store
  * @param context The context the store was created with
  */
-class MachineRecorder<C, A : Action, CMD, E : Event>(
+class MachineRecorder<C : Any, A : Action, CMD : Any, E : Event>(
     private val machine: Machine<C, A, CMD, E>,
     context: C,
 ) : DecisionObserver<C, A, CMD, E> {
@@ -201,29 +214,29 @@ class MachineRecorder<C, A : Action, CMD, E : Event>(
     private val steps = ArrayList<RecordedStep<C, A, CMD, E>>()
 
     /**
-     * Why this recording cannot be replayed, or `null`: set when the first committed decision did
+     * Whether the first committed decision began at the configured initial snapshot: marks an unknown beginning when it did
      * not start from the initial snapshot the recorder was given.
      */
-    var problem: String? = null
+    var origin: RecordingOrigin = RecordingOrigin.InitialSnapshot
         private set
 
-    override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+    override fun onCommitted(input: InputAttribution, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
         locked {
             if (steps.isEmpty() && machineInput is MachineInput.Start) {
                 val expected = machine.decide(initial, machineInput)
                 if (expected.snapshot != decision.snapshot) {
-                    problem = "the run did not start from the recorder's initial snapshot (a restored snapshot started over?)"
+                    origin = RecordingOrigin.UnknownBeginning("the run did not start from the recorder's initial snapshot (a restored snapshot started over?)")
                 }
             }
             steps += RecordedStep.Committed(machineInput, decision)
         }
     }
 
-    override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) {
+    override fun onIgnored(input: InputAttribution, machineInput: MachineInput<A>, reason: IgnoreReason) {
         locked { steps += RecordedStep.Ignored(machineInput, reason) }
     }
 
-    override fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) {
+    override fun onFailed(input: InputAttribution, machineInput: MachineInput<A>, failure: FailureDescriptor) {
         locked { steps += RecordedStep.Failed(machineInput, failure) }
     }
 
@@ -232,7 +245,7 @@ class MachineRecorder<C, A : Action, CMD, E : Event>(
      */
     fun recording(): Recording<C, A, CMD, E> = locked { Recording(machine.id, machine.version, initial, steps.toList()) }
 
-    private inline fun <T> locked(block: () -> T): T {
+    private inline fun <T : Any> locked(block: () -> T): T {
         while (!lock.tryLock()) {
             // Spin: the holder appends one step or copies the list.
         }

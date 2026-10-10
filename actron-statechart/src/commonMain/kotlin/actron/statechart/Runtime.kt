@@ -3,6 +3,29 @@ package actron.statechart
 import actron.core.Action
 import actron.core.ExperimentalActronApi
 import actron.core.State
+import actron.observability.FailureDescriptor
+
+/** Observed guard decision; unconditional transitions do not invoke an application guard. */
+sealed interface GuardCheck {
+    val allows: Boolean
+
+    data object Unconditional : GuardCheck {
+        override val allows: Boolean = true
+        override fun toString(): String = "always"
+    }
+    data object Allowed : GuardCheck {
+        override val allows: Boolean = true
+        override fun toString(): String = "true"
+    }
+    data object Rejected : GuardCheck {
+        override val allows: Boolean = false
+        override fun toString(): String = "false"
+    }
+    data class Failed(val failure: FailureDescriptor) : GuardCheck {
+        override val allows: Boolean = false
+        override fun toString(): String = "failed"
+    }
+}
 
 /**
  * Outcome of [StateChartRuntime.step] and [StateChartRuntime.fire].
@@ -160,11 +183,11 @@ class StateChartRuntime<S : State>(
     private val guards: Map<String, (S, Action) -> Boolean> = emptyMap(),
 ) {
     init {
-        require(definition.transitions.none { definition.node(it.source) is FinalState }) { "[Actron] Final states cannot have outgoing transitions" }
+        require(definition.transitions.none { definition.nodeSatisfies(it.source) { node -> node is FinalState } }) { "[Actron] Final states cannot have outgoing transitions" }
         require(definition.transitions.filter { it.trigger == Trigger.Completion }.all {
-            definition.node(it.source) is CompoundState || definition.node(it.source) is ParallelState
+            definition.nodeSatisfies(it.source) { node -> node is CompoundState || node is ParallelState }
         }) { "[Actron] Completion transitions need a compound or parallel source" }
-        val missing = definition.transitions.mapNotNull { it.guard }.distinct().filter { it !in guards }
+        val missing = buildList { definition.transitions.forEach { it.guard.withLabel { add(it) } } }.distinct().filter { it !in guards }
         require(missing.isEmpty()) { "[Actron] Missing guard implementations: ${missing.joinToString()}" }
         val malformed = definition.hierarchyIssues() + definition.historyIssues()
         require(malformed.isEmpty()) { "[Actron] Malformed state hierarchy: ${malformed.joinToString()}" }
@@ -197,14 +220,14 @@ class StateChartRuntime<S : State>(
      * earlier step or [StateChartDefinition.configurationOf].
      */
     fun step(configuration: StateConfiguration, state: S, action: Action): StepResult =
-        stepObserved(configuration, state, action, null)
+        stepObserved(configuration, state, action) { _, _ -> }
 
     internal fun stepObserved(
         configuration: StateConfiguration, state: S, action: Action,
-        observe: ((Transition, Boolean?, Exception?) -> Unit)?,
+        observe: (Transition, GuardCheck) -> Unit,
     ): StepResult {
         val taken = definition.selectTransitions(configuration) { transition ->
-            transition.on?.matches(action) == true && enabled(transition, state, action, observe)
+            transition.matchesAction(action) && enabled(transition, state, action, observe)
         }
         if (taken.isEmpty()) return StepResult.Ignored
         return transitioned(configuration, taken)
@@ -223,11 +246,11 @@ class StateChartRuntime<S : State>(
      * @throws IllegalArgumentException if [timer] is not a [Trigger.After] transition of [definition]
      */
     fun fire(configuration: StateConfiguration, state: S, timer: Transition): StepResult =
-        fireObserved(configuration, state, timer, null)
+        fireObserved(configuration, state, timer) { _, _ -> }
 
     internal fun fireObserved(
         configuration: StateConfiguration, state: S, timer: Transition,
-        observe: ((Transition, Boolean?, Exception?) -> Unit)?,
+        observe: (Transition, GuardCheck) -> Unit,
     ): StepResult {
         require(timer.isTimer) { "[Actron] Not a timer: $timer" }
         require(timer in definition.transitions) { "[Actron] Timer is not declared in the chart: $timer" }
@@ -237,9 +260,9 @@ class StateChartRuntime<S : State>(
     }
 
     /** One automatic microstep: eventless transitions first, then completion transitions. */
-    fun automaticStep(configuration: StateConfiguration, state: S): StepResult = automaticObserved(configuration, state, null)
+    fun automaticStep(configuration: StateConfiguration, state: S): StepResult = automaticObserved(configuration, state) { _, _ -> }
 
-    internal fun automaticObserved(configuration: StateConfiguration, state: S, observe: ((Transition, Boolean?, Exception?) -> Unit)?): StepResult {
+    internal fun automaticObserved(configuration: StateConfiguration, state: S, observe: (Transition, GuardCheck) -> Unit): StepResult {
         for (completion in listOf(false, true)) {
             val trigger = if (completion) Trigger.Completion else Trigger.Eventless
             val action = AutomaticTransition(completion)
@@ -254,16 +277,18 @@ class StateChartRuntime<S : State>(
 
     private fun enabled(
         transition: Transition, state: S, action: Action,
-        observe: ((Transition, Boolean?, Exception?) -> Unit)?,
+        observe: (Transition, GuardCheck) -> Unit,
     ): Boolean {
         val result = try {
-            transition.guard?.let { guards.getValue(it)(state, action) }
+            var checked: GuardCheck = GuardCheck.Unconditional
+            transition.guard.withLabel { checked = if (guards.getValue(it)(state, action)) GuardCheck.Allowed else GuardCheck.Rejected }
+            checked
         } catch (error: Exception) {
-            observe?.invoke(transition, null, error)
+            observe(transition, GuardCheck.Failed(FailureDescriptor.of(error)))
             throw error
         }
-        observe?.invoke(transition, result, null)
-        return result != false
+        observe(transition, result)
+        return result.allows
     }
 
     private fun transitioned(configuration: StateConfiguration, taken: List<Transition>): StepResult.Transitioned {

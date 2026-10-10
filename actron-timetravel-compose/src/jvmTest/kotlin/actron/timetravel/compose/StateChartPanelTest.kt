@@ -12,13 +12,13 @@ class StateChartPanelTest {
     private data object Go : Action
     @Test fun selectingNodesAndTransitionsShowsActivityAndActualGuardResults() = runComposeUiTest {
         val idle = StateId("idle"); val done = StateId("done")
-        val chart = StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), guard = "allowed")))
+        val chart = StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), guard = actron.statechart.GuardKey("allowed"))))
         val machine = Machine<Unit, Go, Nothing, Event>(DefinitionId("ui"), DefinitionVersion("1"), chart) {
             guard("allowed") { _, _ -> false }
         }
         val snapshot = machine.decide(machine.initialSnapshot(Unit), MachineInput.Start(MachineTime.Zero)).snapshot
         val explained = machine.decideExplained(snapshot, MachineInput.Dispatch(Go, MachineTime.Zero))
-        setContent { StateChartPanel(chart, snapshot, explanation = explained.explanation) }
+        setContent { StateChartPanel(chart, snapshot, inspection = ChartInspection.Decided(explained.explanation, explained.decision.outcome.toString(), emptyList())) }
         onNodeWithTag("chart-node-idle").performClick()
         onNodeWithTag("chart-detail").assertTextContains("activation a1", substring = true)
         onNodeWithTag("chart-transition-0").performClick()

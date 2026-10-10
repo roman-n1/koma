@@ -2,12 +2,15 @@
 
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExperimentalActronApi
 import actron.core.InputId
 import actron.core.InternalActronApi
 import actron.observability.ActivationRef
+import actron.observability.CommandExecution
 import actron.observability.CommandRef
 import actron.observability.FailureDescriptor
 import actron.observability.JournalEntry
@@ -22,19 +25,19 @@ import actron.observability.TimerRef
  * them short and never call back into the store. An exception thrown by a callback is reported
  * to the store's exception handler; the store continues.
  */
-interface DecisionObserver<C, A : Action, CMD, E : Event> {
+interface DecisionObserver<C : Any, A : Action, CMD : Any, E : Event> {
     /**
-     * [decision]'s snapshot was committed while processing [input] (`null` when unknown), for
+     * [decision]'s snapshot was committed while processing [input] ([InputAttribution.Unattributed] when unknown), for
      * [machineInput]. The store's `StateCommitted` trace of the same input and revision precedes
      * this call. A recording of the machine inputs in this order, with the snapshots they
      * produced, is what a replay decides again.
      */
-    fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {}
+    fun onCommitted(input: InputAttribution, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {}
 
     /**
      * The machine ignored [machineInput] for [reason] while processing [input]; nothing was committed.
      */
-    fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) {}
+    fun onIgnored(input: InputAttribution, machineInput: MachineInput<A>, reason: IgnoreReason) {}
 
     /**
      * [action] was refused at admission and never became an input.
@@ -45,7 +48,7 @@ interface DecisionObserver<C, A : Action, CMD, E : Event> {
      * The machine failed to decide [machineInput] while processing [input]: a guard, reducer or
      * rule threw [failure]. Nothing was committed; the cause reaches the store's exception handler.
      */
-    fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) {}
+    fun onFailed(input: InputAttribution, machineInput: MachineInput<A>, failure: FailureDescriptor) {}
 
     /**
      * The store closed with commands its executor had not finished: [queued] had been registered
@@ -65,7 +68,7 @@ interface DecisionObserver<C, A : Action, CMD, E : Event> {
  *
  * Pass the result to [MachineStore] as one of its observers.
  */
-fun <C, A : Action, CMD, E : Event> RecordingSession.decisionsOf(
+fun <C : Any, A : Action, CMD : Any, E : Event> RecordingSession.decisionsOf(
     store: StoreInstanceId,
     command: (CMD) -> Payload<CMD> = { Payload.Omitted },
     action: (A) -> Payload<A> = { Payload.Omitted },
@@ -78,7 +81,7 @@ fun <C, A : Action, CMD, E : Event> RecordingSession.decisionsOf(
  * [MailboxConfig.listeners].
  */
 fun <E : Event> RecordingSession.effectsOf(store: StoreInstanceId, describe: (E) -> Payload<E> = { Payload.Omitted }): EffectListener<E> = object : EffectListener<E> {
-    override fun onQueued(input: InputId?, effect: PendingEffect<E>) {
+    override fun onQueued(input: InputAttribution, effect: PendingEffect<E>) {
         val payload = try {
             describe(effect.event)
         } catch (e: Exception) {
@@ -100,13 +103,13 @@ fun <E : Event> RecordingSession.effectsOf(store: StoreInstanceId, describe: (E)
     }
 }
 
-private class DecisionJournal<C, A : Action, CMD, E : Event>(
+private class DecisionJournal<C : Any, A : Action, CMD : Any, E : Event>(
     private val session: RecordingSession,
     private val store: StoreInstanceId,
     private val describeCommand: (CMD) -> Payload<CMD>,
     private val describeAction: (A) -> Payload<A>,
 ) : DecisionObserver<C, A, CMD, E> {
-    override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+    override fun onCommitted(input: InputAttribution, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
         external(input, machineInput)
         session.publish(
             store,
@@ -117,7 +120,10 @@ private class DecisionJournal<C, A : Action, CMD, E : Event>(
                 transitions = decision.transitions.map { it.index },
                 exited = decision.exited.map { ActivationRef(it.node.value, it.id.value) },
                 entered = decision.entered.map { ActivationRef(it.node.value, it.id.value) },
-                commands = decision.commands.map { CommandRef(it.id.value, it.scope.value, it.lane?.value, it.policy?.let(::policyName), guarded { describeCommand(it.command) }) },
+                commands = decision.commands.map { CommandRef(it.id.value, it.scope.value, when (val lane = it.lane) {
+                    CommandLane.Independent -> CommandExecution.Independent
+                    is LaneId -> CommandExecution.InLane(lane.value, policyName(it.policy))
+                }, guarded { describeCommand(it.command) }) },
                 cancelledScopes = decision.cancelledScopes.map { it.value },
                 timersScheduled = decision.timersScheduled.map { TimerRef(it.id.value, it.transition.index, it.activation.value, it.deadline.sinceStart) },
                 timersCancelled = decision.timersCancelled.map { it.value },
@@ -126,17 +132,17 @@ private class DecisionJournal<C, A : Action, CMD, E : Event>(
         )
     }
 
-    override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) {
+    override fun onIgnored(input: InputAttribution, machineInput: MachineInput<A>, reason: IgnoreReason) {
         external(input, machineInput)
         session.publish(store, JournalEntry.DecisionIgnored(input, reason.name))
     }
 
-    override fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) {
+    override fun onFailed(input: InputAttribution, machineInput: MachineInput<A>, failure: FailureDescriptor) {
         external(input, machineInput)
     }
 
     // The source an input came from is the journal's business as much as the decision.
-    private fun external(input: InputId?, machineInput: MachineInput<A>) {
+    private fun external(input: InputAttribution, machineInput: MachineInput<A>) {
         if (machineInput is MachineInput.External) session.publish(store, JournalEntry.ExternalReceived(input, machineInput.source.value))
     }
 
@@ -148,13 +154,14 @@ private class DecisionJournal<C, A : Action, CMD, E : Event>(
         session.publish(store, JournalEntry.CommandsAbandoned("StoreClosed", queued.map { it.value }, running.map { it.value }))
     }
 
-    private inline fun <T> guarded(describe: () -> Payload<T>): Payload<T> = try {
+    private inline fun <T : Any> guarded(describe: () -> Payload<T>): Payload<T> = try {
         describe()
     } catch (e: Exception) {
         Payload.Unavailable
     }
 
     private fun policyName(policy: ConcurrencyPolicy): String = when (policy) {
+        ConcurrencyPolicy.Independent -> "Independent"
         ConcurrencyPolicy.Latest -> "Latest"
         ConcurrencyPolicy.Sequential -> "Sequential"
         ConcurrencyPolicy.DropIfRunning -> "DropIfRunning"
@@ -165,18 +172,18 @@ private class DecisionJournal<C, A : Action, CMD, E : Event>(
 /** Opt-in live decision diagnostics. Metadata only; never copies action/context payloads. */
 interface DecisionExplanationObserver {
     /** Called under the decision lock before commit/ignored/failed callbacks; never call the Store back. */
-    fun onExplained(input: InputId?, explanation: DecisionExplanation)
+    fun onExplained(input: InputAttribution, explanation: DecisionExplanation)
 }
 
 /** Opt-in typed trace of the one actual decision, including failed and ignored decisions. */
-interface DecisionTraceObserver<C, A : Action, CMD, E : Event> : DecisionObserver<C, A, CMD, E> {
+interface DecisionTraceObserver<C : Any, A : Action, CMD : Any, E : Event> : DecisionObserver<C, A, CMD, E> {
     /** Called before commit/outcome callbacks; never call the Store back or mutate snapshot data. */
-    fun onDecided(input: InputId?, machineInput: MachineInput<A>, explained: ExplainedDecision<C, CMD, E>)
+    fun onDecided(input: InputAttribution, machineInput: MachineInput<A>, explained: ExplainedDecision<C, CMD, E>)
 }
 
 /** Observes actual live guard evaluations without a second decision or extra guard invocations. */
-fun <C, A : Action, CMD, E : Event> decisionDiagnostics(
-    consume: (InputId?, DecisionExplanation) -> Unit,
+fun <C : Any, A : Action, CMD : Any, E : Event> decisionDiagnostics(
+    consume: (InputAttribution, DecisionExplanation) -> Unit,
 ): DecisionObserver<C, A, CMD, E> = object : DecisionObserver<C, A, CMD, E>, DecisionExplanationObserver {
-    override fun onExplained(input: InputId?, explanation: DecisionExplanation) = consume(input, explanation)
+    override fun onExplained(input: InputAttribution, explanation: DecisionExplanation) = consume(input, explanation)
 }

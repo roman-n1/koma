@@ -14,8 +14,8 @@ class BehaviouralToolsTest {
     private val go = ActionMatcher.of<Go>("go")
 
     @Test fun diffShowsGuardEffectAndInternalSemanticsEvenWhenEndpointsStayEqual() {
-        val before = StateChartDefinition(idle, listOf(AtomicState(idle)), listOf(Transition(idle, idle, go, guard = "old", effect = "before")))
-        val after = before.copy(transitions = listOf(Transition(idle, idle, go, guard = "new", effect = "after", kind = TransitionKind.Internal)))
+        val before = StateChartDefinition(idle, listOf(AtomicState(idle)), listOf(Transition(idle, idle, go, guard = actron.statechart.GuardKey("old"), effect = actron.statechart.EffectKey("before"))))
+        val after = before.copy(transitions = listOf(Transition(idle, idle, go, guard = actron.statechart.GuardKey("new"), effect = actron.statechart.EffectKey("after"), kind = TransitionKind.Internal)))
         val description = before.diffTo(after).describe()
         assertTrue(description.contains("- idle --go [old] / before--> idle"), description)
         assertTrue(description.contains("+ idle --go [new] / after (internal)--> idle"), description)
@@ -34,7 +34,7 @@ class BehaviouralToolsTest {
 
     @Test fun versionedDiffDoesNotExecuteOrPretendToCompareOpaqueRules() {
         var calls = 0
-        val chart = StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, go, guard = "allowed")))
+        val chart = StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, go, guard = actron.statechart.GuardKey("allowed"))))
         fun machine(version: String, model: StateChartDefinition = chart, identity: String = "versions") =
             Machine<Unit, Action, Nothing, Event>(DefinitionId(identity), DefinitionVersion(version), model) {
                 guard("allowed") { _, _ -> calls++; true }
@@ -54,8 +54,8 @@ class BehaviouralToolsTest {
 
     @Test fun matrixRetainsGuardAlternativesTimersAndTransitionOrder() {
         val chart = StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(
-            Transition(idle, done, go, guard = "allowed", effect = "save"),
-            Transition(idle, idle, go, guard = "retry", kind = TransitionKind.Internal),
+            Transition(idle, done, go, guard = actron.statechart.GuardKey("allowed"), effect = actron.statechart.EffectKey("save")),
+            Transition(idle, idle, go, guard = actron.statechart.GuardKey("retry"), kind = TransitionKind.Internal),
             Transition(idle, done, Trigger.After(5.seconds)),
         ))
         val matrix = chart.transitionMatrix()

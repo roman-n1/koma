@@ -1,5 +1,7 @@
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.InputId
@@ -9,14 +11,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/** Metadata of the input origin; a local operation has no external producer. */
+sealed interface CausalProvenance {
+    data object Local : CausalProvenance
+    data class Command(val command: CommandId) : CausalProvenance
+    data class External(val source: SourceId) : CausalProvenance
+}
+
 /** One input's metadata-only cause; command output links to its registering input. */
 data class CausalInput(
     val store: StoreInstanceId,
     val input: InputId,
     val root: InputId,
-    val parent: InputId? = null,
-    val command: CommandId? = null,
-    val source: SourceId? = null,
+    val parent: InputAttribution = InputAttribution.Unattributed,
+    val provenance: CausalProvenance = CausalProvenance.Local,
     /** A bounded history evicted the parent's node, so the root cannot be reconstructed. */
     val incomplete: Boolean = false,
 )
@@ -26,7 +34,7 @@ data class CausalInput(
  * the input that registered the command. Bridge cross-store causality remains in MachineGroup's
  * message references. No action/context/command payloads are retained.
  */
-class CausalityTracker<C, A : Action, CMD, E : Event>(
+class CausalityTracker<C : Any, A : Action, CMD : Any, E : Event>(
     private val store: StoreInstanceId,
     private val capacity: Int = 100,
 ) : DecisionObserver<C, A, CMD, E> {
@@ -35,27 +43,39 @@ class CausalityTracker<C, A : Action, CMD, E : Event>(
     val inputs: StateFlow<List<CausalInput>> = history.asStateFlow()
     private val commands = linkedMapOf<CommandId, InputId>()
 
-    private fun record(input: InputId?, machineInput: MachineInput<A>) {
-        if (input == null) return
-        val command = when (machineInput) {
-            is MachineInput.CommandResult -> machineInput.command
-            is MachineInput.CommandCompleted -> machineInput.command
-            is MachineInput.CommandFailed -> machineInput.command
-            is MachineInput.CommandAbandoned -> machineInput.command
-            else -> null
+    private fun record(input: InputAttribution, machineInput: MachineInput<A>) {
+        if (input !is InputId) return
+        var provenance: CausalProvenance = CausalProvenance.Local
+        var parent: InputAttribution = InputAttribution.Unattributed
+        var root = input
+        var incomplete = false
+        fun link(command: CommandId) {
+            provenance = CausalProvenance.Command(command)
+            if (command !in commands) { incomplete = true; return }
+            val registering = commands.getValue(command)
+            parent = registering
+            val index = history.value.indexOfFirst { it.input == registering }
+            if (index < 0) { incomplete = true; return }
+            val cause = history.value[index]
+            root = cause.root
+            incomplete = cause.incomplete
         }
-        val parent = command?.let(commands::get)
-        val cause = history.value.firstOrNull { it.input == parent }
-        val source = (machineInput as? MachineInput.External)?.source
-        history.value = (history.value + CausalInput(store, input, cause?.root ?: input, parent, command, source,
-            incomplete = command != null && (parent == null || cause == null || cause.incomplete))).takeLast(capacity)
+        when (machineInput) {
+            is MachineInput.CommandResult -> link(machineInput.command)
+            is MachineInput.CommandCompleted -> link(machineInput.command)
+            is MachineInput.CommandFailed -> link(machineInput.command)
+            is MachineInput.CommandAbandoned -> link(machineInput.command)
+            is MachineInput.External -> provenance = CausalProvenance.External(machineInput.source)
+            else -> Unit
+        }
+        history.value = (history.value + CausalInput(store, input, root, parent, provenance, incomplete)).takeLast(capacity)
     }
 
-    override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+    override fun onCommitted(input: InputAttribution, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
         record(input, machineInput)
-        if (input != null) for (command in decision.commands) commands[command.id] = input
+        if (input is InputId) for (command in decision.commands) commands[command.id] = input
         while (commands.size > capacity) commands.remove(commands.keys.first())
     }
-    override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) = record(input, machineInput)
-    override fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) = record(input, machineInput)
+    override fun onIgnored(input: InputAttribution, machineInput: MachineInput<A>, reason: IgnoreReason) = record(input, machineInput)
+    override fun onFailed(input: InputAttribution, machineInput: MachineInput<A>, failure: FailureDescriptor) = record(input, machineInput)
 }

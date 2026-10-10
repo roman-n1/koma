@@ -10,6 +10,7 @@ import actron.statechart.machine.Machine
 import actron.statechart.machine.MachineInput
 import actron.statechart.machine.MachineSnapshot
 import actron.statechart.machine.MessageId
+import actron.statechart.machine.RoutePair
 import actron.statechart.machine.PairRole
 import actron.statechart.machine.SourceId
 
@@ -53,6 +54,8 @@ sealed interface GroupMismatch {
 /** The result of one forward step of a [GroupReplaySession]. */
 @ExperimentalActronApi
 sealed interface GroupReplayStep {
+    data class Finished(val position: Int) : GroupReplayStep
+
     data class Matched(val position: Int, val store: StoreInstanceId, val decision: Decision<*, *, *>) : GroupReplayStep
 
     data class Diverged(val mismatch: GroupMismatch) : GroupReplayStep
@@ -85,8 +88,12 @@ class GroupReplaySession(
     var position: Int = 0
         private set
 
-    /** The step at [position], or `null` at the end. */
-    val next: GroupStep? get() = recording.order.getOrNull(position)
+    /** Reports the next group step once; returns false at the end. */
+    fun withNext(accept: (GroupStep) -> Unit): Boolean {
+        if (position >= length) return false
+        accept(recording.order[position])
+        return true
+    }
 
     /** The members' sessions, each at its own position for the group's. */
     val members: Map<StoreInstanceId, ReplaySession<*, *, *, *>> get() = sessions
@@ -103,13 +110,14 @@ class GroupReplaySession(
     /**
      * Checks the next input's bridge/source causality, decides it on its member and compares
      * with the recording. Advances on a match; a divergence leaves every member and the group
-     * cursor unchanged. `null` at the end.
+     * cursor unchanged. [GroupReplayStep.Finished] at the final checkpoint.
      */
-    fun stepForward(): GroupReplayStep? {
-        val step = next ?: return null
-        bridgeMismatches.firstOrNull { it.position == position }?.let { return GroupReplayStep.Diverged(it) }
+    fun stepForward(): GroupReplayStep {
+        if (position >= length) return GroupReplayStep.Finished(position)
+        val step = recording.order[position]
+        for (mismatch in bridgeMismatches) if (mismatch.position == position) return GroupReplayStep.Diverged(mismatch)
         return when (val result = session(step.store).stepForward()) {
-            null -> null
+            is ReplayStep.Finished -> GroupReplayStep.Finished(position)
             is ReplayStep.Matched<*, *, *, *> -> {
                 position++
                 GroupReplayStep.Matched(position - 1, step.store, result.decision)
@@ -145,7 +153,7 @@ class GroupReplaySession(
     fun verify(): List<GroupMismatch> {
         val mismatches = mutableListOf<GroupMismatch>()
         for ((id, session) in sessions) {
-            session.verify()?.let { mismatch -> mismatches += GroupMismatch.Replay(positionOf(id, mismatch.position), id, mismatch) }
+            session.verify { mismatch -> mismatches += GroupMismatch.Replay(positionOf(id, mismatch.position), id, mismatch) }
         }
         mismatches += bridgeMismatches
         return mismatches.sortedBy { it.position }
@@ -176,9 +184,9 @@ class GroupReplaySession(
                     message !in sent -> mismatches += GroupMismatch.ReceivedBeforeSent(index, step.store, message)
                     routes.isEmpty() -> mismatches += GroupMismatch.NoRoute(index, step.store, message)
                     else -> {
-                        val reply = routes.firstNotNullOfOrNull { route -> route.pair?.takeIf { it.role == PairRole.Reply } }
-                        if (reply != null && message !in recording.inFlight && step.store !in heardAtEmit[message].orEmpty()) mismatches += GroupMismatch.ReplyWithoutRequest(index, step.store, message, reply.name)
-                        if (routes.any { it.pair?.role == PairRole.Request }) requestersHeard.getOrPut(step.store) { mutableSetOf() } += message.from
+                        val replies = routes.map { it.pair }.filterIsInstance<RoutePair>().filter { it.role == PairRole.Reply }
+                        if (replies.isNotEmpty() && message !in recording.inFlight && step.store !in heardAtEmit[message].orEmpty()) mismatches += GroupMismatch.ReplyWithoutRequest(index, step.store, message, replies.first().name)
+                        if (routes.any { val pair = it.pair; pair is RoutePair && pair.role == PairRole.Request }) requestersHeard.getOrPut(step.store) { mutableSetOf() } += message.from
                     }
                 }
                 received[key] = index
@@ -210,5 +218,5 @@ class GroupReplaySession(
 
     @Suppress("UNCHECKED_CAST")
     private fun open(machine: Machine<*, *, *, *>, recording: Recording<*, *, *, *>): ReplaySession<*, *, *, *> =
-        ReplaySession(machine as Machine<Any?, Action, Any?, Event>, recording as Recording<Any?, Action, Any?, Event>)
+        ReplaySession(machine as Machine<Any, Action, Any, Event>, recording as Recording<Any, Action, Any, Event>)
 }

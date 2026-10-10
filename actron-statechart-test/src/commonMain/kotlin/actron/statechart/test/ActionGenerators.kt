@@ -6,13 +6,13 @@ import actron.statechart.ActionMatcher
 import actron.statechart.machine.*
 
 /** Finite deterministic payload domain. Seeded randomness belongs to the caller, not wall time. */
-class ActionGenerator<C, A : Action>(val matcher: ActionMatcher, private val generate: (MachineSnapshot<C>, MachineTime) -> List<A>) {
+class ActionGenerator<C : Any, A : Action>(val matcher: ActionMatcher, private val generate: (MachineSnapshot<C>, MachineTime) -> List<A>) {
     fun actions(snapshot: MachineSnapshot<C>, now: MachineTime): List<A> = generate(snapshot, now).also {
         require(it.all(matcher::matches)) { "[Actron] Generator emitted an action outside its declared matcher" }
     }
 }
 
-inline fun <C, reified A : Action> actionGenerator(
+inline fun <C : Any, reified A : Action> actionGenerator(
     name: String, noinline generate: (MachineSnapshot<C>, MachineTime) -> List<A>,
 ): ActionGenerator<C, A> = ActionGenerator(ActionMatcher.of<A>(name), generate)
 
@@ -21,7 +21,7 @@ inline fun <C, reified A : Action> actionGenerator(
  * guard branches observable; otherwise the selection query filters guards (never reducer/IO).
  * Explicit extraInputs supplies command results or other external responses. Timers use deadlines.
  */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.inputGenerator(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.inputGenerator(
     generators: List<ActionGenerator<C, out A>>,
     includeBlocked: Boolean = true,
     includeTimers: Boolean = true,

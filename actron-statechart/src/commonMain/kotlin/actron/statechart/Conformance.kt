@@ -7,6 +7,27 @@ import actron.core.Plugin
 import actron.core.PluginScope
 import actron.core.State
 
+/** Action attribution inferred from Store hooks, which do not expose a causal input. */
+sealed interface ActionObservation {
+    val observed: Boolean
+    fun matches(transition: Transition): Boolean
+    fun unexpected(from: StateId, to: StateId): ConformanceViolation.UnexpectedTrigger
+
+    data object Unobserved : ActionObservation {
+        override val observed: Boolean = false
+        override fun matches(transition: Transition): Boolean = false
+        override fun unexpected(from: StateId, to: StateId): ConformanceViolation.UnexpectedTrigger =
+            error("[Actron] An unobserved action cannot be an unexpected trigger")
+    }
+
+    data class Observed(val action: Action) : ActionObservation {
+        override val observed: Boolean = true
+        override fun matches(transition: Transition): Boolean = transition.matchesAction(action)
+        override fun unexpected(from: StateId, to: StateId): ConformanceViolation.UnexpectedTrigger =
+            ConformanceViolation.UnexpectedTrigger(from, to, action)
+    }
+}
+
 /**
  * A place where a running Store did something its [StateChartDefinition] does not declare.
  */
@@ -23,7 +44,9 @@ sealed interface ConformanceViolation {
      * not proof: a change made from `launch {}` or a chained `enter {}` may come after an
      * unrelated action.
      */
-    data class UndeclaredTransition(val from: StateId, val to: StateId, val lastAction: Action?) : ConformanceViolation
+    data class UndeclaredTransition(val from: StateId, val to: StateId, val lastAction: ActionObservation) : ConformanceViolation {
+        constructor(from: StateId, to: StateId, lastAction: Action) : this(from, to, ActionObservation.Observed(lastAction))
+    }
 
     /**
      * The Store moved from [from] to [to], and the chart declares transitions between them, but
@@ -139,15 +162,15 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
 ) : Plugin<S, A, E> {
     constructor(definition: StateChartDefinition, stateIdOf: (S) -> StateId) : this(definition, LeafMapping { setOf(stateIdOf(it)) })
 
-    private fun interface LeafMapping<S> {
+    private fun interface LeafMapping<S : Any> {
         fun leavesOf(state: S): Set<StateId>
     }
 
     private val declaredStates = definition.states.map { it.id }.toSet()
     private val recordedViolations = mutableListOf<ConformanceViolation>()
     private val recordedCovered = linkedSetOf<Transition>()
-    private var lastAction: A? = null
-    private var trigger: A? = null
+    private var lastAction: ActionObservation = ActionObservation.Unobserved
+    private var trigger: ActionObservation = ActionObservation.Unobserved
     private var pendingSelfLoops: List<Transition> = emptyList()
 
     // What the history states may remember, one entry per possibility. Actron does not show a
@@ -177,14 +200,14 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
 
     override suspend fun onAction(scope: PluginScope<S, A>, state: S, action: A) {
         recordedCovered += pendingSelfLoops
-        lastAction = action
-        trigger = action
+        lastAction = ActionObservation.Observed(action)
+        trigger = lastAction
         val leaves = mapping.leavesOf(state)
         var selfLoops: List<Transition> = emptyList()
         val possible = histories.toMutableList()
         for (history in histories) {
             val configuration = definition.configurationOf(leaves).copy(history = history)
-            val taken = definition.selectTransitions(configuration) { it.on?.matches(action) == true }
+            val taken = definition.selectTransitions(configuration) { it.matchesAction(action) }
             if (taken.isEmpty()) continue
             val step = definition.microstep(configuration, taken)
             if (step.leaves(definition).toSet() != leaves) continue
@@ -204,24 +227,29 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         (to - from).forEach(::checkDeclared)
 
         val action = trigger
-        trigger = null
+        trigger = ActionObservation.Unobserved
         // First ask the runtime: is there a choice of transitions (guards unknown, so every
         // assignment is tried) that takes a possible configuration exactly to the new leaves?
         // Every possibility that explains the change survives, mapped through its explanation.
-        var explained: List<Transition>? = null
+        var explained = false
+        var explainedTransitions: List<Transition> = emptyList()
         val next = mutableListOf<Map<StateId, Set<StateId>>>()
         for (history in histories) {
             val tracked = definition.configurationOf(from).copy(history = history)
-            val taken = explain(tracked, action, to) ?: continue
-            if (explained == null) explained = taken.transitions
-            // Reapply batches to known history; inferred history is not retained.
-            val after = taken.batches.fold(tracked) { current, batch -> definition.microstep(current, batch).configuration }.history
-            if (after !in next) next += after
+            explain(tracked, action, to) { taken ->
+                if (!explained) {
+                    explained = true
+                    explainedTransitions = taken.transitions
+                }
+                // Reapply batches to known history; inferred history is not retained.
+                val after = taken.batches.fold(tracked) { current, batch -> definition.microstep(current, batch).configuration }.history
+                if (after !in next) next += after
+            }
         }
-        if (explained != null) {
-            recordedCovered += explained
+        if (explained) {
+            recordedCovered += explainedTransitions
             // A change only timers explain used no action: the trigger stays for the next change.
-            if (action != null && explained.all { it.isTimer }) trigger = action
+            if (action.observed && explainedTransitions.all { it.isTimer }) trigger = action
             histories = next.take(MAX_HISTORIES)
             return
         }
@@ -234,10 +262,10 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         val chosen = mutableListOf<Transition>()
         val exited = mutableSetOf<StateId>()
         // Domains of the chosen transitions and of the reports: what they explain.
-        val domains = mutableListOf<StateId?>()
-        fun report(domain: StateId?, violation: ConformanceViolation) {
+        val domains = mutableListOf<StateParent>()
+        fun report(domain: StateParent, violation: ConformanceViolation) {
             domains += domain
-            exited += tracked.active.filter { domain == null || definition.isDescendant(it, domain) }
+            exited += tracked.active.filter { definition.isDescendant(it, domain) }
             recordedViolations += violation
         }
         for (leaf in (from - to).sortedWith(byDeclaration)) {
@@ -249,12 +277,9 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
                     val exitSet = definition.exitSet(tracked, t)
                     leaf in exitSet && exitSet.none { it in exited } && leadsTo(tracked, t, to)
                 }.toList()
-            val taken = if (action == null) {
-                candidates.firstOrNull()
-            } else {
-                candidates.firstOrNull { it.on?.matches(action) == true } ?: candidates.firstOrNull { it.isTimer }
-            }
-            if (taken != null) {
+            val eligible = if (!action.observed) candidates else candidates.filter(action::matches).ifEmpty { candidates.filter { it.isTimer } }
+            if (eligible.isNotEmpty()) {
+                val taken = eligible.first()
                 chosen += taken
                 domains += definition.domainOf(taken)
                 exited += definition.exitSet(tracked, taken)
@@ -264,21 +289,21 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
             val domain = definition.domainOf(leaf, target)
             report(
                 domain,
-                if (candidates.isEmpty() || action == null) {
+                if (candidates.isEmpty() || !action.observed) {
                     ConformanceViolation.UndeclaredTransition(from = leaf, to = target, lastAction = lastAction)
                 } else {
-                    ConformanceViolation.UnexpectedTrigger(from = leaf, to = target, action = action)
+                    action.unexpected(leaf, target)
                 },
             )
         }
         for (leaf in added) {
-            if (domains.any { it == null || definition.isDescendant(leaf, it) }) continue
+            if (domains.any { definition.isDescendant(leaf, it) }) continue
             val source = closest(leaf, from.sortedWith(byDeclaration))
             report(definition.domainOf(source, leaf), ConformanceViolation.UndeclaredTransition(from = source, to = leaf, lastAction = lastAction))
         }
         recordedCovered += chosen
         // A change only timers explain used no action: the trigger stays for the next change.
-        if (action != null && domains.size == chosen.size && chosen.all { it.isTimer }) trigger = action
+        if (action.observed && domains.size == chosen.size && chosen.all { it.isTimer }) trigger = action
         val step = definition.microstep(tracked, chosen)
         val kept = definition.configurationOf(to).active
         val chosenExits = step.exited.toSet()
@@ -286,7 +311,7 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
     }
 
     /**
-     * The transitions the runtime takes from [tracked] to end in the leaves [to], or `null`. A
+     * The transitions that explain the change from [tracked] to the leaves [to], reported to a callback. A
      * transition into a history state is evaluated with an inferred record (see
      * [withInferredHistory]). Candidates are the transitions of the active leaves and
      * their ancestors in priority order. For an action: the runtime's selection with every
@@ -299,12 +324,14 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
         val transitions: List<Transition> get() = batches.flatten()
     }
 
-    private fun explain(tracked: StateConfiguration, action: A?, to: Set<StateId>): Explanation? {
-        fun ending(configuration: StateConfiguration, transitions: List<Transition>): Explanation? {
+    private fun explain(tracked: StateConfiguration, action: ActionObservation, to: Set<StateId>, accept: (Explanation) -> Unit): Boolean {
+        fun ending(configuration: StateConfiguration, transitions: List<Transition>): Boolean {
             val first = if (transitions.isEmpty()) configuration else definition.microstep(configuration, transitions).configuration
             if (definition.transitions.none { it.trigger == Trigger.Eventless || it.trigger == Trigger.Completion }) {
-                if (transitions.isEmpty()) return null
-                return Explanation(listOf(transitions)).takeIf { definition.activeLeaves(first).toSet() == to }
+                if (transitions.isEmpty()) return false
+                if (definition.activeLeaves(first).toSet() != to) return false
+                accept(Explanation(listOf(transitions)))
+                return true
             }
             // Guards/context are unknown to this observer. Enumerate potential automatic choices,
             // preserving batch order/history and requiring a potentially stable final configuration.
@@ -318,35 +345,38 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
                     it.source in path.configuration.active && (it.trigger == Trigger.Eventless ||
                         (it.trigger == Trigger.Completion && definition.isComplete(path.configuration, it.source)))
                 }
-                val guarded = automatic.filter { it.guard != null }.take(MAX_GUARD_ENUMERATION)
+                val guarded = automatic.filter { it.guard != actron.statechart.GuardCondition.Unconditional }.take(MAX_GUARD_ENUMERATION)
                 for (mask in 0 until (1 shl guarded.size)) {
-                    val enabled = automatic.filter { it.guard == null }.toSet() + guarded.filterIndexed { i, _ -> mask and (1 shl i) != 0 }
+                    val enabled = automatic.filter { it.guard == actron.statechart.GuardCondition.Unconditional }.toSet() + guarded.filterIndexed { i, _ -> mask and (1 shl i) != 0 }
                     var selected = definition.selectTransitions(path.configuration) { it in enabled && it.trigger == Trigger.Eventless }
                     if (selected.isEmpty()) selected = definition.selectTransitions(path.configuration) { it in enabled && it.trigger == Trigger.Completion }
                     if (selected.isEmpty()) {
-                        if (definition.activeLeaves(path.configuration).toSet() == to) return Explanation(path.batches)
+                        if (definition.activeLeaves(path.configuration).toSet() == to) {
+                            accept(Explanation(path.batches))
+                            return true
+                        }
                     } else {
                         val next = definition.microstep(path.configuration, selected).configuration
                         if (next !in seen) queue.addLast(Path(next, path.batches + listOf(selected)))
                     }
                 }
             }
-            return null
+            return false
         }
-        fun alone(transition: Transition): Explanation? = ending(withInferredHistory(tracked, transition, to), listOf(transition))
+        fun alone(transition: Transition): Boolean = ending(withInferredHistory(tracked, transition, to), listOf(transition))
         val candidates = definition.activeLeaves(tracked).flatMap { definition.candidatesFor(it) }.distinct()
-        if (action == null) return candidates.firstNotNullOfOrNull(::alone)
-        val matching = candidates.filter { it.on?.matches(action) == true }
+        if (!action.observed) return candidates.any(::alone)
+        val matching = candidates.filter(action::matches)
         val enumerated = matching.take(MAX_GUARD_ENUMERATION)
         val allEnabled = enumerated.toSet()
-        ending(tracked, definition.selectTransitions(tracked) { it in allEnabled })?.let { return it }
-        matching.firstNotNullOfOrNull(::alone)?.let { return it }
+        if (ending(tracked, definition.selectTransitions(tracked) { it in allEnabled })) return true
+        if (matching.any(::alone)) return true
         for (mask in (1 shl enumerated.size) - 2 downTo 1) {
             val enabled = enumerated.filterIndexed { i, _ -> mask and (1 shl i) != 0 }.toSet()
-            ending(tracked, definition.selectTransitions(tracked) { it in enabled })?.let { return it }
+            if (ending(tracked, definition.selectTransitions(tracked) { it in enabled })) return true
         }
-        ending(tracked, emptyList())?.let { return it }
-        return candidates.filter { it.isTimer }.firstNotNullOfOrNull(::alone)
+        if (ending(tracked, emptyList())) return true
+        return candidates.filter { it.isTimer }.any(::alone)
     }
 
     /**
@@ -355,10 +385,12 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
      * was active before the plugin was attached). Otherwise [configuration] itself.
      */
     private fun withInferredHistory(configuration: StateConfiguration, transition: Transition, to: Set<StateId>): StateConfiguration {
-        val target = definition.node(transition.target) as? HistoryState ?: return configuration
+        if (!definition.hasNode(transition.target)) return configuration
+        val target = definition.node(transition.target)
+        if (target !is HistoryState) return configuration
         if (target.id in configuration.history) return configuration
         val domain = definition.domainOf(transition)
-        val reported = to.filter { domain == null || definition.isDescendant(it, domain) }
+        val reported = to.filter { definition.isDescendant(it, domain) }
         val record = if (target.deep) {
             reported.filter { definition.isDescendant(it, target.parent) }
         } else {
@@ -388,7 +420,7 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
      */
     private fun leadsTo(configuration: StateConfiguration, transition: Transition, to: Set<StateId>): Boolean {
         val domain = definition.domainOf(transition)
-        val reported = to.filter { domain == null || definition.isDescendant(it, domain) }
+        val reported = to.filter { definition.isDescendant(it, domain) }
         if (reported.isEmpty()) return false
         if (enteredBy(configuration, transition).containsAll(reported)) return true
         val inferred = withInferredHistory(configuration, transition, to)

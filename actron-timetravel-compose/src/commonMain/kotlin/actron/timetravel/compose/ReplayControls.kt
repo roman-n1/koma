@@ -23,32 +23,24 @@ import actron.timetravel.ReplayStep
  */
 @ExperimentalActronApi
 @Stable
-class ReplayControls<C, A : Action, CMD, E : Event>(val store: StoreInstanceId, val session: ReplaySession<C, A, CMD, E>) {
+class ReplayControls<C : Any, A : Action, CMD : Any, E : Event>(val store: StoreInstanceId, val session: ReplaySession<C, A, CMD, E>) {
     /** The replay's position, mirrored for Compose. */
     var position: Int by mutableStateOf(session.position)
         private set
 
-    /** The last divergence [stepForward] met, or `null`; cleared by a move. */
-    var divergence: String? by mutableStateOf(null)
+    var movement: ReplayMovement by mutableStateOf(ReplayMovement.Open)
         private set
-
-    /** What [verify] last found: `null` before it ran, the mismatch or "no divergence". */
-    var verdict: String? by mutableStateOf(null)
+    var verification: ReplayVerification by mutableStateOf(ReplayVerification.Unchecked)
         private set
-
-    /** Explicitly requested diagnostic computation; composition itself never re-runs guards. */
-    var explanation: actron.statechart.machine.DecisionExplanation? by mutableStateOf(null)
-        private set
-    var explanationOutcome: String? by mutableStateOf(null)
-        private set
-    var invariantViolations: List<actron.statechart.machine.InvariantViolation> by mutableStateOf(emptyList())
+    var inspection: ChartInspection by mutableStateOf(ChartInspection.Unrequested)
         private set
 
     fun explainNext() {
-        val explained = session.explainNext()
-        explanation = explained?.explanation
-        explanationOutcome = explained?.decision?.outcome?.toString()
-        invariantViolations = session.checkInvariants()
+        val violations = session.checkInvariants()
+        inspection = ChartInspection.Checkpoint(violations)
+        session.explainNext { explained ->
+            inspection = ChartInspection.Decided(explained.explanation, explained.decision.outcome.toString(), violations)
+        }
     }
 
     val length: Int get() = session.length
@@ -67,40 +59,64 @@ class ReplayControls<C, A : Action, CMD, E : Event>(val store: StoreInstanceId, 
 
     val canStepForward: Boolean get() = position < length
 
-    /** Why a forward step is unavailable, or `null` when it is. */
-    val forwardUnavailable: String? get() = if (position >= length) "at the end of the recording" else divergence?.let { "the replay diverged here: $it" }
+    /** Availability of a forward step, with explicit reasons when disabled. */
+    val forwardAvailability: actron.timetravel.inspect.Availability get() = when {
+        position >= length -> actron.timetravel.inspect.Availability.Unavailable(listOf("at the end of the recording"))
+        movement is ReplayMovement.Diverged -> actron.timetravel.inspect.Availability.Unavailable(listOf("the replay diverged here: ${(movement as ReplayMovement.Diverged).description}"))
+        else -> actron.timetravel.inspect.Availability.Available
+    }
 
     fun stepForward() {
         when (val step = session.stepForward()) {
-            null -> Unit
-            is ReplayStep.Matched -> divergence = null
-            is ReplayStep.Diverged -> divergence = step.mismatch.describe()
+            is ReplayStep.Finished -> Unit
+            is ReplayStep.Matched -> movement = ReplayMovement.Open
+            is ReplayStep.Diverged -> movement = ReplayMovement.Diverged(step.mismatch.position, step.mismatch.describe())
         }
         position = session.position
-        explanation = null
-        explanationOutcome = null
-        invariantViolations = emptyList()
+        inspection = ChartInspection.Unrequested
     }
 
     fun stepBackward() {
         session.stepBackward()
-        divergence = null
+        movement = ReplayMovement.Open
         position = session.position
-        explanation = null
-        explanationOutcome = null
-        invariantViolations = emptyList()
+        inspection = ChartInspection.Unrequested
     }
 
     fun seek(target: Int) {
         session.seek(target.coerceIn(0, length))
-        divergence = null
+        movement = ReplayMovement.Open
         position = session.position
-        explanation = null
-        explanationOutcome = null
-        invariantViolations = emptyList()
+        inspection = ChartInspection.Unrequested
     }
 
     fun verify() {
-        verdict = session.verify()?.describe() ?: "no divergence in ${session.length} steps"
+        verification = ReplayVerification.Checked("no divergence in ${session.length} steps")
+        session.verify { verification = ReplayVerification.Checked(it.describe()) }
+    }
+}
+
+sealed interface ReplayMovement {
+    data object Open : ReplayMovement
+    data class Diverged(val position: Int, val description: String) : ReplayMovement
+}
+sealed interface ReplayVerification {
+    data object Unchecked : ReplayVerification
+    data class Checked(val verdict: String) : ReplayVerification
+}
+
+/** Diagnostic computation is explicitly requested for a checkpoint or its next decision. */
+sealed interface ChartInspection {
+    val violations: List<actron.statechart.machine.InvariantViolation>
+    fun withExplanation(accept: (actron.statechart.machine.DecisionExplanation) -> Unit)
+    data object Unrequested : ChartInspection {
+        override val violations: List<actron.statechart.machine.InvariantViolation> get() = emptyList()
+        override fun withExplanation(accept: (actron.statechart.machine.DecisionExplanation) -> Unit) {}
+    }
+    data class Checkpoint(override val violations: List<actron.statechart.machine.InvariantViolation>) : ChartInspection {
+        override fun withExplanation(accept: (actron.statechart.machine.DecisionExplanation) -> Unit) {}
+    }
+    data class Decided(val explanation: actron.statechart.machine.DecisionExplanation, val outcome: String, override val violations: List<actron.statechart.machine.InvariantViolation>) : ChartInspection {
+        override fun withExplanation(accept: (actron.statechart.machine.DecisionExplanation) -> Unit) { accept(explanation) }
     }
 }

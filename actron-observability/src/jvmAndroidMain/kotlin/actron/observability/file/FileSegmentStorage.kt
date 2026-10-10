@@ -15,7 +15,8 @@ actual class FileSegmentStorage actual constructor(directory: String) : SegmentS
     }
 
     actual override fun list(): List<SegmentInfo> =
-        directory.listFiles()?.filter { it.isFile }?.map { SegmentInfo(it.name, it.length(), it.lastModified()) } ?: emptyList()
+        directory.listFiles()?.filter { file: File -> file.isFile }
+            ?.map { file: File -> SegmentInfo(file.name, file.length(), file.lastModified()) } ?: emptyList()
 
     actual override fun read(name: String): ByteArray = File(directory, name).readBytes()
 

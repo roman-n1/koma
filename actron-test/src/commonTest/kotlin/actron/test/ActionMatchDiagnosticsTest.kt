@@ -79,7 +79,7 @@ class ActionMatchDiagnosticsTest {
 
         assertEquals(listOf(0), diagnostics.matchedHandlerIndices)
         assertEquals(1, diagnostics.matchedHandlerCount)
-        assertEquals(0, diagnostics.selectedHandlerIndex)
+        assertEquals(0, diagnostics.observedSelectedIndex())
     }
 
     @Test
@@ -88,7 +88,7 @@ class ActionMatchDiagnosticsTest {
 
         assertTrue(diagnostics.matchedHandlerIndices.isEmpty())
         assertEquals(0, diagnostics.matchedHandlerCount)
-        assertNull(diagnostics.selectedHandlerIndex)
+        assertNull(diagnostics.observedSelectedIndex())
         assertEquals(
             "ActionMatchDiagnostics(state=Error, action=Increment: no handler matches)",
             diagnostics.toString(),
@@ -100,7 +100,7 @@ class ActionMatchDiagnosticsTest {
         val diagnostics = createStore().diagnoseActionMatches(AppState.Main(0), AppAction.Reset)
 
         assertEquals(listOf(1, 2), diagnostics.matchedHandlerIndices)
-        assertEquals(1, diagnostics.selectedHandlerIndex)
+        assertEquals(1, diagnostics.observedSelectedIndex())
         assertEquals(
             "ActionMatchDiagnostics(state=Main(count=0), action=Reset: " +
                 "selected #1 state<Main> / action<Reset>, shadowed #2 state<AppState> / action<Reset>)",
@@ -131,6 +131,6 @@ class ActionMatchDiagnosticsTest {
         val diagnostics = store.diagnoseActionMatches(AppAction.Increment)
 
         assertEquals(AppState.Main(0), diagnostics.state)
-        assertEquals(0, diagnostics.selectedHandlerIndex)
+        assertEquals(0, diagnostics.observedSelectedIndex())
     }
 }

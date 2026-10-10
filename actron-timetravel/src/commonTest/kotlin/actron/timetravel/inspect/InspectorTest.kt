@@ -116,12 +116,12 @@ class InspectorTest {
         root,
         listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root), AtomicState(content, parent = root)),
         listOf(
-            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
-            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, idle, Trigger.After(10.seconds), effect = "timeout"),
+            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("store")),
+            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, idle, Trigger.After(10.seconds), effect = actron.statechart.EffectKey("timeout")),
             Transition(content, loading, ActionMatcher.of<Act.Refresh>("Refresh")),
-            Transition(idle, idle, ActionMatcher.of<Act.Boom>("Boom"), guard = "boom"),
+            Transition(idle, idle, ActionMatcher.of<Act.Boom>("Boom"), guard = actron.statechart.GuardKey("boom")),
         ),
     )
 
@@ -248,7 +248,7 @@ class InspectorTest {
         assertEquals(1, rejected.size, "the second Refresh was refused by the bounded admission while the first waited: $rejected")
         val failed = processings.first { it.failures.isNotEmpty() }
         assertEquals(OutcomeKind.Failed, failed.outcome?.kind)
-        assertEquals("IllegalStateException", failed.failures.single().type)
+        assertEquals("IllegalStateException", failed.failures.single().typeLabel)
         val timeout = processings.first { it.decision?.transitions == listOf(3) }
         assertTrue(timeout.revision!! > load.revision!!)
         assertTrue(timeline.any { it is TimelineItem.Closed && it.store == tab1 })
@@ -400,7 +400,7 @@ class InspectorTest {
         val store = StoreInstanceId("s")
         var seq = 0L
         fun record(entry: JournalEntry<*, *, *>, forStore: StoreInstanceId? = store) =
-            JournalRecord(JOURNAL_FORMAT_VERSION, session, MachineGroupId("g"), forStore, ExecutionMode.Live, GroupSeq(++seq), forStore?.let { StoreSeq(seq) }, seq.milliseconds, entry)
+            JournalRecord(JOURNAL_FORMAT_VERSION, session, MachineGroupId("g"), forStore ?: actron.observability.RecordSubject.Session, ExecutionMode.Live, GroupSeq(++seq), forStore?.let { StoreSeq(seq) } ?: actron.observability.RecordOrdinal.Session, seq.milliseconds, entry)
         val records = listOf(
             record(JournalEntry.StoreRegistered(Capability.InspectOnly)),
             record(JournalEntry.InputAccepted(InputId(1), InputDescriptor.Startup)),

@@ -48,7 +48,7 @@ class ActionMatchDiagnosticsPropertyTest {
             val random = Random(seed)
             val actionRegs = randomRegistrations(random).filter { it.kind == "action" }
             val store = buildKtStore(actionRegs, KtState.B)
-            val expectedHandlers = actionRegs.mapIndexed { i, r -> ActionHandlerDescription(i, r.stateType, r.inputType) }
+            val expectedHandlers = actionRegs.mapIndexed { i, r -> ActionHandlerDescription(i, r.stateType, requireNotNull(r.inputType)) }
 
             for (s in ktStates) for (a in ktActions) {
                 val d = store.diagnoseActionMatches(s, a)
@@ -60,7 +60,7 @@ class ActionMatchDiagnosticsPropertyTest {
                 assertEquals(expectedHandlers, d.handlers, context)
                 assertEquals(model, d.matchedHandlerIndices, context)
                 assertEquals(model.size, d.matchedHandlerCount, context)
-                assertEquals(model.firstOrNull(), d.selectedHandlerIndex, context)
+                assertEquals(model.firstOrNull(), d.observedSelectedIndex(), context)
                 assertEquals(model.map { expectedHandlers[it] }, d.matchedHandlers, context)
                 assertTrue(d.matchedHandlerIndices.zipWithNext().all { (x, y) -> x < y }, context)
                 assertEquals(expectedText(s, a, d.matchedHandlers), d.toString(), context)
@@ -83,7 +83,7 @@ class ActionMatchDiagnosticsPropertyTest {
             val log = mutableListOf<String>()
             val store = buildKtStore(regs, s, log) { coroutineContext(StandardTestDispatcher(testScheduler)) }
 
-            val selected = store.diagnoseActionMatches(s, a).selectedHandlerIndex
+            val selected = store.diagnoseActionMatches(s, a).observedSelectedIndex()
             store.dispatchAndAwait(a)
 
             assertEquals(listOfNotNull(selected?.let { "action#$it" }), log, "seed=$seed")
@@ -239,14 +239,15 @@ class ActionMatchDiagnosticsPropertyTest {
     }
 
     @Test
-    fun unknownTypesRenderAsQuestionMarks() {
+    fun unnamedTypesRenderAsQuestionMarks() {
+        val unnamed = object {}::class
         val d = ActionMatchDiagnostics(
             state = KtState.B,
             action = KtAction.P,
             handlers = listOf(
-                ActionHandlerDescription(0, null, null),
-                ActionHandlerDescription(1, KtState::class, null),
-                ActionHandlerDescription(2, null, KtAction.P::class),
+                ActionHandlerDescription(0, unnamed, unnamed),
+                ActionHandlerDescription(1, KtState::class, unnamed),
+                ActionHandlerDescription(2, unnamed, KtAction.P::class),
             ),
             matchedHandlerIndices = listOf(0, 2),
         )

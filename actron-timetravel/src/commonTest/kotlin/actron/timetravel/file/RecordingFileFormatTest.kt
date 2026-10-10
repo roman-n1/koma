@@ -66,7 +66,7 @@ class RecordingFileFormatTest {
     private val idle = StateId("Idle")
     private val machine = Machine<Ctx, Act, NoCommand, Ev>(
         DefinitionId("counter"), DefinitionVersion("1"),
-        StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, ActionMatcher.of<Act.Inc>("Inc"), effect = "inc"))),
+        StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, ActionMatcher.of<Act.Inc>("Inc"), effect = actron.statechart.EffectKey("inc")))),
     ) { effect("inc") { c, _ -> c.copy(n = c.n + 1) } }
 
     private val codec = RecordingCodec(Ctx.serializer(), Act.serializer(), NoCommand.serializer(), Ev.serializer())

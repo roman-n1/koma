@@ -75,12 +75,12 @@ sealed interface ValidationIssue {
     data class EmptyCompoundState(val id: StateId) : ValidationIssue
 
     /**
-     * The initial state [initial] of compound state [id], or of the chart when [id] is `null`, is a
+     * The initial state [initial] of compound state [id], or of the chart when [id] is [StateParent.Root], is a
      * [HistoryState]. A history state only says what to restore, so it cannot be where a state or
      * the chart starts. A history state that is not a child of [id] is reported as
      * [InitialNotChild] instead.
      */
-    data class HistoryAsInitial(val id: StateId?, val initial: StateId) : ValidationIssue
+    data class HistoryAsInitial(val id: StateParent, val initial: StateId) : ValidationIssue
 
     /**
      * The [HistoryState.default] of history state [id] cannot be entered from it: for a shallow
@@ -211,13 +211,13 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
     for (transition in transitions) {
         if (transition.source !in declared) issues += ValidationIssue.UnknownTransitionSource(transition)
         if (transition.target !in declared) issues += ValidationIssue.UnknownTransitionTarget(transition)
-        if (node(transition.source) is HistoryState) issues += ValidationIssue.TransitionFromHistory(transition)
-        if (node(transition.source) is FinalState) issues += ValidationIssue.TransitionFromFinal(transition)
-        if (transition.trigger == Trigger.Completion && node(transition.source) !is CompoundState && node(transition.source) !is ParallelState) {
+        if (nodeSatisfies(transition.source) { it is HistoryState }) issues += ValidationIssue.TransitionFromHistory(transition)
+        if (nodeSatisfies(transition.source) { it is FinalState }) issues += ValidationIssue.TransitionFromFinal(transition)
+        if (transition.trigger == Trigger.Completion && !nodeSatisfies(transition.source) { it is CompoundState || it is ParallelState }) {
             issues += ValidationIssue.InvalidCompletionSource(transition)
         }
-        val delay = transition.after
-        if (delay != null && !delay.isPositive()) issues += ValidationIssue.NonPositiveDelay(transition)
+        val trigger = transition.trigger
+        if (trigger is Trigger.After && !trigger.delay.isPositive()) issues += ValidationIssue.NonPositiveDelay(transition)
     }
 
     if (initial in declared) {
@@ -227,14 +227,16 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
             .forEach { issues += ValidationIssue.UnreachableState(it) }
     }
 
-    val withoutGuard = transitions.filter { it.guard == null }
+    val withoutGuard = transitions.filter { it.guard == actron.statechart.GuardCondition.Unconditional }
     withoutGuard
-        .mapNotNull { t -> t.on?.let { on -> (t.source to on) to t } }
+        .filter { it.trigger is Trigger.OnAction }
+        .map { t -> (t.source to (t.trigger as Trigger.OnAction).matcher) to t }
         .groupBy({ it.first }, { it.second })
         .filterValues { it.size > 1 }
         .forEach { (key, group) -> issues += ValidationIssue.AmbiguousTransitions(key.first, key.second, group) }
     withoutGuard
-        .mapNotNull { t -> t.after?.let { delay -> (t.source to delay) to t } }
+        .filter { it.trigger is Trigger.After }
+        .map { t -> (t.source to (t.trigger as Trigger.After).delay) to t }
         .groupBy({ it.first }, { it.second })
         .filterValues { it.size > 1 }
         .forEach { (key, group) -> issues += ValidationIssue.AmbiguousTimers(key.first, key.second, group) }
@@ -246,12 +248,12 @@ fun StateChartDefinition.validate(sampleActions: List<Action> = emptyList()): Li
     val samples = sampleActions.distinct()
     if (samples.isNotEmpty()) {
         transitions
-            .filter { it.guard == null }
+            .filter { it.guard == actron.statechart.GuardCondition.Unconditional }
             .groupBy { it.source }
             .forEach { (source, unguarded) ->
                 for (sample in samples) {
-                    val matching = unguarded.filter { it.on?.matches(sample) == true }
-                    if (matching.map { it.on }.distinct().size > 1) {
+                    val matching = unguarded.filter { it.matchesAction(sample) }
+                    if (matching.map { (it.trigger as Trigger.OnAction).matcher }.distinct().size > 1) {
                         issues += ValidationIssue.ShadowedTransitions(source, sample, matching)
                     }
                 }
@@ -292,7 +294,7 @@ internal fun StateChartDefinition.endpointIssues(): List<ValidationIssue> {
  * state restores. Guards are ignored, so a cycle is reported even if a guard would end it.
  */
 internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
-    val instant = transitions.withIndex().filter { (_, t) -> t.after?.isPositive() == false }
+    val instant = transitions.withIndex().filter { (_, t) -> t.trigger is Trigger.After && !t.trigger.delay.isPositive() }
     if (instant.isEmpty()) return emptyList()
     // A node is an instant timer that has just been started in a configuration; an edge leads to
     // the timers its firing starts, in the configuration the firing produces.
@@ -310,12 +312,14 @@ internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
         // Shortest cycle through start, found breadth-first.
         val previous = mutableMapOf<Node, Node>()
         val queue = ArrayDeque(listOf(start))
-        var closing: Node? = null
-        while (queue.isNotEmpty() && closing == null) {
+        var closing = start
+        var closed = false
+        while (queue.isNotEmpty() && !closed) {
             val current = queue.removeFirst()
             for (candidate in successors(current)) {
                 if (candidate == start) {
                     closing = current
+                    closed = true
                     break
                 }
                 if (candidate !in previous) {
@@ -324,7 +328,8 @@ internal fun StateChartDefinition.instantTimerCycles(): List<List<Transition>> {
                 }
             }
         }
-        var current = closing ?: continue
+        if (!closed) continue
+        var current = closing
         val cycle = mutableListOf(current.timer)
         while (current != start) {
             current = previous.getValue(current)
@@ -350,24 +355,27 @@ internal fun StateChartDefinition.isConsistent(configuration: StateConfiguration
         configuration.history.all { (id, remembered) -> isConsistentHistoryRecord(id, remembered) }
 
 /**
- * [configuration] with the history records this chart cannot restore removed, or `null` when its
- * active nodes are not a configuration of this chart. A record left behind by an earlier version
+ * Whether [configuration] has active nodes that this chart can restore. Invalid history records
+ * are pruned separately. A record left behind by an earlier version
  * of the chart (a leaf that became compound, a region added to a parallel state, a removed leaf)
  * only affects the next transition into its history state, which then takes the default target,
  * so it does not justify discarding a snapshot whose active nodes are valid.
  */
-internal fun StateChartDefinition.consistentPart(configuration: StateConfiguration): StateConfiguration? {
-    if (!hasConsistentActiveNodes(configuration.active)) return null
+internal fun StateChartDefinition.hasRestorableActiveNodes(configuration: StateConfiguration): Boolean = hasConsistentActiveNodes(configuration.active)
+
+internal fun StateChartDefinition.pruneInvalidHistory(configuration: StateConfiguration): StateConfiguration {
     val history = configuration.history.filter { (id, remembered) -> isConsistentHistoryRecord(id, remembered) }
     return if (history.size == configuration.history.size) configuration else StateConfiguration(configuration.active, history)
 }
 
 private fun StateChartDefinition.isConsistentHistoryRecord(id: StateId, remembered: Set<StateId>): Boolean {
-    val history = node(id) as? HistoryState ?: return false
-    if (remembered.isEmpty() || remembered.any { node(it) is HistoryState || !isDescendant(it, history.parent) }) return false
+    if (!hasNode(id)) return false
+    val history = node(id)
+    if (history !is HistoryState) return false
+    if (remembered.isEmpty() || remembered.any { !nodeSatisfies(it) { node -> node !is HistoryState } || !isDescendant(it, history.parent) }) return false
     return if (!history.deep) {
-        when (val parent = node(history.parent)) {
-            is CompoundState -> remembered.size == 1 && node(remembered.single())?.parent == parent.id
+        if (!hasNode(history.parent)) false else when (val parent = node(history.parent)) {
+            is CompoundState -> remembered.size == 1 && node(remembered.single()).parent == parent.id
             is ParallelState -> remembered == hierarchy.regions.getValue(parent.id).toSet()
             else -> false
         }
@@ -378,12 +386,13 @@ private fun StateChartDefinition.isConsistentHistoryRecord(id: StateId, remember
 }
 
 /** Checks a whole configuration, or just the subtree belonging to one history parent. */
-private fun StateChartDefinition.hasConsistentActiveNodes(active: Set<StateId>, root: StateId? = null): Boolean {
-    if (root != null && root !in active) return false
+private fun StateChartDefinition.hasConsistentActiveNodes(active: Set<StateId>, root: StateParent = StateParent.Root): Boolean {
+    if (root is StateId && root !in active) return false
     for (id in active) {
-        val node = node(id) ?: return false
+        if (!hasNode(id)) return false
+        val node = node(id)
         val parent = node.parent
-        if (id != root && parent != null && parent !in active) return false
+        if (id != root && parent is StateId && parent !in active) return false
         val consistent = when (node) {
             is AtomicState, is FinalState -> true
             is CompoundState -> childrenOf(id).count { it.id in active } == 1
@@ -392,7 +401,7 @@ private fun StateChartDefinition.hasConsistentActiveNodes(active: Set<StateId>, 
         }
         if (!consistent) return false
     }
-    return root != null || childrenOf(null).count { it.id in active } == 1
+    return root is StateId || childrenOf().count { it.id in active } == 1
 }
 
 /**
@@ -401,9 +410,13 @@ private fun StateChartDefinition.hasConsistentActiveNodes(active: Set<StateId>, 
 internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
     val issues = mutableListOf<ValidationIssue>()
     for (node in hierarchy.nodes.values) {
-        val parent = node.parent ?: continue
+        val parent = node.parent
+        if (parent !is StateId) continue
+        if (!hasNode(parent)) {
+            issues += ValidationIssue.UnknownParent(node.id, parent)
+            continue
+        }
         when (node(parent)) {
-            null -> issues += ValidationIssue.UnknownParent(node.id, parent)
             is AtomicState, is FinalState -> issues += ValidationIssue.AtomicParent(node.id, parent)
             is HistoryState -> issues += ValidationIssue.HistoryParent(node.id, parent)
             is CompoundState, is ParallelState -> Unit
@@ -412,12 +425,12 @@ internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
     val cycles = mutableListOf<List<StateId>>()
     for (start in hierarchy.nodes.keys) {
         val walk = mutableListOf<StateId>()
-        var current: StateId? = start
-        while (current != null && current !in walk && node(current) != null) {
+        var current: StateParent = start
+        while (current is StateId && current !in walk && hasNode(current)) {
             walk += current
             current = hierarchy.nodes.getValue(current).parent
         }
-        if (current == null || current !in walk) continue
+        if (current !is StateId || current !in walk) continue
         val cycle = walk.drop(walk.indexOf(current))
         val first = cycle.minBy { declarationOrder(it) }
         val rotated = cycle.drop(cycle.indexOf(first)) + cycle.take(cycle.indexOf(first))
@@ -426,7 +439,7 @@ internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
     cycles.sortedBy { declarationOrder(it.first()) }.forEach { issues += ValidationIssue.ParentCycle(it) }
     for (node in hierarchy.nodes.values) {
         if (node !is CompoundState) continue
-        if (node(node.initial)?.parent != node.id) issues += ValidationIssue.InitialNotChild(node.id, node.initial)
+        if (!nodeSatisfies(node.initial) { it.parent == node.id }) issues += ValidationIssue.InitialNotChild(node.id, node.initial)
     }
     for (node in hierarchy.nodes.values) {
         if (node is CompoundState && childrenOf(node.id).isEmpty()) issues += ValidationIssue.EmptyCompoundState(node.id)
@@ -440,18 +453,18 @@ internal fun StateChartDefinition.hierarchyIssues(): List<ValidationIssue> {
  */
 internal fun StateChartDefinition.historyIssues(): List<ValidationIssue> {
     val issues = mutableListOf<ValidationIssue>()
-    if (node(initial) is HistoryState) issues += ValidationIssue.HistoryAsInitial(null, initial)
+    if (nodeSatisfies(initial) { it is HistoryState }) issues += ValidationIssue.HistoryAsInitial(StateParent.Root, initial)
     for (node in hierarchy.nodes.values) {
-        if (node is CompoundState && node(node.initial).let { it is HistoryState && it.parent == node.id }) {
+        if (node is CompoundState && nodeSatisfies(node.initial) { it is HistoryState && it.parent == node.id }) {
             issues += ValidationIssue.HistoryAsInitial(node.id, node.initial)
         }
     }
     for (node in hierarchy.nodes.values) {
-        if (node !is HistoryState || node(node.parent).let { it !is CompoundState && it !is ParallelState }) continue
-        val default = node.default ?: continue
-        val target = node(default)
-        val valid = target != null && target !is HistoryState &&
-            if (node.deep) isDescendant(default, node.parent) else target.parent == node.parent
+        if (node !is HistoryState || !nodeSatisfies(node.parent) { it is CompoundState || it is ParallelState }) continue
+        val default = node.default
+        if (default !is StateId) continue
+        val valid = nodeSatisfies(default) { target -> target !is HistoryState &&
+            if (node.deep) isDescendant(default, node.parent) else target.parent == node.parent }
         if (!valid) issues += ValidationIssue.InvalidHistoryDefault(node.id, default)
     }
     return issues

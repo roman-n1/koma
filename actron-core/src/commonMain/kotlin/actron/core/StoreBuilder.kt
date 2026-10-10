@@ -137,14 +137,11 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 
     @PublishedApi
-    internal class StateHandler<P, SC : StoreScope>(
+    internal class StateHandler<P : Any, SC : StoreScope>(
         val predicate: P,
         val handler: suspend SC.() -> Unit,
-        val matcher: HandlerMatcher?,
-    ) {
-        // Keeps inline code compiled against earlier Actron versions working; such handlers have no matcher.
-        constructor(predicate: P, handler: suspend SC.() -> Unit) : this(predicate, handler, null)
-    }
+        val matcher: HandlerMatcher,
+    )
 
     @PublishedApi
     internal val registeredEnterHandlers = mutableListOf<StateHandler<(S) -> Boolean, EnterScope<S, E, S>>>()
@@ -159,39 +156,40 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     internal val registeredErrorHandlers = mutableListOf<StateHandler<(S, Exception) -> Boolean, RecoverScope<S, E, S, Exception>>>()
 
     private val onEnter: suspend EnterScope<S, E, S>.() -> Unit = {
-        val matchingHandler = this@StoreBuilder.registeredEnterHandlers.firstOrNull { it.predicate(state) }
-        matchingHandler?.handler?.invoke(this) ?: state
+        for (handler in this@StoreBuilder.registeredEnterHandlers) {
+            if (handler.predicate(state)) { handler.handler.invoke(this); break }
+        }
     }
 
     private val onAction: suspend ActionScope<S, A, E, S>.() -> Unit = {
-        val matchingHandler = this@StoreBuilder.registeredActionHandlers.firstOrNull { it.predicate(state, action) }
-        matchingHandler?.handler?.invoke(this) ?: state
+        for (handler in this@StoreBuilder.registeredActionHandlers) {
+            if (handler.predicate(state, action)) { handler.handler.invoke(this); break }
+        }
     }
 
     private val onExit: suspend ExitScope<S, E, S>.() -> Unit = {
-        val matchingHandler = this@StoreBuilder.registeredExitHandlers.firstOrNull { it.predicate(state) }
-        matchingHandler?.handler?.invoke(this)
+        for (handler in this@StoreBuilder.registeredExitHandlers) {
+            if (handler.predicate(state)) { handler.handler.invoke(this); break }
+        }
     }
 
-    private val onError: suspend RecoverScope<S, E, S, Exception>.() -> Unit = {
-        val matchingHandler = this@StoreBuilder.registeredErrorHandlers.firstOrNull { it.predicate(state, error) }
-        matchingHandler?.handler?.invoke(this) ?: throw error
+    private val onError: suspend RecoverScope<S, E, S, Exception>.() -> Unit = handle@ {
+        for (handler in this@StoreBuilder.registeredErrorHandlers) {
+            if (handler.predicate(state, error)) { handler.handler.invoke(this); return@handle }
+        }
+        throw error
     }
 
     @ActronStoreDsl
     class StateHandlerConfig<S : State, A : Action, E : Event, S2 : S> {
 
         @PublishedApi
-        internal class ThreadedHandler<P, SC : StoreScope>(
+        internal class ThreadedHandler<P : Any, SC : StoreScope>(
             private val dispatcher: CoroutineContext,
             val predicate: P,
             private val handler: suspend SC.() -> Unit,
-            val inputType: KClass<*>?,
+            val inputType: KClass<*>,
         ) {
-            // Predicate-only handlers have no declared input type.
-            constructor(dispatcher: CoroutineContext, predicate: P, handler: suspend SC.() -> Unit) :
-                this(dispatcher, predicate, handler, null)
-
             suspend operator fun invoke(scope: SC) {
                 if (dispatcher == EmptyCoroutineContext) handler(scope)
                 else withContext(dispatcher) { handler(scope) }
@@ -220,7 +218,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * @param block The handler function that will be executed when entering this state
          */
         fun enter(dispatcher: CoroutineContext = EmptyCoroutineContext, block: suspend EnterScope<S, E, S2>.() -> Unit) {
-            stateEnterHandlers.add(ThreadedHandler(dispatcher, Unit, block))
+            stateEnterHandlers.add(ThreadedHandler(dispatcher, Unit, block, Unit::class))
         }
 
         /**
@@ -257,7 +255,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * @param block The handler function that will be executed when exiting this state
          */
         fun exit(dispatcher: CoroutineContext = EmptyCoroutineContext, block: suspend ExitScope<S, E, S2>.() -> Unit) {
-            stateExitHandlers.add(ThreadedHandler(dispatcher, Unit, block))
+            stateExitHandlers.add(ThreadedHandler(dispatcher, Unit, block, Unit::class))
         }
 
         /**

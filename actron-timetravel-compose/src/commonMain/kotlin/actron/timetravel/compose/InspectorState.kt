@@ -9,6 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import actron.core.ExperimentalActronApi
 import actron.observability.RecordingSession
+import actron.observability.RecordSubject
 import actron.observability.StoreInstanceId
 import actron.timetravel.Recording
 import actron.timetravel.inspect.Inspector
@@ -47,39 +48,51 @@ class InspectorState(initial: Inspector, mode: InspectorMode = InspectorMode.Ins
     var inspector: Inspector by mutableStateOf(initial)
         private set
 
-    /** The index in [Inspector.timeline] of the selected position, or `null`. */
-    var selected: Int? by mutableStateOf(null)
-
-    /** The Store the timeline is narrowed to, or `null` for the whole group. */
-    var storeFilter: StoreInstanceId? by mutableStateOf(null)
+    var selection: InspectorSelection by mutableStateOf(InspectorSelection.Overview)
+    var filter: StoreFilter by mutableStateOf(StoreFilter.All)
 
     var mode: InspectorMode by mutableStateOf(mode)
 
-    /** The selected position, or `null`. */
-    val selectedItem: TimelineItem? get() = selected?.let { inspector.timeline.getOrNull(it) }
-
-    /** The timeline as the filter leaves it, with the index of each item in the whole timeline. */
+    /** Visits the selected timeline item only while it still belongs to the shown history. */
+    fun withSelected(accept: (TimelineItem) -> Unit): Boolean {
+        val current = selection
+        if (current !is InspectorSelection.Position || current.index !in inspector.timeline.indices) return false
+        accept(inspector.timeline[current.index])
+        return true
+    }
     val visibleTimeline: List<IndexedValue<TimelineItem>>
-        get() {
-            val filter = storeFilter
-            return inspector.timeline.withIndex().filter { (_, item) -> filter == null || item.store == filter || item.store == null }
-        }
+        get() = inspector.timeline.withIndex().filter { (_, item) -> filter.includes(item.subject) }
 
     /** Shows [inspector] from now on; the selection stays if it is still a position. */
     fun refresh(inspector: Inspector) {
         this.inspector = inspector
-        val index = selected
-        if (index != null && index >= inspector.timeline.size) selected = null
+        val current = selection
+        if (current is InspectorSelection.Position && current.index >= inspector.timeline.size) clearSelection()
     }
 
     /** Selects the position [index] of the whole timeline, or nothing. */
-    fun select(index: Int?) {
-        selected = index?.takeIf { it in inspector.timeline.indices }
+    fun select(index: Int) {
+        selection = if (index in inspector.timeline.indices) InspectorSelection.Position(index) else InspectorSelection.Overview
     }
+    fun clearSelection() { selection = InspectorSelection.Overview }
 
     /** Narrows the timeline to [store], or widens it again when it already is. */
     fun toggleFilter(store: StoreInstanceId) {
-        storeFilter = if (storeFilter == store) null else store
+        filter = if (filter is StoreFilter.Single && (filter as StoreFilter.Single).store == store) StoreFilter.All else StoreFilter.Single(store)
+    }
+}
+
+sealed interface InspectorSelection {
+    data object Overview : InspectorSelection
+    data class Position(val index: Int) : InspectorSelection
+}
+
+/** Selects the whole history or the records of one Store, retaining session-level diagnostics. */
+sealed interface StoreFilter {
+    fun includes(subject: RecordSubject): Boolean
+    data object All : StoreFilter { override fun includes(subject: RecordSubject): Boolean = true }
+    data class Single(val store: StoreInstanceId) : StoreFilter {
+        override fun includes(subject: RecordSubject): Boolean = subject == store || subject == RecordSubject.Session
     }
 }
 

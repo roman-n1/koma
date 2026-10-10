@@ -99,10 +99,10 @@ class RecordingCodecGoldenTest {
         root,
         listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root), AtomicState(content, parent = root)),
         listOf(
-            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
-            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, idle, Trigger.After(10.seconds), effect = "timeout"),
+            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("store")),
+            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, idle, Trigger.After(10.seconds), effect = actron.statechart.EffectKey("timeout")),
         ),
     )
 
@@ -143,6 +143,40 @@ class RecordingCodecGoldenTest {
             }
         }
         return Recording(machine.id, machine.version, machine.initialSnapshot(Ctx()), steps)
+    }
+
+    @Test
+    fun aNonNullAction_canUseJsonNullAsItsOpaquePayload() {
+        val payload = Act.Load("opaque")
+        val serializer = object : kotlinx.serialization.KSerializer<Act> {
+            override val descriptor = JsonElement.serializer().descriptor
+            override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Act) {
+                assertEquals(payload, value)
+                (encoder as kotlinx.serialization.json.JsonEncoder).encodeJsonElement(kotlinx.serialization.json.JsonNull)
+            }
+            override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Act {
+                assertEquals(kotlinx.serialization.json.JsonNull, (decoder as kotlinx.serialization.json.JsonDecoder).decodeJsonElement())
+                return payload
+            }
+        }
+        val codec = RecordingCodec(Ctx.serializer(), serializer, Fetch.serializer(), Ev.serializer())
+        val initial = machine.initialSnapshot(Ctx())
+        val input = MachineInput.Dispatch(payload, MachineTime.Zero)
+        val recording = Recording<Ctx, Act, Fetch, Ev>(machine.id, machine.version, initial,
+            listOf(RecordedStep.Ignored(input, actron.statechart.machine.IgnoreReason.NoTransition)))
+        val encoded = codec.encode(recording)
+        assertTrue(encoded.contains("\"action\":null"))
+        val decoded = assertIs<DecodedRecording.Decoded<Ctx, Act, Fetch, Ev>>(codec.decode(encoded))
+        assertEquals(recording.steps, decoded.recording.steps)
+        assertIs<DecodedRecording.Invalid<Ctx, Act, Fetch, Ev>>(codec.decode(encoded.replace(",\"action\":null", "")))
+    }
+
+    @Test
+    fun unusedMetadata_isStillValidatedAgainstTheLegacyWireSchema() {
+        val corrupted = GOLDEN.replace("\"type\":\"start\",\"now\":\"PT0S\"",
+            "\"type\":\"start\",\"now\":\"PT0S\",\"command\":\"wrong-type\"")
+        assertTrue(corrupted != GOLDEN)
+        assertIs<DecodedRecording.Invalid<Ctx, Act, Fetch, Ev>>(codec.decode(corrupted))
     }
 
     @Test

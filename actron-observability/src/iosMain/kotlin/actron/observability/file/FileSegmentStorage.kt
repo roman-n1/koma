@@ -36,8 +36,7 @@ actual class FileSegmentStorage actual constructor(private val directory: String
     init {
         if (mkdir(directory, S_IRWXU.convert()) != 0) {
             require(errno == EEXIST) { "[Actron] Cannot create directory $directory (errno $errno)" }
-            val existing = opendir(directory)
-            require(existing != null) { "[Actron] Not an accessible directory: $directory (errno $errno)" }
+            val existing = requireNotNull(opendir(directory)) { "[Actron] Not an accessible directory: $directory (errno $errno)" }
             closedir(existing)
         }
     }

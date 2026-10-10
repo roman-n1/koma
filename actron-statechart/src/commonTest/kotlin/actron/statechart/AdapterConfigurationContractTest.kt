@@ -55,7 +55,7 @@ class AdapterConfigurationContractTest {
 
     private val failingChart = StateChartDefinition(
         a, listOf(AtomicState(a)),
-        listOf(Transition(a, a, ActionMatcher.of<Fail>("fail"), effect = "fail")),
+        listOf(Transition(a, a, ActionMatcher.of<Fail>("fail"), effect = actron.statechart.EffectKey("fail"))),
     )
 
     @Test
@@ -155,8 +155,8 @@ class AdapterConfigurationContractTest {
     @Test
     fun chartSettingsUseTheLastValueAndAppendPluginsAndProbesAcrossBlocks() = runTest {
         val definition = StateChartDefinition(a, listOf(AtomicState(a)), listOf(
-            Transition(a, a, ActionMatcher.of<Go>("go"), effect = "increment"),
-            Transition(a, a, ActionMatcher.of<Fail>("fail"), effect = "fail"),
+            Transition(a, a, ActionMatcher.of<Go>("go"), effect = actron.statechart.EffectKey("increment")),
+            Transition(a, a, ActionMatcher.of<Fail>("fail"), effect = actron.statechart.EffectKey("fail")),
         ))
         val dispatcher = StandardTestDispatcher(testScheduler, "configured")
         val session = RecordingSession(backgroundScope)
@@ -230,7 +230,7 @@ class AdapterConfigurationContractTest {
     @Test
     fun machineSettingsJournalTheStartupAndSubsequentCommittedDecision() = runTest {
         val definition = StateChartDefinition(a, listOf(AtomicState(a)), listOf(
-            Transition(a, a, ActionMatcher.of<Go>("go"), effect = "increment"),
+            Transition(a, a, ActionMatcher.of<Go>("go"), effect = actron.statechart.EffectKey("increment")),
         ))
         val machine = Machine<Int, Action, Nothing, Event>(DefinitionId("configured"), DefinitionVersion("1"), definition) {
             effect("increment") { context, _ -> context + 1 }

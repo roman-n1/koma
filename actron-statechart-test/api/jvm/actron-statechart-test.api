@@ -10,6 +10,7 @@ public final class actron/statechart/test/ActionGeneratorsKt {
 }
 
 public final class actron/statechart/test/BehaviouralArtifactsKt {
+	public static final fun behaviouralReviewArtifacts (Lactron/statechart/test/BehaviouralSnapshot;)Ljava/util/Map;
 	public static final fun behaviouralReviewArtifacts (Lactron/statechart/test/BehaviouralSnapshot;Lactron/statechart/test/BehaviouralSnapshot;)Ljava/util/Map;
 	public static final fun behaviouralSnapshot (Lactron/statechart/machine/Machine;Lactron/statechart/test/MachineCoverage;Ljava/util/Map;Ljava/util/Set;Ljava/util/Set;Lkotlin/jvm/functions/Function1;)Lactron/statechart/test/BehaviouralSnapshot;
 	public static synthetic fun behaviouralSnapshot$default (Lactron/statechart/machine/Machine;Lactron/statechart/test/MachineCoverage;Ljava/util/Map;Ljava/util/Set;Ljava/util/Set;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lactron/statechart/test/BehaviouralSnapshot;
@@ -71,8 +72,8 @@ public final class actron/statechart/test/CoverageMetric {
 public final class actron/statechart/test/CoverageRecorderKt {
 	public static final fun assertTransitionsCovered (Lactron/statechart/test/MachineCoverage;Ljava/util/Set;)V
 	public static synthetic fun assertTransitionsCovered$default (Lactron/statechart/test/MachineCoverage;Ljava/util/Set;ILjava/lang/Object;)V
+	public static final fun describe (Lactron/statechart/test/MachineCoverage;)Ljava/lang/String;
 	public static final fun describe (Lactron/statechart/test/MachineCoverage;Lactron/statechart/StateChartDefinition;)Ljava/lang/String;
-	public static synthetic fun describe$default (Lactron/statechart/test/MachineCoverage;Lactron/statechart/StateChartDefinition;ILjava/lang/Object;)Ljava/lang/String;
 	public static final fun merge (Lactron/statechart/test/MachineCoverage;Lactron/statechart/test/MachineCoverage;)Lactron/statechart/test/MachineCoverage;
 }
 
@@ -265,23 +266,22 @@ public final class actron/statechart/test/GuardOutcome {
 }
 
 public final class actron/statechart/test/MachineCoverage {
-	public synthetic fun <init> (Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lactron/statechart/test/CoverageMetric;
 	public final fun component2 ()Lactron/statechart/test/CoverageMetric;
 	public final fun component3 ()Lactron/statechart/test/CoverageMetric;
 	public final fun component4 ()Lactron/statechart/test/CoverageMetric;
-	public final fun component5-mK-uRU0 ()Ljava/lang/String;
-	public final fun component6-Dx9vVf4 ()Ljava/lang/String;
-	public final fun copy-tiklLR0 (Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Ljava/lang/String;Ljava/lang/String;)Lactron/statechart/test/MachineCoverage;
-	public static synthetic fun copy-tiklLR0$default (Lactron/statechart/test/MachineCoverage;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lactron/statechart/test/MachineCoverage;
+	public final fun component5-xjbjqhw ()Ljava/lang/String;
+	public final fun component6-o3eglpc ()Ljava/lang/String;
+	public final fun copy-BJhhqF8 (Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Ljava/lang/String;Ljava/lang/String;)Lactron/statechart/test/MachineCoverage;
+	public static synthetic fun copy-BJhhqF8$default (Lactron/statechart/test/MachineCoverage;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Lactron/statechart/test/CoverageMetric;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lactron/statechart/test/MachineCoverage;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getDefinition-mK-uRU0 ()Ljava/lang/String;
+	public final fun getDefinition-xjbjqhw ()Ljava/lang/String;
 	public final fun getGuards ()Lactron/statechart/test/CoverageMetric;
 	public final fun getStates ()Lactron/statechart/test/CoverageMetric;
 	public final fun getTimers ()Lactron/statechart/test/CoverageMetric;
 	public final fun getTransitions ()Lactron/statechart/test/CoverageMetric;
-	public final fun getVersion-Dx9vVf4 ()Ljava/lang/String;
+	public final fun getVersion-o3eglpc ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -289,10 +289,10 @@ public final class actron/statechart/test/MachineCoverage {
 public final class actron/statechart/test/MachineCoverageRecorder : actron/statechart/machine/DecisionTraceObserver {
 	public fun <init> (Lactron/statechart/machine/Machine;)V
 	public fun onClosed (Ljava/util/List;Ljava/util/List;)V
-	public fun onCommitted-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/Decision;)V
-	public fun onDecided-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/ExplainedDecision;)V
-	public fun onFailed-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/observability/FailureDescriptor;)V
-	public fun onIgnored-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/IgnoreReason;)V
+	public fun onCommitted (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/Decision;)V
+	public fun onDecided (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/ExplainedDecision;)V
+	public fun onFailed (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/observability/FailureDescriptor;)V
+	public fun onIgnored (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/IgnoreReason;)V
 	public fun onRejected (Lactron/core/Action;Lactron/statechart/machine/Admission$Rejected;)V
 	public final fun snapshot ()Lactron/statechart/test/MachineCoverage;
 }
@@ -423,21 +423,44 @@ public final class actron/statechart/test/ScenarioCoverage {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class actron/statechart/test/ScenarioResult {
+public abstract interface class actron/statechart/test/ScenarioResult {
+	public abstract fun getCoverage ()Lactron/statechart/test/MachineCoverage;
+	public abstract fun getScenario ()Lactron/statechart/test/MachineScenario;
+	public abstract fun getSnapshot ()Lactron/statechart/machine/MachineSnapshot;
+	public abstract fun onFailure (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/statechart/test/ScenarioResult$Failed : actron/statechart/test/ScenarioResult {
 	public fun <init> (Lactron/statechart/test/MachineScenario;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/test/MachineCoverage;Lactron/statechart/test/SequenceFailure;)V
-	public synthetic fun <init> (Lactron/statechart/test/MachineScenario;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/test/MachineCoverage;Lactron/statechart/test/SequenceFailure;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lactron/statechart/test/MachineScenario;
 	public final fun component2 ()Lactron/statechart/machine/MachineSnapshot;
 	public final fun component3 ()Lactron/statechart/test/MachineCoverage;
 	public final fun component4 ()Lactron/statechart/test/SequenceFailure;
-	public final fun copy (Lactron/statechart/test/MachineScenario;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/test/MachineCoverage;Lactron/statechart/test/SequenceFailure;)Lactron/statechart/test/ScenarioResult;
-	public static synthetic fun copy$default (Lactron/statechart/test/ScenarioResult;Lactron/statechart/test/MachineScenario;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/test/MachineCoverage;Lactron/statechart/test/SequenceFailure;ILjava/lang/Object;)Lactron/statechart/test/ScenarioResult;
+	public final fun copy (Lactron/statechart/test/MachineScenario;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/test/MachineCoverage;Lactron/statechart/test/SequenceFailure;)Lactron/statechart/test/ScenarioResult$Failed;
+	public static synthetic fun copy$default (Lactron/statechart/test/ScenarioResult$Failed;Lactron/statechart/test/MachineScenario;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/test/MachineCoverage;Lactron/statechart/test/SequenceFailure;ILjava/lang/Object;)Lactron/statechart/test/ScenarioResult$Failed;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getCoverage ()Lactron/statechart/test/MachineCoverage;
+	public fun getCoverage ()Lactron/statechart/test/MachineCoverage;
 	public final fun getFailure ()Lactron/statechart/test/SequenceFailure;
-	public final fun getScenario ()Lactron/statechart/test/MachineScenario;
-	public final fun getSnapshot ()Lactron/statechart/machine/MachineSnapshot;
+	public fun getScenario ()Lactron/statechart/test/MachineScenario;
+	public fun getSnapshot ()Lactron/statechart/machine/MachineSnapshot;
 	public fun hashCode ()I
+	public fun onFailure (Lkotlin/jvm/functions/Function1;)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/statechart/test/ScenarioResult$Passed : actron/statechart/test/ScenarioResult {
+	public fun <init> (Lactron/statechart/test/MachineScenario;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/test/MachineCoverage;)V
+	public final fun component1 ()Lactron/statechart/test/MachineScenario;
+	public final fun component2 ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun component3 ()Lactron/statechart/test/MachineCoverage;
+	public final fun copy (Lactron/statechart/test/MachineScenario;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/test/MachineCoverage;)Lactron/statechart/test/ScenarioResult$Passed;
+	public static synthetic fun copy$default (Lactron/statechart/test/ScenarioResult$Passed;Lactron/statechart/test/MachineScenario;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/test/MachineCoverage;ILjava/lang/Object;)Lactron/statechart/test/ScenarioResult$Passed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getCoverage ()Lactron/statechart/test/MachineCoverage;
+	public fun getScenario ()Lactron/statechart/test/MachineScenario;
+	public fun getSnapshot ()Lactron/statechart/machine/MachineSnapshot;
+	public fun hashCode ()I
+	public fun onFailure (Lkotlin/jvm/functions/Function1;)V
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -454,27 +477,55 @@ public final class actron/statechart/test/ScriptedCommandHandler : actron/statec
 }
 
 public final class actron/statechart/test/SequenceFailure {
-	public fun <init> (Ljava/util/List;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;Lactron/observability/FailureDescriptor;)V
-	public synthetic fun <init> (Ljava/util/List;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;Lactron/observability/FailureDescriptor;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/util/List;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;)V
 	public final fun component1 ()Ljava/util/List;
 	public final fun component2 ()Lactron/statechart/machine/MachineSnapshot;
 	public final fun component3 ()Ljava/util/List;
-	public final fun component4 ()Lactron/observability/FailureDescriptor;
-	public final fun copy (Ljava/util/List;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;Lactron/observability/FailureDescriptor;)Lactron/statechart/test/SequenceFailure;
-	public static synthetic fun copy$default (Lactron/statechart/test/SequenceFailure;Ljava/util/List;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;Lactron/observability/FailureDescriptor;ILjava/lang/Object;)Lactron/statechart/test/SequenceFailure;
+	public final fun copy (Ljava/util/List;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;)Lactron/statechart/test/SequenceFailure;
+	public static synthetic fun copy$default (Lactron/statechart/test/SequenceFailure;Ljava/util/List;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;ILjava/lang/Object;)Lactron/statechart/test/SequenceFailure;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getDecisionFailure ()Lactron/observability/FailureDescriptor;
 	public final fun getIdentities ()Ljava/util/Set;
 	public final fun getInputs ()Ljava/util/List;
+	public final fun getProblems ()Ljava/util/List;
 	public final fun getSnapshot ()Lactron/statechart/machine/MachineSnapshot;
 	public final fun getViolations ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface class actron/statechart/test/SequenceProblem {
+	public abstract fun getIdentities ()Ljava/util/Set;
+	public abstract fun getViolations ()Ljava/util/List;
+}
+
+public final class actron/statechart/test/SequenceProblem$Execution : actron/statechart/test/SequenceProblem {
+	public fun <init> (Lactron/observability/FailureDescriptor;)V
+	public final fun component1 ()Lactron/observability/FailureDescriptor;
+	public final fun copy (Lactron/observability/FailureDescriptor;)Lactron/statechart/test/SequenceProblem$Execution;
+	public static synthetic fun copy$default (Lactron/statechart/test/SequenceProblem$Execution;Lactron/observability/FailureDescriptor;ILjava/lang/Object;)Lactron/statechart/test/SequenceProblem$Execution;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFailure ()Lactron/observability/FailureDescriptor;
+	public fun getIdentities ()Ljava/util/Set;
+	public fun getViolations ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/statechart/test/SequenceProblem$Invariants : actron/statechart/test/SequenceProblem {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lactron/statechart/test/SequenceProblem$Invariants;
+	public static synthetic fun copy$default (Lactron/statechart/test/SequenceProblem$Invariants;Ljava/util/List;ILjava/lang/Object;)Lactron/statechart/test/SequenceProblem$Invariants;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getIdentities ()Ljava/util/Set;
+	public fun getViolations ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class actron/statechart/test/SettleKt {
 	public static final fun assertNoPendingWork (Lactron/statechart/machine/MachineStore;Lactron/test/StoreRecorder;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun assertNoPendingWork$default (Lactron/statechart/machine/MachineStore;Lactron/test/StoreRecorder;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static final fun assertNoPendingWork (Lactron/statechart/machine/MachineStore;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static final fun pendingWork (Lactron/statechart/machine/ExecutorCheckpoint;)Lactron/statechart/test/MachinePendingWork;
 	public static final fun settle-8Mi8wO0 (Lactron/statechart/machine/MachineStore;JLkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun settle-8Mi8wO0$default (Lactron/statechart/machine/MachineStore;JLkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -496,7 +547,7 @@ public final class actron/statechart/test/ShrinkReport {
 }
 
 public final class actron/statechart/test/ShrinkingKt {
-	public static final fun replaySequence (Lactron/statechart/machine/Machine;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;)Lactron/statechart/test/SequenceFailure;
+	public static final fun replaySequence (Lactron/statechart/machine/Machine;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;Lkotlin/jvm/functions/Function1;)Z
 	public static final fun shrink (Lactron/statechart/machine/Machine;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;I)Lactron/statechart/test/ShrinkReport;
 	public static final fun shrink (Lactron/statechart/machine/Machine;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;ILkotlin/jvm/functions/Function2;)Lactron/statechart/test/ShrinkReport;
 	public static synthetic fun shrink$default (Lactron/statechart/machine/Machine;Lactron/statechart/machine/MachineSnapshot;Ljava/util/List;IILjava/lang/Object;)Lactron/statechart/test/ShrinkReport;

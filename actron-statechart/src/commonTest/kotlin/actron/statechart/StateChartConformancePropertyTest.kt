@@ -89,7 +89,7 @@ class StateChartConformancePropertyTest {
     private val matcherNames = mapOf(RandomAction.Ping to "Ping", RandomAction.Pong to "Pong", RandomAction.Reset to "Reset")
 
     /** Hard-coded matcher semantics, independent of the library's `matches`. */
-    private fun referenceMatches(matcher: ActionMatcher?, action: RandomAction): Boolean = if (matcher == null) false else when (matcher.type) {
+    private fun referenceMatches(matcher: ActionMatcher?, action: RandomAction): Boolean = if (matcher == null) false else when (val type = (matcher.matching as? ActionMatching.ByType)?.type) {
         null -> matcher.name == (matcherNames[action] ?: "Go")
         RandomAction::class -> true
         RandomAction.Go::class -> action is RandomAction.Go
@@ -114,7 +114,7 @@ class StateChartConformancePropertyTest {
                     source = ids.random(random),
                     target = ids.random(random),
                     on = RandomCharts.matchers.random(random),
-                    guard = if (random.nextInt(3) == 0) guards.keys.random(random) else null,
+                    guard = (if (random.nextInt(3) == 0) guards.keys.random(random) else null)?.let { actron.statechart.GuardKey(it) } ?: actron.statechart.GuardCondition.Unconditional,
                 )
             }
         }
@@ -179,7 +179,7 @@ class StateChartConformancePropertyTest {
         val taken = mutableListOf<Transition>()
         actions.forEachIndexed { index, action ->
             val transition = chart.transitions.firstOrNull { t ->
-                t.source == current && referenceMatches(t.on, action) && (t.guard == null || guards.getValue(t.guard)(nodeOf(current), action))
+                t.source == current && referenceMatches((t.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action) && ((t.guard as? actron.statechart.GuardKey)?.name == null || guards.getValue((t.guard as actron.statechart.GuardKey).name)(nodeOf(current), action))
             }
             val to = if (mutation?.index == index) mutation.target else transition?.target ?: current
             if (mutation?.index != index && transition != null) taken += transition
@@ -198,16 +198,16 @@ class StateChartConformancePropertyTest {
             if (change.from == change.to) {
                 // No state change: the first transition matching the action, guards ignored,
                 // is credited when it is a self-loop.
-                val first = chart.transitions.firstOrNull { it.source == change.from && change.action != null && referenceMatches(it.on, change.action) }
+                val first = chart.transitions.firstOrNull { it.source == change.from && change.action != null && referenceMatches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, change.action) }
                 if (first != null && first.target == change.from && first !in covered) covered += first
                 continue
             }
             if (change.to !in declared) violations += ConformanceViolation.UndeclaredState(change.to)
             val candidates = chart.transitions.filter { it.source == change.from && it.target == change.to }
-            val taken = if (change.action == null) candidates.firstOrNull() else candidates.firstOrNull { referenceMatches(it.on, change.action) }
+            val taken = if (change.action == null) candidates.firstOrNull() else candidates.firstOrNull { referenceMatches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, change.action) }
             when {
                 taken != null -> if (taken !in covered) covered += taken
-                candidates.isEmpty() -> violations += ConformanceViolation.UndeclaredTransition(change.from, change.to, change.action)
+                candidates.isEmpty() -> violations += ConformanceViolation.UndeclaredTransition(change.from, change.to, change.action?.let { ActionObservation.Observed(it) } ?: ActionObservation.Unobserved)
                 else -> violations += ConformanceViolation.UnexpectedTrigger(change.from, change.to, change.action!!)
             }
         }
@@ -222,8 +222,8 @@ class StateChartConformancePropertyTest {
     private fun attributionIsUnambiguous(chart: StateChartDefinition): Boolean =
         chart.transitions.groupBy { it.source to it.target }.values.all { group ->
             val distinct = group.distinct()
-            RandomCharts.actions.all { action -> distinct.count { referenceMatches(it.on, action) } <= 1 }
-        } && chart.transitions.none { t -> t.guard != null && chart.transitions.any { it.source == t.source && it.target == t.source } }
+            RandomCharts.actions.all { action -> distinct.count { referenceMatches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action) } <= 1 }
+        } && chart.transitions.none { t -> (t.guard as? actron.statechart.GuardKey)?.name != null && chart.transitions.any { it.source == t.source && it.target == t.source } }
 
     private suspend fun TestScope.runWalk(
         chart: StateChartDefinition,
@@ -316,7 +316,7 @@ class StateChartConformancePropertyTest {
             val from = referenceChanges(chart, actions.take(index)).first.lastOrNull()?.to ?: chart.initial
             // Targets the chart declares from here, but never for this action.
             val wrong = chart.transitionsFrom(from).map { it.target }.distinct().filter { target ->
-                target != from && chart.transitionsFrom(from).none { it.target == target && referenceMatches(it.on, actions[index]) }
+                target != from && chart.transitionsFrom(from).none { it.target == target && referenceMatches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, actions[index]) }
             }
             if (wrong.isEmpty()) continue
             val mutation = Mutation(index, wrong.random(random))
@@ -567,7 +567,7 @@ class StateChartConformancePropertyTest {
         assertEquals(
             listOf(
                 ConformanceViolation.UndeclaredState(n0),
-                ConformanceViolation.UndeclaredTransition(from = n0, to = n1, lastAction = null),
+                ConformanceViolation.UndeclaredTransition(from = n0, to = n1, lastAction = ActionObservation.Unobserved),
             ),
             conformance.violations,
         )

@@ -6,12 +6,36 @@ import kotlin.jvm.JvmInline
 import kotlin.time.Duration
 
 /** Typed, stable guard label shared by model and implementation. */
-@JvmInline value class GuardKey(val name: String) {
+@JvmInline value class GuardKey(val name: String) : GuardCondition {
     init { require(name.isNotBlank()) { "[Actron] Guard key must not be blank" } }
+    override fun withLabel(visit: (String) -> Unit) { visit(name) }
+    override val displayLabel: String get() = name
 }
 /** Typed, stable reducer label shared by model and implementation. */
-@JvmInline value class EffectKey(val name: String) {
+@JvmInline value class EffectKey(val name: String) : TransitionEffect {
     init { require(name.isNotBlank()) { "[Actron] Effect key must not be blank" } }
+    override fun withLabel(visit: (String) -> Unit) { visit(name) }
+    override val displayLabel: String get() = name
+}
+
+/** Whether selection evaluates an application guard. */
+sealed interface GuardCondition {
+    fun withLabel(visit: (String) -> Unit)
+    val displayLabel: String
+    data object Unconditional : GuardCondition {
+        override fun withLabel(visit: (String) -> Unit) {}
+        override val displayLabel: String = "—"
+    }
+}
+
+/** Whether taking a transition invokes an application reducer. */
+sealed interface TransitionEffect {
+    fun withLabel(visit: (String) -> Unit)
+    val displayLabel: String
+    data object NoEffect : TransitionEffect {
+        override fun withLabel(visit: (String) -> Unit) {}
+        override val displayLabel: String = "—"
+    }
 }
 
 /** Builds immutable definition data; runtime implementations are supplied separately. */
@@ -19,7 +43,7 @@ fun stateChart(initial: StateId, build: StateChartBuilder.() -> Unit): StateChar
     StateChartBuilder().apply(build).definition(initial)
 
 @ActronStoreDsl
-class StateChartBuilder internal constructor(private val parent: StateId? = null) {
+class StateChartBuilder internal constructor(private val parent: StateParent = StateParent.Root) {
     private val nodes = mutableListOf<StateNode>()
     private val transitions = mutableListOf<Transition>()
 
@@ -29,8 +53,10 @@ class StateChartBuilder internal constructor(private val parent: StateId? = null
     }
 
     fun final(id: StateId) { nodes += FinalState(id, parent) }
-    fun history(id: StateId, deep: Boolean = false, default: StateId? = null) {
-        nodes += HistoryState(id, requireNotNull(parent) { "[Actron] History needs a parent" }, deep, default)
+    fun history(id: StateId, deep: Boolean = false, default: HistoryFallback = HistoryFallback.InitialConfiguration) {
+        val owner = parent
+        require(owner is StateId) { "[Actron] History needs a declared parent" }
+        nodes += HistoryState(id, owner, deep, default)
     }
 
     fun compound(id: StateId, initial: StateId, build: StateChartBuilder.() -> Unit) {
@@ -75,10 +101,10 @@ class StateTransitionsBuilder internal constructor(private val source: StateId) 
 
 @ActronStoreDsl
 class TransitionBuilder internal constructor() {
-    internal var guard: String? = null
-    internal var effect: String? = null
+    internal var guard: GuardCondition = GuardCondition.Unconditional
+    internal var effect: TransitionEffect = TransitionEffect.NoEffect
     internal var kind = TransitionKind.External
-    fun guard(key: GuardKey) { guard = key.name }
-    fun effect(key: EffectKey) { effect = key.name }
+    fun guard(key: GuardKey) { guard = key }
+    fun effect(key: EffectKey) { effect = key }
     fun internal() { kind = TransitionKind.Internal }
 }

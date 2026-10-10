@@ -38,7 +38,7 @@ private sealed interface CounterAction : Action {
 
 private class TestLogger : Logger {
     val logs = mutableListOf<String>()
-    override fun log(severity: Logger.Severity, tag: String, throwable: Throwable?, message: () -> String) {
+    override fun log(severity: Logger.Severity, tag: String, message: () -> String) {
         logs.add(message())
     }
 }

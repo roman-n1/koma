@@ -2,6 +2,8 @@
 
 package actron.timetravel.file
 
+import actron.timetravel.verify
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
@@ -109,7 +111,7 @@ class GroupRecordingFilesTest {
 
     private val root = StateId("Root")
     private val idle = StateId("Idle")
-    private fun chart(matcher: ActionMatcher) = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, matcher, effect = "remember")))
+    private fun chart(matcher: ActionMatcher) = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, matcher, effect = actron.statechart.EffectKey("remember"))))
 
     private val ping = Machine<PingCtx, PingAct, NoCommand, PingEv>(DefinitionId("ping"), DefinitionVersion("1"), chart(ActionMatcher.of<PingAct.Kick>("Kick"))) {
         effect("remember") { c, a -> c.copy(last = (a as PingAct.Kick).n) }
@@ -163,8 +165,8 @@ class GroupRecordingFilesTest {
         val pongStore = MachineStore(pong, PongCtx(), CommandHandler<NoCommand, PongAct> { _, _ -> }, executionScope, coroutineContext = dispatcher, observers = listOf(pongMember, recorder.member(pongId, pong, PongCtx()), files.member(pongId, pong, PongCtx(), pongCodec))) { exceptionHandler(ExceptionHandler.Ignore) }
 
         init {
-            group.route<PingEv, PongAct>(pingId, pongId) { (it as? PingEv.Ping)?.let { p -> PongAct.Pong(p.n) } }
-            group.route<PongEv, PingAct>(pongId, pingId) { (it as? PongEv.Ack)?.let { a -> PingAct.Acked(a.n) } }
+            group.route<PingEv, PongAct>(pingId, pongId) { event, carry -> (event as? PingEv.Ping)?.let { p -> carry(PongAct.Pong(p.n)) } }
+            group.route<PongEv, PingAct>(pongId, pingId) { event, carry -> (event as? PongEv.Ack)?.let { a -> carry(PingAct.Acked(a.n)) } }
             pingMember.attach(pingStore)
             pongMember.attach(pongStore)
             group.source(source)
@@ -329,7 +331,7 @@ class GroupRecordingFilesTest {
     fun aCutOfTheGroup_beginsASegmentInEveryFile_andTheRunSinceIt_isTheInMemoryOne_withTheSourcesSnapshots() = runTest {
         val live = Live(this)
         kicks(live, 2, fed = true)
-        val cut = checkNotNull(live.group.checkpoint())
+        val cut = kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(live.group.checkpoint()).checkpoint
         runCurrent()
         kicks(live, 2, from = 3, fed = true)
         live.close()
@@ -356,7 +358,7 @@ class GroupRecordingFilesTest {
     fun aRingThatKeptOnlyTheSegmentsSinceTheCut_readsTheRunFromIt_withTheSourcesSnapshots() = runTest {
         val live = Live(this, RecordingFileConfig(maxSegments = 1))
         kicks(live, 3, fed = true)
-        val cut = checkNotNull(live.group.checkpoint())
+        val cut = kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(live.group.checkpoint()).checkpoint
         runCurrent()
         kicks(live, 2, from = 4, fed = true)
         live.close()
@@ -429,8 +431,8 @@ class GroupRecordingFilesTest {
         // A format 1 segment, written before cuts existed, reads as one without a cut; a format 2
         // segment, written before pairs, as routes without pairs.
         val unpaired = listOf(GroupRoute(pingId, pongId))
-        val old = GroupRecordingFileFormat.decodeSegment("old", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = 1, routes = unpaired, cut = null)) + GroupRecordingFileFormat.entryFrame(entries[0]) + Framing.END)
-        assertEquals(header.copy(fileFormatVersion = 1, routes = unpaired, cut = null), old.header)
+        val old = GroupRecordingFileFormat.decodeSegment("old", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = 1, routes = unpaired, boundary = GroupBoundary.Continuation)) + GroupRecordingFileFormat.entryFrame(entries[0]) + Framing.END)
+        assertEquals(header.copy(fileFormatVersion = 1, routes = unpaired, boundary = GroupBoundary.Continuation), old.header)
         assertEquals(entries.take(1), old.entries)
         assertTrue(old.finished && old.mark == null)
         val v2 = GroupRecordingFileFormat.decodeSegment("v2", GroupRecordingFileFormat.header(header.copy(fileFormatVersion = 2, routes = unpaired)) + Framing.END)

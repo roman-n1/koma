@@ -82,7 +82,7 @@ class StateChartRecoveryRegressionTest {
 
     @Test
     fun contextRecoveryPreservesConfigurationAndActivities() = runTest {
-        val chart = StateChartDefinition(a, listOf(AtomicState(a), AtomicState(b)), listOf(Transition(a, b, go, effect = "fail")))
+        val chart = StateChartDefinition(a, listOf(AtomicState(a), AtomicState(b)), listOf(Transition(a, b, go, effect = actron.statechart.EffectKey("fail"))))
         val errors = mutableListOf<Throwable>()
         var active = false
         val store = StateChartStore<Int, Go, Nothing>(chart, 0, backgroundScope.coroutineContext) {
@@ -108,7 +108,7 @@ class StateChartRecoveryRegressionTest {
 
     @Test
     fun recoveryPreservesTimerBookkeepingAndSelectsFirstMatchingType() = runTest {
-        val chart = StateChartDefinition(a, listOf(AtomicState(a), AtomicState(b)), listOf(Transition(a, b, go, effect = "fail"), Transition(a, b, Trigger.After(1.seconds))))
+        val chart = StateChartDefinition(a, listOf(AtomicState(a), AtomicState(b)), listOf(Transition(a, b, go, effect = actron.statechart.EffectKey("fail")), Transition(a, b, Trigger.After(1.seconds))))
         val errors = mutableListOf<Throwable>()
         val calls = mutableListOf<String>()
         val store = StateChartStore<Int, Go, Nothing>(chart, 0, backgroundScope.coroutineContext) {
@@ -135,7 +135,7 @@ class StateChartRecoveryRegressionTest {
 
     @Test
     fun throwingRecoveryRollsBackItsContextAndReportsFailure() = runTest {
-        val chart = StateChartDefinition(a, listOf(AtomicState(a), AtomicState(b)), listOf(Transition(a, b, go, effect = "fail")))
+        val chart = StateChartDefinition(a, listOf(AtomicState(a), AtomicState(b)), listOf(Transition(a, b, go, effect = actron.statechart.EffectKey("fail"))))
         val errors = mutableListOf<Throwable>()
         val store = StateChartStore<Int, Go, Nothing>(chart, 0, backgroundScope.coroutineContext) {
             effect("fail") { _, _ -> error("operation failed") }

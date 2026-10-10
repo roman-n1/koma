@@ -34,8 +34,8 @@ data class TransitionMatrix(
                     val transition = entry.transition
                     buildString {
                         append(markdownCell(transition.target.value))
-                        transition.guard?.let { append(" [").append(markdownCell(it)).append(']') }
-                        transition.effect?.let { append(" / ").append(markdownCell(it)) }
+                        transition.guard.withLabel { append(" [").append(markdownCell(it)).append(']') }
+                        transition.effect.withLabel { append(" / ").append(markdownCell(it)) }
                         if (transition.kind == TransitionKind.Internal) append(" (internal)")
                         append(" (#").append(entry.index).append(')')
                     }
@@ -51,8 +51,8 @@ data class TransitionMatrix(
         for (entry in entries) {
             val transition = entry.transition
             append("\n| ").append(entry.index).append(" | ")
-            append(listOf(transition.source.value, transition.trigger.displayLabel(), transition.guard ?: "—",
-                transition.effect ?: "—", transition.kind.name, transition.target.value).joinToString(" | ", transform = ::markdownCell))
+            append(listOf(transition.source.value, transition.trigger.displayLabel(), transition.guard.displayLabel,
+                transition.effect.displayLabel, transition.kind.name, transition.target.value).joinToString(" | ", transform = ::markdownCell))
             append(" |")
         }
     }
@@ -72,8 +72,8 @@ internal fun Trigger.displayLabel(): String = when (this) {
 
 internal fun Transition.behaviourLabel(): String = buildString {
     append(source.value).append(" --").append(trigger.displayLabel())
-    guard?.let { append(" [").append(it).append(']') }
-    effect?.let { append(" / ").append(it) }
+    guard.withLabel { append(" [").append(it).append(']') }
+    effect.withLabel { append(" / ").append(it) }
     if (kind == TransitionKind.Internal) append(" (internal)")
     append("--> ").append(target.value)
 }

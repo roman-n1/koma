@@ -2,10 +2,16 @@ public final class actron/logging/DefaultLogger : actron/logging/Logger {
 	public static final field INSTANCE Lactron/logging/DefaultLogger;
 	public final fun disable ()V
 	public fun log (Lactron/logging/Logger$Severity;Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function0;)V
+	public fun log (Lactron/logging/Logger$Severity;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
 }
 
 public abstract interface class actron/logging/Logger {
-	public abstract fun log (Lactron/logging/Logger$Severity;Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function0;)V
+	public fun log (Lactron/logging/Logger$Severity;Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function0;)V
+	public abstract fun log (Lactron/logging/Logger$Severity;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class actron/logging/Logger$DefaultImpls {
+	public static fun log (Lactron/logging/Logger;Lactron/logging/Logger$Severity;Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function0;)V
 }
 
 public final class actron/logging/Logger$Severity : java/lang/Enum {

@@ -63,7 +63,7 @@ class CloseRaceTest {
         listOf(
             Transition(idle, loading, ActionMatcher.of<Act.Load>("Load")),
             Transition(loading, loading, ActionMatcher.of<Act.Load>("Load")),
-            Transition(loading, idle, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
+            Transition(loading, idle, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("store")),
         ),
     )
 

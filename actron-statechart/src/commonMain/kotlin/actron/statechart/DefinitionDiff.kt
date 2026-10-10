@@ -35,7 +35,13 @@ fun StateChartDefinition.diffTo(next: StateChartDefinition): DefinitionDiff {
     val new = next.states.associateBy { it.id }
     val added = next.states.filter { it.id !in old }
     val removed = states.filter { it.id !in new }
-    val changed = states.mapNotNull { before -> new[before.id]?.takeIf { it != before }?.let { StateNodeChange(before, it) } }
+    val changed = buildList {
+        for (before in states) {
+            if (before.id !in new) continue
+            val after = new.getValue(before.id)
+            if (after != before) add(StateNodeChange(before, after))
+        }
+    }
     val parallelRegionsChanged = states.filterIsInstance<ParallelState>().any { state ->
         childrenOf(state.id).filter { it !is HistoryState }.map { it.id }.toSet() !=
             next.childrenOf(state.id).filter { it !is HistoryState }.map { it.id }.toSet()

@@ -39,7 +39,7 @@ sealed interface Incompleteness {
     data class InputsPending(val store: StoreInstanceId, val count: Int) : Incompleteness
 
     /** [count] records of [store] could not be attributed to a processing. */
-    data class Unattributed(val store: StoreInstanceId?, val count: Int) : Incompleteness
+    data class Unattributed(val subject: actron.observability.RecordSubject, val count: Int) : Incompleteness
 
     /** The recording attached for [store] is not the run the journal shows. */
     data class RecordingMismatch(val store: StoreInstanceId, val reason: String) : Incompleteness
@@ -89,21 +89,31 @@ sealed interface RecordingStatus {
 /**
  * One Store of the inspected group.
  *
- * @property capability What the journal says the Store's recording can be used for; `null` when
- * the registration is not in the journal
+ * @property registrations The actual registration records that establish the capability
  * @property records How many of the journal's records are the Store's
  * @property processings How many processings the journal holds for it
- * @property revision The last revision it committed, as far as the journal shows
+ * @property revisions The observed processing revisions; [withRevision] reports the highest
  * @property closed Whether the journal holds its `StoreClosed`
  */
 @ExperimentalActronApi
 data class StoreView(
     val id: StoreInstanceId,
-    val capability: actron.observability.Capability?,
+    val registrations: List<TimelineItem.Registered>,
     val records: Int,
     val processings: Int,
-    val revision: Long?,
+    val revisions: List<Long>,
     val closed: Boolean,
     val recording: RecordingStatus,
     val completeness: Completeness,
-)
+) {
+    fun withCapability(accept: (actron.observability.Capability) -> Unit): Boolean {
+        if (registrations.isEmpty()) return false
+        accept(registrations.first().capability)
+        return true
+    }
+    fun withRevision(accept: (Long) -> Unit): Boolean {
+        if (revisions.isEmpty()) return false
+        accept(revisions.max())
+        return true
+    }
+}

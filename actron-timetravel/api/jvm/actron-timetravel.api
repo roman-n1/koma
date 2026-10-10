@@ -1,6 +1,7 @@
 public final class actron/timetravel/Branch {
 	public fun <init> (Lactron/statechart/machine/Machine;Lactron/statechart/machine/ExecutorCheckpoint;Lactron/timetravel/Recording;)V
-	public synthetic fun <init> (Lactron/statechart/machine/Machine;Lactron/statechart/machine/ExecutorCheckpoint;Lactron/timetravel/Recording;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lactron/statechart/machine/Machine;Lactron/statechart/machine/ExecutorCheckpoint;Lkotlin/jvm/functions/Function3;)V
+	public synthetic fun <init> (Lactron/statechart/machine/Machine;Lactron/statechart/machine/ExecutorCheckpoint;Lkotlin/jvm/functions/Function3;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun advance-LRDsOJo (J)Ljava/util/List;
 	public final fun answer-GM3OAfQ (JLactron/core/Action;)Lactron/statechart/machine/Decision;
 	public final fun complete-hs9yZvY (J)Lactron/statechart/machine/Decision;
@@ -65,27 +66,28 @@ public final class actron/timetravel/DecodedRecording$Decoded : actron/timetrave
 }
 
 public final class actron/timetravel/DecodedRecording$Invalid : actron/timetravel/DecodedRecording {
+	public fun <init> (Ljava/lang/String;Lactron/timetravel/RecordingLocation;)V
+	public synthetic fun <init> (Ljava/lang/String;Lactron/timetravel/RecordingLocation;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Ljava/lang/String;
-	public final fun component2 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Lactron/timetravel/DecodedRecording$Invalid;
-	public static synthetic fun copy$default (Lactron/timetravel/DecodedRecording$Invalid;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lactron/timetravel/DecodedRecording$Invalid;
+	public final fun component2 ()Lactron/timetravel/RecordingLocation;
+	public final fun copy (Ljava/lang/String;Lactron/timetravel/RecordingLocation;)Lactron/timetravel/DecodedRecording$Invalid;
+	public static synthetic fun copy$default (Lactron/timetravel/DecodedRecording$Invalid;Ljava/lang/String;Lactron/timetravel/RecordingLocation;ILjava/lang/Object;)Lactron/timetravel/DecodedRecording$Invalid;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getAt ()Ljava/lang/String;
+	public final fun getLocation ()Lactron/timetravel/RecordingLocation;
 	public final fun getReason ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class actron/timetravel/DecodedRecording$Unsupported : actron/timetravel/DecodedRecording {
-	public fun <init> (Ljava/lang/Integer;Ljava/lang/String;)V
-	public final fun component1 ()Ljava/lang/Integer;
+	public fun <init> (ILjava/lang/String;)V
+	public final fun component1 ()I
 	public final fun component2 ()Ljava/lang/String;
-	public final fun copy (Ljava/lang/Integer;Ljava/lang/String;)Lactron/timetravel/DecodedRecording$Unsupported;
-	public static synthetic fun copy$default (Lactron/timetravel/DecodedRecording$Unsupported;Ljava/lang/Integer;Ljava/lang/String;ILjava/lang/Object;)Lactron/timetravel/DecodedRecording$Unsupported;
+	public final fun copy (ILjava/lang/String;)Lactron/timetravel/DecodedRecording$Unsupported;
+	public static synthetic fun copy$default (Lactron/timetravel/DecodedRecording$Unsupported;ILjava/lang/String;ILjava/lang/Object;)Lactron/timetravel/DecodedRecording$Unsupported;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getFormatVersion ()Ljava/lang/Integer;
+	public final fun getFormatVersion ()I
 	public final fun getReason ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -114,10 +116,10 @@ public final class actron/timetravel/GroupBranch {
 }
 
 public final class actron/timetravel/GroupBranch$Route {
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getFrom-9ScXe1c ()Ljava/lang/String;
-	public final fun getMap ()Lkotlin/jvm/functions/Function1;
 	public final fun getTo-9ScXe1c ()Ljava/lang/String;
+	public final fun mapEvent (Lactron/core/Event;Lkotlin/jvm/functions/Function1;)Z
 }
 
 public abstract interface class actron/timetravel/GroupMismatch {
@@ -264,7 +266,6 @@ public final class actron/timetravel/GroupReplaySession {
 	public final fun checkpointOf-nThWMHI (Ljava/lang/String;)Lactron/statechart/machine/ExecutorCheckpoint;
 	public final fun getLength ()I
 	public final fun getMembers ()Ljava/util/Map;
-	public final fun getNext ()Lactron/timetravel/GroupStep;
 	public final fun getPosition ()I
 	public final fun getRecording ()Lactron/timetravel/GroupRecording;
 	public final fun seek (I)V
@@ -272,6 +273,7 @@ public final class actron/timetravel/GroupReplaySession {
 	public final fun stepBackward ()Z
 	public final fun stepForward ()Lactron/timetravel/GroupReplayStep;
 	public final fun verify ()Ljava/util/List;
+	public final fun withNext (Lkotlin/jvm/functions/Function1;)Z
 }
 
 public abstract interface class actron/timetravel/GroupReplayStep {
@@ -284,6 +286,17 @@ public final class actron/timetravel/GroupReplayStep$Diverged : actron/timetrave
 	public static synthetic fun copy$default (Lactron/timetravel/GroupReplayStep$Diverged;Lactron/timetravel/GroupMismatch;ILjava/lang/Object;)Lactron/timetravel/GroupReplayStep$Diverged;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getMismatch ()Lactron/timetravel/GroupMismatch;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/GroupReplayStep$Finished : actron/timetravel/GroupReplayStep {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Lactron/timetravel/GroupReplayStep$Finished;
+	public static synthetic fun copy$default (Lactron/timetravel/GroupReplayStep$Finished;IILjava/lang/Object;)Lactron/timetravel/GroupReplayStep$Finished;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPosition ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -304,16 +317,16 @@ public final class actron/timetravel/GroupReplayStep$Matched : actron/timetravel
 }
 
 public final class actron/timetravel/GroupRoute {
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lactron/statechart/machine/RoutePair;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lactron/statechart/machine/RoutePair;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lactron/statechart/machine/RouteProtocol;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lactron/statechart/machine/RouteProtocol;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-9ScXe1c ()Ljava/lang/String;
 	public final fun component2-9ScXe1c ()Ljava/lang/String;
-	public final fun component3 ()Lactron/statechart/machine/RoutePair;
-	public final fun copy-0ZgYiXc (Ljava/lang/String;Ljava/lang/String;Lactron/statechart/machine/RoutePair;)Lactron/timetravel/GroupRoute;
-	public static synthetic fun copy-0ZgYiXc$default (Lactron/timetravel/GroupRoute;Ljava/lang/String;Ljava/lang/String;Lactron/statechart/machine/RoutePair;ILjava/lang/Object;)Lactron/timetravel/GroupRoute;
+	public final fun component3 ()Lactron/statechart/machine/RouteProtocol;
+	public final fun copy-0ZgYiXc (Ljava/lang/String;Ljava/lang/String;Lactron/statechart/machine/RouteProtocol;)Lactron/timetravel/GroupRoute;
+	public static synthetic fun copy-0ZgYiXc$default (Lactron/timetravel/GroupRoute;Ljava/lang/String;Ljava/lang/String;Lactron/statechart/machine/RouteProtocol;ILjava/lang/Object;)Lactron/timetravel/GroupRoute;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getFrom-9ScXe1c ()Ljava/lang/String;
-	public final fun getPair ()Lactron/statechart/machine/RoutePair;
+	public final fun getPair ()Lactron/statechart/machine/RouteProtocol;
 	public final fun getTo-9ScXe1c ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
@@ -334,11 +347,11 @@ public final class actron/timetravel/GroupStep {
 
 public final class actron/timetravel/MachineRecorder : actron/statechart/machine/DecisionObserver {
 	public fun <init> (Lactron/statechart/machine/Machine;Ljava/lang/Object;)V
-	public final fun getProblem ()Ljava/lang/String;
+	public final fun getOrigin ()Lactron/timetravel/RecordingOrigin;
 	public fun onClosed (Ljava/util/List;Ljava/util/List;)V
-	public fun onCommitted-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/Decision;)V
-	public fun onFailed-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/observability/FailureDescriptor;)V
-	public fun onIgnored-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/IgnoreReason;)V
+	public fun onCommitted (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/Decision;)V
+	public fun onFailed (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/observability/FailureDescriptor;)V
+	public fun onIgnored (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/IgnoreReason;)V
 	public fun onRejected (Lactron/core/Action;Lactron/statechart/machine/Admission$Rejected;)V
 	public final fun recording ()Lactron/timetravel/Recording;
 }
@@ -426,6 +439,54 @@ public final class actron/timetravel/RecordingKt {
 	public static final fun carriedPast (Lactron/statechart/machine/ExecutorCheckpoint;Lactron/timetravel/RecordedStep;)Lactron/statechart/machine/ExecutorCheckpoint;
 }
 
+public abstract interface class actron/timetravel/RecordingLocation {
+	public abstract fun withPart (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/timetravel/RecordingLocation$Document : actron/timetravel/RecordingLocation {
+	public static final field INSTANCE Lactron/timetravel/RecordingLocation$Document;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withPart (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/timetravel/RecordingLocation$Part : actron/timetravel/RecordingLocation {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lactron/timetravel/RecordingLocation$Part;
+	public static synthetic fun copy$default (Lactron/timetravel/RecordingLocation$Part;Ljava/lang/String;ILjava/lang/Object;)Lactron/timetravel/RecordingLocation$Part;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPath ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withPart (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class actron/timetravel/RecordingOrigin {
+	public abstract fun withProblem (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public final class actron/timetravel/RecordingOrigin$InitialSnapshot : actron/timetravel/RecordingOrigin {
+	public static final field INSTANCE Lactron/timetravel/RecordingOrigin$InitialSnapshot;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withProblem (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public final class actron/timetravel/RecordingOrigin$UnknownBeginning : actron/timetravel/RecordingOrigin {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lactron/timetravel/RecordingOrigin$UnknownBeginning;
+	public static synthetic fun copy$default (Lactron/timetravel/RecordingOrigin$UnknownBeginning;Ljava/lang/String;ILjava/lang/Object;)Lactron/timetravel/RecordingOrigin$UnknownBeginning;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withProblem (Lkotlin/jvm/functions/Function1;)Z
+}
+
 public final class actron/timetravel/ReplayMismatch {
 	public fun <init> (ILactron/statechart/machine/MachineInput;Lactron/timetravel/RecordedStep;Lactron/statechart/machine/Decision;Ljava/util/List;)V
 	public final fun component1 ()I
@@ -450,19 +511,19 @@ public final class actron/timetravel/ReplaySession {
 	public fun <init> (Lactron/statechart/machine/Machine;Lactron/timetravel/Recording;)V
 	public final fun branch ()Lactron/timetravel/Branch;
 	public final fun checkInvariants ()Ljava/util/List;
-	public final fun explainNext ()Lactron/statechart/machine/ExplainedDecision;
+	public final fun explainNext (Lkotlin/jvm/functions/Function1;)Z
 	public final fun getCheckpoint ()Lactron/statechart/machine/ExecutorCheckpoint;
 	public final fun getLength ()I
 	public final fun getMachine ()Lactron/statechart/machine/Machine;
-	public final fun getNext ()Lactron/timetravel/RecordedStep;
 	public final fun getPosition ()I
 	public final fun getRecording ()Lactron/timetravel/Recording;
 	public final fun getSnapshot ()Lactron/statechart/machine/MachineSnapshot;
 	public final fun seek (I)V
 	public final fun stepBackward ()Z
 	public final fun stepForward ()Lactron/timetravel/ReplayStep;
-	public final fun verify (II)Lactron/timetravel/ReplayMismatch;
-	public static synthetic fun verify$default (Lactron/timetravel/ReplaySession;IIILjava/lang/Object;)Lactron/timetravel/ReplayMismatch;
+	public final fun verify (IILkotlin/jvm/functions/Function1;)Z
+	public static synthetic fun verify$default (Lactron/timetravel/ReplaySession;IILkotlin/jvm/functions/Function1;ILjava/lang/Object;)Z
+	public final fun withNext (Lkotlin/jvm/functions/Function1;)Z
 }
 
 public abstract interface class actron/timetravel/ReplayStep {
@@ -475,6 +536,17 @@ public final class actron/timetravel/ReplayStep$Diverged : actron/timetravel/Rep
 	public static synthetic fun copy$default (Lactron/timetravel/ReplayStep$Diverged;Lactron/timetravel/ReplayMismatch;ILjava/lang/Object;)Lactron/timetravel/ReplayStep$Diverged;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getMismatch ()Lactron/timetravel/ReplayMismatch;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/ReplayStep$Finished : actron/timetravel/ReplayStep {
+	public fun <init> (I)V
+	public final fun component1 ()I
+	public final fun copy (I)Lactron/timetravel/ReplayStep$Finished;
+	public static synthetic fun copy$default (Lactron/timetravel/ReplayStep$Finished;IILjava/lang/Object;)Lactron/timetravel/ReplayStep$Finished;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPosition ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -492,53 +564,140 @@ public final class actron/timetravel/ReplayStep$Matched : actron/timetravel/Repl
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class actron/timetravel/file/DecodedGroupSegment {
-	public fun <init> (Lactron/timetravel/file/GroupSegmentHeader;Ljava/util/List;Lactron/observability/file/SegmentMark;Z)V
+public abstract class actron/timetravel/file/DecodedGroupSegment {
+	public abstract fun getEnding ()Lactron/observability/file/SegmentEnding;
+	public abstract fun getEntries ()Ljava/util/List;
+	public final fun getFinished ()Z
+}
+
+public final class actron/timetravel/file/DecodedGroupSegment$Readable : actron/timetravel/file/DecodedGroupSegment {
+	public fun <init> (Lactron/timetravel/file/GroupSegmentHeader;Ljava/util/List;Lactron/observability/file/SegmentEnding;)V
 	public final fun component1 ()Lactron/timetravel/file/GroupSegmentHeader;
 	public final fun component2 ()Ljava/util/List;
-	public final fun component3 ()Lactron/observability/file/SegmentMark;
-	public final fun component4 ()Z
-	public final fun copy (Lactron/timetravel/file/GroupSegmentHeader;Ljava/util/List;Lactron/observability/file/SegmentMark;Z)Lactron/timetravel/file/DecodedGroupSegment;
-	public static synthetic fun copy$default (Lactron/timetravel/file/DecodedGroupSegment;Lactron/timetravel/file/GroupSegmentHeader;Ljava/util/List;Lactron/observability/file/SegmentMark;ZILjava/lang/Object;)Lactron/timetravel/file/DecodedGroupSegment;
+	public final fun component3 ()Lactron/observability/file/SegmentEnding;
+	public final fun copy (Lactron/timetravel/file/GroupSegmentHeader;Ljava/util/List;Lactron/observability/file/SegmentEnding;)Lactron/timetravel/file/DecodedGroupSegment$Readable;
+	public static synthetic fun copy$default (Lactron/timetravel/file/DecodedGroupSegment$Readable;Lactron/timetravel/file/GroupSegmentHeader;Ljava/util/List;Lactron/observability/file/SegmentEnding;ILjava/lang/Object;)Lactron/timetravel/file/DecodedGroupSegment$Readable;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getEntries ()Ljava/util/List;
-	public final fun getFinished ()Z
+	public fun getEnding ()Lactron/observability/file/SegmentEnding;
+	public fun getEntries ()Ljava/util/List;
 	public final fun getHeader ()Lactron/timetravel/file/GroupSegmentHeader;
-	public final fun getMark ()Lactron/observability/file/SegmentMark;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class actron/timetravel/file/DecodedRecordingSegment {
-	public fun <init> (Lactron/timetravel/file/RecordingSegmentHeader;Lactron/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lactron/observability/file/SegmentMark;Z)V
+public final class actron/timetravel/file/DecodedGroupSegment$Unreadable : actron/timetravel/file/DecodedGroupSegment {
+	public fun <init> (Lactron/observability/file/SegmentMark;)V
+	public final fun component1 ()Lactron/observability/file/SegmentMark;
+	public final fun copy (Lactron/observability/file/SegmentMark;)Lactron/timetravel/file/DecodedGroupSegment$Unreadable;
+	public static synthetic fun copy$default (Lactron/timetravel/file/DecodedGroupSegment$Unreadable;Lactron/observability/file/SegmentMark;ILjava/lang/Object;)Lactron/timetravel/file/DecodedGroupSegment$Unreadable;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getEnding ()Lactron/observability/file/SegmentEnding;
+	public fun getEntries ()Ljava/util/List;
+	public final fun getIssue ()Lactron/observability/file/SegmentMark;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class actron/timetravel/file/DecodedRecordingSegment {
+	public abstract fun getEnding ()Lactron/observability/file/SegmentEnding;
+	public final fun getFinished ()Z
+	public abstract fun getSteps ()Ljava/util/List;
+}
+
+public final class actron/timetravel/file/DecodedRecordingSegment$HeaderOnly : actron/timetravel/file/DecodedRecordingSegment {
+	public fun <init> (Lactron/timetravel/file/RecordingSegmentHeader;Lactron/observability/file/SegmentMark;)V
+	public final fun component1 ()Lactron/timetravel/file/RecordingSegmentHeader;
+	public final fun component2 ()Lactron/observability/file/SegmentMark;
+	public final fun copy (Lactron/timetravel/file/RecordingSegmentHeader;Lactron/observability/file/SegmentMark;)Lactron/timetravel/file/DecodedRecordingSegment$HeaderOnly;
+	public static synthetic fun copy$default (Lactron/timetravel/file/DecodedRecordingSegment$HeaderOnly;Lactron/timetravel/file/RecordingSegmentHeader;Lactron/observability/file/SegmentMark;ILjava/lang/Object;)Lactron/timetravel/file/DecodedRecordingSegment$HeaderOnly;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getEnding ()Lactron/observability/file/SegmentEnding;
+	public final fun getHeader ()Lactron/timetravel/file/RecordingSegmentHeader;
+	public final fun getIssue ()Lactron/observability/file/SegmentMark;
+	public fun getSteps ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/file/DecodedRecordingSegment$Readable : actron/timetravel/file/DecodedRecordingSegment {
+	public fun <init> (Lactron/timetravel/file/RecordingSegmentHeader;Lactron/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lactron/observability/file/SegmentEnding;)V
 	public final fun component1 ()Lactron/timetravel/file/RecordingSegmentHeader;
 	public final fun component2 ()Lactron/statechart/machine/ExecutorCheckpoint;
 	public final fun component3 ()Ljava/util/List;
-	public final fun component4 ()Lactron/observability/file/SegmentMark;
-	public final fun component5 ()Z
-	public final fun copy (Lactron/timetravel/file/RecordingSegmentHeader;Lactron/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lactron/observability/file/SegmentMark;Z)Lactron/timetravel/file/DecodedRecordingSegment;
-	public static synthetic fun copy$default (Lactron/timetravel/file/DecodedRecordingSegment;Lactron/timetravel/file/RecordingSegmentHeader;Lactron/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lactron/observability/file/SegmentMark;ZILjava/lang/Object;)Lactron/timetravel/file/DecodedRecordingSegment;
+	public final fun component4 ()Lactron/observability/file/SegmentEnding;
+	public final fun copy (Lactron/timetravel/file/RecordingSegmentHeader;Lactron/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lactron/observability/file/SegmentEnding;)Lactron/timetravel/file/DecodedRecordingSegment$Readable;
+	public static synthetic fun copy$default (Lactron/timetravel/file/DecodedRecordingSegment$Readable;Lactron/timetravel/file/RecordingSegmentHeader;Lactron/statechart/machine/ExecutorCheckpoint;Ljava/util/List;Lactron/observability/file/SegmentEnding;ILjava/lang/Object;)Lactron/timetravel/file/DecodedRecordingSegment$Readable;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getFinished ()Z
+	public fun getEnding ()Lactron/observability/file/SegmentEnding;
 	public final fun getHeader ()Lactron/timetravel/file/RecordingSegmentHeader;
-	public final fun getMark ()Lactron/observability/file/SegmentMark;
 	public final fun getStart ()Lactron/statechart/machine/ExecutorCheckpoint;
-	public final fun getSteps ()Ljava/util/List;
+	public fun getSteps ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/file/DecodedRecordingSegment$Unreadable : actron/timetravel/file/DecodedRecordingSegment {
+	public fun <init> (Lactron/observability/file/SegmentMark;)V
+	public final fun component1 ()Lactron/observability/file/SegmentMark;
+	public final fun copy (Lactron/observability/file/SegmentMark;)Lactron/timetravel/file/DecodedRecordingSegment$Unreadable;
+	public static synthetic fun copy$default (Lactron/timetravel/file/DecodedRecordingSegment$Unreadable;Lactron/observability/file/SegmentMark;ILjava/lang/Object;)Lactron/timetravel/file/DecodedRecordingSegment$Unreadable;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getEnding ()Lactron/observability/file/SegmentEnding;
+	public final fun getIssue ()Lactron/observability/file/SegmentMark;
+	public fun getSteps ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/timetravel/file/GroupBoundary {
+	public abstract fun withCut (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public final class actron/timetravel/file/GroupBoundary$Continuation : actron/timetravel/file/GroupBoundary {
+	public static final field INSTANCE Lactron/timetravel/file/GroupBoundary$Continuation;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withCut (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public abstract interface class actron/timetravel/file/GroupDelivery {
+	public abstract fun withReceived (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public final class actron/timetravel/file/GroupDelivery$Bridged : actron/timetravel/file/GroupDelivery {
+	public fun <init> (Lactron/statechart/machine/MessageId;)V
+	public final fun component1 ()Lactron/statechart/machine/MessageId;
+	public final fun copy (Lactron/statechart/machine/MessageId;)Lactron/timetravel/file/GroupDelivery$Bridged;
+	public static synthetic fun copy$default (Lactron/timetravel/file/GroupDelivery$Bridged;Lactron/statechart/machine/MessageId;ILjava/lang/Object;)Lactron/timetravel/file/GroupDelivery$Bridged;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMessage ()Lactron/statechart/machine/MessageId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withReceived (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public final class actron/timetravel/file/GroupDelivery$Local : actron/timetravel/file/GroupDelivery {
+	public static final field INSTANCE Lactron/timetravel/file/GroupDelivery$Local;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withReceived (Lkotlin/jvm/functions/Function1;)Z
 }
 
 public final class actron/timetravel/file/GroupOrderEntry {
 	public synthetic fun <init> (Ljava/lang/String;ILjava/util/List;Lactron/statechart/machine/MessageId;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;ILjava/util/List;Lactron/statechart/machine/MessageId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;ILjava/util/List;Lactron/timetravel/file/GroupDelivery;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;ILjava/util/List;Lactron/timetravel/file/GroupDelivery;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-9ScXe1c ()Ljava/lang/String;
 	public final fun component2 ()I
 	public final fun component3 ()Ljava/util/List;
-	public final fun component4 ()Lactron/statechart/machine/MessageId;
-	public final fun copy-rMn3vk0 (Ljava/lang/String;ILjava/util/List;Lactron/statechart/machine/MessageId;)Lactron/timetravel/file/GroupOrderEntry;
-	public static synthetic fun copy-rMn3vk0$default (Lactron/timetravel/file/GroupOrderEntry;Ljava/lang/String;ILjava/util/List;Lactron/statechart/machine/MessageId;ILjava/lang/Object;)Lactron/timetravel/file/GroupOrderEntry;
+	public final fun component4 ()Lactron/timetravel/file/GroupDelivery;
+	public final fun copy-rMn3vk0 (Ljava/lang/String;ILjava/util/List;Lactron/timetravel/file/GroupDelivery;)Lactron/timetravel/file/GroupOrderEntry;
+	public static synthetic fun copy-rMn3vk0$default (Lactron/timetravel/file/GroupOrderEntry;Ljava/lang/String;ILjava/util/List;Lactron/timetravel/file/GroupDelivery;ILjava/lang/Object;)Lactron/timetravel/file/GroupOrderEntry;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getReceived ()Lactron/statechart/machine/MessageId;
+	public final fun getDelivery ()Lactron/timetravel/file/GroupDelivery;
 	public final fun getSent ()Ljava/util/List;
 	public final fun getStep ()I
 	public final fun getStore-9ScXe1c ()Ljava/lang/String;
@@ -546,12 +705,25 @@ public final class actron/timetravel/file/GroupOrderEntry {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class actron/timetravel/file/GroupRecordingFileContents {
-	public final fun getCuts ()Ljava/util/List;
-	public final fun getMarks ()Ljava/util/List;
-	public final fun getPosition ()Ljava/lang/Integer;
-	public final fun getRecording ()Lactron/timetravel/GroupRecording;
+public abstract class actron/timetravel/file/GroupRecordingFileContents {
+	public abstract fun getCuts ()Ljava/util/List;
+	public abstract fun getMarks ()Ljava/util/List;
 	public final fun since (Lactron/timetravel/file/RecordedCut;)Lactron/timetravel/GroupRecording;
+	protected abstract fun slice (Lactron/timetravel/file/RecordedCut;)Lactron/timetravel/GroupRecording;
+}
+
+public final class actron/timetravel/file/GroupRecordingFileContents$Readable : actron/timetravel/file/GroupRecordingFileContents {
+	public fun getCuts ()Ljava/util/List;
+	public fun getMarks ()Ljava/util/List;
+	public final fun getPosition ()I
+	public final fun getRecording ()Lactron/timetravel/GroupRecording;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/file/GroupRecordingFileContents$Unreadable : actron/timetravel/file/GroupRecordingFileContents {
+	public fun <init> (Ljava/util/List;)V
+	public fun getCuts ()Ljava/util/List;
+	public fun getMarks ()Ljava/util/List;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -563,7 +735,7 @@ public final class actron/timetravel/file/GroupRecordingFileFormat {
 	public final fun entryFrame (Lactron/timetravel/file/GroupOrderEntry;)[B
 	public final fun getMAGIC ()[B
 	public final fun header (Lactron/timetravel/file/GroupSegmentHeader;)[B
-	public final fun parseSegmentName (Ljava/lang/String;)Lkotlin/Pair;
+	public final fun parseSegmentName (Ljava/lang/String;Lkotlin/jvm/functions/Function2;)Z
 	public final fun segmentName-mh-gAEA (Ljava/lang/String;I)Ljava/lang/String;
 }
 
@@ -584,8 +756,8 @@ public final class actron/timetravel/file/GroupRecordingFiles {
 }
 
 public final class actron/timetravel/file/GroupSegmentHeader {
-	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lactron/timetravel/file/RecordedCut;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lactron/timetravel/file/RecordedCut;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lactron/timetravel/file/GroupBoundary;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lactron/timetravel/file/GroupBoundary;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()I
 	public final fun component2-U-q8Myo ()Ljava/lang/String;
 	public final fun component3 ()Ljava/util/List;
@@ -594,11 +766,11 @@ public final class actron/timetravel/file/GroupSegmentHeader {
 	public final fun component6 ()I
 	public final fun component7 ()I
 	public final fun component8 ()Ljava/util/List;
-	public final fun component9 ()Lactron/timetravel/file/RecordedCut;
-	public final fun copy-RDSEgds (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lactron/timetravel/file/RecordedCut;)Lactron/timetravel/file/GroupSegmentHeader;
-	public static synthetic fun copy-RDSEgds$default (Lactron/timetravel/file/GroupSegmentHeader;ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lactron/timetravel/file/RecordedCut;ILjava/lang/Object;)Lactron/timetravel/file/GroupSegmentHeader;
+	public final fun component9 ()Lactron/timetravel/file/GroupBoundary;
+	public final fun copy-RDSEgds (ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lactron/timetravel/file/GroupBoundary;)Lactron/timetravel/file/GroupSegmentHeader;
+	public static synthetic fun copy-RDSEgds$default (Lactron/timetravel/file/GroupSegmentHeader;ILjava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/util/Set;IILjava/util/List;Lactron/timetravel/file/GroupBoundary;ILjava/lang/Object;)Lactron/timetravel/file/GroupSegmentHeader;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getCut ()Lactron/timetravel/file/RecordedCut;
+	public final fun getBoundary ()Lactron/timetravel/file/GroupBoundary;
 	public final fun getFileFormatVersion ()I
 	public final fun getFirstEntry ()I
 	public final fun getGroup-U-q8Myo ()Ljava/lang/String;
@@ -611,7 +783,7 @@ public final class actron/timetravel/file/GroupSegmentHeader {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class actron/timetravel/file/RecordedCut {
+public final class actron/timetravel/file/RecordedCut : actron/timetravel/file/GroupBoundary {
 	public fun <init> (ILjava/util/Map;Ljava/util/Map;)V
 	public final fun component1 ()I
 	public final fun component2 ()Ljava/util/Map;
@@ -624,6 +796,7 @@ public final class actron/timetravel/file/RecordedCut {
 	public final fun getSources ()Ljava/util/Map;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withCut (Lkotlin/jvm/functions/Function1;)Z
 }
 
 public final class actron/timetravel/file/RecordingFileConfig {
@@ -647,21 +820,38 @@ public final class actron/timetravel/file/RecordingFileConfig {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class actron/timetravel/file/RecordingFileContents {
-	public fun <init> (Lactron/timetravel/Recording;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;)V
+public abstract class actron/timetravel/file/RecordingFileContents {
+	public abstract fun getMarks ()Ljava/util/List;
+	public abstract fun getSegments ()Ljava/util/List;
+	public final fun isComplete ()Z
+}
+
+public final class actron/timetravel/file/RecordingFileContents$Readable : actron/timetravel/file/RecordingFileContents {
+	public fun <init> (Lactron/timetravel/Recording;ILjava/util/List;Ljava/util/List;)V
 	public final fun component1 ()Lactron/timetravel/Recording;
-	public final fun component2 ()Ljava/lang/Integer;
+	public final fun component2 ()I
 	public final fun component3 ()Ljava/util/List;
 	public final fun component4 ()Ljava/util/List;
-	public final fun copy (Lactron/timetravel/Recording;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;)Lactron/timetravel/file/RecordingFileContents;
-	public static synthetic fun copy$default (Lactron/timetravel/file/RecordingFileContents;Lactron/timetravel/Recording;Ljava/lang/Integer;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lactron/timetravel/file/RecordingFileContents;
+	public final fun copy (Lactron/timetravel/Recording;ILjava/util/List;Ljava/util/List;)Lactron/timetravel/file/RecordingFileContents$Readable;
+	public static synthetic fun copy$default (Lactron/timetravel/file/RecordingFileContents$Readable;Lactron/timetravel/Recording;ILjava/util/List;Ljava/util/List;ILjava/lang/Object;)Lactron/timetravel/file/RecordingFileContents$Readable;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getFirstStep ()Ljava/lang/Integer;
-	public final fun getMarks ()Ljava/util/List;
+	public final fun getFirstStep ()I
+	public fun getMarks ()Ljava/util/List;
 	public final fun getRecording ()Lactron/timetravel/Recording;
-	public final fun getSegments ()Ljava/util/List;
+	public fun getSegments ()Ljava/util/List;
 	public fun hashCode ()I
-	public final fun isComplete ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/file/RecordingFileContents$Unreadable : actron/timetravel/file/RecordingFileContents {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lactron/timetravel/file/RecordingFileContents$Unreadable;
+	public static synthetic fun copy$default (Lactron/timetravel/file/RecordingFileContents$Unreadable;Ljava/util/List;ILjava/lang/Object;)Lactron/timetravel/file/RecordingFileContents$Unreadable;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getMarks ()Ljava/util/List;
+	public fun getSegments ()Ljava/util/List;
+	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -672,7 +862,7 @@ public final class actron/timetravel/file/RecordingFileFormat {
 	public final fun decodeSegment (Ljava/lang/String;[BLactron/timetravel/RecordingCodec;)Lactron/timetravel/file/DecodedRecordingSegment;
 	public final fun getMAGIC ()[B
 	public final fun header-loPc8HM (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;II)[B
-	public final fun parseSegmentName (Ljava/lang/String;)Lkotlin/Pair;
+	public final fun parseSegmentName (Ljava/lang/String;Lkotlin/jvm/functions/Function2;)Z
 	public final fun segmentName-toU0d-Q (Ljava/lang/String;I)Ljava/lang/String;
 	public final fun stepFrame (Ljava/lang/String;)[B
 }
@@ -744,13 +934,13 @@ public final class actron/timetravel/file/RecordingFileSink : actron/statechart/
 	public synthetic fun <init> (Ljava/lang/String;Lactron/statechart/machine/Machine;Ljava/lang/Object;Lactron/timetravel/RecordingCodec;Lactron/observability/file/SegmentStorage;Lkotlinx/coroutines/CoroutineScope;Lactron/timetravel/file/RecordingFileConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Lactron/statechart/machine/Machine;Ljava/lang/Object;Lactron/timetravel/RecordingCodec;Lactron/observability/file/SegmentStorage;Lkotlinx/coroutines/CoroutineScope;Lactron/timetravel/file/RecordingFileConfig;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun close (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun getProblem ()Ljava/lang/String;
+	public final fun getOrigin ()Lactron/timetravel/RecordingOrigin;
 	public final fun getSegments ()Ljava/util/List;
 	public final fun getStats ()Lactron/timetravel/file/RecordingFileStats;
 	public fun onClosed (Ljava/util/List;Ljava/util/List;)V
-	public fun onCommitted-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/Decision;)V
-	public fun onFailed-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/observability/FailureDescriptor;)V
-	public fun onIgnored-_fw2D8s (Lactron/core/InputId;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/IgnoreReason;)V
+	public fun onCommitted (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/Decision;)V
+	public fun onFailed (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/observability/FailureDescriptor;)V
+	public fun onIgnored (Lactron/core/InputAttribution;Lactron/statechart/machine/MachineInput;Lactron/statechart/machine/IgnoreReason;)V
 	public fun onRejected (Lactron/core/Action;Lactron/statechart/machine/Admission$Rejected;)V
 }
 
@@ -837,6 +1027,31 @@ public final class actron/timetravel/inspect/Completeness {
 
 public final class actron/timetravel/inspect/Completeness$Companion {
 	public final fun getComplete ()Lactron/timetravel/inspect/Completeness;
+}
+
+public abstract interface class actron/timetravel/inspect/DecisionEvidence {
+}
+
+public final class actron/timetravel/inspect/DecisionEvidence$Committed : actron/timetravel/inspect/DecisionEvidence {
+	public fun <init> (Lactron/observability/JournalEntry$DecisionCommitted;)V
+	public final fun component1 ()Lactron/observability/JournalEntry$DecisionCommitted;
+	public final fun copy (Lactron/observability/JournalEntry$DecisionCommitted;)Lactron/timetravel/inspect/DecisionEvidence$Committed;
+	public static synthetic fun copy$default (Lactron/timetravel/inspect/DecisionEvidence$Committed;Lactron/observability/JournalEntry$DecisionCommitted;ILjava/lang/Object;)Lactron/timetravel/inspect/DecisionEvidence$Committed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEntry ()Lactron/observability/JournalEntry$DecisionCommitted;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/inspect/DecisionEvidence$Ignored : actron/timetravel/inspect/DecisionEvidence {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lactron/timetravel/inspect/DecisionEvidence$Ignored;
+	public static synthetic fun copy$default (Lactron/timetravel/inspect/DecisionEvidence$Ignored;Ljava/lang/String;ILjava/lang/Object;)Lactron/timetravel/inspect/DecisionEvidence$Ignored;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public abstract interface class actron/timetravel/inspect/Incompleteness {
@@ -976,42 +1191,123 @@ public final class actron/timetravel/inspect/Incompleteness$StoppedWhileOpen : a
 }
 
 public final class actron/timetravel/inspect/Incompleteness$Unattributed : actron/timetravel/inspect/Incompleteness {
-	public synthetic fun <init> (Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1-5z6ymsY ()Ljava/lang/String;
+	public fun <init> (Lactron/observability/RecordSubject;I)V
+	public final fun component1 ()Lactron/observability/RecordSubject;
 	public final fun component2 ()I
-	public final fun copy-oWkRnxg (Ljava/lang/String;I)Lactron/timetravel/inspect/Incompleteness$Unattributed;
-	public static synthetic fun copy-oWkRnxg$default (Lactron/timetravel/inspect/Incompleteness$Unattributed;Ljava/lang/String;IILjava/lang/Object;)Lactron/timetravel/inspect/Incompleteness$Unattributed;
+	public final fun copy (Lactron/observability/RecordSubject;I)Lactron/timetravel/inspect/Incompleteness$Unattributed;
+	public static synthetic fun copy$default (Lactron/timetravel/inspect/Incompleteness$Unattributed;Lactron/observability/RecordSubject;IILjava/lang/Object;)Lactron/timetravel/inspect/Incompleteness$Unattributed;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCount ()I
-	public final fun getStore-5z6ymsY ()Ljava/lang/String;
+	public final fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/timetravel/inspect/InputProvenance {
+}
+
+public final class actron/timetravel/inspect/InputProvenance$Bridge : actron/timetravel/inspect/InputProvenance {
+	public fun <init> (Lactron/observability/MessageRef;)V
+	public final fun component1 ()Lactron/observability/MessageRef;
+	public final fun copy (Lactron/observability/MessageRef;)Lactron/timetravel/inspect/InputProvenance$Bridge;
+	public static synthetic fun copy$default (Lactron/timetravel/inspect/InputProvenance$Bridge;Lactron/observability/MessageRef;ILjava/lang/Object;)Lactron/timetravel/inspect/InputProvenance$Bridge;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMessage ()Lactron/observability/MessageRef;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/inspect/InputProvenance$External : actron/timetravel/inspect/InputProvenance {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lactron/timetravel/inspect/InputProvenance$External;
+	public static synthetic fun copy$default (Lactron/timetravel/inspect/InputProvenance$External;Ljava/lang/String;ILjava/lang/Object;)Lactron/timetravel/inspect/InputProvenance$External;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSource ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/timetravel/inspect/InputTrace {
+	public abstract fun getCause ()Lactron/core/InputAttribution;
+	public abstract fun isDecision ()Z
+	public abstract fun withKind (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public final class actron/timetravel/inspect/InputTrace$Accepted : actron/timetravel/inspect/InputTrace {
+	public synthetic fun <init> (JJLactron/observability/InputDescriptor;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-3lQgghE ()J
+	public final fun component2-UwyO8pc ()J
+	public final fun component3 ()Lactron/observability/InputDescriptor;
+	public final fun copy-4jWZIEo (JJLactron/observability/InputDescriptor;)Lactron/timetravel/inspect/InputTrace$Accepted;
+	public static synthetic fun copy-4jWZIEo$default (Lactron/timetravel/inspect/InputTrace$Accepted;JJLactron/observability/InputDescriptor;ILjava/lang/Object;)Lactron/timetravel/inspect/InputTrace$Accepted;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getCause ()Lactron/core/InputAttribution;
+	public final fun getElapsed-UwyO8pc ()J
+	public final fun getGroupSeq-3lQgghE ()J
+	public final fun getKind ()Lactron/observability/InputDescriptor;
+	public fun hashCode ()I
+	public fun isDecision ()Z
+	public fun toString ()Ljava/lang/String;
+	public fun withKind (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public final class actron/timetravel/inspect/InputTrace$UnrecordedAcceptance : actron/timetravel/inspect/InputTrace {
+	public static final field INSTANCE Lactron/timetravel/inspect/InputTrace$UnrecordedAcceptance;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getCause ()Lactron/core/InputAttribution;
+	public fun hashCode ()I
+	public fun isDecision ()Z
+	public fun toString ()Ljava/lang/String;
+	public fun withKind (Lkotlin/jvm/functions/Function1;)Z
 }
 
 public final class actron/timetravel/inspect/Inspector {
 	public static final field Companion Lactron/timetravel/inspect/Inspector$Companion;
 	public fun <init> (Ljava/util/List;Ljava/util/Map;Lactron/observability/JournalStats;)V
-	public synthetic fun <init> (Ljava/util/List;Ljava/util/Map;Lactron/observability/JournalStats;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/util/List;Ljava/util/Map;Lactron/timetravel/inspect/InspectorStatistics;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/Map;Lactron/timetravel/inspect/InspectorStatistics;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun getCompleteness ()Lactron/timetravel/inspect/Completeness;
 	public final fun getEvents ()Ljava/util/List;
-	public final fun getGroup-HtUe4jA ()Ljava/lang/String;
-	public final fun getMode ()Lactron/observability/ExecutionMode;
 	public final fun getRecords ()Ljava/util/List;
-	public final fun getSession-q_6wpAA ()Ljava/lang/String;
-	public final fun getStats ()Lactron/observability/JournalStats;
 	public final fun getStores ()Ljava/util/List;
 	public final fun getTimeline ()Ljava/util/List;
 	public final fun replayability-nThWMHI (Ljava/lang/String;)Lactron/timetravel/inspect/Availability;
 	public final fun timelineOf-nThWMHI (Ljava/lang/String;)Ljava/util/List;
+	public final fun withRun (Lkotlin/jvm/functions/Function3;)Z
 }
 
 public final class actron/timetravel/inspect/Inspector$Companion {
 	public final fun of (Lactron/observability/RecordingSession;Ljava/util/Map;)Lactron/timetravel/inspect/Inspector;
-	public final fun of (Ljava/util/List;Ljava/util/Map;Lactron/observability/JournalStats;)Lactron/timetravel/inspect/Inspector;
+	public final fun of (Ljava/util/List;Ljava/util/Map;Lactron/timetravel/inspect/InspectorStatistics;)Lactron/timetravel/inspect/Inspector;
 	public static synthetic fun of$default (Lactron/timetravel/inspect/Inspector$Companion;Lactron/observability/RecordingSession;Ljava/util/Map;ILjava/lang/Object;)Lactron/timetravel/inspect/Inspector;
-	public static synthetic fun of$default (Lactron/timetravel/inspect/Inspector$Companion;Ljava/util/List;Ljava/util/Map;Lactron/observability/JournalStats;ILjava/lang/Object;)Lactron/timetravel/inspect/Inspector;
+	public static synthetic fun of$default (Lactron/timetravel/inspect/Inspector$Companion;Ljava/util/List;Ljava/util/Map;Lactron/timetravel/inspect/InspectorStatistics;ILjava/lang/Object;)Lactron/timetravel/inspect/Inspector;
 	public final fun of-SlpdThU (Lactron/observability/file/JournalFiles;Ljava/lang/String;Ljava/util/Map;)Lactron/timetravel/inspect/Inspector;
 	public static synthetic fun of-SlpdThU$default (Lactron/timetravel/inspect/Inspector$Companion;Lactron/observability/file/JournalFiles;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Lactron/timetravel/inspect/Inspector;
+}
+
+public abstract interface class actron/timetravel/inspect/InspectorStatistics {
+	public abstract fun withLive (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/timetravel/inspect/InspectorStatistics$FileHistory : actron/timetravel/inspect/InspectorStatistics {
+	public static final field INSTANCE Lactron/timetravel/inspect/InspectorStatistics$FileHistory;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withLive (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/timetravel/inspect/InspectorStatistics$Live : actron/timetravel/inspect/InspectorStatistics {
+	public fun <init> (Lactron/observability/JournalStats;)V
+	public final fun component1 ()Lactron/observability/JournalStats;
+	public final fun copy (Lactron/observability/JournalStats;)Lactron/timetravel/inspect/InspectorStatistics$Live;
+	public static synthetic fun copy$default (Lactron/timetravel/inspect/InspectorStatistics$Live;Lactron/observability/JournalStats;ILjava/lang/Object;)Lactron/timetravel/inspect/InspectorStatistics$Live;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getStats ()Lactron/observability/JournalStats;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withLive (Lkotlin/jvm/functions/Function1;)V
 }
 
 public final class actron/timetravel/inspect/InspectorText {
@@ -1022,8 +1318,63 @@ public final class actron/timetravel/inspect/InspectorText {
 	public final fun mark (Lactron/observability/file/SegmentMark;)Ljava/lang/String;
 	public final fun overview (Lactron/timetravel/inspect/Inspector;)Ljava/util/List;
 	public final fun reason (Lactron/timetravel/inspect/Incompleteness;)Ljava/lang/String;
-	public final fun timeline-RhtlXE8 (Lactron/timetravel/inspect/Inspector;Ljava/lang/String;)Ljava/util/List;
-	public static synthetic fun timeline-RhtlXE8$default (Lactron/timetravel/inspect/InspectorText;Lactron/timetravel/inspect/Inspector;Ljava/lang/String;ILjava/lang/Object;)Ljava/util/List;
+	public final fun timeline (Lactron/timetravel/inspect/Inspector;)Ljava/util/List;
+	public final fun timeline-KT2w-xQ (Lactron/timetravel/inspect/Inspector;Ljava/lang/String;)Ljava/util/List;
+}
+
+public abstract interface class actron/timetravel/inspect/ProcessingAttachment {
+	public abstract fun withRecording (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public final class actron/timetravel/inspect/ProcessingAttachment$JournalOnly : actron/timetravel/inspect/ProcessingAttachment {
+	public static final field INSTANCE Lactron/timetravel/inspect/ProcessingAttachment$JournalOnly;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withRecording (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public final class actron/timetravel/inspect/ProcessingAttachment$Recorded : actron/timetravel/inspect/ProcessingAttachment {
+	public fun <init> (Lactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;)V
+	public final fun component1 ()Lactron/timetravel/RecordedStep;
+	public final fun component2 ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun component3 ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun copy (Lactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;)Lactron/timetravel/inspect/ProcessingAttachment$Recorded;
+	public static synthetic fun copy$default (Lactron/timetravel/inspect/ProcessingAttachment$Recorded;Lactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;ILjava/lang/Object;)Lactron/timetravel/inspect/ProcessingAttachment$Recorded;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfter ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun getBefore ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun getDiff ()Lactron/timetravel/inspect/SnapshotDiff;
+	public final fun getStep ()Lactron/timetravel/RecordedStep;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withRecording (Lkotlin/jvm/functions/Function1;)Z
+}
+
+public abstract interface class actron/timetravel/inspect/ProcessingProgress {
+	public abstract fun withEnd (Lkotlin/jvm/functions/Function2;)Z
+}
+
+public final class actron/timetravel/inspect/ProcessingProgress$Finished : actron/timetravel/inspect/ProcessingProgress {
+	public synthetic fun <init> (Lactron/observability/OutcomeDescriptor;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lactron/observability/OutcomeDescriptor;
+	public final fun component2-UwyO8pc ()J
+	public final fun copy-HG0u8IE (Lactron/observability/OutcomeDescriptor;J)Lactron/timetravel/inspect/ProcessingProgress$Finished;
+	public static synthetic fun copy-HG0u8IE$default (Lactron/timetravel/inspect/ProcessingProgress$Finished;Lactron/observability/OutcomeDescriptor;JILjava/lang/Object;)Lactron/timetravel/inspect/ProcessingProgress$Finished;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDuration-UwyO8pc ()J
+	public final fun getOutcome ()Lactron/observability/OutcomeDescriptor;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withEnd (Lkotlin/jvm/functions/Function2;)Z
+}
+
+public final class actron/timetravel/inspect/ProcessingProgress$Unfinished : actron/timetravel/inspect/ProcessingProgress {
+	public static final field INSTANCE Lactron/timetravel/inspect/ProcessingProgress$Unfinished;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withEnd (Lkotlin/jvm/functions/Function2;)Z
 }
 
 public abstract interface class actron/timetravel/inspect/RecordingStatus {
@@ -1090,37 +1441,38 @@ public final class actron/timetravel/inspect/SnapshotDiff$Companion {
 }
 
 public final class actron/timetravel/inspect/StoreView {
-	public synthetic fun <init> (Ljava/lang/String;Lactron/observability/Capability;IILjava/lang/Long;ZLactron/timetravel/inspect/RecordingStatus;Lactron/timetravel/inspect/Completeness;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;IILjava/util/List;ZLactron/timetravel/inspect/RecordingStatus;Lactron/timetravel/inspect/Completeness;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-9ScXe1c ()Ljava/lang/String;
-	public final fun component2 ()Lactron/observability/Capability;
+	public final fun component2 ()Ljava/util/List;
 	public final fun component3 ()I
 	public final fun component4 ()I
-	public final fun component5 ()Ljava/lang/Long;
+	public final fun component5 ()Ljava/util/List;
 	public final fun component6 ()Z
 	public final fun component7 ()Lactron/timetravel/inspect/RecordingStatus;
 	public final fun component8 ()Lactron/timetravel/inspect/Completeness;
-	public final fun copy-Qpe3CkM (Ljava/lang/String;Lactron/observability/Capability;IILjava/lang/Long;ZLactron/timetravel/inspect/RecordingStatus;Lactron/timetravel/inspect/Completeness;)Lactron/timetravel/inspect/StoreView;
-	public static synthetic fun copy-Qpe3CkM$default (Lactron/timetravel/inspect/StoreView;Ljava/lang/String;Lactron/observability/Capability;IILjava/lang/Long;ZLactron/timetravel/inspect/RecordingStatus;Lactron/timetravel/inspect/Completeness;ILjava/lang/Object;)Lactron/timetravel/inspect/StoreView;
+	public final fun copy-Qpe3CkM (Ljava/lang/String;Ljava/util/List;IILjava/util/List;ZLactron/timetravel/inspect/RecordingStatus;Lactron/timetravel/inspect/Completeness;)Lactron/timetravel/inspect/StoreView;
+	public static synthetic fun copy-Qpe3CkM$default (Lactron/timetravel/inspect/StoreView;Ljava/lang/String;Ljava/util/List;IILjava/util/List;ZLactron/timetravel/inspect/RecordingStatus;Lactron/timetravel/inspect/Completeness;ILjava/lang/Object;)Lactron/timetravel/inspect/StoreView;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getCapability ()Lactron/observability/Capability;
 	public final fun getClosed ()Z
 	public final fun getCompleteness ()Lactron/timetravel/inspect/Completeness;
 	public final fun getId-9ScXe1c ()Ljava/lang/String;
 	public final fun getProcessings ()I
 	public final fun getRecording ()Lactron/timetravel/inspect/RecordingStatus;
 	public final fun getRecords ()I
-	public final fun getRevision ()Ljava/lang/Long;
+	public final fun getRegistrations ()Ljava/util/List;
+	public final fun getRevisions ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public final fun withCapability (Lkotlin/jvm/functions/Function1;)Z
+	public final fun withRevision (Lkotlin/jvm/functions/Function1;)Z
 }
 
 public abstract interface class actron/timetravel/inspect/TimelineItem {
-	public abstract fun getElapsed-FghU774 ()Lkotlin/time/Duration;
-	public abstract fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
-	public abstract fun getStore-5z6ymsY ()Ljava/lang/String;
+	public abstract fun getSubject ()Lactron/observability/RecordSubject;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Abandoned : actron/timetravel/inspect/TimelineItem {
+public final class actron/timetravel/inspect/TimelineItem$Abandoned : actron/timetravel/inspect/TimelineItem$StoreItem {
 	public synthetic fun <init> (JJLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
@@ -1131,20 +1483,19 @@ public final class actron/timetravel/inspect/TimelineItem$Abandoned : actron/tim
 	public final fun copy-59kDVLo (JJLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;)Lactron/timetravel/inspect/TimelineItem$Abandoned;
 	public static synthetic fun copy-59kDVLo$default (Lactron/timetravel/inspect/TimelineItem$Abandoned;JJLjava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Abandoned;
 	public fun equals (Ljava/lang/Object;)Z
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
 	public final fun getQueued ()Ljava/util/List;
 	public final fun getReason ()Ljava/lang/String;
 	public final fun getRunning ()Ljava/util/List;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Checkpoint : actron/timetravel/inspect/TimelineItem {
+public final class actron/timetravel/inspect/TimelineItem$Checkpoint : actron/timetravel/inspect/TimelineItem$JournalItem {
 	public synthetic fun <init> (JJLjava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
@@ -1154,19 +1505,18 @@ public final class actron/timetravel/inspect/TimelineItem$Checkpoint : actron/ti
 	public final fun copy-MUgvLWs (JJLjava/util/List;Ljava/util/List;I)Lactron/timetravel/inspect/TimelineItem$Checkpoint;
 	public static synthetic fun copy-MUgvLWs$default (Lactron/timetravel/inspect/TimelineItem$Checkpoint;JJLjava/util/List;Ljava/util/List;IILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Checkpoint;
 	public fun equals (Ljava/lang/Object;)Z
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
 	public final fun getInFlight ()I
 	public final fun getMembers ()Ljava/util/List;
 	public final fun getSources ()Ljava/util/List;
-	public fun getStore-5z6ymsY ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Closed : actron/timetravel/inspect/TimelineItem {
+public final class actron/timetravel/inspect/TimelineItem$Closed : actron/timetravel/inspect/TimelineItem$StoreItem {
 	public synthetic fun <init> (JJLjava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
@@ -1174,14 +1524,13 @@ public final class actron/timetravel/inspect/TimelineItem$Closed : actron/timetr
 	public final fun copy-GB044bc (JJLjava/lang/String;)Lactron/timetravel/inspect/TimelineItem$Closed;
 	public static synthetic fun copy-GB044bc$default (Lactron/timetravel/inspect/TimelineItem$Closed;JJLjava/lang/String;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Closed;
 	public fun equals (Ljava/lang/Object;)Z
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
 public final class actron/timetravel/inspect/TimelineItem$Commit {
@@ -1205,39 +1554,41 @@ public final class actron/timetravel/inspect/TimelineItem$Damage : actron/timetr
 	public final fun copy (Lactron/observability/file/SegmentMark;)Lactron/timetravel/inspect/TimelineItem$Damage;
 	public static synthetic fun copy$default (Lactron/timetravel/inspect/TimelineItem$Damage;Lactron/observability/file/SegmentMark;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Damage;
 	public fun equals (Ljava/lang/Object;)Z
-	public fun getElapsed-FghU774 ()Lkotlin/time/Duration;
-	public fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
 	public final fun getMark ()Lactron/observability/file/SegmentMark;
-	public fun getStore-5z6ymsY ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Discarded : actron/timetravel/inspect/TimelineItem {
-	public synthetic fun <init> (JJLjava/lang/String;JLactron/observability/InputDescriptor;Lactron/observability/DiscardDescriptor;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+public final class actron/timetravel/inspect/TimelineItem$DefaultImpls {
+	public static fun withPosition (Lactron/timetravel/inspect/TimelineItem;Lkotlin/jvm/functions/Function2;)Z
+}
+
+public final class actron/timetravel/inspect/TimelineItem$Discarded : actron/timetravel/inspect/TimelineItem$StoreItem {
+	public synthetic fun <init> (JJLjava/lang/String;JLactron/timetravel/inspect/InputTrace;Lactron/observability/DiscardDescriptor;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
 	public final fun component3-9ScXe1c ()Ljava/lang/String;
 	public final fun component4-lqctDAI ()J
-	public final fun component5 ()Lactron/observability/InputDescriptor;
+	public final fun component5 ()Lactron/timetravel/inspect/InputTrace;
 	public final fun component6 ()Lactron/observability/DiscardDescriptor;
-	public final fun copy-BZp59sQ (JJLjava/lang/String;JLactron/observability/InputDescriptor;Lactron/observability/DiscardDescriptor;)Lactron/timetravel/inspect/TimelineItem$Discarded;
-	public static synthetic fun copy-BZp59sQ$default (Lactron/timetravel/inspect/TimelineItem$Discarded;JJLjava/lang/String;JLactron/observability/InputDescriptor;Lactron/observability/DiscardDescriptor;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Discarded;
+	public final fun copy-BZp59sQ (JJLjava/lang/String;JLactron/timetravel/inspect/InputTrace;Lactron/observability/DiscardDescriptor;)Lactron/timetravel/inspect/TimelineItem$Discarded;
+	public static synthetic fun copy-BZp59sQ$default (Lactron/timetravel/inspect/TimelineItem$Discarded;JJLjava/lang/String;JLactron/timetravel/inspect/InputTrace;Lactron/observability/DiscardDescriptor;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Discarded;
 	public fun equals (Ljava/lang/Object;)Z
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public final fun getAcceptance ()Lactron/timetravel/inspect/InputTrace;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
 	public final fun getInput-lqctDAI ()J
-	public final fun getKind ()Lactron/observability/InputDescriptor;
 	public final fun getReason ()Lactron/observability/DiscardDescriptor;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Dropped : actron/timetravel/inspect/TimelineItem {
+public final class actron/timetravel/inspect/TimelineItem$Dropped : actron/timetravel/inspect/TimelineItem$StoreItem {
 	public synthetic fun <init> (JJLjava/lang/String;Lactron/observability/MessageRef;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
@@ -1247,19 +1598,18 @@ public final class actron/timetravel/inspect/TimelineItem$Dropped : actron/timet
 	public final fun copy-xUofUag (JJLjava/lang/String;Lactron/observability/MessageRef;Ljava/lang/String;)Lactron/timetravel/inspect/TimelineItem$Dropped;
 	public static synthetic fun copy-xUofUag$default (Lactron/timetravel/inspect/TimelineItem$Dropped;JJLjava/lang/String;Lactron/observability/MessageRef;Ljava/lang/String;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Dropped;
 	public fun equals (Ljava/lang/Object;)Z
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
 	public final fun getMessage ()Lactron/observability/MessageRef;
 	public final fun getReason ()Ljava/lang/String;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Effect : actron/timetravel/inspect/TimelineItem {
+public final class actron/timetravel/inspect/TimelineItem$Effect : actron/timetravel/inspect/TimelineItem$StoreItem {
 	public synthetic fun <init> (JJLjava/lang/String;JLactron/observability/JournalEntry;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
@@ -1270,18 +1620,17 @@ public final class actron/timetravel/inspect/TimelineItem$Effect : actron/timetr
 	public static synthetic fun copy-xUofUag$default (Lactron/timetravel/inspect/TimelineItem$Effect;JJLjava/lang/String;JLactron/observability/JournalEntry;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Effect;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getEffect ()J
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public final fun getEntry ()Lactron/observability/JournalEntry;
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Gap : actron/timetravel/inspect/TimelineItem {
+public final class actron/timetravel/inspect/TimelineItem$Gap : actron/timetravel/inspect/TimelineItem$JournalItem {
 	public synthetic fun <init> (JJJLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
@@ -1290,16 +1639,25 @@ public final class actron/timetravel/inspect/TimelineItem$Gap : actron/timetrave
 	public static synthetic fun copy-4jWZIEo$default (Lactron/timetravel/inspect/TimelineItem$Gap;JJJILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Gap;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getDropped ()J
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
-	public fun getStore-5z6ymsY ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Pending : actron/timetravel/inspect/TimelineItem {
+public abstract interface class actron/timetravel/inspect/TimelineItem$JournalItem : actron/timetravel/inspect/TimelineItem {
+	public abstract fun getElapsed-UwyO8pc ()J
+	public abstract fun getGroupSeq-3lQgghE ()J
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
+}
+
+public final class actron/timetravel/inspect/TimelineItem$JournalItem$DefaultImpls {
+	public static fun withPosition (Lactron/timetravel/inspect/TimelineItem$JournalItem;Lkotlin/jvm/functions/Function2;)Z
+}
+
+public final class actron/timetravel/inspect/TimelineItem$Pending : actron/timetravel/inspect/TimelineItem$StoreItem {
 	public synthetic fun <init> (JJLjava/lang/String;JLactron/observability/InputDescriptor;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
@@ -1309,76 +1667,66 @@ public final class actron/timetravel/inspect/TimelineItem$Pending : actron/timet
 	public final fun copy-HI4aSAw (JJLjava/lang/String;JLactron/observability/InputDescriptor;)Lactron/timetravel/inspect/TimelineItem$Pending;
 	public static synthetic fun copy-HI4aSAw$default (Lactron/timetravel/inspect/TimelineItem$Pending;JJLjava/lang/String;JLactron/observability/InputDescriptor;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Pending;
 	public fun equals (Ljava/lang/Object;)Z
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
 	public final fun getInput-lqctDAI ()J
 	public final fun getKind ()Lactron/observability/InputDescriptor;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Processing : actron/timetravel/inspect/TimelineItem {
-	public synthetic fun <init> (JJLjava/lang/String;JLactron/observability/InputDescriptor;Lactron/core/InputId;JLactron/observability/OutcomeDescriptor;Lkotlin/time/Duration;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/observability/JournalEntry$DecisionCommitted;Ljava/lang/String;Lactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;Lactron/timetravel/inspect/SnapshotDiff;Lactron/observability/MessageRef;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (JJLjava/lang/String;JLactron/observability/InputDescriptor;Lactron/core/InputId;JLactron/observability/OutcomeDescriptor;Lkotlin/time/Duration;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/observability/JournalEntry$DecisionCommitted;Ljava/lang/String;Lactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;Lactron/timetravel/inspect/SnapshotDiff;Lactron/observability/MessageRef;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+public final class actron/timetravel/inspect/TimelineItem$Processing : actron/timetravel/inspect/TimelineItem$StoreItem {
+	public synthetic fun <init> (JJLjava/lang/String;JLactron/timetravel/inspect/InputTrace;Lactron/core/InputAttribution;JLactron/timetravel/inspect/ProcessingProgress;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/timetravel/inspect/ProcessingAttachment;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JJLjava/lang/String;JLactron/timetravel/inspect/InputTrace;Lactron/core/InputAttribution;JLactron/timetravel/inspect/ProcessingProgress;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/timetravel/inspect/ProcessingAttachment;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component10 ()Ljava/util/List;
 	public final fun component11 ()Ljava/util/List;
 	public final fun component12 ()Ljava/util/List;
-	public final fun component13 ()Lactron/observability/JournalEntry$DecisionCommitted;
-	public final fun component14 ()Ljava/lang/String;
-	public final fun component15 ()Lactron/timetravel/RecordedStep;
-	public final fun component16 ()Lactron/statechart/machine/MachineSnapshot;
-	public final fun component17 ()Lactron/statechart/machine/MachineSnapshot;
-	public final fun component18 ()Lactron/timetravel/inspect/SnapshotDiff;
-	public final fun component19 ()Lactron/observability/MessageRef;
+	public final fun component13 ()Lactron/timetravel/inspect/ProcessingAttachment;
+	public final fun component14 ()Ljava/util/List;
 	public final fun component2-UwyO8pc ()J
-	public final fun component20 ()Ljava/lang/String;
 	public final fun component3-9ScXe1c ()Ljava/lang/String;
 	public final fun component4-lqctDAI ()J
-	public final fun component5 ()Lactron/observability/InputDescriptor;
-	public final fun component6-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component5 ()Lactron/timetravel/inspect/InputTrace;
+	public final fun component6 ()Lactron/core/InputAttribution;
 	public final fun component7 ()J
-	public final fun component8 ()Lactron/observability/OutcomeDescriptor;
-	public final fun component9-FghU774 ()Lkotlin/time/Duration;
-	public final fun copy-LY7DA88 (JJLjava/lang/String;JLactron/observability/InputDescriptor;Lactron/core/InputId;JLactron/observability/OutcomeDescriptor;Lkotlin/time/Duration;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/observability/JournalEntry$DecisionCommitted;Ljava/lang/String;Lactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;Lactron/timetravel/inspect/SnapshotDiff;Lactron/observability/MessageRef;Ljava/lang/String;)Lactron/timetravel/inspect/TimelineItem$Processing;
-	public static synthetic fun copy-LY7DA88$default (Lactron/timetravel/inspect/TimelineItem$Processing;JJLjava/lang/String;JLactron/observability/InputDescriptor;Lactron/core/InputId;JLactron/observability/OutcomeDescriptor;Lkotlin/time/Duration;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/observability/JournalEntry$DecisionCommitted;Ljava/lang/String;Lactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;Lactron/timetravel/inspect/SnapshotDiff;Lactron/observability/MessageRef;Ljava/lang/String;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Processing;
+	public final fun component8 ()Lactron/timetravel/inspect/ProcessingProgress;
+	public final fun component9 ()Ljava/util/List;
+	public final fun copy-buuenws (JJLjava/lang/String;JLactron/timetravel/inspect/InputTrace;Lactron/core/InputAttribution;JLactron/timetravel/inspect/ProcessingProgress;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/timetravel/inspect/ProcessingAttachment;Ljava/util/List;)Lactron/timetravel/inspect/TimelineItem$Processing;
+	public static synthetic fun copy-buuenws$default (Lactron/timetravel/inspect/TimelineItem$Processing;JJLjava/lang/String;JLactron/timetravel/inspect/InputTrace;Lactron/core/InputAttribution;JLactron/timetravel/inspect/ProcessingProgress;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/timetravel/inspect/ProcessingAttachment;Ljava/util/List;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Processing;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getActiveNodes ()Ljava/util/List;
-	public final fun getAfter ()Lactron/statechart/machine/MachineSnapshot;
-	public final fun getBefore ()Lactron/statechart/machine/MachineSnapshot;
-	public final fun getCause-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getAcceptance ()Lactron/timetravel/inspect/InputTrace;
+	public final fun getAttachment ()Lactron/timetravel/inspect/ProcessingAttachment;
+	public final fun getCause ()Lactron/core/InputAttribution;
 	public final fun getCommits ()Ljava/util/List;
-	public final fun getDecision ()Lactron/observability/JournalEntry$DecisionCommitted;
-	public final fun getDiff ()Lactron/timetravel/inspect/SnapshotDiff;
-	public final fun getDuration-FghU774 ()Lkotlin/time/Duration;
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
+	public final fun getDecisions ()Ljava/util/List;
 	public fun getElapsed-UwyO8pc ()J
 	public final fun getEvents ()Ljava/util/List;
 	public final fun getFailures ()Ljava/util/List;
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
-	public final fun getIgnored ()Ljava/lang/String;
 	public final fun getInput-lqctDAI ()J
-	public final fun getKind ()Lactron/observability/InputDescriptor;
-	public final fun getMessage ()Lactron/observability/MessageRef;
 	public final fun getOrdinal ()J
-	public final fun getOutcome ()Lactron/observability/OutcomeDescriptor;
-	public final fun getRecorded ()Lactron/timetravel/RecordedStep;
-	public final fun getRevision ()Ljava/lang/Long;
-	public final fun getSource ()Ljava/lang/String;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
+	public final fun getProgress ()Lactron/timetravel/inspect/ProcessingProgress;
+	public final fun getProvenance ()Ljava/util/List;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public final fun isDecision ()Z
 	public final fun isFinished ()Z
 	public fun toString ()Ljava/lang/String;
+	public final fun withActiveNodes (Lkotlin/jvm/functions/Function1;)Z
+	public final fun withDecision (Lkotlin/jvm/functions/Function1;)Z
+	public final fun withIgnored (Lkotlin/jvm/functions/Function1;)Z
+	public final fun withMessage (Lkotlin/jvm/functions/Function1;)Z
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
+	public final fun withRevision (Lkotlin/jvm/functions/Function1;)Z
+	public final fun withSource (Lkotlin/jvm/functions/Function1;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Registered : actron/timetravel/inspect/TimelineItem {
+public final class actron/timetravel/inspect/TimelineItem$Registered : actron/timetravel/inspect/TimelineItem$StoreItem {
 	public synthetic fun <init> (JJLjava/lang/String;Lactron/observability/Capability;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
@@ -1388,17 +1736,16 @@ public final class actron/timetravel/inspect/TimelineItem$Registered : actron/ti
 	public static synthetic fun copy-x57lA6w$default (Lactron/timetravel/inspect/TimelineItem$Registered;JJLjava/lang/String;Lactron/observability/Capability;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Registered;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCapability ()Lactron/observability/Capability;
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Rejected : actron/timetravel/inspect/TimelineItem {
+public final class actron/timetravel/inspect/TimelineItem$Rejected : actron/timetravel/inspect/TimelineItem$StoreItem {
 	public synthetic fun <init> (JJLjava/lang/String;Lactron/observability/Payload;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
@@ -1409,78 +1756,84 @@ public final class actron/timetravel/inspect/TimelineItem$Rejected : actron/time
 	public static synthetic fun copy-xUofUag$default (Lactron/timetravel/inspect/TimelineItem$Rejected;JJLjava/lang/String;Lactron/observability/Payload;Ljava/lang/String;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Rejected;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getAction ()Lactron/observability/Payload;
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
 	public final fun getReason ()Ljava/lang/String;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Sent : actron/timetravel/inspect/TimelineItem {
-	public synthetic fun <init> (JJLjava/lang/String;Lactron/core/InputId;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageRef;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (JJLjava/lang/String;Lactron/core/InputId;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageRef;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+public final class actron/timetravel/inspect/TimelineItem$Sent : actron/timetravel/inspect/TimelineItem$StoreItem {
+	public synthetic fun <init> (JJLjava/lang/String;Lactron/core/InputAttribution;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageCause;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JJLjava/lang/String;Lactron/core/InputAttribution;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageCause;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
 	public final fun component3-9ScXe1c ()Ljava/lang/String;
-	public final fun component4-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component4 ()Lactron/core/InputAttribution;
 	public final fun component5 ()Lactron/observability/MessageRef;
 	public final fun component6-9ScXe1c ()Ljava/lang/String;
 	public final fun component7 ()Z
-	public final fun component8 ()Lactron/observability/MessageRef;
-	public final fun copy-Kx-Z9II (JJLjava/lang/String;Lactron/core/InputId;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageRef;)Lactron/timetravel/inspect/TimelineItem$Sent;
-	public static synthetic fun copy-Kx-Z9II$default (Lactron/timetravel/inspect/TimelineItem$Sent;JJLjava/lang/String;Lactron/core/InputId;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageRef;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Sent;
+	public final fun component8 ()Lactron/observability/MessageCause;
+	public final fun copy-yzmL0fE (JJLjava/lang/String;Lactron/core/InputAttribution;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageCause;)Lactron/timetravel/inspect/TimelineItem$Sent;
+	public static synthetic fun copy-yzmL0fE$default (Lactron/timetravel/inspect/TimelineItem$Sent;JJLjava/lang/String;Lactron/core/InputAttribution;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageCause;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Sent;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getCause ()Lactron/observability/MessageRef;
+	public final fun getCause ()Lactron/observability/MessageCause;
 	public final fun getDelivered ()Z
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
-	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getInput ()Lactron/core/InputAttribution;
 	public final fun getMessage ()Lactron/observability/MessageRef;
-	public synthetic fun getStore-5z6ymsY ()Ljava/lang/String;
 	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public final fun getTo-9ScXe1c ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Stopped : actron/timetravel/inspect/TimelineItem {
+public final class actron/timetravel/inspect/TimelineItem$Stopped : actron/timetravel/inspect/TimelineItem$JournalItem {
 	public synthetic fun <init> (JJLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
 	public final fun copy-0meB9uw (JJ)Lactron/timetravel/inspect/TimelineItem$Stopped;
 	public static synthetic fun copy-0meB9uw$default (Lactron/timetravel/inspect/TimelineItem$Stopped;JJILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Stopped;
 	public fun equals (Ljava/lang/Object;)Z
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
-	public fun getStore-5z6ymsY ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 
-public final class actron/timetravel/inspect/TimelineItem$Unattributed : actron/timetravel/inspect/TimelineItem {
-	public synthetic fun <init> (JJLjava/lang/String;Lactron/observability/JournalEntry;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+public abstract interface class actron/timetravel/inspect/TimelineItem$StoreItem : actron/timetravel/inspect/TimelineItem$JournalItem {
+	public abstract fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
+}
+
+public final class actron/timetravel/inspect/TimelineItem$StoreItem$DefaultImpls {
+	public static fun getSubject (Lactron/timetravel/inspect/TimelineItem$StoreItem;)Lactron/observability/RecordSubject;
+	public static fun withPosition (Lactron/timetravel/inspect/TimelineItem$StoreItem;Lkotlin/jvm/functions/Function2;)Z
+}
+
+public final class actron/timetravel/inspect/TimelineItem$Unattributed : actron/timetravel/inspect/TimelineItem$JournalItem {
+	public synthetic fun <init> (JJLactron/observability/RecordSubject;Lactron/observability/JournalEntry;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-3lQgghE ()J
 	public final fun component2-UwyO8pc ()J
-	public final fun component3-5z6ymsY ()Ljava/lang/String;
+	public final fun component3 ()Lactron/observability/RecordSubject;
 	public final fun component4 ()Lactron/observability/JournalEntry;
-	public final fun copy-qE-oDok (JJLjava/lang/String;Lactron/observability/JournalEntry;)Lactron/timetravel/inspect/TimelineItem$Unattributed;
-	public static synthetic fun copy-qE-oDok$default (Lactron/timetravel/inspect/TimelineItem$Unattributed;JJLjava/lang/String;Lactron/observability/JournalEntry;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Unattributed;
+	public final fun copy-e2t9-j4 (JJLactron/observability/RecordSubject;Lactron/observability/JournalEntry;)Lactron/timetravel/inspect/TimelineItem$Unattributed;
+	public static synthetic fun copy-e2t9-j4$default (Lactron/timetravel/inspect/TimelineItem$Unattributed;JJLactron/observability/RecordSubject;Lactron/observability/JournalEntry;ILjava/lang/Object;)Lactron/timetravel/inspect/TimelineItem$Unattributed;
 	public fun equals (Ljava/lang/Object;)Z
-	public synthetic fun getElapsed-FghU774 ()Lkotlin/time/Duration;
 	public fun getElapsed-UwyO8pc ()J
 	public final fun getEntry ()Lactron/observability/JournalEntry;
 	public fun getGroupSeq-3lQgghE ()J
-	public synthetic fun getGroupSeq-uvK1f3Y ()Lactron/observability/GroupSeq;
-	public fun getStore-5z6ymsY ()Ljava/lang/String;
+	public fun getSubject ()Lactron/observability/RecordSubject;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public fun withPosition (Lkotlin/jvm/functions/Function2;)Z
 }
 

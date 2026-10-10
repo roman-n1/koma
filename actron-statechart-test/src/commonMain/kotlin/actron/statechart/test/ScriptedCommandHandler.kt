@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.update
  * executor started, cancelled and finished is recorded for the test to read.
  */
 @ExperimentalActronApi
-class ScriptedCommandHandler<CMD, A : Action> : CommandHandler<CMD, A> {
+class ScriptedCommandHandler<CMD : Any, A : Action> : CommandHandler<CMD, A> {
     private class Running<A : Action>(val sink: ResultSink<A>, val end: CompletableDeferred<Unit>)
 
     private val runningNow = MutableStateFlow<Map<CommandId, Running<A>>>(emptyMap())

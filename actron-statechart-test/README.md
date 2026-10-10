@@ -23,7 +23,7 @@ with the machine's meaning.
   `ExecutorCheckpoint` once the store settled.
 - **`MachineStore.settle(timeout)`**: `awaitIdle` then `checkpoint()`; **`ExecutorCheckpoint.pendingWork()`**:
   the commands running, queued and ending, the timers with what is left, the effects pending;
-  **`MachineStore.assertNoPendingWork(recorder?)`**: fails naming all of it and the events not received.
+  **`MachineStore.assertNoPendingWork()` / `assertNoPendingWork(recorder)`**: fails naming all of it and the events not received.
 - **`VirtualMachineClock(scheduler)`**, `TestScope.machineClock()`: a `MachineClock` on virtual time.
 - **`ScriptedCommandHandler`**: runs nothing by itself; records what the executor started and
   cancelled; the test answers, completes or fails each command, as a replay's `Branch` does.
@@ -98,7 +98,8 @@ report.assertSuccess()             // also rejects an exhausted decision budget
 `ExplorationStrategy.RandomWalk(seed = 42, runs = 1_000)` selects reproducible random input
 choices. Breadth-first search keeps different contexts/history even when active nodes are equal.
 `report.scenarios` contains executable prefixes that cover the transitions actually reached;
-`machine.replaySequence(initial, scenario.inputs)` reruns one and returns its first failure.
+`machine.replaySequence(initial, scenario.inputs) { failure -> ... }` reruns one and reports
+its first failure through the callback, returning whether it failed.
 Neither coverage nor a successful bounded run proves safety beyond supplied payloads and depth.
 `MachineTestDriver` also checks every recorded stable snapshot on settle, including transient
 commits between two calls. Runtime-enforced violations appear in the driver's `failures` list.
