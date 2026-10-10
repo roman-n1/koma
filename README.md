@@ -41,6 +41,19 @@ That gives a bug report a concrete next step: **open the recording, find the dec
 alternative.** Deterministic replay requires the pure Machine path and compatible definitions
 and codecs. Replay, branching and inspector APIs are currently experimental.
 
+### Toward a null-free library
+
+Actron is moving toward behavior that needs neither nullable contracts nor optional containers.
+**CI prevents new explicit nullable constructs in library implementations.** The Kotlin source
+check rejects new `null` literals, nullable types, `!!`, `lateinit`, and `Optional` / `Option` /
+`Maybe` containers, including aliased imports. Existing occurrences are tracked in a baseline
+that may only shrink.
+
+The migration is still in progress. Once the baseline reaches zero, strict mode prevents new
+findings and CI rejects a return to the migration baseline. Kotlin's required `equals(Any?)`
+signature is exempt; inferred types and external APIs still need review. See the
+[absence policy](doc/guides/absence-policy.md) for the check's scope, limitations and API migration guide.
+
 ### Start small. Make complexity explicit.
 
 A counter needs a Store. A loading screen needs clear phases. A feature with nested or
