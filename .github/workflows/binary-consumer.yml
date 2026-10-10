@@ -1,4 +1,4 @@
-name: Koma to Actron migration isolation
+name: Actron migration isolation
 on:
   pull_request:
   push:
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
-      - name: Run a frozen Koma client alongside Actron
+      - name: Verify Actron isolation from the frozen legacy client
         run: scripts/verify-binary-consumer.sh ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         if: always()
