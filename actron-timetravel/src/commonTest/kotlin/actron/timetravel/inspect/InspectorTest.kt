@@ -290,7 +290,7 @@ class InspectorTest {
         val inspector = Inspector.of(run.session)
         val store = inspector.stores.single()
 
-        assertEquals(RecordingStatus.None, store.recording)
+        assertEquals(RecordingStatus.Unrecorded, store.recording)
         assertTrue(!store.completeness.isComplete)
         val omitted = assertIs<Incompleteness.PayloadsOmitted>(store.completeness.reasons.single())
         assertTrue(omitted.count > 10, omitted.toString())

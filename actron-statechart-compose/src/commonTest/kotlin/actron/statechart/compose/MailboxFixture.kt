@@ -53,7 +53,7 @@ internal object MailboxFixture {
      */
     fun store(
         scope: CoroutineScope,
-        coroutineContext: CoroutineContext?,
+        coroutineContext: CoroutineContext,
         maxRetained: Int = 64,
         maxAttempts: Int? = null,
         report: (Throwable) -> Unit = { throw it },

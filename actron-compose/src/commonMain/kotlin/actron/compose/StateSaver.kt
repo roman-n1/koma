@@ -7,14 +7,14 @@ import actron.core.State
 import actron.core.StateSaver
 
 private class StateSaverImpl<S : State> : StateSaver<S> {
-    private var savedState: S? = null
+    private var restoredState: (S) -> S = { it }
 
     override fun save(state: S) {
-        savedState = state
+        restoredState = { state }
     }
 
-    override fun restore(): S? {
-        return savedState
+    override fun restore(initialState: S): S {
+        return restoredState(initialState)
     }
 }
 

@@ -662,6 +662,11 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 
 You can also create a `StateSaver` instance with the `StateSaver()` factory function.
 
+`restore(initialState)` returns a saved state or the supplied initial state. For a saver that
+only writes, use `StateSaver(save = { state -> persist(state) }, restore = { it })`.
+The restore contract does not return `null`; see the [absence policy](absence-policy.md)
+for the API migration and the ongoing removal of nullable contracts.
+
 ### Clear Pending Actions
 
 By default, Actron clears already queued actions when the store exits the current state and enters a different state variant.

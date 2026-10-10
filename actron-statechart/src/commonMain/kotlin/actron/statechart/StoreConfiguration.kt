@@ -15,7 +15,7 @@ import actron.core.StoreProbe
 import actron.core.StoreScope
 import actron.observability.recordTo
 import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * Runtime settings shared by chart and machine adapters. The adapter owns its initial state
@@ -67,7 +67,7 @@ class ChartStoreConfiguration<C, A : Action, E : Event> internal constructor(
      * dispatch a declared chart action after recovery.
      */
     inline fun <reified T : Exception> recover(
-        dispatcher: CoroutineDispatcher? = null,
+        dispatcher: CoroutineContext = EmptyCoroutineContext,
         noinline block: suspend ChartRecoveryScope<C, E, T>.() -> Unit,
     ) {
         delegate.state<ChartState<C>> {

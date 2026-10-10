@@ -20,9 +20,9 @@ class StorePluginTest {
 
         override fun save(state: S) = Unit
 
-        override fun restore(): S? {
+        override fun restore(initialState: S): S {
             restoreCalls += 1
-            return restoredState
+            return restoredState ?: initialState
         }
     }
 

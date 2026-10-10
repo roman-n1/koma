@@ -287,7 +287,7 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
 fun <C, A : Action, E : Event> StateChartStore(
     definition: StateChartDefinition,
     context: C,
-    coroutineContext: CoroutineContext? = null,
+    coroutineContext: CoroutineContext = kotlinx.coroutines.Dispatchers.Default,
     builder: StateChartStoreBuilder<C, A, E>.() -> Unit = {},
 ): Store<ChartState<C>, A, E> = ChartStoreHost(definition, context, StateChartStoreBuilder<C, A, E>().apply(builder)).build(coroutineContext)
 
@@ -327,6 +327,13 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         .filter { it.value.isTimer }
         .groupBy({ it.value.source }, { it.index })
 
+    private val timerDelays = buildMap<Int, kotlin.time.Duration> {
+        for ((index, transition) in definition.transitions.withIndex()) {
+            val trigger = transition.trigger
+            if (trigger is Trigger.After) put(index, trigger.delay)
+        }
+    }
+
     private val declaredInitial = ChartState(
         configuration = runtime.initialConfiguration(),
         context = context,
@@ -344,7 +351,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
     internal var staleFirings: Int = 0
         private set
 
-    fun build(coroutineContext: CoroutineContext?): Store<ChartState<C>, A, E> {
+    fun build(coroutineContext: CoroutineContext): Store<ChartState<C>, A, E> {
         store = Store(declaredInitial, coroutineContext) {
             // The action type is erased; every action this Store receives is an A.
             @Suppress("UNCHECKED_CAST")
@@ -536,7 +543,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         val activation = if (cancelTimers) activations.getValue(timer.source) else Job()
         tasks.trySend(
             Task(activation) {
-                delay(timer.after!!)
+                delay(timerDelays.getValue(index))
                 transactor.transaction {
                     try {
                         fire(this, index, token)

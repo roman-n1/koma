@@ -40,7 +40,7 @@ class StorePatchTest {
             savedStates += state
         }
 
-        override fun restore(): AppState? = restoredState
+        override fun restore(initialState: AppState): AppState = restoredState ?: initialState
     }
 
     private fun recordingPlugin(
@@ -240,6 +240,25 @@ class StorePatchTest {
         }
 
         assertEquals(AppState(count = 42), store.currentState)
+    }
+
+    @Test
+    fun patch_shouldPassLastInitialStateToRestorationOnce() {
+        val restoredFrom = mutableListOf<AppState>()
+        val store = Store<AppState, AppAction, Nothing>(AppState(0)) {
+            stateSaver(StateSaver(save = {}, restore = { initial ->
+                restoredFrom += initial
+                initial.copy(count = initial.count + 1)
+            }))
+        }.patchForTest {
+            initialState(AppState(10))
+            initialState(AppState(20))
+        }
+
+        assertEquals(AppState(21), store.currentState)
+        assertEquals(AppState(21), store.currentState)
+        assertEquals(listOf(AppState(20)), restoredFrom)
+        store.close()
     }
 
     @Test

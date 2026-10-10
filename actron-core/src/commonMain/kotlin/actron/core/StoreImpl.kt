@@ -6,7 +6,6 @@ import kotlinx.coroutines.flow.first
 import kotlin.time.Duration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalForInheritanceCoroutinesApi
@@ -43,7 +42,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         isStateRestored = true
         MutableStateFlow(
             try {
-                stateSaver.restore() ?: initialState
+                stateSaver.restore(initialState)
             } catch (t: Throwable) {
                 handleException(t, input = null)
                 if (t is Exception) {
@@ -137,8 +136,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 this@StoreImpl.dispatch(action)
             }
 
-            override fun launch(dispatcher: CoroutineDispatcher?, block: suspend PluginLaunchScope<S, A>.() -> Unit) {
-                coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + launchOrigin()) {
+            override fun launch(dispatcher: CoroutineContext, block: suspend PluginLaunchScope<S, A>.() -> Unit) {
+                coroutineScope.launch(dispatcher + launchOrigin()) {
                     block(
                         object : PluginLaunchScope<S, A> {
                             override val currentState: S get() = this@StoreImpl.currentState
@@ -298,13 +297,13 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         check(mutex.tryLock()) { "[Actron] Failed to configure the Store because it is starting or already started" }
         try {
             check(!isStartupRequested) { "[Actron] Store configuration must be applied before startup is requested" }
-            if (patch.initialState != null) {
+            if (patch.settings.any { it is StoreSetting.InitialState }) {
                 check(!isStateRestored) { "[Actron] initialState cannot be patched after the state has been read" }
             }
-            if (patch.stateSaver != null) {
+            if (patch.settings.any { it is StoreSetting.Persistence }) {
                 check(!isStateRestored) { "[Actron] stateSaver cannot be patched after the state has been read" }
             }
-            if (patch.coroutineContext != null) {
+            if (patch.settings.any { it is StoreSetting.ExecutionContext }) {
                 check(!isCoroutineScopeCreated) { "[Actron] coroutineContext cannot be patched after the Store has begun running coroutines" }
             }
             applyConfigurationPatch(patch)
@@ -420,13 +419,17 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     }
 
     private fun applyConfigurationPatch(patch: StorePatch<S, A, E>) {
-        patch.initialState?.let { initialState = it }
-        patch.coroutineContext?.let { coroutineContext = it }
-        patch.stateSaver?.let { stateSaver = it }
-        patch.exceptionHandler?.let { exceptionHandler = it }
-        patch.autoStartPolicy?.let { autoStartPolicy = it }
-        patch.pendingActionPolicy?.let { pendingActionPolicy = it }
-        patch.pluginExecutionPolicy?.let { pluginExecutionPolicy = it }
+        for (setting in patch.settings) {
+            when (setting) {
+                is StoreSetting.InitialState -> initialState = setting.state
+                is StoreSetting.ExecutionContext -> coroutineContext = setting.context
+                is StoreSetting.Persistence -> stateSaver = setting.saver
+                is StoreSetting.FailureHandler -> exceptionHandler = setting.handler
+                is StoreSetting.AutoStart -> autoStartPolicy = setting.policy
+                is StoreSetting.PendingActions -> pendingActionPolicy = setting.policy
+                is StoreSetting.PluginExecution -> pluginExecutionPolicy = setting.policy
+            }
+        }
         patch.pluginPatches.forEach { pluginPatch ->
             when (pluginPatch) {
                 is PluginPatch.Append -> plugins.addAll(pluginPatch.plugins)
@@ -591,7 +594,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 }
 
                 override fun launch(
-                    dispatcher: CoroutineDispatcher?,
+                    dispatcher: CoroutineContext,
                     control: LaunchControl,
                     block: suspend ActionLaunchScope<S, A, E, S>.() -> Unit,
                 ) {
@@ -606,7 +609,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     )
                 }
 
-                override fun subscribe(dispatcher: CoroutineDispatcher?, block: suspend ActionLaunchScope<S, A, E, S>.() -> Unit) {
+                override fun subscribe(dispatcher: CoroutineContext, block: suspend ActionLaunchScope<S, A, E, S>.() -> Unit) {
                     val stateRuntime = stateRuntimes[state::class] ?: throw InternalError(IllegalStateException("[Actron] State scope is not found"))
                     val job = launchInStateRuntime(
                         stateRuntime = stateRuntime,
@@ -643,7 +646,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     emit(event)
                 }
 
-                override fun launch(dispatcher: CoroutineDispatcher?, block: suspend EnterLaunchScope<S, E, S>.() -> Unit) {
+                override fun launch(dispatcher: CoroutineContext, block: suspend EnterLaunchScope<S, E, S>.() -> Unit) {
                     launchInStateRuntime(
                         stateRuntime = stateRuntime,
                         dispatcher = dispatcher,
@@ -652,7 +655,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                     )
                 }
 
-                override fun subscribe(dispatcher: CoroutineDispatcher?, block: suspend EnterLaunchScope<S, E, S>.() -> Unit) {
+                override fun subscribe(dispatcher: CoroutineContext, block: suspend EnterLaunchScope<S, E, S>.() -> Unit) {
                     val job = launchInStateRuntime(
                         stateRuntime = stateRuntime,
                         dispatcher = dispatcher,
@@ -668,11 +671,11 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private fun <LS> launchInStateRuntime(
         stateRuntime: StateRuntime,
-        dispatcher: CoroutineDispatcher?,
+        dispatcher: CoroutineContext,
         buildLaunchScope: suspend () -> LS,
         block: suspend LS.() -> Unit,
     ): Job {
-        return stateRuntime.scope.launch((dispatcher ?: EmptyCoroutineContext) + launchOrigin()) {
+        return stateRuntime.scope.launch(dispatcher + launchOrigin()) {
             executeLaunchInStateRuntime(
                 stateRuntime = stateRuntime,
                 dispatcher = dispatcher,
@@ -686,7 +689,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
         stateRuntime: StateRuntime,
         action: A,
         control: LaunchControl,
-        dispatcher: CoroutineDispatcher?,
+        dispatcher: CoroutineContext,
         buildLaunchScope: suspend () -> LS,
         block: suspend LS.() -> Unit,
     ) {
@@ -729,8 +732,8 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
     private fun resolveTrackedActionLaunchKey(action: A, control: LaunchControl): Any {
         return when (control) {
             LaunchControl.Untracked -> error("Untracked launches do not have a tracked lane")
-            is LaunchControl.CancelPrevious -> control.lane ?: action::class
-            is LaunchControl.DropIfRunning -> control.lane ?: action::class
+            is LaunchControl.CancelPrevious -> control.lane.keyFor(action)
+            is LaunchControl.DropIfRunning -> control.lane.keyFor(action)
         }
     }
 
@@ -753,7 +756,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
 
     private suspend fun <LS> executeLaunchInStateRuntime(
         stateRuntime: StateRuntime,
-        dispatcher: CoroutineDispatcher?,
+        dispatcher: CoroutineContext,
         buildLaunchScope: suspend () -> LS,
         block: suspend LS.() -> Unit,
     ) {
@@ -773,7 +776,7 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
             pendingInputs.update { it + 1 }
             trace { StoreTrace.InputAccepted(input, InputKind.Recovery(t, origin)) }
             val queued = QueuedInput(input)
-            coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore + InputOrigin(input)) {
+            coroutineScope.launch(dispatcher + insideStore + InputOrigin(input)) {
                 mutex.withLock {
                     queued.locked = true
                     process(input) {
@@ -810,12 +813,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 if (canRunLaunchOperation(stateScope, currentCoroutineContext()[Job], owner)) emit(event)
             }
 
-            override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend EnterTransactionScope<S, E, S>.() -> Unit) {
+            override suspend fun transaction(dispatcher: CoroutineContext, block: suspend EnterTransactionScope<S, E, S>.() -> Unit) {
                 checkNotInsideThisStore("transaction")
                 val caller = currentCoroutineContext()[Job]
                 val input = acceptTransaction()
                 val queued = QueuedInput(input)
-                val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore + InputOrigin(input)) {
+                val job = coroutineScope.launch(dispatcher + insideStore + InputOrigin(input)) {
                     mutex.withLock {
                         queued.locked = true
                         if (!canRunLaunchOperation(stateScope, caller, owner)) {
@@ -870,12 +873,12 @@ internal abstract class StoreImpl<S : State, A : Action, E : Event> : Store<S, A
                 if (canRunLaunchOperation(stateScope, currentCoroutineContext()[Job], owner)) emit(event)
             }
 
-            override suspend fun transaction(dispatcher: CoroutineDispatcher?, block: suspend ActionTransactionScope<S, A, E, S>.() -> Unit) {
+            override suspend fun transaction(dispatcher: CoroutineContext, block: suspend ActionTransactionScope<S, A, E, S>.() -> Unit) {
                 checkNotInsideThisStore("transaction")
                 val caller = currentCoroutineContext()[Job]
                 val input = acceptTransaction()
                 val queued = QueuedInput(input)
-                val job = coroutineScope.launch((dispatcher ?: EmptyCoroutineContext) + insideStore + InputOrigin(input)) {
+                val job = coroutineScope.launch(dispatcher + insideStore + InputOrigin(input)) {
                     mutex.withLock {
                         queued.locked = true
                         if (!canRunLaunchOperation(stateScope, caller, owner)) {

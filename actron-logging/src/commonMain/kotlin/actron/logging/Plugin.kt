@@ -5,7 +5,8 @@ import actron.core.Event
 import actron.core.Plugin
 import actron.core.PluginScope
 import actron.core.State
-import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * Creates a plugin that logs actions, events, and committed state changes.
@@ -25,14 +26,14 @@ import kotlinx.coroutines.CoroutineDispatcher
  * @param tag The tag to use for logging
  * @param severity The severity level for log messages
  * @param logger The logger implementation to use
- * @param dispatcher Optional CoroutineDispatcher to log on instead of the Store's hook
+ * @param dispatcher Execution context to log on instead of the Store's hook
  * @return Plugin that logs common Store operations
  */
 fun <S : State, A : Action, E : Event> simpleLogging(
     tag: String = "Actron",
     severity: Logger.Severity = Logger.Severity.Debug,
     logger: Logger = DefaultLogger,
-    dispatcher: CoroutineDispatcher? = null,
+    dispatcher: CoroutineContext = EmptyCoroutineContext,
 ): Plugin<S, A, E> {
     return object : Plugin<S, A, E> {
         override suspend fun onAction(scope: PluginScope<S, A>, state: S, action: A) {
@@ -48,7 +49,7 @@ fun <S : State, A : Action, E : Event> simpleLogging(
         }
 
         private fun log(scope: PluginScope<S, A>, message: () -> String) {
-            if (dispatcher == null) {
+            if (dispatcher == EmptyCoroutineContext) {
                 try {
                     logger.log(severity = severity, tag = tag, throwable = null, message = message)
                 } catch (e: Exception) {

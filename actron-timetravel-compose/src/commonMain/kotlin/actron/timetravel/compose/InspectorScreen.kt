@@ -187,7 +187,7 @@ private fun StoreCard(store: StoreView, selected: Boolean, replay: Availability,
 }
 
 private fun recordingLabel(store: StoreView): String = when (val status = store.recording) {
-    actron.timetravel.inspect.RecordingStatus.None -> "none"
+    actron.timetravel.inspect.RecordingStatus.Unrecorded -> "none"
     is actron.timetravel.inspect.RecordingStatus.Attached -> "attached (${status.steps} steps)"
     is actron.timetravel.inspect.RecordingStatus.Mismatch -> "mismatch"
 }

@@ -44,7 +44,7 @@ class StoreRecorderTest {
     ) : StateSaver<AppState> {
         override fun save(state: AppState) = Unit
 
-        override fun restore(): AppState? = restoredState
+        override fun restore(initialState: AppState): AppState = restoredState ?: initialState
     }
 
     private fun createTestStore(): Store<AppState, AppAction, AppEvent> {

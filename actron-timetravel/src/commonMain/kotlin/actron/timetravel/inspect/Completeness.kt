@@ -77,7 +77,7 @@ sealed interface Availability {
 @ExperimentalActronApi
 sealed interface RecordingStatus {
     /** No recording attached: the history shows what the journal kept. */
-    data object None : RecordingStatus
+    data object Unrecorded : RecordingStatus
 
     /** A recording of [steps] steps, matching the journal's decisions. */
     data class Attached(val steps: Int) : RecordingStatus

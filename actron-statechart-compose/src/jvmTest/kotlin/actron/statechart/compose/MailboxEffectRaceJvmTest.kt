@@ -38,7 +38,7 @@ class MailboxEffectRaceJvmTest {
         val effects = 400
         val recreations = 200
         val storeScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-        val store = MailboxFixture.store(storeScope, coroutineContext = null, maxRetained = effects)
+        val store = MailboxFixture.store(storeScope, coroutineContext = kotlinx.coroutines.Dispatchers.Default, maxRetained = effects)
         val gates = mutableMapOf<EffectId, CompletableDeferred<Unit>>()
         val taken = mutableListOf<Delivery<Ev>>()
         val acknowledged = mutableListOf<Boolean>()

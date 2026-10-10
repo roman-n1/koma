@@ -1,9 +1,9 @@
 package actron.core
 
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlin.reflect.KClass
 
 /**
@@ -15,7 +15,7 @@ import kotlin.reflect.KClass
 @Suppress("unused")
 @ActronStoreDsl
 class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
-    private var storeInitialState: S? = null
+    private var storeInitialState: () -> S = { throw IllegalArgumentException("[Actron] InitialState must be set in Store{} DSL") }
     private var storeCoroutineContext: CoroutineContext = Dispatchers.Default
     private var storeStateSaver: StateSaver<S> = StateSaver.Noop()
     private var storeExceptionHandler: ExceptionHandler = ExceptionHandler.Rethrow
@@ -47,7 +47,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
      * @param state The initial state to set
      */
     fun initialState(state: S) {
-        storeInitialState = state
+        storeInitialState = { state }
     }
 
     /**
@@ -183,34 +183,29 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
         @PublishedApi
         internal class ThreadedHandler<P, SC : StoreScope>(
-            private val dispatcher: CoroutineDispatcher?,
+            private val dispatcher: CoroutineContext,
             val predicate: P,
             private val handler: suspend SC.() -> Unit,
             val inputType: KClass<*>?,
         ) {
-            // Keeps inline code compiled against earlier Actron versions working; such handlers have no input type.
-            constructor(dispatcher: CoroutineDispatcher?, predicate: P, handler: suspend SC.() -> Unit) :
+            // Predicate-only handlers have no declared input type.
+            constructor(dispatcher: CoroutineContext, predicate: P, handler: suspend SC.() -> Unit) :
                 this(dispatcher, predicate, handler, null)
 
             suspend operator fun invoke(scope: SC) {
-                if (dispatcher == null) {
-                    handler(scope)
-                } else {
-                    withContext(dispatcher) {
-                        handler(scope)
-                    }
-                }
+                if (dispatcher == EmptyCoroutineContext) handler(scope)
+                else withContext(dispatcher) { handler(scope) }
             }
         }
 
         @PublishedApi
-        internal val stateEnterHandlers = mutableListOf<ThreadedHandler<Nothing?, EnterScope<S, E, S2>>>()
+        internal val stateEnterHandlers = mutableListOf<ThreadedHandler<Unit, EnterScope<S, E, S2>>>()
 
         @PublishedApi
         internal val stateActionHandlers = mutableListOf<ThreadedHandler<(A) -> Boolean, ActionScope<S, A, E, S2>>>()
 
         @PublishedApi
-        internal val stateExitHandlers = mutableListOf<ThreadedHandler<Nothing?, ExitScope<S, E, S2>>>()
+        internal val stateExitHandlers = mutableListOf<ThreadedHandler<Unit, ExitScope<S, E, S2>>>()
 
         @PublishedApi
         internal val stateErrorHandlers = mutableListOf<ThreadedHandler<(Exception) -> Boolean, RecoverScope<S, E, S2, Exception>>>()
@@ -221,11 +216,11 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * If multiple `enter {}` handlers can match the current state, the first registered handler is used.
          * Supplying a dispatcher changes where the handler runs, but the Store still waits for it to finish.
          *
-         * @param dispatcher Optional CoroutineDispatcher override for executing the enter handler
+         * @param dispatcher Execution context override for executing the enter handler
          * @param block The handler function that will be executed when entering this state
          */
-        fun enter(dispatcher: CoroutineDispatcher? = null, block: suspend EnterScope<S, E, S2>.() -> Unit) {
-            stateEnterHandlers.add(ThreadedHandler(dispatcher, null, block))
+        fun enter(dispatcher: CoroutineContext = EmptyCoroutineContext, block: suspend EnterScope<S, E, S2>.() -> Unit) {
+            stateEnterHandlers.add(ThreadedHandler(dispatcher, Unit, block))
         }
 
         /**
@@ -235,10 +230,10 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * the first registered handler is used.
          * Supplying a dispatcher changes where the handler runs, but the Store still waits for it to finish.
          *
-         * @param dispatcher Optional CoroutineDispatcher override for executing the action handler
+         * @param dispatcher Execution context override for executing the action handler
          * @param block The handler function that processes the action and updates the state
          */
-        inline fun <reified A2 : A> action(dispatcher: CoroutineDispatcher? = null, noinline block: suspend ActionScope<S, A2, E, S2>.() -> Unit) {
+        inline fun <reified A2 : A> action(dispatcher: CoroutineContext = EmptyCoroutineContext, noinline block: suspend ActionScope<S, A2, E, S2>.() -> Unit) {
             stateActionHandlers.add(
                 ThreadedHandler(
                     dispatcher = dispatcher,
@@ -258,11 +253,11 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * If multiple `exit {}` handlers can match the current state, the first registered handler is used.
          * Supplying a dispatcher changes where the handler runs, but the Store still waits for it to finish.
          *
-         * @param dispatcher Optional CoroutineDispatcher override for executing the exit handler
+         * @param dispatcher Execution context override for executing the exit handler
          * @param block The handler function that will be executed when exiting this state
          */
-        fun exit(dispatcher: CoroutineDispatcher? = null, block: suspend ExitScope<S, E, S2>.() -> Unit) {
-            stateExitHandlers.add(ThreadedHandler(dispatcher, null, block))
+        fun exit(dispatcher: CoroutineContext = EmptyCoroutineContext, block: suspend ExitScope<S, E, S2>.() -> Unit) {
+            stateExitHandlers.add(ThreadedHandler(dispatcher, Unit, block))
         }
 
         /**
@@ -272,10 +267,10 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
          * the first registered handler is used.
          * Supplying a dispatcher changes where the handler runs, but the Store still waits for it to finish.
          *
-         * @param dispatcher Optional CoroutineDispatcher override for executing the recover handler
+         * @param dispatcher Execution context override for executing the recover handler
          * @param block The handler function that processes the exception and updates the state
          */
-        inline fun <reified T : Exception> recover(dispatcher: CoroutineDispatcher? = null, noinline block: suspend RecoverScope<S, E, S2, T>.() -> Unit) {
+        inline fun <reified T : Exception> recover(dispatcher: CoroutineContext = EmptyCoroutineContext, noinline block: suspend RecoverScope<S, E, S2, T>.() -> Unit) {
             stateErrorHandlers.add(
                 ThreadedHandler(
                     dispatcher = dispatcher,
@@ -296,7 +291,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
             message = "Use recover<T>(dispatcher, block)",
             replaceWith = ReplaceWith("recover<T>(dispatcher, block)"),
         )
-        inline fun <reified T : Exception> error(dispatcher: CoroutineDispatcher? = null, noinline block: suspend RecoverScope<S, E, S2, T>.() -> Unit) {
+        inline fun <reified T : Exception> error(dispatcher: CoroutineContext = EmptyCoroutineContext, noinline block: suspend RecoverScope<S, E, S2, T>.() -> Unit) {
             recover(dispatcher, block)
         }
     }
@@ -369,7 +364,7 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
 
     @OptIn(InternalActronApi::class)
     internal fun build(): Store<S, A, E> {
-        val state = requireNotNull(storeInitialState) { "[Actron] InitialState must be set in Store{} DSL" }
+        val state = storeInitialState()
         return object : StoreImpl<S, A, E>() {
             override var initialState: S = state
             override var coroutineContext: CoroutineContext = storeCoroutineContext
@@ -398,27 +393,21 @@ class StoreBuilder<S : State, A : Action, E : Event> internal constructor() {
     }
 }
 
-/**
- * Creates a Store with optional initial state and root coroutine context.
- *
- * [initialState] and [context], when non-null, are applied before [builder].
- * If [initialState] is null, the initial state must be set inside [builder] by calling
- * [StoreBuilder.initialState].
- *
- * @param initialState The initial state of the Store when no saved snapshot is restored
- * @param context The coroutine context to use for Store processing
- * @param builder StoreBuilder lambda used to customize the store
- * @return A configured Store instance
- * @throws IllegalArgumentException if the initial state is not set
- */
+/** Creates a Store with an explicit initial state and execution context. */
 fun <S : State, A : Action, E : Event> Store(
-    initialState: S? = null,
-    context: CoroutineContext? = null,
+    initialState: S,
+    context: CoroutineContext = Dispatchers.Default,
     builder: StoreBuilder<S, A, E>.() -> Unit,
-): Store<S, A, E> {
-    val storeBuilder = StoreBuilder<S, A, E>()
-    initialState?.let(storeBuilder::initialState)
-    context?.let(storeBuilder::coroutineContext)
-    storeBuilder.builder()
-    return storeBuilder.build()
+): Store<S, A, E> = Store<S, A, E>(context) {
+    initialState(initialState)
+    builder()
 }
+
+/** Creates a Store whose initial state is supplied by [builder]. */
+fun <S : State, A : Action, E : Event> Store(
+    context: CoroutineContext = Dispatchers.Default,
+    builder: StoreBuilder<S, A, E>.() -> Unit,
+): Store<S, A, E> = StoreBuilder<S, A, E>().apply {
+    coroutineContext(context)
+    builder()
+}.build()

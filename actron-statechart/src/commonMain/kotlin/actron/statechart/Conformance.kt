@@ -264,10 +264,10 @@ class StateChartConformance<S : State, A : Action, E : Event> private constructo
             val domain = definition.domainOf(leaf, target)
             report(
                 domain,
-                if (candidates.isEmpty()) {
+                if (candidates.isEmpty() || action == null) {
                     ConformanceViolation.UndeclaredTransition(from = leaf, to = target, lastAction = lastAction)
                 } else {
-                    ConformanceViolation.UnexpectedTrigger(from = leaf, to = target, action = action!!)
+                    ConformanceViolation.UnexpectedTrigger(from = leaf, to = target, action = action)
                 },
             )
         }

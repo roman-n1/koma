@@ -78,7 +78,7 @@ internal fun <T> selectCoverage(candidates: List<Set<T>>, lengths: List<Int>, ta
         val previous = visited[missing]
         if (previous != null && previous <= chosen.size) return
         visited[missing] = chosen.size
-        val next = missing.minByOrNull { id -> candidates.count { id in it } }!!
+        val next = missing.minBy { id -> candidates.count { id in it } }
         val choices = candidates.indices.filter { next in candidates[it] }
             .sortedWith(compareByDescending<Int> { (candidates[it] intersect missing).size }
                 .thenBy { lengths[it] }.thenBy { it })

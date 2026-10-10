@@ -1,6 +1,8 @@
 package actron.core
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlin.random.Random
 import kotlin.reflect.KClass
@@ -92,12 +94,12 @@ internal inline fun <reified S2 : RtState> stateKind(): StateKind = object : Sta
 
 internal interface ActionKind {
     val type: KClass<out RtAction>
-    fun <S2 : RtState> add(cfg: RtConfig<S2>, dispatcher: CoroutineDispatcher?, id: Int, log: MutableList<Int>)
+    fun <S2 : RtState> add(cfg: RtConfig<S2>, dispatcher: CoroutineContext, id: Int, log: MutableList<Int>)
 }
 
 internal inline fun <reified A2 : RtAction> actionKind(): ActionKind = object : ActionKind {
     override val type: KClass<out RtAction> = A2::class
-    override fun <S2 : RtState> add(cfg: RtConfig<S2>, dispatcher: CoroutineDispatcher?, id: Int, log: MutableList<Int>) {
+    override fun <S2 : RtState> add(cfg: RtConfig<S2>, dispatcher: CoroutineContext, id: Int, log: MutableList<Int>) {
         cfg.action<A2>(dispatcher) {
             log += id
             action.fail?.let { throw it }
@@ -176,7 +178,7 @@ internal class Inner(
     val recoverKind: RecoverKind? = null,
     val legacyPredicate: LegacyPredicate? = null,
     val deprecatedAlias: Boolean = false,
-    val dispatcher: CoroutineDispatcher? = null,
+    val dispatcher: CoroutineContext = EmptyCoroutineContext,
 )
 
 internal class RoutingProgram(val blocks: List<Block>) {
@@ -290,7 +292,7 @@ internal class RoutingProgram(val blocks: List<Block>) {
                 } else {
                     val inner = List(random.nextInt(0, 5)) {
                         val kind = HandlerKind.entries.random(random)
-                        val dispatcher = if (random.nextInt(4) == 0) Dispatchers.Unconfined else null
+                        val dispatcher = if (random.nextInt(4) == 0) Dispatchers.Unconfined else EmptyCoroutineContext
                         val isLegacy = legacy && random.nextInt(8) == 0
                         when (kind) {
                             HandlerKind.ACTION -> Inner(

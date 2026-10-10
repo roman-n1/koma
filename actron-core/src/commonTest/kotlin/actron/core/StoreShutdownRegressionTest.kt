@@ -22,7 +22,7 @@ class StoreShutdownRegressionTest {
         val saved = mutableListOf<State>()
         var doneEntered = false
         val store = Store<State, Finish, Nothing>(Active, backgroundScope.coroutineContext) {
-            stateSaver(StateSaver(save = { saved += it }, restore = { null }))
+            stateSaver(StateSaver(save = { saved += it }, restore = { it }))
             state<Active> {
                 action<Finish> { nextState { Done } }
                 exit {

@@ -211,7 +211,7 @@ object PersistentRestoreProcess {
                     assertEquals(1, activities)
                     assertEquals(1, launches)
                     assertTrue(store.currentState.timers.running.isNotEmpty())
-                    assertEquals(store.currentState, DiskSaver(file, DataOutputStream::chartState, DataInputStream::chartState).restore())
+                    assertEquals(store.currentState, DiskSaver(file, DataOutputStream::chartState, DataInputStream::chartState).restore(store.currentState))
                     if (phase.endsWith("-abrupt")) haltAfterCommit(phase)
                 }
                 "chart-read" -> {
@@ -248,7 +248,7 @@ object PersistentRestoreProcess {
             // replaces the bad file with a usable snapshot for the application's next launch.
             if (phase == "chart-invalid") {
                 store.dispatchAndAwait(Begin)
-                assertEquals(42, DiskSaver(file, DataOutputStream::chartState, DataInputStream::chartState).restore()!!.context)
+                assertEquals(42, DiskSaver(file, DataOutputStream::chartState, DataInputStream::chartState).restore(ChartState(StateConfiguration(emptySet()), -1)).context)
             }
         } finally {
             store.close()
@@ -301,7 +301,7 @@ object PersistentRestoreProcess {
                 assertTrue(store.currentState.commands.isNotEmpty())
                 assertTrue(store.currentState.timers.isNotEmpty())
                 assertEquals(listOf("startup-1", "pending-fetch"), commands)
-                assertEquals(store.currentState, DiskSaver(file, DataOutputStream::machineState, DataInputStream::machineState).restore())
+                assertEquals(store.currentState, DiskSaver(file, DataOutputStream::machineState, DataInputStream::machineState).restore(store.currentState))
                 if (phase.endsWith("-abrupt")) haltAfterCommit(phase)
             } else {
                 assertEquals(if (phase == "machine-invalid" || phase == "machine-fresh") 0 else 42, store.currentState.context)
@@ -357,8 +357,8 @@ private class DiskSaver<S : State>(
         }
     }
 
-    override fun restore(): S? {
-        if (!file.exists()) return null
+    override fun restore(initialState: S): S {
+        if (!file.exists()) return initialState
         return DataInputStream(file.inputStream().buffered()).use { input ->
             require(input.readInt() == 1) { "Unsupported application state schema" }
             input.decode().also { require(input.read() == -1) { "Trailing application state bytes" } }

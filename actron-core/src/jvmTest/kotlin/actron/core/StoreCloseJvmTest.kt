@@ -30,7 +30,7 @@ class StoreCloseJvmTest {
         val entered = CompletableDeferred<Unit>()
         val store: Store<Box, Bump, Nothing> = Store(Box()) {
             coroutineContext(Dispatchers.Default)
-            stateSaver(StateSaver(save = { synchronized(saved) { saved += it } }, restore = { null }))
+            stateSaver(StateSaver(save = { synchronized(saved) { saved += it } }, restore = { it }))
             state<Box> {
                 enter {
                     launch {

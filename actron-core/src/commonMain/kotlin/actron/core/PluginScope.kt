@@ -1,6 +1,7 @@
 package actron.core
 
-import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * Scope exposed to [Plugin] hooks.
@@ -23,7 +24,7 @@ interface PluginScope<S : State, A : Action> {
      * The launched coroutine survives state changes and is cancelled when the Store's root
      * coroutine scope is cancelled, such as by [Store.close] or parent scope cancellation.
      */
-    fun launch(dispatcher: CoroutineDispatcher? = null, block: suspend PluginLaunchScope<S, A>.() -> Unit)
+    fun launch(dispatcher: CoroutineContext = EmptyCoroutineContext, block: suspend PluginLaunchScope<S, A>.() -> Unit)
 
     /**
      * Scope available within background work launched from a [Plugin].

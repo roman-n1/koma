@@ -310,6 +310,7 @@ records the individual changes and their route back upstream.
 ## Contributing and deeper reading
 
 - [Store API guide](doc/guides/store-api.md): recovery, launch/transaction, persistence, policies and full plugin examples.
+- [Absence policy](doc/guides/absence-policy.md): migration away from null and optional containers, API changes and the CI guard.
 - [Device resource budgets](verification/resource-soak/README.md): required Android/iOS soak runs, resource cleanup, memory plateau and commit latency reports.
 - [Internal documentation](doc/internal/README.md): architecture, decisions, review evidence and roadmap.
 - [IntelliJ plugin](tooling/intellij-plugin/README.md): K2 gutter, model Find Usages and diagram navigation.

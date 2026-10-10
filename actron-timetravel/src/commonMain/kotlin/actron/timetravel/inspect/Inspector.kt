@@ -77,7 +77,7 @@ class Inspector(
         for (store in storeIds) {
             val recording = recordings[store]
             if (recording == null) {
-                enriched[store] = RecordingStatus.None
+                enriched[store] = RecordingStatus.Unrecorded
                 continue
             }
             when (val result = enrich(timeline, store, recording)) {
@@ -107,7 +107,7 @@ class Inspector(
         val view = stores.firstOrNull { it.id == store } ?: return Availability.Unavailable(listOf("the journal has no records of $store"))
         val reasons = mutableListOf<String>()
         when (val status = view.recording) {
-            RecordingStatus.None -> reasons += "no recording is attached for $store; the journal's capability is ${view.capability ?: "unknown"}, which can be shown, not replayed"
+            RecordingStatus.Unrecorded -> reasons += "no recording is attached for $store; the journal's capability is ${view.capability ?: "unknown"}, which can be shown, not replayed"
             is RecordingStatus.Mismatch -> reasons += "the recording attached for $store does not match the journal: ${status.reason}"
             is RecordingStatus.Attached -> Unit
         }

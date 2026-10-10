@@ -21,9 +21,16 @@ apiValidation {
     ignoredProjects += "resource-soak" // device verification harness, not a published API
     ignoredProjects += "time-travel-example" // runnable debug application, not a published API
     ignoredProjects += "durable-effects-example" // application-owned persistence example
+    ignoredProjects += "nullability-guard" // internal Kotlin syntax policy checker
     klib {
         enabled = true
     }
+}
+
+tasks.register("checkNullability") {
+    group = "verification"
+    description = "Rejects new nullable constructs and optional containers in library sources."
+    dependsOn(":nullability-guard:checkPolicy")
 }
 
 // The time-travel modules are debug tooling (handoff §11, §12): no production module may depend

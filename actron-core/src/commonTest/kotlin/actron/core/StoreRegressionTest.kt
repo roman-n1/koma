@@ -230,7 +230,7 @@ class StoreRegressionTest {
             handled = handled,
             stateSaver = StateSaver(
                 save = { if (it is EnterState.Entered && !it.entered) throw IllegalStateException("disk full") },
-                restore = { null },
+                restore = { it },
             ),
         )
 

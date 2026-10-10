@@ -402,7 +402,7 @@ class StateChartStoreTest {
             saved = state
         }
 
-        override fun restore(): S? = saved
+        override fun restore(initialState: S): S = saved ?: initialState
     }
 
     @Test

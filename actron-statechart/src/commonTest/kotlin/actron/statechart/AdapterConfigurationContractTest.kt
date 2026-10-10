@@ -71,7 +71,7 @@ class AdapterConfigurationContractTest {
             effect("fail") { _, _ -> error("operation failed") }
             store {
                 recordTo(session, id)
-                stateSaver(StateSaver(save = { saved += it; chronology += "save:${it.context}" }, restore = { null }))
+                stateSaver(StateSaver(save = { saved += it; chronology += "save:${it.context}" }, restore = { it }))
                 exceptionHandler(ExceptionHandler { failures += it })
                 plugin(Plugin(
                     onEvent = { state, event -> observed += event to state.context; chronology += "event:${state.context}" },
@@ -120,7 +120,7 @@ class AdapterConfigurationContractTest {
         val store = StateChartStore<Int, Action, Event>(failingChart, 0, backgroundScope.coroutineContext) {
             effect("fail") { _, _ -> throw originalFailure }
             store {
-                stateSaver(StateSaver(save = { saved += it }, restore = { null }))
+                stateSaver(StateSaver(save = { saved += it }, restore = { it }))
                 exceptionHandler(ExceptionHandler { failures += it })
                 plugin(Plugin(
                     onEvent = { state, event -> observed += event to state.context },
@@ -181,7 +181,7 @@ class AdapterConfigurationContractTest {
                 coroutineContext(Dispatchers.Default)
                 autoStartPolicy(AutoStartPolicy.OnDispatchOrStateCollection)
                 pluginExecutionPolicy(PluginExecutionPolicy.Concurrent)
-                stateSaver(StateSaver(save = { firstSaved += it }, restore = { firstRestores++; null }))
+                stateSaver(StateSaver(save = { firstSaved += it }, restore = { firstRestores++; it }))
                 exceptionHandler(ExceptionHandler { firstFailures += it })
                 plugin(Plugin(onStart = { plugins += "first:start"; delay(1); plugins += "first:end" }))
                 probe(StoreProbe { if (it is StoreTrace.StateCommitted) probes += "first" })
@@ -190,7 +190,7 @@ class AdapterConfigurationContractTest {
                 coroutineContext(dispatcher)
                 autoStartPolicy(AutoStartPolicy.OnDispatch)
                 pluginExecutionPolicy(PluginExecutionPolicy.InRegistrationOrder)
-                stateSaver(StateSaver(save = { lastSaved += it }, restore = { lastRestores++; null }))
+                stateSaver(StateSaver(save = { lastSaved += it }, restore = { lastRestores++; it }))
                 exceptionHandler(ExceptionHandler { lastFailures += it })
                 plugin(Plugin(onStart = { plugins += "second" }))
                 probe(StoreProbe { if (it is StoreTrace.StateCommitted) probes += "second" })
@@ -241,7 +241,7 @@ class AdapterConfigurationContractTest {
         val id = StoreInstanceId("configured-machine")
         val saved = mutableListOf<Int>()
         val store = MachineStore(machine, 0, CommandHandler<Nothing, Action> { _, _ -> }, scope, coroutineContext = dispatcher) {
-            stateSaver(StateSaver(save = { saved += it.context }, restore = { null }))
+            stateSaver(StateSaver(save = { saved += it.context }, restore = { it }))
             autoStartPolicy(AutoStartPolicy.OnDispatch)
             recordTo(session, id)
         }

@@ -137,7 +137,7 @@ fun <C, A : Action, CMD, E : Event> MachineStore(
     handler: CommandHandler<CMD, A>,
     scope: CoroutineScope,
     clock: MachineClock = MachineClock.monotonic(),
-    coroutineContext: CoroutineContext? = null,
+    coroutineContext: CoroutineContext = kotlinx.coroutines.Dispatchers.Default,
     admission: AdmissionPolicy = AdmissionPolicy.Unbounded,
     observers: List<DecisionObserver<C, A, CMD, E>> = emptyList(),
     mailbox: MailboxConfig<E> = MailboxConfig(),
@@ -151,7 +151,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
     handler: CommandHandler<CMD, A>,
     scope: CoroutineScope,
     private val clock: MachineClock,
-    coroutineContext: CoroutineContext?,
+    coroutineContext: CoroutineContext,
     private val admission: AdmissionPolicy,
     private val observers: List<DecisionObserver<C, A, CMD, E>>,
     mailboxConfig: MailboxConfig<E>,
@@ -515,13 +515,7 @@ internal class MachineStoreImpl<C, A : Action, CMD, E : Event>(
         }
         innerApi.patch(
             StorePatch(
-                initialState = patch.initialState,
-                coroutineContext = patch.coroutineContext,
-                stateSaver = patch.stateSaver,
-                exceptionHandler = patch.exceptionHandler,
-                autoStartPolicy = patch.autoStartPolicy,
-                pendingActionPolicy = patch.pendingActionPolicy,
-                pluginExecutionPolicy = patch.pluginExecutionPolicy,
+                settings = patch.settings,
                 pluginPatches = adapted.map { PluginPatch.Append(it) },
             ),
         )
