@@ -80,7 +80,7 @@ only, and the MachineStore builder cannot install arbitrary handlers or recovery
 `MachineStore.feed` and `MachineGroup.source` also remain experimental; see the
 [stable core boundary](../doc/internal/adr/2026-10-01-stable-core.md#store-adapter-boundary-2026-10-03-review).
 The module lives in the fork
-[roman-n1/koma](https://github.com/roman-n1/koma), not in upstream Koma.
+[roman-n1/actron](https://github.com/roman-n1/actron), not in upstream Koma.
 
 ## Behaviour queries and documentation
 

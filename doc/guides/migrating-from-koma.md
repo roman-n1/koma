@@ -36,5 +36,7 @@ persistence codecs and serialized type names before reusing old recordings or sa
 the package rename does not promise compatibility for those payloads. Keep old recordings
 and their matching Koma runtime until they have been migrated and verified.
 
-The GitHub source URL is still `roman-n1/koma`; repository hosting and Maven publication
-are separate from this source change. Upstream attribution and the MIT license are retained.
+The GitHub repository is now [roman-n1/actron](https://github.com/roman-n1/actron).
+Update existing clones with `git remote set-url origin https://github.com/roman-n1/actron.git`.
+Repository hosting and Maven publication are separate; the repository rename does not
+publish artifacts. Upstream attribution and the MIT license are retained.

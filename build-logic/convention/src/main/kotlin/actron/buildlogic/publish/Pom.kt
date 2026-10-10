@@ -9,7 +9,7 @@ import org.gradle.api.publish.maven.MavenPomLicenseSpec
  *   there and lists the fork's maintainer next to koma-kt.
  */
 internal fun MavenPublishBaseExtension.pom(forkUrl: String? = null) {
-    val repoUrl = forkUrl ?: "https://github.com/roman-n1/koma/"
+    val repoUrl = forkUrl ?: "https://github.com/roman-n1/actron/"
     val repoPath = repoUrl.removePrefix("https://github.com/").removeSuffix("/")
     pom {
         name.set("Actron")

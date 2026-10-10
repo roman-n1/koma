@@ -2,7 +2,7 @@
 
 - Updated: 2026-09-28
 - Subject: [TBSten/actron-strict](https://github.com/TBSten/actron-strict) — a KSP plugin on top of
-  Actron (MIT, experimental), and our `actron-statechart` module (fork `roman-n1/koma`).
+  Actron (MIT, experimental), and our `actron-statechart` module (fork `roman-n1/actron`).
 - Roman's question: do they overlap, can they be used in the same messenger, and is a bridge
   between them needed.
 

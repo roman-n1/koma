@@ -47,7 +47,7 @@ Store and reaches no network.
   replay navigation. Return to Replay discards the experiment and restores the replay UI at
   the original cursor, including any divergence and verification result.
 
-Status: **experimental**, `@ExperimentalActronApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
+Status: **experimental**, `@ExperimentalActronApi`, in the fork [roman-n1/actron](https://github.com/roman-n1/actron).
 
 ## Dependency
 

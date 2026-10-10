@@ -281,7 +281,7 @@ For an Android-only build, the same dependency line belongs in `dependencies { â
 
 Actron was previously named Koma in this fork, based on upstream
 [koma-kt/koma](https://github.com/koma-kt/koma) **4.0.0**. The source repository is currently
-[roman-n1/koma](https://github.com/roman-n1/koma). It adds an optional declarative statechart
+[roman-n1/actron](https://github.com/roman-n1/actron). It adds an optional declarative statechart
 model, pure decision machines, structured recording and Time Travel.
 The original Store DSL remains available under the `actron.*` packages.
 See [Migrating from Koma](doc/guides/migrating-from-koma.md) for the breaking rename.

@@ -25,7 +25,7 @@ machine's concerns live here.
 The UI model of a screen is `viewStore.select { it.toUiModel() }` from `actron-compose`: a pure
 projection of the snapshot, so nothing of it is here.
 
-Status: **experimental**, `@ExperimentalActronApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
+Status: **experimental**, `@ExperimentalActronApi`, in the fork [roman-n1/actron](https://github.com/roman-n1/actron).
 
 ## Dependency
 
