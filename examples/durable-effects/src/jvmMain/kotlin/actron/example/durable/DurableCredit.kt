@@ -139,7 +139,7 @@ class DiskOutbox(private val path: Path) : StateSaver<MachineSnapshot<Outbox>> {
         decoded.outbox
     }
 
-    override fun restore(): MachineSnapshot<Outbox> = creditMachine.initialSnapshot(durable.value)
+    override fun restore(initialState: MachineSnapshot<Outbox>): MachineSnapshot<Outbox> = creditMachine.initialSnapshot(durable.value)
 
     override fun save(state: MachineSnapshot<Outbox>) {
         durableReplace(path, storageJson.encodeToString(DomainFile(outbox = state.context)))

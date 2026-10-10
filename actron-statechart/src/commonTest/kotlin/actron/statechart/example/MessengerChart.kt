@@ -286,7 +286,7 @@ typealias MessengerStore = Store<ChartState<MessengerContext>, MessengerAction, 
 fun MessengerStore(
     services: MessengerServices,
     initial: MessengerContext = MessengerContext(),
-    coroutineContext: CoroutineContext? = null,
+    coroutineContext: CoroutineContext = kotlinx.coroutines.Dispatchers.Default,
 ): MessengerStore = StateChartStore(MessengerChart.definition, initial, coroutineContext) {
     // The parameter is not called `context`: inside the hooks below, `context` must be the hook
     // scope's context (the value as updated by this step), and a parameter of that name would

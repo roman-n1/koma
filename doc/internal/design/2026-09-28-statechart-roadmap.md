@@ -286,6 +286,14 @@ KDoc that documents these contracts (`Plugin.kt`, `Store.kt`, `StateSaver.kt`, `
 
 #### (b) Observation hooks in `actron-core` (all `@InternalActronApi`)
 
+The 2026-10-11 [absence-policy migration](../../guides/absence-policy.md) is a deliberate
+fork-only API break: Store factories use overloads, execution overrides use non-null contexts,
+`StateSaver.restore` receives a fallback, launch lanes select a key explicitly, and Store patches
+contain configuration commands. Core saver/lifecycle/patch/launch tests, Compose retained-state
+tests and persistent-restore tests cover the changes. Consumers must recompile; historical
+inline-constructor compatibility claims below describe the earlier API. The null/optional CI
+guard prevents new debt while the remaining internal and public contracts are migrated.
+
 | # | Change | Where | Since | Regression tests | Upstream status | Removable when |
 |---|---|---|---|---|---|---|
 | b1 | `StoreProbe`: every accepted, discarded and processed input with its outcome, commits, events and failures; `currentInputId()`; input ids carried in the coroutine context | `StoreProbe.kt` (`StoreProbe`, `StoreTrace`, `InputKind`, `DiscardReason`, `ProcessingOutcome`), `InputOrigin` in `StoreImpl.kt`, `StoreBuilder.probe`, `StorePatchBuilder.probe`, `StorePatch.probes` | [round 9](../notes/2026-09-29-stability-review.md#fixed-in-the-ninth-round-time-travel-foundation-probes-journal-machine-executor), ccc1c1e, 2e1331a, 90a7e02, 1ccdabd | `StoreProbeTest` | planned: issue "StoreProbe", then `upstream-pr/store-probe` (a) and `upstream-pr/store-probe-correlation` (b) | merged; used by `actron-observability` (journal); `MachineStore` correlates admission reservations and per-input waiters with terminal traces, and observes the completion of close |

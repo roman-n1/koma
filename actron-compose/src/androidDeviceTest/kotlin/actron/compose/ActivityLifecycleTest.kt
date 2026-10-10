@@ -101,8 +101,8 @@ class ActivityLifecycleTest {
         compose.runOnIdle {
             assertSame(left.store, fixture.handles.getValue("left").store)
             assertSame(right.saver, fixture.handles.getValue("right").saver)
-            assertEquals(Counter(1), left.saver.restore())
-            assertEquals(Counter(2), right.saver.restore())
+            assertEquals(Counter(1), left.saver.restore(Counter(0)))
+            assertEquals(Counter(2), right.saver.restore(Counter(0)))
             fixture.tabs.value = listOf("right")
         }
         compose.runOnIdle {

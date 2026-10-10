@@ -1051,8 +1051,8 @@ public final class actron/timetravel/inspect/RecordingStatus$Mismatch : actron/t
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class actron/timetravel/inspect/RecordingStatus$None : actron/timetravel/inspect/RecordingStatus {
-	public static final field INSTANCE Lactron/timetravel/inspect/RecordingStatus$None;
+public final class actron/timetravel/inspect/RecordingStatus$Unrecorded : actron/timetravel/inspect/RecordingStatus {
+	public static final field INSTANCE Lactron/timetravel/inspect/RecordingStatus$Unrecorded;
 	public fun equals (Ljava/lang/Object;)Z
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;

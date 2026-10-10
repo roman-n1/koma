@@ -436,10 +436,10 @@ sealed interface actron.timetravel.inspect/RecordingStatus { // actron.timetrave
         final fun toString(): kotlin/String // actron.timetravel.inspect/RecordingStatus.Mismatch.toString|toString(){}[0]
     }
 
-    final object None : actron.timetravel.inspect/RecordingStatus { // actron.timetravel.inspect/RecordingStatus.None|null[0]
-        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.inspect/RecordingStatus.None.equals|equals(kotlin.Any?){}[0]
-        final fun hashCode(): kotlin/Int // actron.timetravel.inspect/RecordingStatus.None.hashCode|hashCode(){}[0]
-        final fun toString(): kotlin/String // actron.timetravel.inspect/RecordingStatus.None.toString|toString(){}[0]
+    final object Unrecorded : actron.timetravel.inspect/RecordingStatus { // actron.timetravel.inspect/RecordingStatus.Unrecorded|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.inspect/RecordingStatus.Unrecorded.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.inspect/RecordingStatus.Unrecorded.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.inspect/RecordingStatus.Unrecorded.toString|toString(){}[0]
     }
 }
 

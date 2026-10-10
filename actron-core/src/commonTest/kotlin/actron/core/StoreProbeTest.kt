@@ -308,7 +308,7 @@ class StoreProbeTest {
             probe,
             dispatcher,
             exceptionHandler = ExceptionHandler { handled += it },
-            stateSaver = StateSaver(save = { if (it is AppState.Ready && it.count > 0) throw saverError }, restore = { null }),
+            stateSaver = StateSaver(save = { if (it is AppState.Ready && it.count > 0) throw saverError }, restore = { it }),
         )
         store.startAndAwaitForTest()
         probe.clear()

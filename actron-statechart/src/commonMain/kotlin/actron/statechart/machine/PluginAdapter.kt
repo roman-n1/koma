@@ -5,7 +5,7 @@ import actron.core.Event
 import actron.core.ExperimentalActronApi
 import actron.core.Plugin
 import actron.core.PluginScope
-import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.coroutines.CoroutineContext
 
 /**
  * A [Plugin] written for the [MachineStore] (state `MachineSnapshot`, actions `A`, effects `E`)
@@ -51,7 +51,7 @@ private class AdaptedPluginScope<C, A : Action>(
 ) : PluginScope<MachineSnapshot<C>, A> {
     override fun dispatch(action: A) = store.dispatch(action)
 
-    override fun launch(dispatcher: CoroutineDispatcher?, block: suspend PluginScope.LaunchScope<MachineSnapshot<C>, A>.() -> Unit) {
+    override fun launch(dispatcher: CoroutineContext, block: suspend PluginScope.LaunchScope<MachineSnapshot<C>, A>.() -> Unit) {
         val target = store
         inner.launch(dispatcher) { AdaptedLaunchScope(this, target).block() }
     }

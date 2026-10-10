@@ -45,7 +45,7 @@ class StoreSaverTest {
     fun store_shouldUseStateSaverToRestoreState() = runTest(testDispatcher) {
         var savedState = AppState(10)
 
-        val stateSaver = StateSaver(
+        val stateSaver = StateSaver<AppState>(
             save = { state -> savedState = state },
             restore = { savedState },
         )
@@ -66,7 +66,7 @@ class StoreSaverTest {
             initialState = AppState(0),
             stateSaver = StateSaver(
                 save = { throw IllegalArgumentException("save failed") },
-                restore = { null },
+                restore = { it },
             ),
             exceptionHandler = ExceptionHandler { handledException = it },
             errorStateOnException = AppState(-1),

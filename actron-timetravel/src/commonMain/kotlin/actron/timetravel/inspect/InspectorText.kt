@@ -167,7 +167,7 @@ object InspectorText {
     }
 
     private fun recording(status: RecordingStatus): String = when (status) {
-        RecordingStatus.None -> "none"
+        RecordingStatus.Unrecorded -> "none"
         is RecordingStatus.Attached -> "attached(${status.steps} steps)"
         is RecordingStatus.Mismatch -> "mismatch"
     }

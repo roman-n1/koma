@@ -88,8 +88,8 @@ class ViewStoreJvmTest {
                 assertEquals(UiState.Ready(2), right.state)
                 assertSame(leftSaver, savers.getValue("left"))
                 assertSame(rightSaver, savers.getValue("right"))
-                assertEquals(UiState.Ready(10), leftSaver.restore())
-                assertEquals(UiState.Ready(20), rightSaver.restore())
+                assertEquals(UiState.Ready(10), leftSaver.restore(UiState.Ready(0)))
+                assertEquals(UiState.Ready(20), rightSaver.restore(UiState.Ready(0)))
                 tabs.value = listOf("right")
                 repeat(2) { pumpFrame() }
                 assertEquals(1, stores.getValue("left").closeCount)

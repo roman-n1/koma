@@ -354,9 +354,14 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
     }
 
     /** Timers by source, as positions in the chart's transition list, in declaration order. */
-    private val timersBySource: Map<StateId, List<TransitionId>> = chart.transitions.withIndex()
-        .filter { it.value.isTimer }
-        .groupBy({ it.value.source }, { TransitionId(it.index) })
+    private data class TimerRule(val transition: TransitionId, val delay: kotlin.time.Duration)
+    private val timersBySource: Map<StateId, List<TimerRule>> = buildMap<StateId, MutableList<TimerRule>> {
+        for ((index, transition) in chart.transitions.withIndex()) {
+            val trigger = transition.trigger
+            if (trigger is Trigger.After) getOrPut(transition.source) { mutableListOf() }
+                .add(TimerRule(TransitionId(index), trigger.delay))
+        }
+    }
 
     /**
      * The snapshot before the first input: revision 0, nothing active, [context] as given.
@@ -602,11 +607,10 @@ class Machine<C, A : Action, CMD, E : Event> internal constructor(
                     scope.rule()
                     context = scope.context
                 }
-                for (transition in timersBySource[node].orEmpty()) {
-                    val delay = chart.transitions[transition.index].after!!
+                for (timer in timersBySource[node].orEmpty()) {
                     val timerId = TimerId(counters.timers + 1)
                     counters = counters.copy(timers = timerId.value)
-                    timersScheduled += TimerSchedule(timerId, transition, activation.id, input.now + delay)
+                    timersScheduled += TimerSchedule(timerId, timer.transition, activation.id, input.now + timer.delay)
                 }
             }
         }

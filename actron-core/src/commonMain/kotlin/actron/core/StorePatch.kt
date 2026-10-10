@@ -8,16 +8,21 @@ import kotlin.coroutines.CoroutineContext
  * @property probes [StoreProbe]s to append; an internal observation API (see [StoreProbe])
  */
 data class StorePatch<S : State, A : Action, E : Event>(
-    val initialState: S? = null,
-    val coroutineContext: CoroutineContext? = null,
-    val stateSaver: StateSaver<S>? = null,
-    val exceptionHandler: ExceptionHandler? = null,
-    val autoStartPolicy: AutoStartPolicy? = null,
-    val pendingActionPolicy: PendingActionPolicy? = null,
-    val pluginExecutionPolicy: PluginExecutionPolicy? = null,
+    val settings: List<StoreSetting<S>> = emptyList(),
     val pluginPatches: List<PluginPatch<S, A, E>> = emptyList(),
     val probes: List<StoreProbe<S, A, E>> = emptyList(),
 )
+
+/** Commands applied before a Store starts. An empty patch performs no configuration changes. */
+sealed interface StoreSetting<out S : State> {
+    data class InitialState<S : State>(val state: S) : StoreSetting<S>
+    data class ExecutionContext(val context: CoroutineContext) : StoreSetting<Nothing>
+    data class Persistence<S : State>(val saver: StateSaver<S>) : StoreSetting<S>
+    data class FailureHandler(val handler: ExceptionHandler) : StoreSetting<Nothing>
+    data class AutoStart(val policy: AutoStartPolicy) : StoreSetting<Nothing>
+    data class PendingActions(val policy: PendingActionPolicy) : StoreSetting<Nothing>
+    data class PluginExecution(val policy: PluginExecutionPolicy) : StoreSetting<Nothing>
+}
 
 sealed interface PluginPatch<S : State, A : Action, E : Event> {
     data class Append<S : State, A : Action, E : Event>(val plugins: List<Plugin<S, A, E>>) : PluginPatch<S, A, E>
@@ -38,42 +43,36 @@ sealed interface PluginPatch<S : State, A : Action, E : Event> {
  */
 @Suppress("unused")
 class StorePatchBuilder<S : State, A : Action, E : Event> {
-    private var initialStatePatch: S? = null
-    private var coroutineContextPatch: CoroutineContext? = null
-    private var stateSaverPatch: StateSaver<S>? = null
-    private var exceptionHandlerPatch: ExceptionHandler? = null
-    private var autoStartPolicyPatch: AutoStartPolicy? = null
-    private var pendingActionPolicyPatch: PendingActionPolicy? = null
-    private var pluginExecutionPolicyPatch: PluginExecutionPolicy? = null
+    private val settings = mutableListOf<StoreSetting<S>>()
     private val pluginPatches = mutableListOf<PluginPatch<S, A, E>>()
     private val probePatches = mutableListOf<StoreProbe<S, A, E>>()
 
     fun initialState(state: S) {
-        initialStatePatch = state
+        settings += StoreSetting.InitialState(state)
     }
 
     fun coroutineContext(coroutineContext: CoroutineContext) {
-        coroutineContextPatch = coroutineContext
+        settings += StoreSetting.ExecutionContext(coroutineContext)
     }
 
     fun stateSaver(stateSaver: StateSaver<S>) {
-        stateSaverPatch = stateSaver
+        settings += StoreSetting.Persistence(stateSaver)
     }
 
     fun exceptionHandler(exceptionHandler: ExceptionHandler) {
-        exceptionHandlerPatch = exceptionHandler
+        settings += StoreSetting.FailureHandler(exceptionHandler)
     }
 
     fun autoStartPolicy(policy: AutoStartPolicy) {
-        autoStartPolicyPatch = policy
+        settings += StoreSetting.AutoStart(policy)
     }
 
     fun pendingActionPolicy(policy: PendingActionPolicy) {
-        pendingActionPolicyPatch = policy
+        settings += StoreSetting.PendingActions(policy)
     }
 
     fun pluginExecutionPolicy(policy: PluginExecutionPolicy) {
-        pluginExecutionPolicyPatch = policy
+        settings += StoreSetting.PluginExecution(policy)
     }
 
     fun plugin(first: Plugin<S, A, E>, vararg rest: Plugin<S, A, E>) {
@@ -100,13 +99,7 @@ class StorePatchBuilder<S : State, A : Action, E : Event> {
 
     fun build(): StorePatch<S, A, E> {
         return StorePatch(
-            initialState = initialStatePatch,
-            coroutineContext = coroutineContextPatch,
-            stateSaver = stateSaverPatch,
-            exceptionHandler = exceptionHandlerPatch,
-            autoStartPolicy = autoStartPolicyPatch,
-            pendingActionPolicy = pendingActionPolicyPatch,
-            pluginExecutionPolicy = pluginExecutionPolicyPatch,
+            settings = settings.toList(),
             pluginPatches = pluginPatches.toList(),
             probes = probePatches.toList(),
         )

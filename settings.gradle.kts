@@ -38,3 +38,6 @@ project(":durable-effects-example").projectDir = file("examples/durable-effects"
 
 include(":behaviour-review")
 project(":behaviour-review").projectDir = file("verification/behaviour-review")
+
+include(":nullability-guard")
+project(":nullability-guard").projectDir = file("verification/nullability-guard")

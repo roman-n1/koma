@@ -58,7 +58,7 @@ class StoreSoakJvmTest {
         coroutineContext(Dispatchers.Default)
         pendingActionPolicy(policy)
         exceptionHandler(ExceptionHandler { synchronized(handled) { handled += it } })
-        stateSaver(StateSaver(save = { saved.incrementAndGet() }, restore = { null }))
+        stateSaver(StateSaver(save = { saved.incrementAndGet() }, restore = { it }))
         plugin(Plugin(onState = { _, _ -> }, onAction = { _, _ -> }))
         state<S.Idle> {
             action<A.Go> { nextState { S.Busy(state.count, state.query) } }
@@ -91,7 +91,7 @@ class StoreSoakJvmTest {
             action<A.Recover> { nextState { S.Idle(state.count, state.query) } }
         }
         state<S> {
-            action<A.Inc>(dispatcher = if (incOnIo) Dispatchers.IO else null) { nextState { withCount(state, state.count + 1) } }
+            action<A.Inc>(dispatcher = if (incOnIo) Dispatchers.IO else kotlin.coroutines.EmptyCoroutineContext) { nextState { withCount(state, state.count + 1) } }
             action<A> { } // ignore the rest in this variant
         }
     }

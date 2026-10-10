@@ -115,7 +115,7 @@ class StoreHandlerRegistryTest {
             handler = { },
         )
         val threadedHandler = StoreBuilder.StateHandlerConfig.ThreadedHandler<(AppAction) -> Boolean, ActionScope<AppState, AppAction, AppEvent, AppState>>(
-            dispatcher = null,
+            dispatcher = kotlin.coroutines.EmptyCoroutineContext,
             predicate = { true },
             handler = { },
         )

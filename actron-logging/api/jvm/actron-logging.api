@@ -32,7 +32,7 @@ public final class actron/logging/LoggerJournalSink$Companion {
 }
 
 public final class actron/logging/PluginKt {
-	public static final fun simpleLogging (Ljava/lang/String;Lactron/logging/Logger$Severity;Lactron/logging/Logger;Lkotlinx/coroutines/CoroutineDispatcher;)Lactron/core/Plugin;
-	public static synthetic fun simpleLogging$default (Ljava/lang/String;Lactron/logging/Logger$Severity;Lactron/logging/Logger;Lkotlinx/coroutines/CoroutineDispatcher;ILjava/lang/Object;)Lactron/core/Plugin;
+	public static final fun simpleLogging (Ljava/lang/String;Lactron/logging/Logger$Severity;Lactron/logging/Logger;Lkotlin/coroutines/CoroutineContext;)Lactron/core/Plugin;
+	public static synthetic fun simpleLogging$default (Ljava/lang/String;Lactron/logging/Logger$Severity;Lactron/logging/Logger;Lkotlin/coroutines/CoroutineContext;ILjava/lang/Object;)Lactron/core/Plugin;
 }
 

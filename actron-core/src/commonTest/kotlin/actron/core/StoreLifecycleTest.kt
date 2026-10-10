@@ -231,7 +231,7 @@ class StoreLifecycleTest {
         val saved = mutableListOf<AppState>()
         val store: Store<AppState, AppAction, Nothing> = Store(AppState.Idle()) {
             coroutineContext(Dispatchers.Unconfined)
-            stateSaver(StateSaver(save = { saved += it }, restore = { null }))
+            stateSaver(StateSaver(save = { saved += it }, restore = { it }))
             state<AppState.Idle> {
                 action<AppAction.Increment> { nextState { state.copy(value = state.value + 1) } }
                 action<AppAction.Reset> { nextState { state } }

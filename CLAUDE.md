@@ -26,6 +26,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Implement proper marker interfaces (State, Action, Event)
 - Use data classes/objects for concrete state implementations
 
+### Null and optional policy
+
+- Follow `doc/guides/absence-policy.md`: model behavior and domain operations; do not add nullable contracts, `!!`, `lateinit`, optional containers, or renamed value/empty wrappers.
+- Run `./gradlew checkNullability`. Existing debt may only shrink with `:nullability-guard:pruneBaseline`; never add baseline entries to approve new debt.
+- Preserve readers for old recordings during the breaking API migration. The migration is incomplete until `:nullability-guard:finishMigration` passes.
+
 ### DSL Pattern
 
 - Use the @ActronStoreDsl annotation for builder APIs

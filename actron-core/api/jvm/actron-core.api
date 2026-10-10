@@ -15,32 +15,32 @@ public abstract interface class actron/core/ActionScope : actron/core/StoreScope
 	public abstract fun event (Lactron/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getAction ()Lactron/core/Action;
 	public abstract fun getState ()Lactron/core/State;
-	public abstract fun launch (Lkotlinx/coroutines/CoroutineDispatcher;Lactron/core/LaunchControl;Lkotlin/jvm/functions/Function2;)V
-	public static synthetic fun launch$default (Lactron/core/ActionScope;Lkotlinx/coroutines/CoroutineDispatcher;Lactron/core/LaunchControl;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public abstract fun launch (Lkotlin/coroutines/CoroutineContext;Lactron/core/LaunchControl;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun launch$default (Lactron/core/ActionScope;Lkotlin/coroutines/CoroutineContext;Lactron/core/LaunchControl;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 	public fun nextState (Lactron/core/State;)V
 	public abstract fun nextState (Lkotlin/jvm/functions/Function0;)V
 	public fun nextStateBy (Lkotlin/jvm/functions/Function0;)V
-	public abstract fun subscribe (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
-	public static synthetic fun subscribe$default (Lactron/core/ActionScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public abstract fun subscribe (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun subscribe$default (Lactron/core/ActionScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public final class actron/core/ActionScope$DefaultImpls {
-	public static synthetic fun launch$default (Lactron/core/ActionScope;Lkotlinx/coroutines/CoroutineDispatcher;Lactron/core/LaunchControl;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public static synthetic fun launch$default (Lactron/core/ActionScope;Lkotlin/coroutines/CoroutineContext;Lactron/core/LaunchControl;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 	public static fun nextState (Lactron/core/ActionScope;Lactron/core/State;)V
 	public static fun nextStateBy (Lactron/core/ActionScope;Lkotlin/jvm/functions/Function0;)V
-	public static synthetic fun subscribe$default (Lactron/core/ActionScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public static synthetic fun subscribe$default (Lactron/core/ActionScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public abstract interface class actron/core/ActionScope$LaunchScope : actron/core/StoreScope {
 	public abstract fun event (Lactron/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getAction ()Lactron/core/Action;
 	public abstract fun isActive ()Z
-	public abstract fun transaction (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun transaction$default (Lactron/core/ActionScope$LaunchScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun transaction (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun transaction$default (Lactron/core/ActionScope$LaunchScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class actron/core/ActionScope$LaunchScope$DefaultImpls {
-	public static synthetic fun transaction$default (Lactron/core/ActionScope$LaunchScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun transaction$default (Lactron/core/ActionScope$LaunchScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public abstract interface class actron/core/ActionScope$LaunchScope$TransactionScope : actron/core/StoreScope {
@@ -133,31 +133,31 @@ public abstract interface class actron/core/EnterScope : actron/core/StoreScope 
 	public abstract fun clearPendingActions ()V
 	public abstract fun event (Lactron/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getState ()Lactron/core/State;
-	public abstract fun launch (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
-	public static synthetic fun launch$default (Lactron/core/EnterScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public abstract fun launch (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun launch$default (Lactron/core/EnterScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 	public fun nextState (Lactron/core/State;)V
 	public abstract fun nextState (Lkotlin/jvm/functions/Function0;)V
 	public fun nextStateBy (Lkotlin/jvm/functions/Function0;)V
-	public abstract fun subscribe (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
-	public static synthetic fun subscribe$default (Lactron/core/EnterScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public abstract fun subscribe (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun subscribe$default (Lactron/core/EnterScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public final class actron/core/EnterScope$DefaultImpls {
-	public static synthetic fun launch$default (Lactron/core/EnterScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public static synthetic fun launch$default (Lactron/core/EnterScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 	public static fun nextState (Lactron/core/EnterScope;Lactron/core/State;)V
 	public static fun nextStateBy (Lactron/core/EnterScope;Lkotlin/jvm/functions/Function0;)V
-	public static synthetic fun subscribe$default (Lactron/core/EnterScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public static synthetic fun subscribe$default (Lactron/core/EnterScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public abstract interface class actron/core/EnterScope$LaunchScope : actron/core/StoreScope {
 	public abstract fun event (Lactron/core/Event;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun isActive ()Z
-	public abstract fun transaction (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public static synthetic fun transaction$default (Lactron/core/EnterScope$LaunchScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun transaction (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun transaction$default (Lactron/core/EnterScope$LaunchScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class actron/core/EnterScope$LaunchScope$DefaultImpls {
-	public static synthetic fun transaction$default (Lactron/core/EnterScope$LaunchScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun transaction$default (Lactron/core/EnterScope$LaunchScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public abstract interface class actron/core/EnterScope$LaunchScope$TransactionScope : actron/core/StoreScope {
@@ -323,7 +323,12 @@ public final class actron/core/LaunchControl$Untracked : actron/core/LaunchContr
 }
 
 public final class actron/core/LaunchLane {
+	public static final field Companion Lactron/core/LaunchLane$Companion;
 	public fun <init> ()V
+}
+
+public final class actron/core/LaunchLane$Companion {
+	public final fun getByAction ()Lactron/core/LaunchLane;
 }
 
 public final class actron/core/PendingActionPolicy : java/lang/Enum {
@@ -395,12 +400,12 @@ public final class actron/core/PluginPatch$Replace : actron/core/PluginPatch {
 
 public abstract interface class actron/core/PluginScope {
 	public abstract fun dispatch (Lactron/core/Action;)V
-	public abstract fun launch (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
-	public static synthetic fun launch$default (Lactron/core/PluginScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public abstract fun launch (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun launch$default (Lactron/core/PluginScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public final class actron/core/PluginScope$DefaultImpls {
-	public static synthetic fun launch$default (Lactron/core/PluginScope;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public static synthetic fun launch$default (Lactron/core/PluginScope;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 }
 
 public abstract interface class actron/core/PluginScope$LaunchScope {
@@ -487,7 +492,7 @@ public abstract interface class actron/core/State {
 
 public abstract interface class actron/core/StateSaver {
 	public static final field Companion Lactron/core/StateSaver$Companion;
-	public abstract fun restore ()Lactron/core/State;
+	public abstract fun restore (Lactron/core/State;)Lactron/core/State;
 	public abstract fun save (Lactron/core/State;)V
 }
 
@@ -496,7 +501,7 @@ public final class actron/core/StateSaver$Companion {
 }
 
 public final class actron/core/StateSaverKt {
-	public static final fun StateSaver (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)Lactron/core/StateSaver;
+	public static final fun StateSaver (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lactron/core/StateSaver;
 }
 
 public abstract interface class actron/core/Store : java/lang/AutoCloseable {
@@ -542,10 +547,10 @@ public final class actron/core/StoreBuilder$StateHandler {
 
 public final class actron/core/StoreBuilder$StateHandlerConfig {
 	public fun <init> ()V
-	public final fun enter (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
-	public static synthetic fun enter$default (Lactron/core/StoreBuilder$StateHandlerConfig;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
-	public final fun exit (Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;)V
-	public static synthetic fun exit$default (Lactron/core/StoreBuilder$StateHandlerConfig;Lkotlinx/coroutines/CoroutineDispatcher;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public final fun enter (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun enter$default (Lactron/core/StoreBuilder$StateHandlerConfig;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
+	public final fun exit (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;)V
+	public static synthetic fun exit$default (Lactron/core/StoreBuilder$StateHandlerConfig;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;ILjava/lang/Object;)V
 	public final fun getStateActionHandlers ()Ljava/util/List;
 	public final fun getStateEnterHandlers ()Ljava/util/List;
 	public final fun getStateErrorHandlers ()Ljava/util/List;
@@ -553,8 +558,8 @@ public final class actron/core/StoreBuilder$StateHandlerConfig {
 }
 
 public final class actron/core/StoreBuilder$StateHandlerConfig$ThreadedHandler {
-	public fun <init> (Lkotlinx/coroutines/CoroutineDispatcher;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)V
-	public fun <init> (Lkotlinx/coroutines/CoroutineDispatcher;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;Lkotlin/reflect/KClass;)V
+	public fun <init> (Lkotlin/coroutines/CoroutineContext;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)V
+	public fun <init> (Lkotlin/coroutines/CoroutineContext;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;Lkotlin/reflect/KClass;)V
 	public final fun getInputType ()Lkotlin/reflect/KClass;
 	public final fun getPredicate ()Ljava/lang/Object;
 	public final fun invoke (Lactron/core/StoreScope;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -562,7 +567,9 @@ public final class actron/core/StoreBuilder$StateHandlerConfig$ThreadedHandler {
 
 public final class actron/core/StoreBuilderKt {
 	public static final fun Store (Lactron/core/State;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function1;)Lactron/core/Store;
+	public static final fun Store (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function1;)Lactron/core/Store;
 	public static synthetic fun Store$default (Lactron/core/State;Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lactron/core/Store;
+	public static synthetic fun Store$default (Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lactron/core/Store;
 }
 
 public final class actron/core/StoreHandlerMetadata {
@@ -585,29 +592,17 @@ public abstract interface class actron/core/StoreInternalApi {
 
 public final class actron/core/StorePatch {
 	public fun <init> ()V
-	public fun <init> (Lactron/core/State;Lkotlin/coroutines/CoroutineContext;Lactron/core/StateSaver;Lactron/core/ExceptionHandler;Lactron/core/AutoStartPolicy;Lactron/core/PendingActionPolicy;Lactron/core/PluginExecutionPolicy;Ljava/util/List;Ljava/util/List;)V
-	public synthetic fun <init> (Lactron/core/State;Lkotlin/coroutines/CoroutineContext;Lactron/core/StateSaver;Lactron/core/ExceptionHandler;Lactron/core/AutoStartPolicy;Lactron/core/PendingActionPolicy;Lactron/core/PluginExecutionPolicy;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Lactron/core/State;
-	public final fun component2 ()Lkotlin/coroutines/CoroutineContext;
-	public final fun component3 ()Lactron/core/StateSaver;
-	public final fun component4 ()Lactron/core/ExceptionHandler;
-	public final fun component5 ()Lactron/core/AutoStartPolicy;
-	public final fun component6 ()Lactron/core/PendingActionPolicy;
-	public final fun component7 ()Lactron/core/PluginExecutionPolicy;
-	public final fun component8 ()Ljava/util/List;
-	public final fun component9 ()Ljava/util/List;
-	public final fun copy (Lactron/core/State;Lkotlin/coroutines/CoroutineContext;Lactron/core/StateSaver;Lactron/core/ExceptionHandler;Lactron/core/AutoStartPolicy;Lactron/core/PendingActionPolicy;Lactron/core/PluginExecutionPolicy;Ljava/util/List;Ljava/util/List;)Lactron/core/StorePatch;
-	public static synthetic fun copy$default (Lactron/core/StorePatch;Lactron/core/State;Lkotlin/coroutines/CoroutineContext;Lactron/core/StateSaver;Lactron/core/ExceptionHandler;Lactron/core/AutoStartPolicy;Lactron/core/PendingActionPolicy;Lactron/core/PluginExecutionPolicy;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lactron/core/StorePatch;
+	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;Ljava/util/List;)Lactron/core/StorePatch;
+	public static synthetic fun copy$default (Lactron/core/StorePatch;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lactron/core/StorePatch;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getAutoStartPolicy ()Lactron/core/AutoStartPolicy;
-	public final fun getCoroutineContext ()Lkotlin/coroutines/CoroutineContext;
-	public final fun getExceptionHandler ()Lactron/core/ExceptionHandler;
-	public final fun getInitialState ()Lactron/core/State;
-	public final fun getPendingActionPolicy ()Lactron/core/PendingActionPolicy;
-	public final fun getPluginExecutionPolicy ()Lactron/core/PluginExecutionPolicy;
 	public final fun getPluginPatches ()Ljava/util/List;
 	public final fun getProbes ()Ljava/util/List;
-	public final fun getStateSaver ()Lactron/core/StateSaver;
+	public final fun getSettings ()Ljava/util/List;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -651,6 +646,86 @@ public final class actron/core/StoreProbeKt {
 }
 
 public abstract interface class actron/core/StoreScope {
+}
+
+public abstract interface class actron/core/StoreSetting {
+}
+
+public final class actron/core/StoreSetting$AutoStart : actron/core/StoreSetting {
+	public fun <init> (Lactron/core/AutoStartPolicy;)V
+	public final fun component1 ()Lactron/core/AutoStartPolicy;
+	public final fun copy (Lactron/core/AutoStartPolicy;)Lactron/core/StoreSetting$AutoStart;
+	public static synthetic fun copy$default (Lactron/core/StoreSetting$AutoStart;Lactron/core/AutoStartPolicy;ILjava/lang/Object;)Lactron/core/StoreSetting$AutoStart;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPolicy ()Lactron/core/AutoStartPolicy;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/core/StoreSetting$ExecutionContext : actron/core/StoreSetting {
+	public fun <init> (Lkotlin/coroutines/CoroutineContext;)V
+	public final fun component1 ()Lkotlin/coroutines/CoroutineContext;
+	public final fun copy (Lkotlin/coroutines/CoroutineContext;)Lactron/core/StoreSetting$ExecutionContext;
+	public static synthetic fun copy$default (Lactron/core/StoreSetting$ExecutionContext;Lkotlin/coroutines/CoroutineContext;ILjava/lang/Object;)Lactron/core/StoreSetting$ExecutionContext;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContext ()Lkotlin/coroutines/CoroutineContext;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/core/StoreSetting$FailureHandler : actron/core/StoreSetting {
+	public fun <init> (Lactron/core/ExceptionHandler;)V
+	public final fun component1 ()Lactron/core/ExceptionHandler;
+	public final fun copy (Lactron/core/ExceptionHandler;)Lactron/core/StoreSetting$FailureHandler;
+	public static synthetic fun copy$default (Lactron/core/StoreSetting$FailureHandler;Lactron/core/ExceptionHandler;ILjava/lang/Object;)Lactron/core/StoreSetting$FailureHandler;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHandler ()Lactron/core/ExceptionHandler;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/core/StoreSetting$InitialState : actron/core/StoreSetting {
+	public fun <init> (Lactron/core/State;)V
+	public final fun component1 ()Lactron/core/State;
+	public final fun copy (Lactron/core/State;)Lactron/core/StoreSetting$InitialState;
+	public static synthetic fun copy$default (Lactron/core/StoreSetting$InitialState;Lactron/core/State;ILjava/lang/Object;)Lactron/core/StoreSetting$InitialState;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getState ()Lactron/core/State;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/core/StoreSetting$PendingActions : actron/core/StoreSetting {
+	public fun <init> (Lactron/core/PendingActionPolicy;)V
+	public final fun component1 ()Lactron/core/PendingActionPolicy;
+	public final fun copy (Lactron/core/PendingActionPolicy;)Lactron/core/StoreSetting$PendingActions;
+	public static synthetic fun copy$default (Lactron/core/StoreSetting$PendingActions;Lactron/core/PendingActionPolicy;ILjava/lang/Object;)Lactron/core/StoreSetting$PendingActions;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPolicy ()Lactron/core/PendingActionPolicy;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/core/StoreSetting$Persistence : actron/core/StoreSetting {
+	public fun <init> (Lactron/core/StateSaver;)V
+	public final fun component1 ()Lactron/core/StateSaver;
+	public final fun copy (Lactron/core/StateSaver;)Lactron/core/StoreSetting$Persistence;
+	public static synthetic fun copy$default (Lactron/core/StoreSetting$Persistence;Lactron/core/StateSaver;ILjava/lang/Object;)Lactron/core/StoreSetting$Persistence;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getSaver ()Lactron/core/StateSaver;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/core/StoreSetting$PluginExecution : actron/core/StoreSetting {
+	public fun <init> (Lactron/core/PluginExecutionPolicy;)V
+	public final fun component1 ()Lactron/core/PluginExecutionPolicy;
+	public final fun copy (Lactron/core/PluginExecutionPolicy;)Lactron/core/StoreSetting$PluginExecution;
+	public static synthetic fun copy$default (Lactron/core/StoreSetting$PluginExecution;Lactron/core/PluginExecutionPolicy;ILjava/lang/Object;)Lactron/core/StoreSetting$PluginExecution;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getPolicy ()Lactron/core/PluginExecutionPolicy;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public abstract interface class actron/core/StoreTrace {

@@ -180,12 +180,13 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.exploreDetailed(
     }
 
     require(initial.definition == id && initial.version == version) { "[Actron] Snapshot belongs to another machine or version" }
-    var start: Path<C, A>? = Path(initial, emptyList(), now, 0, localCoverage = emptyCoverage.copy(states = emptyCoverage.states.copy(covered = initial.configuration.active)))
+    val initialPath = Path<C, A>(initial, emptyList(), now, 0, localCoverage = emptyCoverage.copy(states = emptyCoverage.states.copy(covered = initial.configuration.active)))
+    var start: Path<C, A>? = initialPath
     if (!initial.isStarted) {
-        start = decidePath(start!!, MachineInput.Start(now), 0)
+        start = decidePath(initialPath, MachineInput.Start(now), 0)
     } else {
         coverage.observeInitial(initial)
-        scenarios[start!!.localCoverage] = MachineScenario("initial", emptyList())
+        scenarios[initialPath.localCoverage] = MachineScenario("initial", emptyList())
         checked += invariants.size
         val violations = checkInvariants(initial)
         if (violations.isNotEmpty()) {

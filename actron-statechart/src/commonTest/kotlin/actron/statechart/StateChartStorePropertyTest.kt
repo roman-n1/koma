@@ -172,7 +172,7 @@ class StateChartStorePropertyTest {
             saved = state
         }
 
-        override fun restore(): ChartState<Int>? = saved
+        override fun restore(initialState: ChartState<Int>): ChartState<Int> = saved ?: initialState
     }
 
     private val advances = listOf(300.milliseconds, 500.milliseconds, 1.seconds, 2.seconds, 3.seconds, 5.seconds, 10.seconds)

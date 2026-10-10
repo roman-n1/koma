@@ -19,11 +19,11 @@ interface StateSaver<S : State> {
     /**
      * Restores the snapshot to use before Store startup.
      *
-     * Return `null` to fall back to the Store's declared initial state.
+     * Return [initialState] when no snapshot has been saved.
      *
-     * @return The restored state, or null if there is no saved state
+     * @return The restored state, or [initialState] when no snapshot exists
      */
-    fun restore(): S?
+    fun restore(initialState: S): S
 
     companion object {
         /**
@@ -32,8 +32,8 @@ interface StateSaver<S : State> {
         @Suppress("FunctionName")
         fun <S : State> Noop(): StateSaver<S> = object : StateSaver<S> {
             override fun save(state: S) {}
-            override fun restore(): S? {
-                return null
+            override fun restore(initialState: S): S {
+                return initialState
             }
         }
     }
@@ -42,12 +42,12 @@ interface StateSaver<S : State> {
 /**
  * Creates a [StateSaver] from save and restore lambdas.
  */
-fun <S : State> StateSaver(save: (state: S) -> Unit, restore: () -> S?) = object : StateSaver<S> {
+fun <S : State> StateSaver(save: (state: S) -> Unit, restore: (initialState: S) -> S) = object : StateSaver<S> {
     override fun save(state: S) {
         save.invoke(state)
     }
 
-    override fun restore(): S? {
-        return restore.invoke()
+    override fun restore(initialState: S): S {
+        return restore.invoke(initialState)
     }
 }

@@ -70,7 +70,7 @@ class AdmissionShutdownJvmTest {
     private class Fixture(
         policy: AdmissionPolicy = AdmissionPolicy.Bounded(1),
         observers: List<DecisionObserver<Int, Tick, Nothing, Never>> = emptyList(),
-        coroutineContext: CoroutineContext? = null,
+        coroutineContext: CoroutineContext = kotlinx.coroutines.Dispatchers.Default,
         configure: StoreConfiguration<MachineSnapshot<Int>, MachineInput<Tick>, Never>.() -> Unit = {},
     ) : AutoCloseable {
         val clock = GatedClock()

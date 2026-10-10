@@ -16,7 +16,7 @@ class StoreInstanceIsolationTest {
 
     @Test
     fun sharedLaneAndActionTypeDoNotShareCancellationAcrossStores() = runTest {
-        for (lane in listOf(null, LaunchLane())) {
+        for (lane in listOf(LaunchLane.ByAction, LaunchLane())) {
             fun tab() = Store<Result, Action, Nothing>(Result(), backgroundScope.coroutineContext) {
                 state<Result> {
                     action<Load> {
@@ -25,7 +25,7 @@ class StoreInstanceIsolationTest {
                             transaction { nextState { Result(action.value) } }
                         }
                     }
-                    action<Cancel> { if (lane != null) cancelLaunch(lane) }
+                    action<Cancel> { if (lane !== LaunchLane.ByAction) cancelLaunch(lane) }
                 }
             }
             val left = tab()
