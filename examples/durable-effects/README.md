@@ -1,6 +1,6 @@
 # Durable effects across process death
 
-This runnable JVM example uses the production `koma-statechart` API. It credits a local
+This runnable JVM example uses the production `actron-statechart` API. It credits a local
 balance once for a stable business intent, even if the process dies after the credit and
 before the mailbox acknowledgement. It has no Time Travel dependency and is not published.
 
@@ -9,7 +9,7 @@ before the mailbox acknowledgement. It has no Time Travel dependency and is not 
 # Run again: the same intent still produces balance=25, with one receipt.
 ./gradlew :durable-effects-example:run
 # Choose a different, existing or newly created local directory:
-./gradlew :durable-effects-example:run -PdemoDir=/tmp/koma-credit-demo
+./gradlew :durable-effects-example:run -PdemoDir=/tmp/actron-credit-demo
 ./gradlew :durable-effects-example:jvmTest
 ```
 
@@ -29,7 +29,7 @@ The application keeps three different pieces of data:
 | Data | Owner | Lifetime |
 | --- | --- | --- |
 | `CreditIntent(id, amount)` in `Outbox.pending` | Application `DiskOutbox` / `StateSaver` | Disk, across processes |
-| Retained `ApplyCredit(intent)` delivery | Koma mailbox | This Store only |
+| Retained `ApplyCredit(intent)` delivery | Actron mailbox | This Store only |
 | Balance and receipt keyed by `intent.id` | Application `DiskLedger` | Disk, across processes |
 
 The caller supplies a business id, such as an invoice id, before dispatching the request.
@@ -46,13 +46,13 @@ startup / emit ApplyCredit when restored context has pending
 
 ## The handler's order
 
-See [DurableCredit.kt](src/jvmMain/kotlin/koma/example/durable/DurableCredit.kt). A screen owns
+See [DurableCredit.kt](src/jvmMain/kotlin/actron/example/durable/DurableCredit.kt). A screen owns
 one mailbox subscription and calls `session.handle(delivery)`; cancelling that subscription
 leaves the Store and its pending deliveries alive for the next screen. Each handler runs as a
 child of the session owner; cancelling the screen cancels and joins that handler. A blocking
 ledger write can finish despite cancellation, so teardown waits for it before releasing ownership.
 
-1. Check that the business intent was actually persisted. Koma publishes its committed state
+1. Check that the business intent was actually persisted. Actron publishes its committed state
    before calling `StateSaver.save`, and reports a saver failure without rolling back the
    transition. `DiskOutbox.durable` changes only after the disk commit succeeds.
 2. Apply the credit using the business id. `DiskLedger` writes the new balance **and** its
@@ -72,7 +72,7 @@ the session's handler jobs, including handler boundary callbacks, since teardown
 mobile applications should use suspending teardown on an appropriate dispatcher instead
 of blocking the UI thread. Disk I/O here is intentionally synchronous inside `StateSaver`.
 
-The files use an application schema, independent of Koma's recording formats. Writes use a
+The files use an application schema, independent of Actron's recording formats. Writes use a
 temporary file, file fsync, atomic replace, then parent-directory fsync. Corrupt or unknown
 schemas fail closed; the application must migrate or recover them without silently dropping
 pending business work or receipts. Disk-full and I/O failures propagate. The handler leaves
@@ -105,7 +105,7 @@ are separate transactions whose ordering makes each intermediate state recoverab
 
 ## Regression evidence
 
-[DurableEffectProcessTest](src/jvmTest/kotlin/koma/example/durable/DurableEffectProcessTest.kt)
+[DurableEffectProcessTest](src/jvmTest/kotlin/actron/example/durable/DurableEffectProcessTest.kt)
 creates real `MachineStore` instances and mailbox subscribers. Four tests stop a child JVM
 with `Runtime.halt` at the boundaries above, skipping `close` and `finally`. Two more fresh
 JVMs then use only the saved files and verify a single credit. Additional cases cover repeated

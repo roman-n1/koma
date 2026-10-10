@@ -1,6 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins { id("org.jetbrains.kotlin.multiplatform") }
-val upgraded = providers.gradleProperty("binary.upgraded").get().toBoolean()
 val target = providers.gradleProperty("binary.target").get()
 kotlin {
     when (target) {
@@ -12,15 +11,9 @@ kotlin {
     }
     sourceSets.commonTest.dependencies {
         implementation("koma.verification:legacy-koma-consumer:4.0.0-fixture")
+        implementation("${providers.gradleProperty("fork.group").get()}:actron-core:${providers.gradleProperty("fork.version").get()}")
         implementation(kotlin("test"))
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${providers.gradleProperty("coroutines.version").get()}")
-    }
-}
-if (upgraded) {
-    configurations.configureEach {
-        resolutionStrategy.dependencySubstitution {
-            substitute(module("io.github.koma-kt:koma-core")).using(module("${providers.gradleProperty("fork.group").get()}:koma-core:${providers.gradleProperty("fork.version").get()}"))
-        }
     }
 }
 tasks.register("verifyRunnerGraph") {
@@ -31,11 +24,11 @@ tasks.register("verifyRunnerGraph") {
         val rootId = resolution.rootComponent.get().id
         check(ids.filterIsInstance<org.gradle.api.artifacts.component.ProjectComponentIdentifier>().all { it == rootId }) { "Source substitution: $ids" }
         val modules = ids.filterIsInstance<org.gradle.api.artifacts.component.ModuleComponentIdentifier>()
-        val core = modules.filter { it.module.startsWith("koma-core") }
-        val expectedGroup = if (upgraded) providers.gradleProperty("fork.group").get() else "io.github.koma-kt"
-        val expectedVersion = if (upgraded) providers.gradleProperty("fork.version").get() else "4.0.0"
-        check(core.isNotEmpty() && core.all { it.group == expectedGroup && it.version == expectedVersion }) { "Wrong runtime core: $core" }
+        val actron = modules.filter { it.module.startsWith("actron-core") }
+        val koma = modules.filter { it.module.startsWith("koma-core") }
+        check(actron.isNotEmpty() && actron.all { it.group == providers.gradleProperty("fork.group").get() && it.version == providers.gradleProperty("fork.version").get() }) { "Wrong Actron core: $actron" }
+        check(koma.isNotEmpty() && koma.all { it.group == "io.github.koma-kt" && it.version == "4.0.0" }) { "Legacy runtime must retain upstream Koma: $koma" }
         check(modules.any { it.group == "koma.verification" && it.module.startsWith("legacy-koma-consumer") })
-        logger.lifecycle("Frozen binary runtime verified: upgraded=$upgraded, core=$core")
+        logger.lifecycle("Migration isolation verified: Actron=$actron, Koma=$koma")
     }
 }

@@ -19,12 +19,12 @@ The `Store()` overloads exist as an API surface that makes the two input axes, `
 Even though the combinations are simple, we prioritize leaving room to write the call naturally depending on the caller's style and the context it sits in.
 
 The number of overloads is not increased beyond what is needed, but we do not reduce them just because "they could theoretically be merged".
-In Koma, letting users write declarations without strain weighs more than minimizing the surface for its own sake.
+In Actron, letting users write declarations without strain weighs more than minimizing the surface for its own sake.
 
 ## `Store{}` DSL naming
 
 The naming of the `Store{}` DSL prefers declarative words such as `state {}` `action {}` `event()` over `onXxx` or verb-centric hook names.
-We want Koma to be seen as a DSL that describes "which state handles what" rather than one that imperatively enumerates "when what happens".
+We want Actron to be seen as a DSL that describes "which state handles what" rather than one that imperatively enumerates "when what happens".
 
 Therefore the DSL chooses naming that foregrounds the structure of the state machine over naming that strongly evokes a timeline or a callback sequence.
 
@@ -40,7 +40,7 @@ Conversely, making `state` collection alone the start trigger could lose a `disp
 The default leans toward neither.
 
 Not including `event` collection among the start triggers is by design.
-In Koma, loading of the first state should be tied to observing state, and subscribing to `event` is positioned purely as subscribing to side effects.
+In Actron, loading of the first state should be tied to observing state, and subscribing to `event` is positioned purely as subscribing to side effects.
 
 Eager start, where loading of the first state proceeds before the UI is ready, is not the default.
 It is more natural for a Store to be created first as a declaration and to start moving at the point where it is needed.
@@ -52,7 +52,7 @@ This does not rule out room for adding start semantics options in the future.
 A `StoreStartPolicy` such as the [Store start timing policy proposal](../notes/2026-04-23-store-start-policy.md) is conceivable as a way to handle exceptional requirements without changing the default.
 Even in that case, however, the default that takes priority is the current "automatic start on the first `dispatch()` or `state` collection".
 
-For tests, `:koma-test` may provide `startAndWait()` to explicitly wait for startup to complete.
+For tests, `:actron-test` may provide `startAndWait()` to explicitly wait for startup to complete.
 This does not replace the existing "automatic start on the first `dispatch()` or `state` collection"; it is positioned as an auxiliary API used alongside it, for checking startup on its own or for tests that want to observe the post-startup state before the first action.
 
 Likewise, there is room to add a public `start()` for production as an explicit start API that can be used alongside the existing auto-start.

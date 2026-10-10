@@ -1,0 +1,277 @@
+public final class actron/timetravel/compose/BranchControls {
+	public static final field $stable I
+	public fun <init> (Lactron/timetravel/GroupBranch;Ljava/util/Map;Ljava/util/List;)V
+	public synthetic fun <init> (Lactron/timetravel/GroupBranch;Ljava/util/Map;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun advance-LRDsOJo (J)V
+	public final fun answer-vnDJnQw (Lactron/timetravel/compose/BranchInput$Answer;J)V
+	public final fun awaiting-nThWMHI (Ljava/lang/String;)Ljava/util/List;
+	public final fun complete-wD7VlvU (Ljava/lang/String;J)V
+	public final fun dispatch (Lactron/timetravel/compose/BranchInput$Dispatch;)V
+	public final fun fail-TQ7tjxM (Ljava/lang/String;JLjava/lang/String;)V
+	public static synthetic fun fail-TQ7tjxM$default (Lactron/timetravel/compose/BranchControls;Ljava/lang/String;JLjava/lang/String;ILjava/lang/Object;)V
+	public final fun feed (Lactron/timetravel/compose/BranchInput$Feed;)V
+	public final fun getBranch ()Lactron/timetravel/GroupBranch;
+	public final fun getDecisions ()Ljava/util/List;
+	public final fun getInputs ()Ljava/util/List;
+	public final fun getMachines ()Ljava/util/Map;
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getProblem ()Ljava/lang/String;
+	public final fun inputsOf-nThWMHI (Ljava/lang/String;)Ljava/util/List;
+	public final fun mermaid-nThWMHI (Ljava/lang/String;)Ljava/lang/String;
+	public final fun now-P3fgsww (Ljava/lang/String;)J
+	public final fun queued-nThWMHI (Ljava/lang/String;)Ljava/util/Map;
+	public final fun snapshot-nThWMHI (Ljava/lang/String;)Lactron/statechart/machine/MachineSnapshot;
+}
+
+public final class actron/timetravel/compose/BranchDecision {
+	public static final field $stable I
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Lactron/statechart/machine/Decision;Lactron/timetravel/inspect/SnapshotDiff;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2-9ScXe1c ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Lactron/statechart/machine/Decision;
+	public final fun component5 ()Lactron/timetravel/inspect/SnapshotDiff;
+	public final fun copy-YUMYHSU (ILjava/lang/String;Ljava/lang/String;Lactron/statechart/machine/Decision;Lactron/timetravel/inspect/SnapshotDiff;)Lactron/timetravel/compose/BranchDecision;
+	public static synthetic fun copy-YUMYHSU$default (Lactron/timetravel/compose/BranchDecision;ILjava/lang/String;Ljava/lang/String;Lactron/statechart/machine/Decision;Lactron/timetravel/inspect/SnapshotDiff;ILjava/lang/Object;)Lactron/timetravel/compose/BranchDecision;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Ljava/lang/String;
+	public final fun getDecision ()Lactron/statechart/machine/Decision;
+	public final fun getDiff ()Lactron/timetravel/inspect/SnapshotDiff;
+	public final fun getIndex ()I
+	public final fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/timetravel/compose/BranchInput {
+	public abstract fun getLabel ()Ljava/lang/String;
+	public abstract fun getStore-9ScXe1c ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/compose/BranchInput$Answer : actron/timetravel/compose/BranchInput {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lactron/core/Action;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-9ScXe1c ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lactron/core/Action;
+	public final fun copy-8Qj-jWY (Ljava/lang/String;Ljava/lang/String;Lactron/core/Action;)Lactron/timetravel/compose/BranchInput$Answer;
+	public static synthetic fun copy-8Qj-jWY$default (Lactron/timetravel/compose/BranchInput$Answer;Ljava/lang/String;Ljava/lang/String;Lactron/core/Action;ILjava/lang/Object;)Lactron/timetravel/compose/BranchInput$Answer;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getLabel ()Ljava/lang/String;
+	public final fun getResult ()Lactron/core/Action;
+	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/compose/BranchInput$Dispatch : actron/timetravel/compose/BranchInput {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lactron/core/Action;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-9ScXe1c ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lactron/core/Action;
+	public final fun copy-8Qj-jWY (Ljava/lang/String;Ljava/lang/String;Lactron/core/Action;)Lactron/timetravel/compose/BranchInput$Dispatch;
+	public static synthetic fun copy-8Qj-jWY$default (Lactron/timetravel/compose/BranchInput$Dispatch;Ljava/lang/String;Ljava/lang/String;Lactron/core/Action;ILjava/lang/Object;)Lactron/timetravel/compose/BranchInput$Dispatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lactron/core/Action;
+	public fun getLabel ()Ljava/lang/String;
+	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/compose/BranchInput$Feed : actron/timetravel/compose/BranchInput {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lactron/core/Action;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-9ScXe1c ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3-3NUfpqc ()Ljava/lang/String;
+	public final fun component4 ()Lactron/core/Action;
+	public final fun copy-kGKfcng (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lactron/core/Action;)Lactron/timetravel/compose/BranchInput$Feed;
+	public static synthetic fun copy-kGKfcng$default (Lactron/timetravel/compose/BranchInput$Feed;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lactron/core/Action;ILjava/lang/Object;)Lactron/timetravel/compose/BranchInput$Feed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lactron/core/Action;
+	public fun getLabel ()Ljava/lang/String;
+	public final fun getSource-3NUfpqc ()Ljava/lang/String;
+	public fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/compose/BranchText {
+	public static final field $stable I
+	public static final field INSTANCE Lactron/timetravel/compose/BranchText;
+	public final fun line (Lactron/timetravel/compose/BranchDecision;)Ljava/lang/String;
+}
+
+public final class actron/timetravel/compose/ComposableSingletons$GroupReplayPanelsKt {
+	public static final field INSTANCE Lactron/timetravel/compose/ComposableSingletons$GroupReplayPanelsKt;
+	public fun <init> ()V
+	public final fun getLambda$-1272455781$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-1941322845$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$642993604$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class actron/timetravel/compose/ComposableSingletons$GroupTimeTravelControlsKt {
+	public static final field INSTANCE Lactron/timetravel/compose/ComposableSingletons$GroupTimeTravelControlsKt;
+	public fun <init> ()V
+	public final fun getLambda$-750270362$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-875643953$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class actron/timetravel/compose/ComposableSingletons$InspectorScreenKt {
+	public static final field INSTANCE Lactron/timetravel/compose/ComposableSingletons$InspectorScreenKt;
+	public fun <init> ()V
+	public final fun getLambda$-1665992068$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-1700538271$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-31442733$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$-992257523$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$1090293836$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$296566250$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+	public final fun getLambda$873159957$actron_timetravel_compose ()Lkotlin/jvm/functions/Function3;
+}
+
+public final class actron/timetravel/compose/GroupReplayControls {
+	public static final field $stable I
+	public fun <init> (Lactron/timetravel/GroupReplaySession;)V
+	public final fun at (I)Lactron/timetravel/compose/GroupReplayPosition;
+	public final fun checkpoint-nThWMHI (Ljava/lang/String;)Lactron/statechart/machine/ExecutorCheckpoint;
+	public final fun getCanStepBackward ()Z
+	public final fun getCanStepForward ()Z
+	public final fun getDivergence ()Lactron/timetravel/GroupMismatch;
+	public final fun getForwardUnavailable ()Ljava/lang/String;
+	public final fun getLength ()I
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getPosition ()I
+	public final fun getSelected ()Lactron/timetravel/compose/GroupReplayPosition;
+	public final fun getSession ()Lactron/timetravel/GroupReplaySession;
+	public final fun getVerification ()Ljava/util/List;
+	public final fun mermaid-nThWMHI (Ljava/lang/String;)Ljava/lang/String;
+	public final fun seek (I)V
+	public final fun snapshot-nThWMHI (Ljava/lang/String;)Lactron/statechart/machine/MachineSnapshot;
+	public final fun stepBackward ()V
+	public final fun stepForward ()V
+	public final fun verify ()V
+}
+
+public final class actron/timetravel/compose/GroupReplayPanelsKt {
+	public static final fun GroupPositionPanel (Lactron/timetravel/compose/GroupReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun GroupReplayBar (Lactron/timetravel/compose/GroupReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun GroupTimelinePanel-nh77kGM (Lactron/timetravel/compose/GroupReplayControls;Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class actron/timetravel/compose/GroupReplayPosition {
+	public static final field $stable I
+	public synthetic fun <init> (ILjava/lang/String;ILactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;Lactron/timetravel/inspect/SnapshotDiff;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2-9ScXe1c ()Ljava/lang/String;
+	public final fun component3 ()I
+	public final fun component4 ()Lactron/timetravel/RecordedStep;
+	public final fun component5 ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun component6 ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun component7 ()Lactron/timetravel/inspect/SnapshotDiff;
+	public final fun copy-3a0KIGA (ILjava/lang/String;ILactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;Lactron/timetravel/inspect/SnapshotDiff;)Lactron/timetravel/compose/GroupReplayPosition;
+	public static synthetic fun copy-3a0KIGA$default (Lactron/timetravel/compose/GroupReplayPosition;ILjava/lang/String;ILactron/timetravel/RecordedStep;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/machine/MachineSnapshot;Lactron/timetravel/inspect/SnapshotDiff;ILjava/lang/Object;)Lactron/timetravel/compose/GroupReplayPosition;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfter ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun getBefore ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun getDiff ()Lactron/timetravel/inspect/SnapshotDiff;
+	public final fun getIndex ()I
+	public final fun getMemberStep ()I
+	public final fun getRecorded ()Lactron/timetravel/RecordedStep;
+	public final fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/timetravel/compose/GroupTimeTravelControls {
+	public static final field $stable I
+	public fun <init> (Lactron/timetravel/compose/GroupReplayControls;Ljava/util/List;Ljava/util/List;)V
+	public synthetic fun <init> (Lactron/timetravel/compose/GroupReplayControls;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun branchHere ()V
+	public final fun getBranch ()Lactron/timetravel/compose/BranchControls;
+	public final fun getBranchPosition ()Ljava/lang/Integer;
+	public final fun getMode ()Lactron/timetravel/compose/InspectorMode;
+	public final fun getReplay ()Lactron/timetravel/compose/GroupReplayControls;
+	public final fun returnToReplay ()V
+}
+
+public final class actron/timetravel/compose/GroupTimeTravelControlsKt {
+	public static final fun GroupTimeTravelBar (Lactron/timetravel/compose/GroupTimeTravelControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+
+public final class actron/timetravel/compose/InspectorMode : java/lang/Enum {
+	public static final field Branch Lactron/timetravel/compose/InspectorMode;
+	public static final field Inspect Lactron/timetravel/compose/InspectorMode;
+	public static final field Live Lactron/timetravel/compose/InspectorMode;
+	public static final field Replay Lactron/timetravel/compose/InspectorMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lactron/timetravel/compose/InspectorMode;
+	public static fun values ()[Lactron/timetravel/compose/InspectorMode;
+}
+
+public final class actron/timetravel/compose/InspectorScreenKt {
+	public static final fun BranchPanel (Lactron/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun DefinitionPanel (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun InspectorScreen (Lactron/timetravel/compose/InspectorState;Lactron/timetravel/compose/GroupReplayControls;Lactron/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun InspectorScreen (Lactron/timetravel/compose/InspectorState;Lactron/timetravel/compose/GroupTimeTravelControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun InspectorScreen (Lactron/timetravel/compose/InspectorState;Lactron/timetravel/compose/ReplayControls;Lactron/timetravel/compose/BranchControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun ModeBar (Lactron/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun PositionPanel (Lactron/timetravel/compose/InspectorState;Lactron/timetravel/compose/ReplayControls;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun ReplayBar (Lactron/timetravel/compose/ReplayControls;Lactron/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun StoresPanel (Lactron/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun TimelinePanel (Lactron/timetravel/compose/InspectorState;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+	public static final fun label (Lactron/timetravel/inspect/Completeness;)Ljava/lang/String;
+}
+
+public final class actron/timetravel/compose/InspectorState {
+	public static final field $stable I
+	public fun <init> (Lactron/timetravel/inspect/Inspector;Lactron/timetravel/compose/InspectorMode;)V
+	public synthetic fun <init> (Lactron/timetravel/inspect/Inspector;Lactron/timetravel/compose/InspectorMode;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getInspector ()Lactron/timetravel/inspect/Inspector;
+	public final fun getMode ()Lactron/timetravel/compose/InspectorMode;
+	public final fun getSelected ()Ljava/lang/Integer;
+	public final fun getSelectedItem ()Lactron/timetravel/inspect/TimelineItem;
+	public final fun getStoreFilter-5z6ymsY ()Ljava/lang/String;
+	public final fun getVisibleTimeline ()Ljava/util/List;
+	public final fun refresh (Lactron/timetravel/inspect/Inspector;)V
+	public final fun select (Ljava/lang/Integer;)V
+	public final fun setMode (Lactron/timetravel/compose/InspectorMode;)V
+	public final fun setSelected (Ljava/lang/Integer;)V
+	public final fun setStoreFilter-h7Rna_4 (Ljava/lang/String;)V
+	public final fun toggleFilter-nThWMHI (Ljava/lang/String;)V
+}
+
+public final class actron/timetravel/compose/InspectorStateKt {
+	public static final fun rememberInspectorState (Lactron/timetravel/inspect/Inspector;Lactron/timetravel/compose/InspectorMode;Landroidx/compose/runtime/Composer;II)Lactron/timetravel/compose/InspectorState;
+	public static final fun rememberLiveInspector-WPi__2c (Lactron/observability/RecordingSession;Ljava/util/Map;JLandroidx/compose/runtime/Composer;II)Lactron/timetravel/compose/InspectorState;
+}
+
+public final class actron/timetravel/compose/ReplayControls {
+	public static final field $stable I
+	public synthetic fun <init> (Ljava/lang/String;Lactron/timetravel/ReplaySession;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun explainNext ()V
+	public final fun getCanStepBackward ()Z
+	public final fun getCanStepForward ()Z
+	public final fun getDivergence ()Ljava/lang/String;
+	public final fun getExplanation ()Lactron/statechart/machine/DecisionExplanation;
+	public final fun getExplanationOutcome ()Ljava/lang/String;
+	public final fun getForwardUnavailable ()Ljava/lang/String;
+	public final fun getInvariantViolations ()Ljava/util/List;
+	public final fun getLength ()I
+	public final fun getPosition ()I
+	public final fun getSession ()Lactron/timetravel/ReplaySession;
+	public final fun getSnapshot ()Lactron/statechart/machine/MachineSnapshot;
+	public final fun getStore-9ScXe1c ()Ljava/lang/String;
+	public final fun getVerdict ()Ljava/lang/String;
+	public final fun mermaid ()Ljava/lang/String;
+	public final fun seek (I)V
+	public final fun stepBackward ()V
+	public final fun stepForward ()V
+	public final fun verify ()V
+}
+
+public final class actron/timetravel/compose/StateChartPanelKt {
+	public static final fun StateChartPanel (Lactron/statechart/StateChartDefinition;Lactron/statechart/machine/MachineSnapshot;Lactron/statechart/StateConfiguration;Lactron/statechart/machine/DecisionExplanation;Ljava/util/List;Landroidx/compose/ui/Modifier;Landroidx/compose/runtime/Composer;II)V
+}
+

@@ -7,7 +7,7 @@
 Runtime policies such as `PendingActionPolicy` and `PluginExecutionPolicy` are currently exposed as `enum`.
 
 There is the point that moving these to `sealed interface` might improve future extensibility.
-On the other hand, Koma's public policy APIs are designed not as strategy interfaces that allow users to implement their own, but as a small number of high-level modes interpreted by the Store.
+On the other hand, Actron's public policy APIs are designed not as strategy interfaces that allow users to implement their own, but as a small number of high-level modes interpreted by the Store.
 
 ## Decision
 
@@ -21,7 +21,7 @@ A policy that chooses among a small number of fixed modes is an `enum`; a policy
 ## Notes
 
 - `enum` has an intuitive meaning as a type representing "a closed, small set of modes", and its purpose is easy to read from the call site.
-- Making it a `sealed interface` does not enable external users to implement their own policies. Since in Koma the library side gives meaning to policies, the extensibility of mere named modes is sufficient with `enum`.
+- Making it a `sealed interface` does not enable external users to implement their own policies. Since in Actron the library side gives meaning to policies, the extensibility of mere named modes is sufficient with `enum`.
 - Changing from `enum` to `sealed interface` is a public API / ABI change and has a compatibility cost.
-- `koma-core` has a JVM target and Java compilation support enabled, so the advantage of `enum` being easy to handle from Java is not discarded either.
+- `actron-core` has a JVM target and Java compilation support enabled, so the advantage of `enum` being easy to handle from Java is not discarded either.
 - If, in the future, a policy needs payload-carrying variants such as `KeepUntil(...)` or different input shapes per case, conversion to `sealed interface` or introduction of a separate type will be reconsidered at that point.

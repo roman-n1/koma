@@ -5,8 +5,8 @@
 ## Background
 
 The fork writes five formats: the journal's record model and its segment layout
-(`koma-observability`), the recording's JSON and its segment layout, and the group's order file
-(`koma-timetravel`). Each has a version constant and moved with every stage of the handoff; the
+(`actron-observability`), the recording's JSON and its segment layout, and the group's order file
+(`actron-timetravel`). Each has a version constant and moved with every stage of the handoff; the
 messenger will keep journals and recordings across app versions, so a reader must read what an
 earlier writer wrote, or say that it cannot, and never guess. `5.0.0` without a suffix requires
 this policy (roadmap, "Version 5.0"); this ADR states it and `FormatVersionsTest` holds it.
@@ -15,11 +15,11 @@ this policy (roadmap, "Version 5.0"); this ADR states it and `FormatVersionsTest
 
 | Constant | Where | Versions | Reads an older version by |
 |---|---|---|---|
-| `JOURNAL_FORMAT_VERSION` (7) | `koma.observability.Record.kt` | the record model: variants and fields of `JournalEntry` | the decoder reads a segment by the version in its header: variants are added only at the end under new tags, fields only at the end of a variant, so an older segment decodes with the fields it has |
-| `JOURNAL_FILE_FORMAT_VERSION` (1) | `koma.observability.file.JournalFileFormat` | the segment layout: magic, frames, header | a branch on the header's version keeps decoding the old layout |
-| `RECORDING_FORMAT_VERSION` (6) | `koma.timetravel.RecordingCodec` | the JSON of a recording | an explicit `FormatMigration` from the previous version in the codec's own list; an older version without one is `Unsupported`, never defaulted |
-| `RECORDING_FILE_FORMAT_VERSION` (1) | `koma.timetravel.file.RecordingFileFormat` | the segment layout of a recording file | a branch on the header's version |
-| `GroupRecordingFileFormat.VERSION` (3) | `koma.timetravel.file.GroupRecordingFiles.kt` | the order file's header and entries (JSON) | a field added since is absent in an older segment and its absence has a stated meaning (no cut, no pair); a change of meaning needs a branch on the version |
+| `JOURNAL_FORMAT_VERSION` (7) | `actron.observability.Record.kt` | the record model: variants and fields of `JournalEntry` | the decoder reads a segment by the version in its header: variants are added only at the end under new tags, fields only at the end of a variant, so an older segment decodes with the fields it has |
+| `JOURNAL_FILE_FORMAT_VERSION` (1) | `actron.observability.file.JournalFileFormat` | the segment layout: magic, frames, header | a branch on the header's version keeps decoding the old layout |
+| `RECORDING_FORMAT_VERSION` (6) | `actron.timetravel.RecordingCodec` | the JSON of a recording | an explicit `FormatMigration` from the previous version in the codec's own list; an older version without one is `Unsupported`, never defaulted |
+| `RECORDING_FILE_FORMAT_VERSION` (1) | `actron.timetravel.file.RecordingFileFormat` | the segment layout of a recording file | a branch on the header's version |
+| `GroupRecordingFileFormat.VERSION` (3) | `actron.timetravel.file.GroupRecordingFiles.kt` | the order file's header and entries (JSON) | a field added since is absent in an older segment and its absence has a stated meaning (no cut, no pair); a change of meaning needs a branch on the version |
 
 Rules, for every one of them:
 
@@ -56,7 +56,7 @@ Not adopted:
 
 ## Notes
 
-- Tests: `FormatVersionsTest` (koma-timetravel, sees all five constants): the five numbers are
+- Tests: `FormatVersionsTest` (actron-timetravel, sees all five constants): the five numbers are
   the frozen ones; a bump fails it with the checklist above until the table is updated in the
   same change, which is when the rest of the list is reviewed.
 - This is criterion (2) of `5.0.0` (roadmap "Version 5.0"); criterion (1), the experimental

@@ -15,9 +15,9 @@ happened, and a group had no container at all.
 
 ## Decision
 
-The format lives in `koma.timetravel.file`; the framing is the journal's, made shareable.
+The format lives in `actron.timetravel.file`; the framing is the journal's, made shareable.
 
-- **One framing for every segment file.** `Framing` in `koma-observability` is the
+- **One framing for every segment file.** `Framing` in `actron-observability` is the
   `[length][crc32][payload]` frame, the end frame and the reader that returns the frames whose
   checksum held with the mark of what stopped it; `JournalFileFormat` now uses it, with its
   goldens unchanged. A recording segment is `KOMARECD`, a header frame, a checkpoint frame,
@@ -65,17 +65,17 @@ Not adopted:
 
 ## Notes
 
-- Tests: [`RecordingFileFormatTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/file/RecordingFileFormatTest.kt)
+- Tests: [`RecordingFileFormatTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/file/RecordingFileFormatTest.kt)
   (round trip, a pinned golden, a newer format refused, every cut a prefix with a mark, a
   flipped byte caught, `carriedPast` equal to `checkpointAt`);
-  [`RecordingFileSinkTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/file/RecordingFileSinkTest.kt)
+  [`RecordingFileSinkTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/file/RecordingFileSinkTest.kt)
   (a live run read back as the recorder saw it and replaying; rotation with a checkpoint per
   segment and a ring that still replays from what remains; a dropped step leaving a marked hole
   and a range after it; a crash mid-write and damage in the middle never crossed);
-  [`RecordingFileStormTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/file/RecordingFileStormTest.kt)
+  [`RecordingFileStormTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/file/RecordingFileStormTest.kt)
   (a six-thread storm with a queue too small and a ring of four small segments: what the files
   hold is the tail of the run from the recorder's checkpoint there, and it replays);
-  [`GroupRecordingFilesTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/file/GroupRecordingFilesTest.kt)
+  [`GroupRecordingFilesTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/file/GroupRecordingFilesTest.kt)
   (a group read back as the recorder saw it; a ring that dropped early segments yielding the
   range every file covers with its messages in flight; a dropped order entry starting a new
   range; the order segment's round trip and cuts).

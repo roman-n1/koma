@@ -12,7 +12,7 @@ However, what they deal with is how to arbitrate launched jobs tied to a keyed l
 `debounce` / `throttle`, on the other hand, are controls that decide how multiple inputs within a time window are combined, which are dropped, and when execution happens; their meaning is more that of "a mechanism that decides input acceptance and execution timing" than of per-job control.
 As a result, "which dispatches go through" and "which dispatches are lost" cannot be followed from the state and action definitions alone, and tend to become unclear unless the passage of time is also taken into account.
 
-Also, Koma's Store places importance on the visibility of action processing order and state transitions.
+Also, Actron's Store places importance on the visibility of action processing order and state transitions.
 Bringing in a built-in control where the acceptance and execution timing of dispatches change based on time windows means that even a seemingly simple dispatch may internally be delayed, thinned out or discarded, which lowers the readability and explainability of the API.
 
 ## Decision

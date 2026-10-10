@@ -1,12 +1,12 @@
-@file:OptIn(koma.core.ExperimentalKomaApi::class)
+@file:OptIn(actron.core.ExperimentalActronApi::class)
 package consumer
 
-import koma.core.ExceptionHandler
-import koma.message.message
-import koma.statechart.StateChartStore
-import koma.statechart.machine.CommandHandler
-import koma.statechart.machine.MachineSnapshot
-import koma.statechart.machine.MachineStore
+import actron.core.ExceptionHandler
+import actron.message.message
+import actron.statechart.StateChartStore
+import actron.statechart.machine.CommandHandler
+import actron.statechart.machine.MachineSnapshot
+import actron.statechart.machine.MachineStore
 import kotlinx.coroutines.CoroutineScope
 
 // Each forbidden operation has its own expected compiler diagnostic. One unrelated error must

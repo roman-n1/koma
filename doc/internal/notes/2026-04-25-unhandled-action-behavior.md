@@ -74,7 +74,7 @@ As the minimum improvement, at least the following should be stated explicitly.
 
 This alone somewhat closes the gap between "a DSL that looks declarative" and "actually first-wins ordered rules".
 
-### 2. Routing diagnostics in `:koma-test`
+### 2. Routing diagnostics in `:actron-test`
 
 Provide an API that checks "how many handlers match for this `state` and `action`" without dispatching.
 
@@ -103,7 +103,7 @@ This API should be treated as returning an observation, not a verdict.
 
 This does not change runtime behavior and allows the intent of the routing definition to be tested directly.
 
-### 3. Assert at dispatch time in `:koma-test`
+### 3. Assert at dispatch time in `:actron-test`
 
 Provide an API that asserts the expected number of matches at the same time as dispatching.
 
@@ -153,7 +153,7 @@ fun <S : State, A : Action, E : Event> StoreOverridesBuilder<S, A, E>.unhandledA
 
 Use cases are logging, debug fail-fast, telemetry and so on.
 However, this handles only `unhandled`, and cannot cover diagnostics of multiple matches or shadowing.
-Its priority can therefore be lower than the match diagnostics in `:koma-test`.
+Its priority can therefore be lower than the match diagnostics in `:actron-test`.
 
 ## Notes
 

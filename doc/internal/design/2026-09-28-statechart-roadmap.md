@@ -1,10 +1,10 @@
-# Statechart layer on top of Koma: roadmap
+# Statechart layer on top of Actron: roadmap
 
 - Updated: 2026-10-06 (gap-analysis waves implemented; see 2026-10-06-gap-roadmap.md); 2026-10-01 (plan B dropped; full divergence inventory vs 4.0.0; version 5.0 decision; 2026-09-28: phase status after wave 6)
 
 ## Background
 
-Koma 4.0 already works as a flat state machine over sealed classes. It has
+Actron 4.0 already works as a flat state machine over sealed classes. It has
 `state<S2> { enter / action<A2> / exit / recover<T> }`, first-match in registration
 order, effects with state lifetime (`launch`, `LaunchControl`),
 business errors as transitions (`recover {}`) and `Plugin` for observation.
@@ -25,11 +25,11 @@ visualization, transition coverage and model-based testing are impossible today.
 
 ## Policy
 
-### Do not rewrite Koma
+### Do not rewrite Actron
 
 - The statechart is an optional layer in a separate module. The existing `Store` API and
   semantics do not change.
-- `Koma State != statechart node`. The layer uses composition: `Store`
+- `Actron State != statechart node`. The layer uses composition: `Store`
   remains the source of `StateFlow` for the UI, and the statechart is responsible for the structure
   of transitions.
 - The statechart is applied only where there is `State + Event -> Transition`.
@@ -47,7 +47,7 @@ StateChartDefinition (immutable data)
       +--> Validator
       +--> Exporter (Mermaid / DOT)
       +--> Test path generator
-      +--> Runtime --> Koma Store adapter
+      +--> Runtime --> Actron Store adapter
 ```
 
 The DSL builds an immutable model; the runtime executes it. Everything the tools
@@ -89,7 +89,7 @@ All phases 0–7 are done in the fork; phase 8 partially. Numbers are PRs in `ro
 | 6 | Parallel regions — wave 3 | #12 | merged |
 | — | Timers `Trigger.After` — wave 4 (there was no phase for it in the original plan) | #13 | merged |
 | 4 | `StateChartStore` adapter — wave 5 | #14 | merged |
-| — | "Messenger" example as a test, `koma-statechart/README.md`, comparison with koma-strict — wave 6 | #15 | merged |
+| — | "Messenger" example as a test, `actron-statechart/README.md`, comparison with actron-strict — wave 6 | #15 | merged |
 
 Core steps 1–3 from the upstream strategy are #2, #3, #4 (merged into the fork). The semantics and decisions of each
 wave are in [`2026-09-28-statechart-semantics.md`](./2026-09-28-statechart-semantics.md), sections
@@ -109,14 +109,14 @@ This document. No code.
 
 ### Phase 1 — introspectable model
 
-A new KMP module `koma-statechart` (modeled on `koma-test`: android, iosArm64,
+A new KMP module `actron-statechart` (modeled on `actron-test`: android, iosArm64,
 iosSimulatorArm64, jvm). In the first iteration, one module with the packages `model`,
 `validation`, `tooling`, `runtime`, `dsl` instead of six separate artifacts.
 
 Minimal model: `StateId` (value class), `StateNode` / `AtomicState`,
 `Transition(source, target, on: ActionMatcher)`, `StateChartDefinition`.
 `ActionMatcher` carries a `KClass<out Action>` and a stable name, because
-`qualifiedName` is not available on all KMP targets. The dependency on `koma-core`
+`qualifiedName` is not available on all KMP targets. The dependency on `actron-core`
 is only for the marker interfaces. Unit tests.
 
 ### Phase 2 — validation and Mermaid
@@ -128,25 +128,25 @@ missing initial, conflicting transitions without guards. Export to Mermaid
 ### Phase 3 — flat runtime
 
 A pure function `step(configuration, action) -> TransitionResult` with metadata
-of the transition that fired. No coroutines and no Koma.
+of the transition that fired. No coroutines and no Actron.
 
-### Phase 4 — integration with Koma
+### Phase 4 — integration with Actron
 
 An adapter that assembles a `Store` from the definition. The preferred variant, without
 core changes: a single catch-all `state<S> { action<A> { runtime.step(...) } }`.
-The Koma state keeps the active configuration as a field. The transition trace for
-coverage is captured through `Plugin` and `koma-test` (`dispatchAndAwait`,
+The Actron state keeps the active configuration as a field. The transition trace for
+coverage is captured through `Plugin` and `actron-test` (`dispatchAndAwait`,
 `StoreRecorder`).
 
 ### Phase 5 — hierarchy
 
 Compound states, initial transitions, the LCA exit/enter algorithm. If the layer keeps
-the Koma state as a single class, Koma itself does no exit/enter, and then the
+the Actron state as a single class, Actron itself does no exit/enter, and then the
 coroutine lifetime of substates is managed by the layer.
 
 If this runs into limitations, the minimal hook in the core is a "phase key"
 strategy `(S) -> Any` (default `it::class`) instead of `state::class` in
-`StoreImpl`, marked `@ExperimentalKomaApi`. It touches
+`StoreImpl`, marked `@ExperimentalActronApi`. It touches
 `stateRuntimes`, `PendingActionPolicy` and `LaunchControl`, so only through a
 separate ADR.
 
@@ -166,7 +166,7 @@ checking, shrinking of a failing sequence, debug timeline.
 
 ## Definition of Done for the first milestone (Phase 1–2)
 
-- the existing Koma API is unchanged;
+- the existing Actron API is unchanged;
 - the model is immutable, transitions are first-class objects, state IDs are stable;
 - the model can be traversed in full;
 - a flat graph can be described and its unreachable states found;
@@ -175,10 +175,10 @@ checking, shrinking of a failing sequence, debug timeline.
 
 ## Upstream strategy: small steps
 
-The goal is for the Koma author (`koma-kt/koma`) to accept changes one at a time. For
+The goal is for the Actron author (`koma-kt/koma`) to accept changes one at a time. For
 that, each step:
 
-- is useful to Koma on its own, even if the statechart layer never appears;
+- is useful to Actron on its own, even if the statechart layer never appears;
 - builds on what the author has already written down in `doc/internal/`;
 - is additive and does not change the behavior of existing Stores;
 - starts as a feature request and only after agreement turns into a
@@ -186,17 +186,17 @@ that, each step:
 
 Order and placement:
 
-| # | Step | Where | Benefit for Koma on its own | What it gives the statechart layer |
+| # | Step | Where | Benefit for Actron on its own | What it gives the statechart layer |
 |---|---|---|---|---|
 | 1 | Keep matcher metadata (`StateType(S2::class)` / `AnyState`, `ActionType(A2::class)` / `AnyAction`) next to the predicates in the `StoreBuilder` registry. The public API does not change. | core, internal | The basis for the routing diagnostics the author proposes in `notes/2026-04-25-unhandled-action-behavior.md` (the section on `build()` checks names exactly this as the obstacle) | The first data about the structure: which state and action types are declared |
-| 2 | Routing diagnostics in `:koma-test`: `diagnoseActionMatches`, asserting the number of matches on dispatch | `koma-test` | Exactly items 2–3 from the same note by the author | Checking that a transition in the model and a handler in the Store agree |
-| 3 | A read-only description of all handlers (`describeHandlers()`); in the core only an `@InternalKomaApi` method, the public API in `koma-test`, because the author prefers not to widen the public surface of `koma-core` | `koma-test` + core internal | Store documentation, handler coverage in tests | Coverage checking and a first visualization without our own DSL |
+| 2 | Routing diagnostics in `:actron-test`: `diagnoseActionMatches`, asserting the number of matches on dispatch | `actron-test` | Exactly items 2–3 from the same note by the author | Checking that a transition in the model and a handler in the Store agree |
+| 3 | A read-only description of all handlers (`describeHandlers()`); in the core only an `@InternalActronApi` method, the public API in `actron-test`, because the author prefers not to widen the public surface of `actron-core` | `actron-test` + core internal | Store documentation, handler coverage in tests | Coverage checking and a first visualization without our own DSL |
 | 4 | The reason for a state change, for observers (action / enter / launch transaction / recover) | core, contentious | Debug timeline and trace (upstream #189), `receiveTransition` in the test driver (upstream #176) | Transition metadata for coverage and MBT |
-| 5 | The `koma-statechart` module: model, validation, Mermaid, path generation | separate module (in the fork) | — | Phases 1–2 and part of Phase 8 |
+| 5 | The `actron-statechart` module: model, validation, Mermaid, path generation | separate module (in the fork) | — | Phases 1–2 and part of Phase 8 |
 | 6 | Runtime and adapter to Store through the ordinary DSL | separate module | — | Phases 3–4 |
 | 7 | Opt-in hierarchical state scopes: `enter` / `exit` / `launch` of a sealed parent survive transitions between its child variants (LCA over the sealed hierarchy) | core, RFC + ADR | Today `state<Parent> { enter {} }` restarts on every change of child variant, which is inconvenient even without statecharts. Shaped as a policy enum, following `doc/internal/adr/2026-05-07-runtime-policy-enum.md` | Phase 5 without our own coroutine management |
 | 8 | Parallel regions, history | separate module | — | Phases 6–7, not proposed for the core |
-| 9 | RFC "optional introspectable statechart model for Koma": the module as a companion or an external artifact | upstream issue | — | Official status for the layer |
+| 9 | RFC "optional introspectable statechart model for Actron": the module as a companion or an external artifact | upstream issue | — | Official status for the layer |
 
 Notes on risks:
 
@@ -216,12 +216,12 @@ Notes on risks:
 ### Plan B (dropped 2026-10-01)
 
 Roman's decision (2026-09-28) was to send only the request for step 1 upstream and to keep
-`koma-statechart` on the public API of Koma 4.0.0, so that the layer would work on unmodified
-Koma. Dropped on 2026-10-01: the layer requires the fork's `koma-core`. It uses the
-`@InternalKomaApi` bridge (`StoreInternalApi.dispatchIf`, `StoreBuilder.validateRecovery`), the
-`StoreProbe` that `MachineStore`'s idle gate and `koma-observability` are built on, the public
-`InputId`, and `StoreScope` opened for the chart scopes; `koma-logging` depends on
-`koma-observability`. So the fork is published as one set of modules under `io.github.roman-n1`,
+`actron-statechart` on the public API of Actron 4.0.0, so that the layer would work on unmodified
+Actron. Dropped on 2026-10-01: the layer requires the fork's `actron-core`. It uses the
+`@InternalActronApi` bridge (`StoreInternalApi.dispatchIf`, `StoreBuilder.validateRecovery`), the
+`StoreProbe` that `MachineStore`'s idle gate and `actron-observability` are built on, the public
+`InputId`, and `StoreScope` opened for the chart scopes; `actron-logging` depends on
+`actron-observability`. So the fork is published as one set of modules under `io.github.roman-n1`,
 and the way back to upstream is per row of the divergence inventory below, not per module.
 
 Order of work (2026-10-01): messenger-facing changes first; upstream changes are prepared in
@@ -239,13 +239,13 @@ follow from this.
 
 ### Rules for the fork
 
-- **Additive, one step per PR.** `koma-core` changes in the fork are additive and each is its own
+- **Additive, one step per PR.** `actron-core` changes in the fork are additive and each is its own
   commit, so a row of the inventory can be replaced by upstream's version of the same change or
   dropped on its own.
-- **The statechart layer only in its own modules.** `koma-statechart`, `koma-observability`,
-  `koma-timetravel`, `koma-timetravel-compose`, `koma-statechart-test` and
-  `koma-statechart-compose` are additive modules; they are not divergence, and they are built and
-  published only with the fork's `koma-core`.
+- **The statechart layer only in its own modules.** `actron-statechart`, `actron-observability`,
+  `actron-timetravel`, `actron-timetravel-compose`, `actron-statechart-test` and
+  `actron-statechart-compose` are additive modules; they are not divergence, and they are built and
+  published only with the fork's `actron-core`.
 - **The inventory is complete.** The tables below are the complete list of what the fork changed in
   the modules upstream owns. A row leaves when upstream ships the same change (on the next tag
   merge) or when the fork removes it; both happen in the PR that does the merge or the removal.
@@ -260,9 +260,9 @@ regression tests that pin it; upstream status (`not proposed`, `prepared: upstre
 The rounds are sections of the [stability review](../notes/2026-09-29-stability-review.md); the upstream series and its
 status live in [`notes/2026-10-01-upstream-series.md`](../notes/2026-10-01-upstream-series.md).
 
-#### (a) Stability fixes in `koma-core`
+#### (a) Stability fixes in `actron-core`
 
-Tests are in `koma-core/src/commonTest/kotlin/koma/core/` unless marked JVM (`src/jvmTest`).
+Tests are in `actron-core/src/commonTest/kotlin/actron/core/` unless marked JVM (`src/jvmTest`).
 KDoc that documents these contracts (`Plugin.kt`, `Store.kt`, `StateSaver.kt`, `ExceptionHandler.kt`,
 `StoreScope.kt`) travels with the row it belongs to.
 
@@ -284,14 +284,14 @@ KDoc that documents these contracts (`Plugin.kt`, `Store.kt`, `StateSaver.kt`, `
 | a14 | Soak tests that back the fixes above without mapping to one | — | round 5 | `StoreSoakTest`, `StoreSoakJvmTest` (JVM) | travel with the rows | — |
 | a15 | A fatal `ProcessingStarted` probe or a rethrowing probe exception handler still restores processing, releases pending work and emits `ProcessingFinished`; machine input waiters terminate | `StoreImpl.process` | admission/shutdown stabilization, 2026-10-06 | `StoreProbeFailureJvmTest` (JVM), `AdmissionShutdownJvmTest.*ProcessingStartProbe*` (JVM) | not proposed | merged or declined |
 
-#### (b) Observation hooks in `koma-core` (all `@InternalKomaApi`)
+#### (b) Observation hooks in `actron-core` (all `@InternalActronApi`)
 
 | # | Change | Where | Since | Regression tests | Upstream status | Removable when |
 |---|---|---|---|---|---|---|
-| b1 | `StoreProbe`: every accepted, discarded and processed input with its outcome, commits, events and failures; `currentInputId()`; input ids carried in the coroutine context | `StoreProbe.kt` (`StoreProbe`, `StoreTrace`, `InputKind`, `DiscardReason`, `ProcessingOutcome`), `InputOrigin` in `StoreImpl.kt`, `StoreBuilder.probe`, `StorePatchBuilder.probe`, `StorePatch.probes` | [round 9](../notes/2026-09-29-stability-review.md#fixed-in-the-ninth-round-time-travel-foundation-probes-journal-machine-executor), ccc1c1e, 2e1331a, 90a7e02, 1ccdabd | `StoreProbeTest` | planned: issue "StoreProbe", then `upstream-pr/store-probe` (a) and `upstream-pr/store-probe-correlation` (b) | merged; used by `koma-observability` (journal); `MachineStore` correlates admission reservations and per-input waiters with terminal traces, and observes the completion of close |
+| b1 | `StoreProbe`: every accepted, discarded and processed input with its outcome, commits, events and failures; `currentInputId()`; input ids carried in the coroutine context | `StoreProbe.kt` (`StoreProbe`, `StoreTrace`, `InputKind`, `DiscardReason`, `ProcessingOutcome`), `InputOrigin` in `StoreImpl.kt`, `StoreBuilder.probe`, `StorePatchBuilder.probe`, `StorePatch.probes` | [round 9](../notes/2026-09-29-stability-review.md#fixed-in-the-ninth-round-time-travel-foundation-probes-journal-machine-executor), ccc1c1e, 2e1331a, 90a7e02, 1ccdabd | `StoreProbeTest` | planned: issue "StoreProbe", then `upstream-pr/store-probe` (a) and `upstream-pr/store-probe-correlation` (b) | merged; used by `actron-observability` (journal); `MachineStore` correlates admission reservations and per-input waiters with terminal traces, and observes the completion of close |
 | b2 | Matcher metadata next to the handler predicates; the old-signature constructors of `StateHandler` and `ThreadedHandler` stay public so inline code compiled against 4.0.0 keeps working | `HandlerMatcher.kt`, `StoreBuilder.StateHandler.matcher`, `ThreadedHandler.inputType` | ae8f313 (roadmap step 1) | `StoreHandlerRegistryTest`, `StoreHandlerRegistryPropertyTest` | issue koma-kt/koma#280 (open, no answer); prepared: `upstream-pr/handler-matcher-metadata` | merged |
-| b3 | `StoreInternalApi.matchActionHandlers` and `diagnoseActionMatches` in `koma-test` | `StoreInternalApi.kt`, `koma-test/ActionMatchDiagnostics.kt` | 8a03bda (step 2) | `ActionMatchDiagnosticsTest` | not proposed until #280 lands | merged or declined |
-| b4 | `StoreInternalApi.handlerMetadata` and `describeHandlers` in `koma-test` | `StoreInternalApi.kt`, `koma-test/StoreHandlers.kt` | 48af6ac (step 3) | `StoreHandlersTest` | not proposed until #280 lands | merged or declined |
+| b3 | `StoreInternalApi.matchActionHandlers` and `diagnoseActionMatches` in `actron-test` | `StoreInternalApi.kt`, `actron-test/ActionMatchDiagnostics.kt` | 8a03bda (step 2) | `ActionMatchDiagnosticsTest` | not proposed until #280 lands | merged or declined |
+| b4 | `StoreInternalApi.handlerMetadata` and `describeHandlers` in `actron-test` | `StoreInternalApi.kt`, `actron-test/StoreHandlers.kt` | 48af6ac (step 3) | `StoreHandlersTest` | not proposed until #280 lands | merged or declined |
 | b5 | `StoreInternalApi.dispatchIf(action, isValid)`: the predicate runs under the lock before `onAction`, so an activity's action queued while its node exited is discarded as stale | `StoreInternalApi.kt`, `StoreImpl.kt`; used at `StateChartStore.kt` (`ChartLaunchScope.dispatch`) | round 6, 90cafce | `StoreProbeTest.dispatchIf_withAFalsePredicate_isDiscardedAsStale_andConsumesNoOrdinal`, `StateChartActivityDispatchTest` | fork-only by design | an `ActivityDispatch(action, activation)` envelope through plain `dispatch()`, unwrapped by the chart's `action<Action>` handler, replaces it |
 | b7 | `StoreInternalApi.awaitIdle(timeout): StorePendingWork` and the `pendingInputs` counter next to the input traces; `StateRuntime.subscriptions` | `StoreInternalApi.kt`, `StoreImpl.kt` | 2026-10-01, [ADR](../adr/2026-10-01-await-idle-and-subscriptions.md) | `StoreAwaitIdleTest` | planned: issue on the author's note `2026-05-10-await-launch-completion-in-tests.md`, then `upstream-pr/await-idle` | merged |
 | b6 | `StoreBuilder.validateRecovery {}`: a `recover {}` from `store {}` blocks may not change the chart's configuration or timers, nor a machine's snapshot | `StoreBuilder.kt`, `StoreImpl.validateRecoveredState`; used at `StateChartStore.kt` and `MachineStore.kt` | round 6, 90cafce | `StateChartRecoveryRegressionTest` context, timers, activity and rollback tests | fork-only by design | resolved 2026-10-05: constrained ChartStoreConfiguration.recover<T> changes context only; MachineStore takes StoreConfiguration without recovery; validator retained as internal defense |
@@ -300,81 +300,81 @@ KDoc that documents these contracts (`Plugin.kt`, `Store.kt`, `StateSaver.kt`, `
 
 | # | Change | Where | Since | Regression tests | Upstream status | Removable when |
 |---|---|---|---|---|---|---|
-| c1 | `InputId` (public; `@ExperimentalKomaApi` until 5.0-3, 2026-10-01), the id every journal record and decision observer carries | `StoreProbe.kt` | round 9, 90a7e02 | `StoreProbeTest` | proposed with b1 (as `@InternalKomaApi`) | merged |
-| c2 | `StoreScope` changed from `sealed` to open, so `ChartHookScope` and `ChartLaunchScope` can be `StoreScope`s for `koma-message`'s `message()` | `StoreScope.kt` | round 4, 916c19c | — | fork-only by design | resolved 2026-10-05: chart scopes expose `val store: StoreScope` and delegate; core marker remains open to preserve stable consumer compatibility |
+| c1 | `InputId` (public; `@ExperimentalActronApi` until 5.0-3, 2026-10-01), the id every journal record and decision observer carries | `StoreProbe.kt` | round 9, 90a7e02 | `StoreProbeTest` | proposed with b1 (as `@InternalActronApi`) | merged |
+| c2 | `StoreScope` changed from `sealed` to open, so `ChartHookScope` and `ChartLaunchScope` can be `StoreScope`s for `actron-message`'s `message()` | `StoreScope.kt` | round 4, 916c19c | — | fork-only by design | resolved 2026-10-05: chart scopes expose `val store: StoreScope` and delegate; core marker remains open to preserve stable consumer compatibility |
 | c3 | `StorePatch.probes`: a new property, so the data class's constructor and `copy` changed | `StorePatch.kt` | round 9, ccc1c1e | `StoreProbeTest` | with b1 | merged |
 | c4 | New abstract members of `StoreInternalApi` (`dispatchIf`, `matchActionHandlers`, `handlerMetadata`): a binary change for implementors of the internal interface | `StoreInternalApi.kt` | rounds 6, 9 | — | with their rows | with their rows |
 | c5 | Documented guarantee: actions are processed in dispatch order | `Store.dispatch` KDoc | round 2 | a3 | with a3 | merged |
-| c7 | `subscribe {}` on `EnterScope` and `ActionScope` (a launch `awaitIdle` leaves out); `StorePendingWork` (public data); koma-test `awaitIdle()`, `pendingWork()` | `StoreScope.kt`, `StoreInternalApi.kt`, `koma-test/StoreExtensions.kt` | 2026-10-01 | `StoreAwaitIdleTest`, `StoreAwaitIdleExtensionTest`, `StateChartAwaitIdleTest` | with b7 | merged |
+| c7 | `subscribe {}` on `EnterScope` and `ActionScope` (a launch `awaitIdle` leaves out); `StorePendingWork` (public data); actron-test `awaitIdle()`, `pendingWork()` | `StoreScope.kt`, `StoreInternalApi.kt`, `actron-test/StoreExtensions.kt` | 2026-10-01 | `StoreAwaitIdleTest`, `StoreAwaitIdleExtensionTest`, `StateChartAwaitIdleTest` | with b7 | merged |
 | c6 | `api/` dumps and `apiCheck` in CI; `checkDebugGraph`; CI for every pull request; `iosArm64` compiled in the macOS job; every test task logs failed assertions | root `build.gradle.kts`, `.github/workflows/gradle.yml` | fork build | — | fork-only by design | never |
 
 #### (d) Companion modules upstream owns
 
 | # | Change | Where | Since | Regression tests | Upstream status | Removable when |
 |---|---|---|---|---|---|---|
-| d1 | `koma-compose`: the narrowed `ViewStore` of `stateContent` keeps the last `S2`, so a callback after the state's type changed does not throw | `ViewStore.kt` (`NarrowedState`, `narrow`) | 84b0000, 54b1ed6 | `ViewStoreJvmTest.stateContent_callback*` (JVM) | prepared: `upstream-pr/compose-state-content-narrowing` @ bf047ec (C1) | merged |
-| d9 | `koma-compose`: real Android Activity recreation, screen removal/return, keyed instances, Store replacement and external ownership; dedicated emulator CI | `androidDeviceTest/ActivityLifecycleTest.kt`, `.github/workflows/android-compose-lifecycle.yml` | 2026-10-05 | `ActivityLifecycleTest` (Android device) | fork-only test infrastructure; no runtime API change | retained as regression coverage |
-| d2 | `koma-test`: `diagnoseActionMatches`, `describeHandlers`; `StoreRecorder` refuses a second Store; a clearer error from `createRecorder()` after startup; fail-fast documented | `ActionMatchDiagnostics.kt`, `StoreHandlers.kt`, `StoreRecorder.kt`, `StoreExtensions.kt` | 8a03bda, 48af6ac, 26832ec, 4b15358 | `StoreRecorderTest`, b3/b4 tests | b3/b4 after #280; the recorder fixes with a10 | merged or declined |
-| d7 | `koma-test`: a cursor on `StoreRecorder` (`receiveEvent<E>()`, `receiveEvent(predicate)`, `unconsumedEvents`, `assertNoUnconsumedEvents()`) and `Store.assertNoPendingWork(recorder?)` | `StoreRecorder.kt`, `StoreExtensions.kt` | 2026-10-01, [ADR](../adr/2026-10-01-recorder-cursor-and-pending-work.md) | `StoreRecorderCursorTest` | planned with b7 (`upstream-pr/await-idle`) | merged |
-| d8 | `koma-compose`: `ViewStore.select(mapper)`, a derived value read in place, readers recomposing only when it changed | `ViewStore.kt` | 2026-10-01, [ADR](../adr/2026-10-01-viewstore-select.md) | `ViewStoreJvmTest.select_*` | planned: feature request after C1 (`upstream-pr/viewstore-select`) | merged |
-| d3 | `koma-logging`: `simpleLogging` logs from the hook when no dispatcher is given, so entries stay in order; a throwing logger is reported instead of aborting the action | `Plugin.kt` | bbcc6e6, 54b1ed6 | `LoggingOutputTest` | prepared: `upstream-pr/logging-inline-entries` @ 9d41c49 (C3) | merged |
-| d4 | `koma-logging`: `LoggerJournalSink`, and with it a dependency on `koma-observability` (and so on b1) | `JournalSink.kt`, `koma-logging/build.gradle.kts` | round 9, 2e1331a | `LoggerJournalSinkTest` | fork-only by design | `LoggerJournalSink` moves to a `koma-observability-logging` module |
-| d5 | `koma-message`: the subscription is registered before `onStart` returns; a throwing receive block is reported and the subscription continues; `extraBufferCapacity = 64` and the hub exposed as a `SharedFlow` | `Plugin.kt`, `Message.kt` | c9a11d0, 4e92b04, cb525ea | `MessageDeliveryTest` | prepared: `upstream-pr/message-subscription-before-start` @ 26a5685 (C2); the buffer size is mentioned, not proposed | merged (the buffer stays fork-only) |
-| d6 | Build: `api` instead of `implementation` for `koma-core` in the companion modules; Mocha timeouts for JS and Wasm on Node; the publish convention for `io.github.roman-n1`; explicit JVM 11 bytecode baseline; isolated Maven consumer verification repository | `*/build.gradle.kts`, `build-logic` | fork build | `verification/published-consumer`: POM/metadata/payload checks, external JVM smoke and platform compile matrix | `api` prepared: `upstream-pr/companion-api-deps` @ e8d889c (C4); the rest fork-only | C4 merged; the rest never |
-| d8 | Core klib identity remains `io.github.koma-kt:koma-core` despite fork Maven coordinates, so frozen stable consumers link to the replacement core | `koma-core/build.gradle.kts`, binary consumer workflow | 2026-10-06 | `verification/binary-consumer`: published 4.0.0 client frozen before replacement, control and upgraded JVM/JS/Wasm/iOS runtime tests | fork coordinate migration only | fork-only |
+| d1 | `actron-compose`: the narrowed `ViewStore` of `stateContent` keeps the last `S2`, so a callback after the state's type changed does not throw | `ViewStore.kt` (`NarrowedState`, `narrow`) | 84b0000, 54b1ed6 | `ViewStoreJvmTest.stateContent_callback*` (JVM) | prepared: `upstream-pr/compose-state-content-narrowing` @ bf047ec (C1) | merged |
+| d9 | `actron-compose`: real Android Activity recreation, screen removal/return, keyed instances, Store replacement and external ownership; dedicated emulator CI | `androidDeviceTest/ActivityLifecycleTest.kt`, `.github/workflows/android-compose-lifecycle.yml` | 2026-10-05 | `ActivityLifecycleTest` (Android device) | fork-only test infrastructure; no runtime API change | retained as regression coverage |
+| d2 | `actron-test`: `diagnoseActionMatches`, `describeHandlers`; `StoreRecorder` refuses a second Store; a clearer error from `createRecorder()` after startup; fail-fast documented | `ActionMatchDiagnostics.kt`, `StoreHandlers.kt`, `StoreRecorder.kt`, `StoreExtensions.kt` | 8a03bda, 48af6ac, 26832ec, 4b15358 | `StoreRecorderTest`, b3/b4 tests | b3/b4 after #280; the recorder fixes with a10 | merged or declined |
+| d7 | `actron-test`: a cursor on `StoreRecorder` (`receiveEvent<E>()`, `receiveEvent(predicate)`, `unconsumedEvents`, `assertNoUnconsumedEvents()`) and `Store.assertNoPendingWork(recorder?)` | `StoreRecorder.kt`, `StoreExtensions.kt` | 2026-10-01, [ADR](../adr/2026-10-01-recorder-cursor-and-pending-work.md) | `StoreRecorderCursorTest` | planned with b7 (`upstream-pr/await-idle`) | merged |
+| d8 | Actron uses distinct packages, artifacts and core klib identity; consumers must recompile after the rename | `actron-core/build.gradle.kts`, migration guide | 2026-10-10 | Migration isolation fixture runs frozen upstream Koma beside Actron on JVM/JS/Wasm/iOS | breaking rename; no runtime substitution | fork-only |
+| d3 | `actron-logging`: `simpleLogging` logs from the hook when no dispatcher is given, so entries stay in order; a throwing logger is reported instead of aborting the action | `Plugin.kt` | bbcc6e6, 54b1ed6 | `LoggingOutputTest` | prepared: `upstream-pr/logging-inline-entries` @ 9d41c49 (C3) | merged |
+| d4 | `actron-logging`: `LoggerJournalSink`, and with it a dependency on `actron-observability` (and so on b1) | `JournalSink.kt`, `actron-logging/build.gradle.kts` | round 9, 2e1331a | `LoggerJournalSinkTest` | fork-only by design | `LoggerJournalSink` moves to a `actron-observability-logging` module |
+| d5 | `actron-message`: the subscription is registered before `onStart` returns; a throwing receive block is reported and the subscription continues; `extraBufferCapacity = 64` and the hub exposed as a `SharedFlow` | `Plugin.kt`, `Message.kt` | c9a11d0, 4e92b04, cb525ea | `MessageDeliveryTest` | prepared: `upstream-pr/message-subscription-before-start` @ 26a5685 (C2); the buffer size is mentioned, not proposed | merged (the buffer stays fork-only) |
+| d6 | Build: `api` instead of `implementation` for `actron-core` in the companion modules; Mocha timeouts for JS and Wasm on Node; the publish convention for `io.github.roman-n1`; explicit JVM 11 bytecode baseline; isolated Maven consumer verification repository | `*/build.gradle.kts`, `build-logic` | fork build | `verification/published-consumer`: POM/metadata/payload checks, external JVM smoke and platform compile matrix | `api` prepared: `upstream-pr/companion-api-deps` @ e8d889c (C4); the rest fork-only | C4 merged; the rest never |
+| d8 | Actron uses distinct packages, artifacts and core klib identity; consumers must recompile after the rename | `actron-core/build.gradle.kts`, migration guide | 2026-10-10 | Migration isolation fixture runs frozen upstream Koma beside Actron on JVM/JS/Wasm/iOS | breaking rename; no runtime substitution | fork-only |
 
 ### Synchronization with upstream
 
 - The fork's `main` = upstream + our merged PRs. The upstream base is recorded in
-  `gradle.properties` (`koma.upstream.base`), not in the fork's version.
+  `gradle.properties` (`actron.upstream.base`), not in the fork's version.
 - On every upstream release: `git fetch upstream --tags`, then merge the release tag
   into the fork's `main` **with a merge commit** (no rebase, so as not to break
-  branches and clones). Before the merge, read `git diff <base>..<tag> -- koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt`
+  branches and clones). Before the merge, read `git diff <base>..<tag> -- actron-core/src/commonMain/kotlin/actron/core/StoreImpl.kt`
   in full and sort its hunks against the inventory: where upstream covers a row, take upstream's
   version and keep our test; the row leaves in the same PR. The fork's tests are the oracle of the
-  merge (`:koma-core:jvmTest`, `StoreProbeTest`, the statechart tests, `apiCheck`), not the shape of
+  merge (`:actron-core:jvmTest`, `StoreProbeTest`, the statechart tests, `apiCheck`), not the shape of
   our code.
 - Practice for `StoreImpl.kt`: our additions stay in cohesive blocks at the end of the class, the
   boundary calls are one-liners (`trace { … }`), upstream code and KDoc are not reformatted;
   `git config rerere.enabled true` and `merge.conflictStyle zdiff3` in the checkout; unmerged
   `upstream-pr/*` branches are re-created on the new tag.
-- After the merge: `apiDump`, `koma.upstream.base` updated, the fork's CI green on all platforms,
+- After the merge: `apiDump`, `actron.upstream.base` updated, the fork's CI green on all platforms,
   then a new fork version.
 
 ### How the messenger connects the fork
 
 1. **During active development — composite build.** The fork is added as a
-   git submodule, and `includeBuild("koma")` is written into the messenger's `settings.gradle.kts`.
+   git submodule, and `includeBuild("actron")` is written into the messenger's `settings.gradle.kts`.
    Gradle substitutes the fork's modules for the
    `io.github.koma-kt:*` dependencies by itself; nothing needs publishing, and edits to
-   Koma are visible immediately. Downside: the messenger's CI has to fetch the submodule.
+   Actron are visible immediately. Downside: the messenger's CI has to fetch the submodule.
 2. **Once the version has stabilized — GitHub Packages.** Publishing from the fork's GitHub
    Actions on a macOS runner (otherwise the iOS artifacts cannot be built), to the fork's own
    Maven repository. Reading requires a token with `read:packages`.
    - Coordinates: a separate group `io.github.roman-n1`, so that the fork's artifacts
      are never confused with the official `io.github.koma-kt`.
    - Version: the fork's own line, `5.0.0-alpha.N` from 2026-10-01 (decision below); the upstream
-     base it was merged with is `koma.upstream.base` in `gradle.properties`, not part of the version.
-   - The official `koma-core` and the fork's must not be mixed in one project:
-     the classes are the same, the groups differ. Koma's group and version are set in the
+     base it was merged with is `actron.upstream.base` in `gradle.properties`, not part of the version.
+   - The official `actron-core` and the fork's must not be mixed in one project:
+     the classes are the same, the groups differ. Actron's group and version are set in the
      messenger's version catalog in one place.
    - The current `.github/workflows/publish.yml` publishes to Maven Central on
      prerelease and will fail in the fork without the secrets. The fork needs a separate
      publishing workflow; to be done when we get to item 2.
 3. **Moving to official Koma.** When upstream has released all the core steps
    that the messenger needs: in the messenger's version catalog the group of
-   `koma-core`/`koma-compose`/`koma-test` changes to `io.github.koma-kt`, and the
-   version to the official one. `koma-statechart` remains our artifact (or
+   `actron-core`/`actron-compose`/`actron-test` changes to `io.github.koma-kt`, and the
+   version to the official one. `actron-statechart` remains our artifact (or
    moves to upstream through the RFC, step 9). Until every inventory row the layer needs is
-   `merged` or removed, the messenger stays on the fork's `koma-core` (plan B is dropped).
+   `merged` or removed, the messenger stays on the fork's `actron-core` (plan B is dropped).
 
 ### Version 5.0 (decision 2026-10-01)
 
-The fork is its own line: `5.0.0-alpha.1` from this decision on (`koma.fork.version`). The number
+The fork is its own line: `5.0.0-alpha.1` from this decision on (`actron.fork.version`). The number
 says what the inventory says, that the modules are not "4.0.0 plus patches": `StoreScope` is open,
 `StorePatch`'s constructor changed, `InputId` is new, and the statechart, journal and replay modules
-are the product. `alpha` says what is still true: most of that API is `@ExperimentalKomaApi` and the
-on-disk formats moved with every stage. `5.0.0` without a suffix requires: (1) `@ExperimentalKomaApi`
+are the product. `alpha` says what is still true: most of that API is `@ExperimentalActronApi` and the
+on-disk formats moved with every stage. `5.0.0` without a suffix requires: (1) `@ExperimentalActronApi`
 removed from the core of the machine and the journal (`Machine`, `MachineStore`, `Lanes`,
 `ExecutorCheckpoint`, `MachineGroup`, `RecordingSession`, `JournalEntry`, `JournalFiles`,
 `RecordingCodec`, `RecordingFiles`), held by `apiCheck`; (2) the formats frozen under a migration
@@ -383,7 +383,7 @@ Both are in place since 2026-10-01: (2) the [format freeze policy](../adr/2026-1
 and `FormatVersionsTest`, which pins the five versions and names the checklist on a bump; (1) per
 the [stable core ADR](../adr/2026-10-01-stable-core.md): `InputId`, the journal, the pure chart
 and machine models, their snapshots/decisions/checkpoints, and the recording formats of
-`koma-timetravel`. The sources' contract, evolving Store adapter scopes and raw StoreBuilder
+`actron-timetravel`. The sources' contract, evolving Store adapter scopes and raw StoreBuilder
 configuration remain experimental; so do replay, branches and the inspector. The c2/b6
 adapter changes below must resolve their public contract before those markers come off.
 What remains for `5.0.0` is the tag (5.0-4).
@@ -396,7 +396,7 @@ The messenger pilot, device measurements and publishing remain work, not conditi
    sets each project's group and version to the same coordinates, so a composite build
    (`includeBuild`) substitutes them (the build files keep `io.github.koma-kt` to stay close to
    upstream). No release has been published yet, so the messenger still connects the fork with a
-   composite build; `koma-statechart/README.md` describes both.
+   composite build; `actron-statechart/README.md` describes both.
 2. **Known limitations of wave 5** (decisions in the semantics document, "Wave 5 decisions"):
    - after restore from `StateSaver`, enter hooks are not run again, and timers start with the full
      delay (the remaining time is not saved);
@@ -418,8 +418,8 @@ The messenger pilot, device measurements and publishing remain work, not conditi
    The debug timeline and group replay/experiment inspector are implemented; the
    [desktop example](../../../examples/time-travel/README.md) demonstrates the complete file
    workflow. Real messenger wiring and device measurements remain separate work.
-5. **Bridge to koma-strict** — optional, as a separate module; design in
-   [`2026-09-28-koma-strict-comparison.md`](./2026-09-28-koma-strict-comparison.md).
+5. **Bridge to actron-strict** — optional, as a separate module; design in
+   [`2026-09-28-actron-strict-comparison.md`](./2026-09-28-actron-strict-comparison.md).
 6. **Upstream.** The series in [`notes/2026-10-01-upstream-series.md`](../notes/2026-10-01-upstream-series.md): companion fixes, the stability fixes one by one, the `awaitIdle` and `StoreProbe` proposals; steps 2–3 and the RFC (step 9) after the author's answer on #280.
 
 ## Notes
@@ -433,9 +433,9 @@ The messenger pilot, device measurements and publishing remain work, not conditi
 ## Related
 
 - [Statechart layer semantics](./2026-09-28-statechart-semantics.md)
-- [Comparison with koma-strict](./2026-09-28-koma-strict-comparison.md)
-- [Module README](../../../koma-statechart/README.md)
+- [Comparison with actron-strict](./2026-09-28-actron-strict-comparison.md)
+- [Module README](../../../actron-statechart/README.md)
 
-- [Koma design principles](./2026-04-23-design-principles.md)
+- [Actron design principles](./2026-04-23-design-principles.md)
 - [Store surface design notes](./2026-04-29-store-api-design.md)
 - [LaunchControl API design](../adr/2026-05-01-launch-control-case-naming.md)

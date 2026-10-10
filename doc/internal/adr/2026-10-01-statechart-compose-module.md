@@ -1,4 +1,4 @@
-# A machine's Compose helpers live in `koma-statechart-compose`; the first is `MailboxEffect`
+# A machine's Compose helpers live in `actron-statechart-compose`; the first is `MailboxEffect`
 
 - Updated: 2026-10-01
 
@@ -9,13 +9,13 @@ events. The fork's `MachineStore` has a retained mailbox for the effects a scree
 (handoff §10, [ADR](./2026-09-30-effect-mailbox.md)): a subscriber of `mailbox.subscribe()`
 takes one `Delivery` at a time and acknowledges it, and a subscriber that goes away hands what
 it held to the next one. A screen wrote that subscription by hand in a `LaunchedEffect`, and
-the decision of the roadmap plan (2026-10-01) was to keep `koma-compose` core-only, as upstream
+the decision of the roadmap plan (2026-10-01) was to keep `actron-compose` core-only, as upstream
 keeps it, and put the machine's Compose concerns in a module of their own.
 
 ## Decision
 
-A new module `koma-statechart-compose` (`api(koma-compose)`, `api(koma-statechart)`,
-`api(compose.runtime)`; the targets of `koma-timetravel-compose`, web browser-only because of
+A new module `actron-statechart-compose` (`api(actron-compose)`, `api(actron-statechart)`,
+`api(compose.runtime)`; the targets of `actron-timetravel-compose`, web browser-only because of
 Skiko; not a debug module, so `checkDebugGraph` does not watch it). Its first declaration:
 
 ```kotlin
@@ -45,7 +45,7 @@ Not adopted:
 - Acknowledging for the block (acknowledge when the block returns): a block that navigates
   and then suspends on a dialog would acknowledge too late or too early; the UI says when it
   took responsibility.
-- A `ViewStore`-level member (`viewStore.mailboxEffect { }`): `ViewStore` is `koma-compose`'s
+- A `ViewStore`-level member (`viewStore.mailboxEffect { }`): `ViewStore` is `actron-compose`'s
   and knows a `Store`, not a `MachineStore`; a member would couple core to the machine.
 - Two-way binding helpers and a `rememberUiModel`: `viewStore.select { it.toUiModel() }`
   ([ADR](./2026-10-01-viewstore-select.md)) is the UI model, and a binding hides the action.
@@ -61,7 +61,7 @@ Not adopted:
   is known, acknowledges each exactly once, the 200 interrupted ones on their second attempt.
   `MailboxEffectRaceJvmTest`: the storm with the store on `Dispatchers.Default`.
 - The test composition is a `Recomposer` on the test dispatcher with a `BroadcastFrameClock`
-  and an applier that draws nothing (`ComposeHarness`), as `koma-compose`'s JVM tests do; it is
+  and an applier that draws nothing (`ComposeHarness`), as `actron-compose`'s JVM tests do; it is
   common code, so the tests run in the browser and on iOS too.
 - Upstream: nothing; the module is additive and depends on the fork's machine (roadmap rules).
 

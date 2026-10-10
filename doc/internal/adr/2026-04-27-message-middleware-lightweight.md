@@ -4,7 +4,7 @@
 
 ## Background
 
-`MessageMiddleware` in `koma-message` is a built-in for exchanging simple messages between Stores.
+`MessageMiddleware` in `actron-message` is a built-in for exchanging simple messages between Stores.
 The current implementation is based on a `MessageHub` shared within the process and a `MutableSharedFlow` with `replay = 0`.
 
 Because of this, at least the following two characteristics remain.
@@ -39,7 +39,7 @@ The candidates envisioned are as follows.
 - `MessageMiddleware` prioritizes being "a lightweight, ready-to-use built-in". It is not regarded as something that should ship with strong delivery guarantees or isolation guarantees as standard.
 - Requirements for inter-Store coordination differ greatly in meaning across cases such as inter-feature notifications, shared sessions, background sync and cross-screen coordination. Trying to solve all of these generically with a single built-in message bus tends to make the assumptions vaguer instead.
 - When strong guarantees are needed, it is more natural for the user to have a dedicated design that makes explicit "who is connected to whom, with what lifetime, and with what redelivery policy".
-- When supplementing the description of `koma-message` in the future, the direction also prioritizes "making the constraints explicit", and does not assume extension into a general-purpose messaging infrastructure.
+- When supplementing the description of `actron-message` in the future, the direction also prioritizes "making the constraints explicit", and does not assume extension into a general-purpose messaging infrastructure.
 
 ## Related
 

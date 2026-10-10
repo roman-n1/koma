@@ -13,7 +13,7 @@ dependencyResolutionManagement {
         exclusiveContent {
             forRepository {
                 maven {
-                    name = "IsolatedPublishedKoma"
+                    name = "IsolatedPublishedActron"
                     url = uri(providers.gradleProperty("consumer.repository").get())
                 }
             }
@@ -23,5 +23,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "published-koma-consumer"
+rootProject.name = "published-actron-consumer"
 include(":app", ":tooling")

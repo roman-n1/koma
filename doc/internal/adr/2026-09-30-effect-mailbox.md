@@ -17,7 +17,7 @@ fired while it was gone.
 
 ## Decision
 
-The mailbox is part of `MachineStore` (`koma-statechart`), fed by the scheduler actor,
+The mailbox is part of `MachineStore` (`actron-statechart`), fed by the scheduler actor,
 journaled by a listener, and in the checkpoint.
 
 - **The policy is per effect and explicit.** `MailboxConfig.policy` maps each effect to an
@@ -63,12 +63,12 @@ Not adopted:
 
 ## Notes
 
-- Tests: [`EffectMailboxTest`](../../../koma-statechart/src/commonTest/kotlin/koma/statechart/machine/EffectMailboxTest.kt)
+- Tests: [`EffectMailboxTest`](../../../actron-statechart/src/commonTest/kotlin/actron/statechart/machine/EffectMailboxTest.kt)
   (transient effects on the event flow only; a retained effect waiting, delivered, acknowledged
   once, journaled; a subscriber going away handing its effect to the next with the attempt
   counting up; `Latest` superseding while waiting; the bound; closing; the checkpoint; a
   throwing policy) and
-  [`EffectMailboxStormTest`](../../../koma-statechart/src/commonTest/kotlin/koma/statechart/machine/EffectMailboxStormTest.kt)
+  [`EffectMailboxStormTest`](../../../actron-statechart/src/commonTest/kotlin/actron/statechart/machine/EffectMailboxStormTest.kt)
   (four hundred retained effects from four threads while three subscribers live a few
   milliseconds each, acknowledging some and dying with the rest in hand: every effect is
   acknowledged exactly once, none is lost or discarded, the journal has one queue and one
@@ -99,7 +99,7 @@ third; a `Latest` effect with a budget of one is discarded after one departure).
 
 ## Related
 
-- [`MailboxEffect` in `koma-statechart-compose`](./2026-10-01-statechart-compose-module.md)
+- [`MailboxEffect` in `actron-statechart-compose`](./2026-10-01-statechart-compose-module.md)
 - [MachineStore commit protocol](./2026-09-30-machine-store-commit-protocol.md)
 - [Group replay](./2026-09-30-group-replay.md)
 - [Time Travel and structured logging handoff](../design/2026-09-29-time-travel-logging-handoff.md), §6, §8, §10

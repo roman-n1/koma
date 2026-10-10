@@ -21,11 +21,14 @@ jobs:
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          if ! git show "$BASE_SHA:.koma/baselines/messenger-send.koma.json" > "$RUNNER_TEMP/koma-before.json"; then
-            rm -f "$RUNNER_TEMP/koma-before.json"
+          if ! git show "$BASE_SHA:.actron/baselines/messenger-send.actron.json" > "$RUNNER_TEMP/actron-before.json"; then
+            # The base revision of the rename still stores the same model under Koma.
+            if ! git show "$BASE_SHA:.koma/baselines/messenger-send.koma.json" > "$RUNNER_TEMP/actron-before.json"; then
+              rm -f "$RUNNER_TEMP/actron-before.json"
+            fi
           fi
       - name: Execute plans and export review artifacts
-        run: ./gradlew :behaviour-review:exportBehaviour -Pkoma.behaviour.baseline="$RUNNER_TEMP/koma-before.json"
+        run: ./gradlew :behaviour-review:exportBehaviour -Pactron.behaviour.baseline="$RUNNER_TEMP/actron-before.json"
       - name: Publish review summary
         run: |
           python3 - <<'PY'
@@ -33,7 +36,7 @@ jobs:
           import os
           folder = Path('verification/behaviour-review/build/behaviour-review')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-              summary.write('## Koma behavioural review\n\n')
+              summary.write('## Actron behavioural review\n\n')
               for name in ('behaviour.diff', 'coverage.diff', 'coverage.txt'):
                   text = (folder / name).read_text().replace('```', "'''" )
                   summary.write(f'### {name}\n\n```text\n{text}\n```\n\n')
@@ -56,6 +59,6 @@ jobs:
         run: ./gradlew -p tooling/intellij-plugin buildPlugin test
       - uses: actions/upload-artifact@v4
         with:
-          name: koma-intellij-plugin
+          name: actron-intellij-plugin
           path: tooling/intellij-plugin/build/distributions/*.zip
           if-no-files-found: error

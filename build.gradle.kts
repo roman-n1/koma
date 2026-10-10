@@ -7,7 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform) apply false
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.vanniktech.mavenPublish) apply false
-    alias(libs.plugins.koma.publish) apply false
+    alias(libs.plugins.actron.publish) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.kotlinx.bcv)
 }
@@ -29,7 +29,7 @@ apiValidation {
 // The time-travel modules are debug tooling (handoff §11, §12): no production module may depend
 // on them, so an app that keeps them in a debug source set keeps them out of its release graph.
 // `checkDebugGraph` fails on a dependency in the wrong direction; CI runs it next to `apiCheck`.
-val debugModules = setOf(":koma-timetravel", ":koma-timetravel-compose", ":time-travel-example")
+val debugModules = setOf(":actron-timetravel", ":actron-timetravel-compose", ":time-travel-example")
 // Collected once every project is evaluated, at configuration time, so the task's action holds
 // plain strings and the configuration cache can keep it.
 val debugGraphOffenders = mutableListOf<String>()

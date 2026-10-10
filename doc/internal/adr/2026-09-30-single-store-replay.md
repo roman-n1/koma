@@ -18,7 +18,7 @@ module.
 
 ## Decision
 
-`koma-timetravel` is a new module on `koma-statechart` (and, through it, `koma-observability`);
+`actron-timetravel` is a new module on `actron-statechart` (and, through it, `actron-observability`);
 no Compose, no Store, no coroutines in its API.
 
 - **The recording is the run.** `MachineRecorder`, a `DecisionObserver`, keeps each machine
@@ -70,14 +70,14 @@ Not adopted:
 
 ## Notes
 
-- Tests: [`ReplaySessionTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/ReplaySessionTest.kt)
+- Tests: [`ReplaySessionTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/ReplaySessionTest.kt)
   records a live run (a superseded load whose careless handler answers on cancellation, a
   refresh, a timeout, a failing guard) and replays it: every step matches and no handler runs;
   seek and stepping back land on what a sequential replay reproduces; a machine with a changed
   effect under the same version diverges at the first affected step and the session stays
   there; a timer recorded before its deadline diverges; version and definition compatibility;
   a recorder with the wrong initial context is flagged; a recorded failure matches by type.
-  [`BranchTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/BranchTest.kt)
+  [`BranchTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/BranchTest.kt)
   branches from an earlier position with the live store untouched, answers awaiting commands by
   hand or from an equal recorded command and refuses an unequal one, fires timers by advancing
   the clock, fails a command, and emulates `Latest`.
@@ -117,7 +117,7 @@ embedded payloads by shape (the first draft added a context field to every objec
 `query`, commands included) is caught by the strict serializers, which is the point of not
 ignoring unknown keys.
 
-Not adopted: a serialization-free wire model of koma's own (a second JSON, for no gain) and
+Not adopted: a serialization-free wire model of actron's own (a second JSON, for no gain) and
 `ignoreUnknownKeys` (it would turn a format drift into silently dropped data).
 
 ## Addendum (2026-09-30): a recording begins at a checkpoint, and a branch runs the lanes

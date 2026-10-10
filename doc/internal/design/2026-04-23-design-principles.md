@@ -1,4 +1,4 @@
-# Koma design principles
+# Actron design principles
 
 - Updated: 2026-04-23
 
@@ -6,14 +6,14 @@
 
 Notes on individual policies such as `PendingActionPolicy` and `MiddlewareExecutionPolicy` have been accumulating, but on their own they make it hard to read back later "why the specification goes in that direction".
 
-Here we organize the design axes behind Koma's individual specifications.
+Here we organize the design axes behind Actron's individual specifications.
 This document exists to spell out the reasoning behind individual policy and API decisions as higher-level design principles.
 
 ## Policy
 
-Koma's basic design policy is as follows.
+Actron's basic design policy is as follows.
 
-- Koma is a state machine built around "what state are we in now, and what happens in that state" rather than "what do we do when this action arrives".
+- Actron is a state machine built around "what state are we in now, and what happens in that state" rather than "what do we do when this action arrives".
 - An action is a trigger for a state transition or for starting processing; the lifetime of long-lived work belongs to the state.
 - Store creation and the start of side effects are separated. A Store is first created as a declaration, and side effects run after start.
 - Middleware is treated as an independent extension point on the outside, not as part of the Store's own pipeline.

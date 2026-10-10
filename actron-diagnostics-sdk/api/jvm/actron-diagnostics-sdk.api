@@ -1,0 +1,11 @@
+public final class actron/diagnostics/sdk/OpenTelemetryDiagnosticSink : actron/diagnostics/DiagnosticSink {
+	public fun <init> (Lio/opentelemetry/api/trace/Tracer;I)V
+	public synthetic fun <init> (Lio/opentelemetry/api/trace/Tracer;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun emit (Lactron/diagnostics/CausalTraceEvent;)V
+}
+
+public final class actron/diagnostics/sdk/SentryDiagnosticSink : actron/diagnostics/DiagnosticSink {
+	public fun <init> (Lio/sentry/IScopes;)V
+	public fun emit (Lactron/diagnostics/CausalTraceEvent;)V
+}
+

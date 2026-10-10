@@ -20,10 +20,10 @@ half became possible; the first needed only a cursor.
   `assertNoUnconsumedEvents()` fails listing it; `clear()` resets the cursor with the history.
   `events` keeps every event, received or not: the record is the record, the cursor is the test's
   bookkeeping over it (Information Expert: the recorder owns the list, so it owns the cursor).
-- **`Store.assertNoPendingWork(recorder?)`** in koma-test: `pendingWork()` idle and, with a
+- **`Store.assertNoPendingWork(recorder?)`** in actron-test: `pendingWork()` idle and, with a
   recorder, no unconsumed events; otherwise `AssertionError` with both. It does not wait: a test
   calls `awaitIdle()` first when launches may still be running.
-- Assertion helpers throw `kotlin.AssertionError` (the stdlib's), so koma-test needs no
+- Assertion helpers throw `kotlin.AssertionError` (the stdlib's), so actron-test needs no
   dependency on a test framework; misuse of the API keeps throwing `IllegalStateException`.
 
 Not adopted:
@@ -35,7 +35,7 @@ Not adopted:
 
 ## Notes
 
-- Tests: [`StoreRecorderCursorTest`](../../koma-test/src/commonTest/kotlin/koma/test/StoreRecorderCursorTest.kt):
+- Tests: [`StoreRecorderCursorTest`](../../actron-test/src/commonTest/kotlin/actron/test/StoreRecorderCursorTest.kt):
   events received in order by type and by predicate while `events` keeps them all; a wrong type,
   an empty tail and a failed predicate fail and leave the cursor; the tail is listed and `clear()`
   resets the cursor; `assertNoPendingWork` fails on an unreceived event and on a running launch
@@ -46,4 +46,4 @@ Not adopted:
 ## Related
 
 - [awaitIdle and subscriptions](./2026-10-01-await-idle-and-subscriptions.md)
-- [A MachineStore is a Store koma-test can drive](./2026-10-01-machine-store-test-bridge.md)
+- [A MachineStore is a Store actron-test can drive](./2026-10-01-machine-store-test-bridge.md)

@@ -51,7 +51,7 @@ Not adopted:
 - Snapshotting sources without pausing them: a source mid-feed at the snapshot would be
   counted by itself and not by the member, or the reverse; the cut would not be a cut.
 - A typed source state in the library: the adapters' states are the application's (Paging3's
-  generation and window are not Koma's business); strings keep them serializable and safe by
+  generation and window are not Actron's business); strings keep them serializable and safe by
   construction, at the price of no typing.
 - Pausing sources by freezing their targets only: the members' gates already hold what a source
   feeds, but the source would keep advancing its own generation; the pause is what stops the
@@ -59,12 +59,12 @@ Not adopted:
 
 ## Notes
 
-- Tests: [`ExternalSourceTest`](../../../koma-statechart/src/commonTest/kotlin/koma/statechart/machine/ExternalSourceTest.kt)
+- Tests: [`ExternalSourceTest`](../../../actron-statechart/src/commonTest/kotlin/actron/statechart/machine/ExternalSourceTest.kt)
   (a paged source feeding a member: `External` inputs decided and journaled with their source,
   admission applied to a source, a cut pausing the source before the members and resuming it
   after, the snapshot equal to what the member decided, a source that does not pause aborting
-  the cut with the group resumed) and, in `koma-timetravel`,
-  [`ExternalSourceCutStormTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/ExternalSourceCutStormTest.kt)
+  the cut with the group resumed) and, in `actron-timetravel`,
+  [`ExternalSourceCutStormTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/ExternalSourceCutStormTest.kt)
   (a source feeding from its own thread while four threads dispatch and thirty cuts are taken:
   at every cut the source's snapshot equals the member's decided pages, and the recording since
   the cut replays without a mismatch, sources included), plus the format golden with an

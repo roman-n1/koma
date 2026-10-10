@@ -59,7 +59,7 @@ To make `MANUAL` work, a separate API for explicit start is required.
 
 ## Open questions
 
-- Whether to put the explicit start API on the `Store` interface or add it as an extension inside core is undecided. Adding it to the interface affects fake implementations, and with an extension we need to think about how to present the fact that it depends on the Koma implementation.
+- Whether to put the explicit start API on the `Store` interface or add it as an extension inside core is undecided. Adding it to the interface affects fake implementations, and with an extension we need to think about how to present the fact that it depends on the Actron implementation.
 - Whether to include `collectEvent()` as a start trigger is undecided. It is currently not included, but from the user's point of view observing `event` may be expected to be tied to start as well.
 - The README explanation for the case where `state` is collected before start under `MANUAL` needs to be made clear. The explanation is expected to be that the current snapshot flows, but side effects tied to start do not run yet.
 - Samples for choosing `ON_FIRST_DISPATCH` or `MANUAL` when using `rememberViewStore()` need to be added to the README / the Compose-side tests.

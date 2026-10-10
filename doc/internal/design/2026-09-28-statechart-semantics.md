@@ -4,12 +4,12 @@
 
 This document fixes the semantics of phases 4–7 from the
 [roadmap](2026-09-28-statechart-roadmap.md) ahead of the code. Everything lives in the
-`koma-statechart` module. It was written for the public API of `koma-core` only (plan B, dropped
-on 2026-10-01); the adapter uses the fork's `koma-core` (`StoreInternalApi.dispatchIf`,
+`actron-statechart` module. It was written for the public API of `actron-core` only (plan B, dropped
+on 2026-10-01); the adapter uses the fork's `actron-core` (`StoreInternalApi.dispatchIf`,
 `StoreBuilder.validateRecovery`, `StoreProbe`, `InputId`, the open `StoreScope`), see the
 [divergence inventory](2026-09-28-statechart-roadmap.md#divergence-inventory-vs-upstream-400) and
 the [stability review](../notes/2026-09-29-stability-review.md). All new public types are marked
-`@ExperimentalKomaApi`.
+`@ExperimentalActronApi`.
 
 ## Model
 
@@ -48,7 +48,7 @@ only a label. The implementation is provided by the Store adapter.
 - `history: Map<StateId, Set<StateId>>` — the remembered children/leaves for nodes
   that have a `HistoryState`.
 
-The runtime remains a pure function. The configuration is held by the caller: the Koma Store,
+The runtime remains a pure function. The configuration is held by the caller: the Actron Store,
 in a field of the state.
 
 ## Step
@@ -127,7 +127,7 @@ val store = StateChartStore<C, A, E>(
 )
 ```
 
-- The Koma state class does not change (`ChartState`), so Koma does no
+- The Actron state class does not change (`ChartState`), so Actron does no
   exit/enter. The lifetime of the work under a node is held by the adapter: `launch` in
   `onEnter` receives the node's `LaunchLane`, and on exit from the node the adapter
   calls `cancelLaunch(lane)`.
@@ -137,8 +137,8 @@ val store = StateChartStore<C, A, E>(
   its own node activation `Job`s and timer tokens in the state; see "Wave 5 decisions".)
 - Order within one step: exit handlers (from the inside out), then the effects
   of the transitions (in selection order), then enter handlers (from the outside in). All of it
-  runs in a single Koma transaction, so the UI sees one new state.
-- The Store remains an ordinary `Store<ChartState<C>, A, E>`: `koma-test`,
+  runs in a single Actron transaction, so the UI sees one new state.
+- The Store remains an ordinary `Store<ChartState<C>, A, E>`: `actron-test`,
   `Plugin`, `StateSaver` and Compose work without changes.
 
 ## Wave 1 decisions (hierarchy)
@@ -409,7 +409,7 @@ Refinements; code in branch `feature/statechart-timers`.
   `After`: the first such one by priority is covered. If the whole change was explained by timers (and there are no
   violations), the action trigger remains unused for the next change. Without a trigger, as
   before, the first eligible transition is taken, timer or not. A change that is explained by both
-  a matching action and a timer is attributed to the action. A timer self-loop does not change the leaves, Koma
+  a matching action and a timer is attributed to the action. A timer self-loop does not change the leaves, Actron
   does not report it, and it is never covered.
 
 ## Wave 5 decisions (Store adapter)
@@ -417,9 +417,9 @@ Refinements; code in branch `feature/statechart-timers`.
 Refinements; code in branch `feature/statechart-store` (`StateChartStore.kt`).
 
 - **API.** `StateChartStore<C, A, E>(definition, context, coroutineContext = null) { ... }`
-  returns an ordinary `Store<ChartState<C>, A, E>` created by the Koma DSL `Store(...)`, so
-  `koma-test` (`dispatchAndAwait`, `patch`, `StoreRecorder`), `Plugin`, `StateSaver` and Compose
-  work without changes. The builder `StateChartStoreBuilder` (`@KomaStoreDsl`):
+  returns an ordinary `Store<ChartState<C>, A, E>` created by the Actron DSL `Store(...)`, so
+  `actron-test` (`dispatchAndAwait`, `patch`, `StoreRecorder`), `Plugin`, `StateSaver` and Compose
+  work without changes. The builder `StateChartStoreBuilder` (`@ActronStoreDsl`):
   `guard(label) { state, action -> }`, `effect(label) { context, action -> }`,
   `onEnter(id) { }`, `onExit(id) { }`, `activity(id) { }` and `store { }` — access to the
   `StoreBuilder` (coroutineContext, stateSaver, plugin, exceptionHandler, policies, `recover {}`).
@@ -429,7 +429,7 @@ Refinements; code in branch `feature/statechart-store` (`StateChartStore.kt`).
   the tokens of the running timers by index in `definition.transitions` (equal declarations are equal
   values, hence the index) and the last issued token. All of it is data, saved by `StateSaver`.
   Consequence: restarting a timer (for example, a periodic self-loop) changes the state even if
-  the configuration and context are the same, and Koma commits it.
+  the configuration and context are the same, and Actron commits it.
 - **Fail fast at build time** (`IllegalArgumentException`): a missing guard (checked by `StateChartRuntime`),
   a missing effect, a broken hierarchy (the runtime constructor), a hook/activity for an undeclared node or
   for a `HistoryState`, re-registration of a guard or effect with the same label. Extra labels are
@@ -437,20 +437,20 @@ Refinements; code in branch `feature/statechart-store` (`StateChartStore.kt`).
 - **A single catch-all handler.** `state<ChartState<C>> { enter { start }; action<Action> { step } }`.
   The action type is erased, so the handler is registered through an unchecked cast of the builder to
   `StoreBuilder<ChartState<C>, Action, E>`; only `A` arrives in the Store. The state class does not
-  change, so Koma never does its own exit/enter, `enter {}` runs exactly once
+  change, so Actron never does its own exit/enter, `enter {}` runs exactly once
   at start, and `PendingActionPolicy.ClearOnStateExit` does not affect chart steps. `store {}` blocks
   are applied after registration, so their `enter {}`/`action {}` for `ChartState` never
   fire, while `recover {}` works; `initialState` from `store {}` is ignored.
 - **Step.** `runtime.step`; `Ignored` — the state does not change, no hooks are called, no commit
-  (there is no separate hook for unhandled actions: a Koma plugin sees the action in `onAction`). On
+  (there is no separate hook for unhandled actions: a Actron plugin sees the action in `onAction`). On
   `Transitioned`, in a single handler: exit hooks (in `exited` order, from the inside out), effects
   (in transition selection order), enter hooks (in `entered` order, from the outside in); then the
   work of the exited nodes is cancelled, the activities of the entered ones are started, and timers: those of `exited` are removed, new
   tokens are issued for `entered` (as `timersToCancel`/`timersToStart`, but by index). A single
   `nextState` — the UI sees one new state. Hooks receive `context` (a var; changes
   accumulate in order), `action` (`A`, `TimerFired` for a timer, `null` at start), `node`,
-  `event(e)` (emitted immediately, before the commit — as in Koma). Guards receive the state before the step.
-- **An error in a hook or effect.** The exception goes to Koma (`recover {}` / exceptionHandler),
+  `event(e)` (emitted immediately, before the commit — as in Actron). Guards receive the state before the step.
+- **An error in a hook or effect.** The exception goes to Actron (`recover {}` / exceptionHandler),
   the step is not committed; the activations created in this step are cancelled, so work started by a
   hook does not start. Events already emitted by the hooks of the failed step are not retracted. A timer whose step
   failed is spent: it is removed from `timers.running` when the failure is reported (stability
@@ -458,13 +458,13 @@ Refinements; code in branch `feature/statechart-store` (`StateChartStore.kt`).
   re-entry (or a Store restart).
 - **Node work without `LaunchLane`.** `cancelLaunch` exists only in `ActionScope`, and a timer
   fires in a transaction, which has neither `launch` nor `cancelLaunch`. So `enter {}` once
-  starts a Koma `launch` that lives for the whole lifetime of the Store: it reads a task channel (`Channel.UNLIMITED`,
+  starts a Actron `launch` that lives for the whole lifetime of the Store: it reads a task channel (`Channel.UNLIMITED`,
   `trySend` is thread-safe) and starts them as child coroutines in a `supervisorScope` (in the context of the
   Store, hence under `runTest` — virtual time). Each entry into a node has its own "activation"
   `Job()`; a task is tied to it via `invokeOnCompletion` and is cancelled on exit from the node, and
   if the activation is already cancelled before the start, it does not start. Closing the Store cancels everything through
-  Koma. The adapter's mutable tables live in the object of the specific Store (not globally) and
-  are touched only inside Koma handlers and transactions, which Koma executes one at a time under a
+  Actron. The adapter's mutable tables live in the object of the specific Store (not globally) and
+  are touched only inside Actron handlers and transactions, which Actron executes one at a time under a
   mutex.
 - **`ChartEnterScope.launch` and `activity`.** `launch` in `onEnter` — work for the duration of the activation.
   `activity(id)` — the declarative work of a node (like an activity in Harel / invoke in SCXML): it starts
@@ -480,7 +480,7 @@ Refinements; code in branch `feature/statechart-store` (`StateChartStore.kt`).
   node fire in start (declaration) order; if the first exits the source, the second arrives
   with a stale token (messenger: `retry` and `giveUp` at 5 s each).
 - **Start and restore.** The initial state is built at build time: `initialConfiguration()` and
-  tokens `1..n` for `initialTimers()`. A fresh start (Koma handed back exactly this object — compared by
+  tokens `1..n` for `initialTimers()`. A fresh start (Actron handed back exactly this object — compared by
   reference) runs the enter hooks of the initial configuration from the outside in with `action = null`, then
   activities and timers; a commit only if the hooks changed the context. For a state restored by
   `StateSaver` (or substituted via `patch { initialState }`) — enter hooks are **not**
@@ -498,7 +498,7 @@ Refinements; code in branch `feature/statechart-store` (`StateChartStore.kt`).
   on the adapter yields no violations; self-loop timers remain uncovered (wave 4 decision).
 - **Tests.** `StateChartStoreTest` — the messenger (parallel: a connection with `retry`/`giveUp` at 5 s,
   a chat with deep history, a 3 s typing timer, a sync job in `onEnter`, a ping activity), restore,
-  plugins/koma-test/conformance, errors. `StateChartStorePropertyTest` — random charts
+  plugins/actron-test/conformance, errors. `StateChartStorePropertyTest` — random charts
   `forEachTimerChart` (+ random effects) and random schedules of actions/virtual time
   advances; the reference is the pure `StateChartRuntime` with a naive scheduler (deadline, then start
   order). After every operation the configuration, the set of running timers, the hook order,
@@ -510,7 +510,7 @@ Refinements; code in branch `feature/statechart-store` (`StateChartStore.kt`).
 
 The semantics did not change; the library code did not change.
 
-- **Example.** `koma-statechart/src/commonTest/kotlin/koma/statechart/example/`: `MessengerChart.kt`
+- **Example.** `actron-statechart/src/commonTest/kotlin/actron/statechart/example/`: `MessengerChart.kt`
   (the chart, context, services, Store factory — the file that gets copied) and `MessengerChartTest.kt`
   (scenarios in virtual time, `validate`, Mermaid, a model-based test). Adapter details already
   covered by `StateChartStoreTest` (hook order, restore, stale timers, errors) are not

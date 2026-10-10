@@ -10,28 +10,28 @@ case "$TARGET" in
   ios) PUBLICATIONS=(IosArm64 IosSimulatorArm64); TASKS=(:app:compileKotlinIosArm64 :app:compileKotlinIosSimulatorArm64 :tooling:compileKotlinIosArm64 :tooling:compileKotlinIosSimulatorArm64) ;;
   *) printf 'Usage: %s [jvm|android|js|wasm|ios]\n' "$0" >&2; exit 2 ;;
 esac
-WORK=$(mktemp -d "${TMPDIR:-/tmp}/koma-published-consumer.XXXXXX")
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/actron-published-consumer.XXXXXX")
 trap 'rm -rf "$WORK"' EXIT
 # Read the actual publishing coordinates and plugin versions, without duplicating release values.
 value() { python3 "$ROOT/verification/published-consumer/config.py" "$ROOT" "$1"; }
 GROUP=$(value group)
 VERSION=$(value version)
-MODULES=(koma-core koma-compose koma-logging koma-message koma-test koma-statechart koma-observability koma-timetravel koma-statechart-test koma-timetravel-compose koma-statechart-compose)
+MODULES=(actron-core actron-compose actron-logging actron-message actron-test actron-statechart actron-observability actron-timetravel actron-statechart-test actron-timetravel-compose actron-statechart-compose)
 PUBLISH_TASKS=()
 for module in "${MODULES[@]}"; do
   for publication in KotlinMultiplatform "${PUBLICATIONS[@]}"; do
     PUBLISH_TASKS+=(":$module:publish${publication}PublicationToConsumerRepository")
   done
 done
-"$ROOT/gradlew" -p "$ROOT" "${PUBLISH_TASKS[@]}" -Pkoma.consumer.repository="$WORK/maven" --no-configuration-cache --max-workers=2 --no-daemon
+"$ROOT/gradlew" -p "$ROOT" "${PUBLISH_TASKS[@]}" -Pactron.consumer.repository="$WORK/maven" --no-configuration-cache --max-workers=2 --no-daemon
 python3 "$ROOT/verification/published-consumer/verify_metadata.py" "$WORK/maven" "$GROUP" "$VERSION" "$TARGET"
 PROPERTIES=(-Pconsumer.repository="$WORK/maven" -Pconsumer.group="$GROUP" -Pconsumer.version="$VERSION" -Pconsumer.target="$TARGET"
   -Pconsumer.kotlin="$(value kotlin)" -Pconsumer.agp="$(value agp)" -Pconsumer.compose="$(value compose-multiplatform)" -Pconsumer.coroutines="$(value coroutines)")
 if [[ "$TARGET" == jvm ]]; then
-  if [[ -n "${KOMA_CONSUMER_JAVA11_HOME:-}" ]]; then
-    PROPERTIES+=(-Pconsumer.java11.home="$KOMA_CONSUMER_JAVA11_HOME")
+  if [[ -n "${ACTRON_CONSUMER_JAVA11_HOME:-}" ]]; then
+    PROPERTIES+=(-Pconsumer.java11.home="$ACTRON_CONSUMER_JAVA11_HOME")
   elif [[ "${CI:-}" == true ]]; then
-    printf 'JVM consumer CI requires KOMA_CONSUMER_JAVA11_HOME; Java 11 execution must not be skipped\n' >&2
+    printf 'JVM consumer CI requires ACTRON_CONSUMER_JAVA11_HOME; Java 11 execution must not be skipped\n' >&2
     exit 1
   else
     printf 'Java 11 home not supplied; local smoke uses the Gradle runtime (CI executes on Java 11)\n'

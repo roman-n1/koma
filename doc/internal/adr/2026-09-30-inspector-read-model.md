@@ -12,11 +12,11 @@ nodes, the input and its cause, commands, timers, failures, and an indicator of 
 §6 adds that the journal is not complete when payloads, inputs, runtime records or a part of
 the group are missing, and that the inspector shows the concrete reason. §13 says not to begin
 with a debug UI, and §3 keeps the Compose timeline in a late, optional
-`koma-timetravel-compose`.
+`actron-timetravel-compose`.
 
 ## Decision
 
-The inspector is `koma.timetravel.inspect`, pure data over data, with a text renderer; the
+The inspector is `actron.timetravel.inspect`, pure data over data, with a text renderer; the
 Compose UI comes later and only reads this model.
 
 - **The journal is the source of order and of what was kept.** `Inspector` takes the journal
@@ -63,11 +63,11 @@ Not adopted:
 - Matching a recording by identity or by a token: values match by content, and a recording
   read from a file has no identity to match.
 - A Compose module now: the model is the deliverable of this stage; a UI that reads it is the
-  next one, and keeping it out of this module keeps `koma-timetravel` free of Compose.
+  next one, and keeping it out of this module keeps `actron-timetravel` free of Compose.
 
 ## Notes
 
-- Tests: [`InspectorTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/inspect/InspectorTest.kt)
+- Tests: [`InspectorTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/inspect/InspectorTest.kt)
   inspects a journaled, recorded run of one and two tabs (a load answered, a stale answer, a
   refresh, a refused action under bounded admission, a timeout, a failing guard, a close): the
   Stores with capabilities and counts, every kind of position in order, snapshots and
@@ -75,7 +75,7 @@ Not adopted:
   `retainAll`, a recording of another run refused with the step, files with a deleted and a
   damaged segment, and hand-made records with a gap, a pending input, an unattributed record
   and a stop while open.
-- Left for later: the Compose timeline (`koma-timetravel-compose`), a Mermaid rendering of the
+- Left for later: the Compose timeline (`actron-timetravel-compose`), a Mermaid rendering of the
   definition with the active nodes highlighted, group-wide positions across Stores (stage 6),
   and seek/branch from a position, which `ReplaySession` and `Branch` already give the UI.
 

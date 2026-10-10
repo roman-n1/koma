@@ -1,17 +1,17 @@
-@file:OptIn(koma.core.ExperimentalKomaApi::class)
+@file:OptIn(actron.core.ExperimentalActronApi::class)
 package consumer
 
 import androidx.compose.runtime.Composable
-import koma.core.Action
-import koma.core.Event
-import koma.core.State
-import koma.core.Store
-import koma.statechart.machine.Machine
-import koma.statechart.test.MachineTestDriver
-import koma.test.startAndAwait
-import koma.timetravel.compose.InspectorScreen
-import koma.timetravel.compose.InspectorState
-import koma.timetravel.inspect.Inspector
+import actron.core.Action
+import actron.core.Event
+import actron.core.State
+import actron.core.Store
+import actron.statechart.machine.Machine
+import actron.statechart.test.MachineTestDriver
+import actron.test.startAndAwait
+import actron.timetravel.compose.InspectorScreen
+import actron.timetravel.compose.InspectorState
+import actron.timetravel.inspect.Inspector
 import kotlinx.coroutines.test.TestScope
 
 fun <C, A : Action, CMD, E : Event> publishedDriver(machine: Machine<C, A, CMD, E>, context: C, scope: TestScope) =

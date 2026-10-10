@@ -29,7 +29,7 @@ At this point, the exposure of `cancelLaunch()` stays as `ActionScope`, and expo
 - `ActionScope.LaunchScope.TransactionScope` looks promising at first glance, but exposing `cancelLaunch()` there as is has a self-cancel problem. The transaction is not executed directly inside the launched job itself; it runs in a separate job that the outer side `join()`s, so when the same explicit lane is shared, it could stop its own tracked launch.
 - In that case, the transaction side may proceed all the way to the state update while only the outer launched job is cancelled, which is unintuitive behavior.
 - Furthermore, from the viewpoint of `ActionScope.LaunchScope.TransactionScope`, whether "another lane should be stopped" or "the lane it belongs to may also be stopped" cannot be expressed with the current `cancelLaunch(lane)` signature alone.
-- Koma takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". On top of that, keeping the entry point for lane cancellation confined to `ActionScope` first makes it easier to read which action decision caused the stop.
+- Actron takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". On top of that, keeping the entry point for lane cancellation confined to `ActionScope` first makes it easier to read which action decision caused the stop.
 - Therefore, this time, while acknowledging that there are candidates, the decision to extend the current `cancelLaunch()` to other scopes is not taken until concrete use cases become clear.
 
 ## Related

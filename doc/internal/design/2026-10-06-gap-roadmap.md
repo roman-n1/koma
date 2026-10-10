@@ -2,7 +2,7 @@
 
 - Updated: 2026-10-06
 
-The six implementation waves from `koma-gap-analysis.md` are implemented in the statechart,
+The six implementation waves from `actron-gap-analysis.md` are implemented in the statechart,
 statechart-test and Time Travel modules. Existing ordinary Store semantics are unchanged.
 The new public model/API requires updated JVM/klib dumps; users must version behavioural
 Machine definitions when adopting new transition semantics or changing rules.

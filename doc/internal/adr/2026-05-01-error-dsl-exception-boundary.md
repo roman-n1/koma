@@ -4,7 +4,7 @@
 
 ## Background
 
-Koma's `recover {}` DSL (including the deprecated `error {}` alias) is the entry point for treating failures that occur inside the state machine as state transitions.
+Actron's `recover {}` DSL (including the deprecated `error {}` alias) is the entry point for treating failures that occur inside the state machine as state transitions.
 On the other hand, Kotlin's `Throwable` includes not only `Exception`, for which recovery should be attempted as an ordinary business exception, but also the `Error` family such as `AssertionError`, and non-standard failures such as custom `Throwable`s.
 
 In the implementation so far, except for those immediately rethrown as fatal, `Throwable`s could broadly flow into the `recover {}` side.
@@ -47,7 +47,7 @@ With this decision, the meanings are fixed as follows.
 
 ## Related
 
-- [Koma design principles](../design/2026-04-23-design-principles.md)
+- [Actron design principles](../design/2026-04-23-design-principles.md)
 
 ## Addendum (2026-09-29, stability review)
 

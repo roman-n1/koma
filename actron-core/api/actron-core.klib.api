@@ -1,0 +1,808 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:actron-core>
+open annotation class actron.core/ActronStoreDsl : kotlin/Annotation { // actron.core/ActronStoreDsl|null[0]
+    constructor <init>() // actron.core/ActronStoreDsl.<init>|<init>(){}[0]
+}
+
+open annotation class actron.core/ExperimentalActronApi : kotlin/Annotation { // actron.core/ExperimentalActronApi|null[0]
+    constructor <init>() // actron.core/ExperimentalActronApi.<init>|<init>(){}[0]
+}
+
+open annotation class actron.core/InternalActronApi : kotlin/Annotation { // actron.core/InternalActronApi|null[0]
+    constructor <init>() // actron.core/InternalActronApi.<init>|<init>(){}[0]
+}
+
+final enum class actron.core/AutoStartPolicy : kotlin/Enum<actron.core/AutoStartPolicy> { // actron.core/AutoStartPolicy|null[0]
+    enum entry OnDispatch // actron.core/AutoStartPolicy.OnDispatch|null[0]
+    enum entry OnDispatchOrStateCollection // actron.core/AutoStartPolicy.OnDispatchOrStateCollection|null[0]
+
+    final val entries // actron.core/AutoStartPolicy.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<actron.core/AutoStartPolicy> // actron.core/AutoStartPolicy.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): actron.core/AutoStartPolicy // actron.core/AutoStartPolicy.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<actron.core/AutoStartPolicy> // actron.core/AutoStartPolicy.values|values#static(){}[0]
+}
+
+final enum class actron.core/PendingActionPolicy : kotlin/Enum<actron.core/PendingActionPolicy> { // actron.core/PendingActionPolicy|null[0]
+    enum entry ClearOnStateExit // actron.core/PendingActionPolicy.ClearOnStateExit|null[0]
+    enum entry Keep // actron.core/PendingActionPolicy.Keep|null[0]
+
+    final val entries // actron.core/PendingActionPolicy.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<actron.core/PendingActionPolicy> // actron.core/PendingActionPolicy.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): actron.core/PendingActionPolicy // actron.core/PendingActionPolicy.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<actron.core/PendingActionPolicy> // actron.core/PendingActionPolicy.values|values#static(){}[0]
+}
+
+final enum class actron.core/PluginExecutionPolicy : kotlin/Enum<actron.core/PluginExecutionPolicy> { // actron.core/PluginExecutionPolicy|null[0]
+    enum entry Concurrent // actron.core/PluginExecutionPolicy.Concurrent|null[0]
+    enum entry InRegistrationOrder // actron.core/PluginExecutionPolicy.InRegistrationOrder|null[0]
+
+    final val entries // actron.core/PluginExecutionPolicy.entries|#static{}entries[0]
+        final fun <get-entries>(): kotlin.enums/EnumEntries<actron.core/PluginExecutionPolicy> // actron.core/PluginExecutionPolicy.entries.<get-entries>|<get-entries>#static(){}[0]
+
+    final fun valueOf(kotlin/String): actron.core/PluginExecutionPolicy // actron.core/PluginExecutionPolicy.valueOf|valueOf#static(kotlin.String){}[0]
+    final fun values(): kotlin/Array<actron.core/PluginExecutionPolicy> // actron.core/PluginExecutionPolicy.values|values#static(){}[0]
+}
+
+abstract fun interface <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/StoreProbe { // actron.core/StoreProbe|null[0]
+    abstract fun record(actron.core/StoreTrace<#A, #B, #C>) // actron.core/StoreProbe.record|record(actron.core.StoreTrace<1:0,1:1,1:2>){}[0]
+}
+
+abstract interface <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event, #D: #A> actron.core/ActionScope : actron.core/StoreScope { // actron.core/ActionScope|null[0]
+    abstract val action // actron.core/ActionScope.action|{}action[0]
+        abstract fun <get-action>(): #B // actron.core/ActionScope.action.<get-action>|<get-action>(){}[0]
+    abstract val state // actron.core/ActionScope.state|{}state[0]
+        abstract fun <get-state>(): #D // actron.core/ActionScope.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun cancelLaunch(actron.core/LaunchLane) // actron.core/ActionScope.cancelLaunch|cancelLaunch(actron.core.LaunchLane){}[0]
+    abstract fun clearPendingActions() // actron.core/ActionScope.clearPendingActions|clearPendingActions(){}[0]
+    abstract fun launch(kotlinx.coroutines/CoroutineDispatcher? = ..., actron.core/LaunchControl = ..., kotlin.coroutines/SuspendFunction1<actron.core/ActionScope.LaunchScope<#A, #B, #C, #D>, kotlin/Unit>) // actron.core/ActionScope.launch|launch(kotlinx.coroutines.CoroutineDispatcher?;actron.core.LaunchControl;kotlin.coroutines.SuspendFunction1<actron.core.ActionScope.LaunchScope<1:0,1:1,1:2,1:3>,kotlin.Unit>){}[0]
+    abstract fun nextState(kotlin/Function0<#A>) // actron.core/ActionScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+    abstract fun subscribe(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<actron.core/ActionScope.LaunchScope<#A, #B, #C, #D>, kotlin/Unit>) // actron.core/ActionScope.subscribe|subscribe(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.ActionScope.LaunchScope<1:0,1:1,1:2,1:3>,kotlin.Unit>){}[0]
+    abstract suspend fun event(#C) // actron.core/ActionScope.event|event(1:2){}[0]
+    open fun nextState(#A) // actron.core/ActionScope.nextState|nextState(1:0){}[0]
+    open fun nextStateBy(kotlin/Function0<#A>) // actron.core/ActionScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+
+    abstract interface <#A1: actron.core/State, #B1: actron.core/Action, #C1: actron.core/Event, #D1: #A1> LaunchScope : actron.core/StoreScope { // actron.core/ActionScope.LaunchScope|null[0]
+        abstract val action // actron.core/ActionScope.LaunchScope.action|{}action[0]
+            abstract fun <get-action>(): #B1 // actron.core/ActionScope.LaunchScope.action.<get-action>|<get-action>(){}[0]
+        abstract val isActive // actron.core/ActionScope.LaunchScope.isActive|{}isActive[0]
+            abstract fun <get-isActive>(): kotlin/Boolean // actron.core/ActionScope.LaunchScope.isActive.<get-isActive>|<get-isActive>(){}[0]
+
+        abstract suspend fun event(#C1) // actron.core/ActionScope.LaunchScope.event|event(1:2){}[0]
+        abstract suspend fun transaction(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<actron.core/ActionScope.LaunchScope.TransactionScope<#A1, #B1, #C1, #D1>, kotlin/Unit>) // actron.core/ActionScope.LaunchScope.transaction|transaction(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.ActionScope.LaunchScope.TransactionScope<1:0,1:1,1:2,1:3>,kotlin.Unit>){}[0]
+
+        abstract interface <#A2: actron.core/State, #B2: actron.core/Action, #C2: actron.core/Event, #D2: #A2> TransactionScope : actron.core/StoreScope { // actron.core/ActionScope.LaunchScope.TransactionScope|null[0]
+            abstract val action // actron.core/ActionScope.LaunchScope.TransactionScope.action|{}action[0]
+                abstract fun <get-action>(): #B2 // actron.core/ActionScope.LaunchScope.TransactionScope.action.<get-action>|<get-action>(){}[0]
+            abstract val state // actron.core/ActionScope.LaunchScope.TransactionScope.state|{}state[0]
+                abstract fun <get-state>(): #D2 // actron.core/ActionScope.LaunchScope.TransactionScope.state.<get-state>|<get-state>(){}[0]
+
+            abstract fun clearPendingActions() // actron.core/ActionScope.LaunchScope.TransactionScope.clearPendingActions|clearPendingActions(){}[0]
+            abstract fun nextState(kotlin/Function0<#A2>) // actron.core/ActionScope.LaunchScope.TransactionScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+            abstract suspend fun event(#C2) // actron.core/ActionScope.LaunchScope.TransactionScope.event|event(1:2){}[0]
+            open fun nextState(#A2) // actron.core/ActionScope.LaunchScope.TransactionScope.nextState|nextState(1:0){}[0]
+            open fun nextStateBy(kotlin/Function0<#A2>) // actron.core/ActionScope.LaunchScope.TransactionScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+        }
+    }
+}
+
+abstract interface <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/Plugin { // actron.core/Plugin|null[0]
+    open suspend fun onAction(actron.core/PluginScope<#A, #B>, #A, #B) // actron.core/Plugin.onAction|onAction(actron.core.PluginScope<1:0,1:1>;1:0;1:1){}[0]
+    open suspend fun onEvent(actron.core/PluginScope<#A, #B>, #A, #C) // actron.core/Plugin.onEvent|onEvent(actron.core.PluginScope<1:0,1:1>;1:0;1:2){}[0]
+    open suspend fun onStart(actron.core/PluginScope<#A, #B>, #A) // actron.core/Plugin.onStart|onStart(actron.core.PluginScope<1:0,1:1>;1:0){}[0]
+    open suspend fun onState(actron.core/PluginScope<#A, #B>, #A, #A) // actron.core/Plugin.onState|onState(actron.core.PluginScope<1:0,1:1>;1:0;1:0){}[0]
+}
+
+abstract interface <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/Store : kotlin/AutoCloseable { // actron.core/Store|null[0]
+    abstract val currentState // actron.core/Store.currentState|{}currentState[0]
+        abstract fun <get-currentState>(): #A // actron.core/Store.currentState.<get-currentState>|<get-currentState>(){}[0]
+    abstract val event // actron.core/Store.event|{}event[0]
+        abstract fun <get-event>(): kotlinx.coroutines.flow/Flow<#C> // actron.core/Store.event.<get-event>|<get-event>(){}[0]
+    abstract val state // actron.core/Store.state|{}state[0]
+        abstract fun <get-state>(): kotlinx.coroutines.flow/StateFlow<#A> // actron.core/Store.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun close() // actron.core/Store.close|close(){}[0]
+    abstract fun collectEvent(kotlin/Function1<#C, kotlin/Unit>) // actron.core/Store.collectEvent|collectEvent(kotlin.Function1<1:2,kotlin.Unit>){}[0]
+    abstract fun collectState(kotlin/Function1<#A, kotlin/Unit>) // actron.core/Store.collectState|collectState(kotlin.Function1<1:0,kotlin.Unit>){}[0]
+    abstract fun dispatch(#B) // actron.core/Store.dispatch|dispatch(1:1){}[0]
+    abstract fun start() // actron.core/Store.start|start(){}[0]
+    open fun dispose() // actron.core/Store.dispose|dispose(){}[0]
+}
+
+abstract interface <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/StoreInternalApi { // actron.core/StoreInternalApi|null[0]
+    abstract fun dispatchIf(#B, kotlin/Function0<kotlin/Boolean>) // actron.core/StoreInternalApi.dispatchIf|dispatchIf(1:1;kotlin.Function0<kotlin.Boolean>){}[0]
+    abstract fun handlerMetadata(): actron.core/StoreHandlerMetadata // actron.core/StoreInternalApi.handlerMetadata|handlerMetadata(){}[0]
+    abstract fun matchActionHandlers(#A, #B): kotlin.collections/List<actron.core/ActionHandlerMatch> // actron.core/StoreInternalApi.matchActionHandlers|matchActionHandlers(1:0;1:1){}[0]
+    abstract fun patch(actron.core/StorePatch<#A, #B, #C>): actron.core/Store<#A, #B, #C> // actron.core/StoreInternalApi.patch|patch(actron.core.StorePatch<1:0,1:1,1:2>){}[0]
+    abstract suspend fun awaitIdle(kotlin.time/Duration): actron.core/StorePendingWork // actron.core/StoreInternalApi.awaitIdle|awaitIdle(kotlin.time.Duration){}[0]
+    abstract suspend fun dispatchAndAwait(#B) // actron.core/StoreInternalApi.dispatchAndAwait|dispatchAndAwait(1:1){}[0]
+    abstract suspend fun startAndAwait() // actron.core/StoreInternalApi.startAndAwait|startAndAwait(){}[0]
+}
+
+abstract interface <#A: actron.core/State, #B: actron.core/Action> actron.core/PluginScope { // actron.core/PluginScope|null[0]
+    abstract fun dispatch(#B) // actron.core/PluginScope.dispatch|dispatch(1:1){}[0]
+    abstract fun launch(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<actron.core/PluginScope.LaunchScope<#A, #B>, kotlin/Unit>) // actron.core/PluginScope.launch|launch(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.PluginScope.LaunchScope<1:0,1:1>,kotlin.Unit>){}[0]
+
+    abstract interface <#A1: actron.core/State, #B1: actron.core/Action> LaunchScope { // actron.core/PluginScope.LaunchScope|null[0]
+        abstract val currentState // actron.core/PluginScope.LaunchScope.currentState|{}currentState[0]
+            abstract fun <get-currentState>(): #A1 // actron.core/PluginScope.LaunchScope.currentState.<get-currentState>|<get-currentState>(){}[0]
+
+        abstract fun dispatch(#B1) // actron.core/PluginScope.LaunchScope.dispatch|dispatch(1:1){}[0]
+    }
+}
+
+abstract interface <#A: actron.core/State, #B: actron.core/Event, #C: #A, #D: kotlin/Exception> actron.core/RecoverScope : actron.core/StoreScope { // actron.core/RecoverScope|null[0]
+    abstract val error // actron.core/RecoverScope.error|{}error[0]
+        abstract fun <get-error>(): #D // actron.core/RecoverScope.error.<get-error>|<get-error>(){}[0]
+    abstract val state // actron.core/RecoverScope.state|{}state[0]
+        abstract fun <get-state>(): #C // actron.core/RecoverScope.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun clearPendingActions() // actron.core/RecoverScope.clearPendingActions|clearPendingActions(){}[0]
+    abstract fun nextState(kotlin/Function0<#A>) // actron.core/RecoverScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+    abstract suspend fun event(#B) // actron.core/RecoverScope.event|event(1:1){}[0]
+    open fun nextState(#A) // actron.core/RecoverScope.nextState|nextState(1:0){}[0]
+    open fun nextStateBy(kotlin/Function0<#A>) // actron.core/RecoverScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+}
+
+abstract interface <#A: actron.core/State, #B: actron.core/Event, #C: #A> actron.core/EnterScope : actron.core/StoreScope { // actron.core/EnterScope|null[0]
+    abstract val state // actron.core/EnterScope.state|{}state[0]
+        abstract fun <get-state>(): #C // actron.core/EnterScope.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun clearPendingActions() // actron.core/EnterScope.clearPendingActions|clearPendingActions(){}[0]
+    abstract fun launch(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<actron.core/EnterScope.LaunchScope<#A, #B, #C>, kotlin/Unit>) // actron.core/EnterScope.launch|launch(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.EnterScope.LaunchScope<1:0,1:1,1:2>,kotlin.Unit>){}[0]
+    abstract fun nextState(kotlin/Function0<#A>) // actron.core/EnterScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+    abstract fun subscribe(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<actron.core/EnterScope.LaunchScope<#A, #B, #C>, kotlin/Unit>) // actron.core/EnterScope.subscribe|subscribe(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.EnterScope.LaunchScope<1:0,1:1,1:2>,kotlin.Unit>){}[0]
+    abstract suspend fun event(#B) // actron.core/EnterScope.event|event(1:1){}[0]
+    open fun nextState(#A) // actron.core/EnterScope.nextState|nextState(1:0){}[0]
+    open fun nextStateBy(kotlin/Function0<#A>) // actron.core/EnterScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+
+    abstract interface <#A1: actron.core/State, #B1: actron.core/Event, #C1: #A1> LaunchScope : actron.core/StoreScope { // actron.core/EnterScope.LaunchScope|null[0]
+        abstract val isActive // actron.core/EnterScope.LaunchScope.isActive|{}isActive[0]
+            abstract fun <get-isActive>(): kotlin/Boolean // actron.core/EnterScope.LaunchScope.isActive.<get-isActive>|<get-isActive>(){}[0]
+
+        abstract suspend fun event(#B1) // actron.core/EnterScope.LaunchScope.event|event(1:1){}[0]
+        abstract suspend fun transaction(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<actron.core/EnterScope.LaunchScope.TransactionScope<#A1, #B1, #C1>, kotlin/Unit>) // actron.core/EnterScope.LaunchScope.transaction|transaction(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.EnterScope.LaunchScope.TransactionScope<1:0,1:1,1:2>,kotlin.Unit>){}[0]
+
+        abstract interface <#A2: actron.core/State, #B2: actron.core/Event, #C2: #A2> TransactionScope : actron.core/StoreScope { // actron.core/EnterScope.LaunchScope.TransactionScope|null[0]
+            abstract val state // actron.core/EnterScope.LaunchScope.TransactionScope.state|{}state[0]
+                abstract fun <get-state>(): #C2 // actron.core/EnterScope.LaunchScope.TransactionScope.state.<get-state>|<get-state>(){}[0]
+
+            abstract fun clearPendingActions() // actron.core/EnterScope.LaunchScope.TransactionScope.clearPendingActions|clearPendingActions(){}[0]
+            abstract fun nextState(kotlin/Function0<#A2>) // actron.core/EnterScope.LaunchScope.TransactionScope.nextState|nextState(kotlin.Function0<1:0>){}[0]
+            abstract suspend fun event(#B2) // actron.core/EnterScope.LaunchScope.TransactionScope.event|event(1:1){}[0]
+            open fun nextState(#A2) // actron.core/EnterScope.LaunchScope.TransactionScope.nextState|nextState(1:0){}[0]
+            open fun nextStateBy(kotlin/Function0<#A2>) // actron.core/EnterScope.LaunchScope.TransactionScope.nextStateBy|nextStateBy(kotlin.Function0<1:0>){}[0]
+        }
+    }
+}
+
+abstract interface <#A: actron.core/State, #B: actron.core/Event, #C: #A> actron.core/ExitScope : actron.core/StoreScope { // actron.core/ExitScope|null[0]
+    abstract val state // actron.core/ExitScope.state|{}state[0]
+        abstract fun <get-state>(): #C // actron.core/ExitScope.state.<get-state>|<get-state>(){}[0]
+
+    abstract fun clearPendingActions() // actron.core/ExitScope.clearPendingActions|clearPendingActions(){}[0]
+    abstract suspend fun event(#B) // actron.core/ExitScope.event|event(1:1){}[0]
+}
+
+abstract interface <#A: actron.core/State> actron.core/StateSaver { // actron.core/StateSaver|null[0]
+    abstract fun restore(): #A? // actron.core/StateSaver.restore|restore(){}[0]
+    abstract fun save(#A) // actron.core/StateSaver.save|save(1:0){}[0]
+
+    final object Companion { // actron.core/StateSaver.Companion|null[0]
+        final fun <#A2: actron.core/State> Noop(): actron.core/StateSaver<#A2> // actron.core/StateSaver.Companion.Noop|Noop(){0§<actron.core.State>}[0]
+    }
+}
+
+abstract interface actron.core/Action // actron.core/Action|null[0]
+
+abstract interface actron.core/Event // actron.core/Event|null[0]
+
+abstract interface actron.core/ExceptionHandler { // actron.core/ExceptionHandler|null[0]
+    abstract fun handle(kotlin/Throwable) // actron.core/ExceptionHandler.handle|handle(kotlin.Throwable){}[0]
+
+    final object Companion { // actron.core/ExceptionHandler.Companion|null[0]
+        final val Ignore // actron.core/ExceptionHandler.Companion.Ignore|{}Ignore[0]
+            final fun <get-Ignore>(): actron.core/ExceptionHandler // actron.core/ExceptionHandler.Companion.Ignore.<get-Ignore>|<get-Ignore>(){}[0]
+        final val Log // actron.core/ExceptionHandler.Companion.Log|{}Log[0]
+            final fun <get-Log>(): actron.core/ExceptionHandler // actron.core/ExceptionHandler.Companion.Log.<get-Log>|<get-Log>(){}[0]
+        final val Noop // actron.core/ExceptionHandler.Companion.Noop|{}Noop[0]
+            final fun <get-Noop>(): actron.core/ExceptionHandler // actron.core/ExceptionHandler.Companion.Noop.<get-Noop>|<get-Noop>(){}[0]
+        final val Rethrow // actron.core/ExceptionHandler.Companion.Rethrow|{}Rethrow[0]
+            final fun <get-Rethrow>(): actron.core/ExceptionHandler // actron.core/ExceptionHandler.Companion.Rethrow.<get-Rethrow>|<get-Rethrow>(){}[0]
+        final val Unhandled // actron.core/ExceptionHandler.Companion.Unhandled|{}Unhandled[0]
+            final fun <get-Unhandled>(): actron.core/ExceptionHandler // actron.core/ExceptionHandler.Companion.Unhandled.<get-Unhandled>|<get-Unhandled>(){}[0]
+    }
+}
+
+abstract interface actron.core/State // actron.core/State|null[0]
+
+abstract interface actron.core/StoreScope // actron.core/StoreScope|null[0]
+
+sealed interface <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/PluginPatch { // actron.core/PluginPatch|null[0]
+    final class <#A1: actron.core/State, #B1: actron.core/Action, #C1: actron.core/Event> Append : actron.core/PluginPatch<#A1, #B1, #C1> { // actron.core/PluginPatch.Append|null[0]
+        constructor <init>(kotlin.collections/List<actron.core/Plugin<#A1, #B1, #C1>>) // actron.core/PluginPatch.Append.<init>|<init>(kotlin.collections.List<actron.core.Plugin<1:0,1:1,1:2>>){}[0]
+
+        final val plugins // actron.core/PluginPatch.Append.plugins|{}plugins[0]
+            final fun <get-plugins>(): kotlin.collections/List<actron.core/Plugin<#A1, #B1, #C1>> // actron.core/PluginPatch.Append.plugins.<get-plugins>|<get-plugins>(){}[0]
+
+        final fun component1(): kotlin.collections/List<actron.core/Plugin<#A1, #B1, #C1>> // actron.core/PluginPatch.Append.component1|component1(){}[0]
+        final fun copy(kotlin.collections/List<actron.core/Plugin<#A1, #B1, #C1>> = ...): actron.core/PluginPatch.Append<#A1, #B1, #C1> // actron.core/PluginPatch.Append.copy|copy(kotlin.collections.List<actron.core.Plugin<1:0,1:1,1:2>>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/PluginPatch.Append.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/PluginPatch.Append.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/PluginPatch.Append.toString|toString(){}[0]
+    }
+
+    final class <#A1: actron.core/State, #B1: actron.core/Action, #C1: actron.core/Event> Clear : actron.core/PluginPatch<#A1, #B1, #C1> { // actron.core/PluginPatch.Clear|null[0]
+        constructor <init>() // actron.core/PluginPatch.Clear.<init>|<init>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/PluginPatch.Clear.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/PluginPatch.Clear.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/PluginPatch.Clear.toString|toString(){}[0]
+    }
+
+    final class <#A1: actron.core/State, #B1: actron.core/Action, #C1: actron.core/Event> Replace : actron.core/PluginPatch<#A1, #B1, #C1> { // actron.core/PluginPatch.Replace|null[0]
+        constructor <init>(kotlin.collections/List<actron.core/Plugin<#A1, #B1, #C1>>) // actron.core/PluginPatch.Replace.<init>|<init>(kotlin.collections.List<actron.core.Plugin<1:0,1:1,1:2>>){}[0]
+
+        final val plugins // actron.core/PluginPatch.Replace.plugins|{}plugins[0]
+            final fun <get-plugins>(): kotlin.collections/List<actron.core/Plugin<#A1, #B1, #C1>> // actron.core/PluginPatch.Replace.plugins.<get-plugins>|<get-plugins>(){}[0]
+
+        final fun component1(): kotlin.collections/List<actron.core/Plugin<#A1, #B1, #C1>> // actron.core/PluginPatch.Replace.component1|component1(){}[0]
+        final fun copy(kotlin.collections/List<actron.core/Plugin<#A1, #B1, #C1>> = ...): actron.core/PluginPatch.Replace<#A1, #B1, #C1> // actron.core/PluginPatch.Replace.copy|copy(kotlin.collections.List<actron.core.Plugin<1:0,1:1,1:2>>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/PluginPatch.Replace.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/PluginPatch.Replace.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/PluginPatch.Replace.toString|toString(){}[0]
+    }
+}
+
+sealed interface <#A: out actron.core/Action> actron.core/InputKind { // actron.core/InputKind|null[0]
+    final class <#A1: out actron.core/Action> Dispatch : actron.core/InputKind<#A1> { // actron.core/InputKind.Dispatch|null[0]
+        constructor <init>(#A1) // actron.core/InputKind.Dispatch.<init>|<init>(1:0){}[0]
+
+        final val action // actron.core/InputKind.Dispatch.action|{}action[0]
+            final fun <get-action>(): #A1 // actron.core/InputKind.Dispatch.action.<get-action>|<get-action>(){}[0]
+
+        final fun component1(): #A1 // actron.core/InputKind.Dispatch.component1|component1(){}[0]
+        final fun copy(#A1 = ...): actron.core/InputKind.Dispatch<#A1> // actron.core/InputKind.Dispatch.copy|copy(1:0){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/InputKind.Dispatch.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/InputKind.Dispatch.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/InputKind.Dispatch.toString|toString(){}[0]
+    }
+
+    final class Recovery : actron.core/InputKind<kotlin/Nothing> { // actron.core/InputKind.Recovery|null[0]
+        constructor <init>(kotlin/Throwable, actron.core/InputId?) // actron.core/InputKind.Recovery.<init>|<init>(kotlin.Throwable;actron.core.InputId?){}[0]
+
+        final val error // actron.core/InputKind.Recovery.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // actron.core/InputKind.Recovery.error.<get-error>|<get-error>(){}[0]
+        final val origin // actron.core/InputKind.Recovery.origin|{}origin[0]
+            final fun <get-origin>(): actron.core/InputId? // actron.core/InputKind.Recovery.origin.<get-origin>|<get-origin>(){}[0]
+
+        final fun component1(): kotlin/Throwable // actron.core/InputKind.Recovery.component1|component1(){}[0]
+        final fun component2(): actron.core/InputId? // actron.core/InputKind.Recovery.component2|component2(){}[0]
+        final fun copy(kotlin/Throwable = ..., actron.core/InputId? = ...): actron.core/InputKind.Recovery // actron.core/InputKind.Recovery.copy|copy(kotlin.Throwable;actron.core.InputId?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/InputKind.Recovery.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/InputKind.Recovery.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/InputKind.Recovery.toString|toString(){}[0]
+    }
+
+    final class Transaction : actron.core/InputKind<kotlin/Nothing> { // actron.core/InputKind.Transaction|null[0]
+        constructor <init>(actron.core/InputId?) // actron.core/InputKind.Transaction.<init>|<init>(actron.core.InputId?){}[0]
+
+        final val origin // actron.core/InputKind.Transaction.origin|{}origin[0]
+            final fun <get-origin>(): actron.core/InputId? // actron.core/InputKind.Transaction.origin.<get-origin>|<get-origin>(){}[0]
+
+        final fun component1(): actron.core/InputId? // actron.core/InputKind.Transaction.component1|component1(){}[0]
+        final fun copy(actron.core/InputId? = ...): actron.core/InputKind.Transaction // actron.core/InputKind.Transaction.copy|copy(actron.core.InputId?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/InputKind.Transaction.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/InputKind.Transaction.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/InputKind.Transaction.toString|toString(){}[0]
+    }
+
+    final object Startup : actron.core/InputKind<kotlin/Nothing> { // actron.core/InputKind.Startup|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/InputKind.Startup.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/InputKind.Startup.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/InputKind.Startup.toString|toString(){}[0]
+    }
+}
+
+sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out actron.core/Event> actron.core/StoreTrace { // actron.core/StoreTrace|null[0]
+    final class <#A1: out actron.core/Action> InputAccepted : actron.core/StoreTrace<kotlin/Nothing, #A1, kotlin/Nothing> { // actron.core/StoreTrace.InputAccepted|null[0]
+        constructor <init>(actron.core/InputId, actron.core/InputKind<#A1>) // actron.core/StoreTrace.InputAccepted.<init>|<init>(actron.core.InputId;actron.core.InputKind<1:0>){}[0]
+
+        final val input // actron.core/StoreTrace.InputAccepted.input|{}input[0]
+            final fun <get-input>(): actron.core/InputId // actron.core/StoreTrace.InputAccepted.input.<get-input>|<get-input>(){}[0]
+        final val kind // actron.core/StoreTrace.InputAccepted.kind|{}kind[0]
+            final fun <get-kind>(): actron.core/InputKind<#A1> // actron.core/StoreTrace.InputAccepted.kind.<get-kind>|<get-kind>(){}[0]
+
+        final fun component1(): actron.core/InputId // actron.core/StoreTrace.InputAccepted.component1|component1(){}[0]
+        final fun component2(): actron.core/InputKind<#A1> // actron.core/StoreTrace.InputAccepted.component2|component2(){}[0]
+        final fun copy(actron.core/InputId = ..., actron.core/InputKind<#A1> = ...): actron.core/StoreTrace.InputAccepted<#A1> // actron.core/StoreTrace.InputAccepted.copy|copy(actron.core.InputId;actron.core.InputKind<1:0>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.InputAccepted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/StoreTrace.InputAccepted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/StoreTrace.InputAccepted.toString|toString(){}[0]
+    }
+
+    final class <#A1: out actron.core/Event> EventEmitted : actron.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, #A1> { // actron.core/StoreTrace.EventEmitted|null[0]
+        constructor <init>(actron.core/InputId?, #A1) // actron.core/StoreTrace.EventEmitted.<init>|<init>(actron.core.InputId?;1:0){}[0]
+
+        final val event // actron.core/StoreTrace.EventEmitted.event|{}event[0]
+            final fun <get-event>(): #A1 // actron.core/StoreTrace.EventEmitted.event.<get-event>|<get-event>(){}[0]
+        final val input // actron.core/StoreTrace.EventEmitted.input|{}input[0]
+            final fun <get-input>(): actron.core/InputId? // actron.core/StoreTrace.EventEmitted.input.<get-input>|<get-input>(){}[0]
+
+        final fun component1(): actron.core/InputId? // actron.core/StoreTrace.EventEmitted.component1|component1(){}[0]
+        final fun component2(): #A1 // actron.core/StoreTrace.EventEmitted.component2|component2(){}[0]
+        final fun copy(actron.core/InputId? = ..., #A1 = ...): actron.core/StoreTrace.EventEmitted<#A1> // actron.core/StoreTrace.EventEmitted.copy|copy(actron.core.InputId?;1:0){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.EventEmitted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/StoreTrace.EventEmitted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/StoreTrace.EventEmitted.toString|toString(){}[0]
+    }
+
+    final class <#A1: out actron.core/State> StateCommitted : actron.core/StoreTrace<#A1, kotlin/Nothing, kotlin/Nothing> { // actron.core/StoreTrace.StateCommitted|null[0]
+        constructor <init>(actron.core/InputId, kotlin/Long, #A1, #A1) // actron.core/StoreTrace.StateCommitted.<init>|<init>(actron.core.InputId;kotlin.Long;1:0;1:0){}[0]
+
+        final val input // actron.core/StoreTrace.StateCommitted.input|{}input[0]
+            final fun <get-input>(): actron.core/InputId // actron.core/StoreTrace.StateCommitted.input.<get-input>|<get-input>(){}[0]
+        final val previous // actron.core/StoreTrace.StateCommitted.previous|{}previous[0]
+            final fun <get-previous>(): #A1 // actron.core/StoreTrace.StateCommitted.previous.<get-previous>|<get-previous>(){}[0]
+        final val revision // actron.core/StoreTrace.StateCommitted.revision|{}revision[0]
+            final fun <get-revision>(): kotlin/Long // actron.core/StoreTrace.StateCommitted.revision.<get-revision>|<get-revision>(){}[0]
+        final val state // actron.core/StoreTrace.StateCommitted.state|{}state[0]
+            final fun <get-state>(): #A1 // actron.core/StoreTrace.StateCommitted.state.<get-state>|<get-state>(){}[0]
+
+        final fun component1(): actron.core/InputId // actron.core/StoreTrace.StateCommitted.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // actron.core/StoreTrace.StateCommitted.component2|component2(){}[0]
+        final fun component3(): #A1 // actron.core/StoreTrace.StateCommitted.component3|component3(){}[0]
+        final fun component4(): #A1 // actron.core/StoreTrace.StateCommitted.component4|component4(){}[0]
+        final fun copy(actron.core/InputId = ..., kotlin/Long = ..., #A1 = ..., #A1 = ...): actron.core/StoreTrace.StateCommitted<#A1> // actron.core/StoreTrace.StateCommitted.copy|copy(actron.core.InputId;kotlin.Long;1:0;1:0){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.StateCommitted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/StoreTrace.StateCommitted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/StoreTrace.StateCommitted.toString|toString(){}[0]
+    }
+
+    final class FailureReported : actron.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.core/StoreTrace.FailureReported|null[0]
+        constructor <init>(actron.core/InputId?, kotlin/Throwable) // actron.core/StoreTrace.FailureReported.<init>|<init>(actron.core.InputId?;kotlin.Throwable){}[0]
+
+        final val error // actron.core/StoreTrace.FailureReported.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // actron.core/StoreTrace.FailureReported.error.<get-error>|<get-error>(){}[0]
+        final val input // actron.core/StoreTrace.FailureReported.input|{}input[0]
+            final fun <get-input>(): actron.core/InputId? // actron.core/StoreTrace.FailureReported.input.<get-input>|<get-input>(){}[0]
+
+        final fun component1(): actron.core/InputId? // actron.core/StoreTrace.FailureReported.component1|component1(){}[0]
+        final fun component2(): kotlin/Throwable // actron.core/StoreTrace.FailureReported.component2|component2(){}[0]
+        final fun copy(actron.core/InputId? = ..., kotlin/Throwable = ...): actron.core/StoreTrace.FailureReported // actron.core/StoreTrace.FailureReported.copy|copy(actron.core.InputId?;kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.FailureReported.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/StoreTrace.FailureReported.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/StoreTrace.FailureReported.toString|toString(){}[0]
+    }
+
+    final class InputDiscarded : actron.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.core/StoreTrace.InputDiscarded|null[0]
+        constructor <init>(actron.core/InputId, actron.core/DiscardReason) // actron.core/StoreTrace.InputDiscarded.<init>|<init>(actron.core.InputId;actron.core.DiscardReason){}[0]
+
+        final val input // actron.core/StoreTrace.InputDiscarded.input|{}input[0]
+            final fun <get-input>(): actron.core/InputId // actron.core/StoreTrace.InputDiscarded.input.<get-input>|<get-input>(){}[0]
+        final val reason // actron.core/StoreTrace.InputDiscarded.reason|{}reason[0]
+            final fun <get-reason>(): actron.core/DiscardReason // actron.core/StoreTrace.InputDiscarded.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): actron.core/InputId // actron.core/StoreTrace.InputDiscarded.component1|component1(){}[0]
+        final fun component2(): actron.core/DiscardReason // actron.core/StoreTrace.InputDiscarded.component2|component2(){}[0]
+        final fun copy(actron.core/InputId = ..., actron.core/DiscardReason = ...): actron.core/StoreTrace.InputDiscarded // actron.core/StoreTrace.InputDiscarded.copy|copy(actron.core.InputId;actron.core.DiscardReason){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.InputDiscarded.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/StoreTrace.InputDiscarded.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/StoreTrace.InputDiscarded.toString|toString(){}[0]
+    }
+
+    final class ProcessingFinished : actron.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.core/StoreTrace.ProcessingFinished|null[0]
+        constructor <init>(actron.core/InputId, kotlin/Long, actron.core/ProcessingOutcome) // actron.core/StoreTrace.ProcessingFinished.<init>|<init>(actron.core.InputId;kotlin.Long;actron.core.ProcessingOutcome){}[0]
+
+        final val input // actron.core/StoreTrace.ProcessingFinished.input|{}input[0]
+            final fun <get-input>(): actron.core/InputId // actron.core/StoreTrace.ProcessingFinished.input.<get-input>|<get-input>(){}[0]
+        final val ordinal // actron.core/StoreTrace.ProcessingFinished.ordinal|{}ordinal[0]
+            final fun <get-ordinal>(): kotlin/Long // actron.core/StoreTrace.ProcessingFinished.ordinal.<get-ordinal>|<get-ordinal>(){}[0]
+        final val outcome // actron.core/StoreTrace.ProcessingFinished.outcome|{}outcome[0]
+            final fun <get-outcome>(): actron.core/ProcessingOutcome // actron.core/StoreTrace.ProcessingFinished.outcome.<get-outcome>|<get-outcome>(){}[0]
+
+        final fun component1(): actron.core/InputId // actron.core/StoreTrace.ProcessingFinished.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // actron.core/StoreTrace.ProcessingFinished.component2|component2(){}[0]
+        final fun component3(): actron.core/ProcessingOutcome // actron.core/StoreTrace.ProcessingFinished.component3|component3(){}[0]
+        final fun copy(actron.core/InputId = ..., kotlin/Long = ..., actron.core/ProcessingOutcome = ...): actron.core/StoreTrace.ProcessingFinished // actron.core/StoreTrace.ProcessingFinished.copy|copy(actron.core.InputId;kotlin.Long;actron.core.ProcessingOutcome){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.ProcessingFinished.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/StoreTrace.ProcessingFinished.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/StoreTrace.ProcessingFinished.toString|toString(){}[0]
+    }
+
+    final class ProcessingStarted : actron.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.core/StoreTrace.ProcessingStarted|null[0]
+        constructor <init>(actron.core/InputId, kotlin/Long) // actron.core/StoreTrace.ProcessingStarted.<init>|<init>(actron.core.InputId;kotlin.Long){}[0]
+
+        final val input // actron.core/StoreTrace.ProcessingStarted.input|{}input[0]
+            final fun <get-input>(): actron.core/InputId // actron.core/StoreTrace.ProcessingStarted.input.<get-input>|<get-input>(){}[0]
+        final val ordinal // actron.core/StoreTrace.ProcessingStarted.ordinal|{}ordinal[0]
+            final fun <get-ordinal>(): kotlin/Long // actron.core/StoreTrace.ProcessingStarted.ordinal.<get-ordinal>|<get-ordinal>(){}[0]
+
+        final fun component1(): actron.core/InputId // actron.core/StoreTrace.ProcessingStarted.component1|component1(){}[0]
+        final fun component2(): kotlin/Long // actron.core/StoreTrace.ProcessingStarted.component2|component2(){}[0]
+        final fun copy(actron.core/InputId = ..., kotlin/Long = ...): actron.core/StoreTrace.ProcessingStarted // actron.core/StoreTrace.ProcessingStarted.copy|copy(actron.core.InputId;kotlin.Long){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.ProcessingStarted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/StoreTrace.ProcessingStarted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/StoreTrace.ProcessingStarted.toString|toString(){}[0]
+    }
+
+    final object StoreClosed : actron.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.core/StoreTrace.StoreClosed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.StoreClosed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/StoreTrace.StoreClosed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/StoreTrace.StoreClosed.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.core/DiscardReason { // actron.core/DiscardReason|null[0]
+    final class Rejected : actron.core/DiscardReason { // actron.core/DiscardReason.Rejected|null[0]
+        constructor <init>(kotlin/Throwable) // actron.core/DiscardReason.Rejected.<init>|<init>(kotlin.Throwable){}[0]
+
+        final val error // actron.core/DiscardReason.Rejected.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // actron.core/DiscardReason.Rejected.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): kotlin/Throwable // actron.core/DiscardReason.Rejected.component1|component1(){}[0]
+        final fun copy(kotlin/Throwable = ...): actron.core/DiscardReason.Rejected // actron.core/DiscardReason.Rejected.copy|copy(kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/DiscardReason.Rejected.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/DiscardReason.Rejected.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/DiscardReason.Rejected.toString|toString(){}[0]
+    }
+
+    final class StartupFailed : actron.core/DiscardReason { // actron.core/DiscardReason.StartupFailed|null[0]
+        constructor <init>(kotlin/Throwable) // actron.core/DiscardReason.StartupFailed.<init>|<init>(kotlin.Throwable){}[0]
+
+        final val error // actron.core/DiscardReason.StartupFailed.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // actron.core/DiscardReason.StartupFailed.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): kotlin/Throwable // actron.core/DiscardReason.StartupFailed.component1|component1(){}[0]
+        final fun copy(kotlin/Throwable = ...): actron.core/DiscardReason.StartupFailed // actron.core/DiscardReason.StartupFailed.copy|copy(kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/DiscardReason.StartupFailed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/DiscardReason.StartupFailed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/DiscardReason.StartupFailed.toString|toString(){}[0]
+    }
+
+    final object ClearedExplicitly : actron.core/DiscardReason { // actron.core/DiscardReason.ClearedExplicitly|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/DiscardReason.ClearedExplicitly.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/DiscardReason.ClearedExplicitly.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/DiscardReason.ClearedExplicitly.toString|toString(){}[0]
+    }
+
+    final object ClearedOnStateExit : actron.core/DiscardReason { // actron.core/DiscardReason.ClearedOnStateExit|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/DiscardReason.ClearedOnStateExit.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/DiscardReason.ClearedOnStateExit.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/DiscardReason.ClearedOnStateExit.toString|toString(){}[0]
+    }
+
+    final object LaunchInactive : actron.core/DiscardReason { // actron.core/DiscardReason.LaunchInactive|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/DiscardReason.LaunchInactive.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/DiscardReason.LaunchInactive.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/DiscardReason.LaunchInactive.toString|toString(){}[0]
+    }
+
+    final object Stale : actron.core/DiscardReason { // actron.core/DiscardReason.Stale|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/DiscardReason.Stale.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/DiscardReason.Stale.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/DiscardReason.Stale.toString|toString(){}[0]
+    }
+
+    final object StoreClosed : actron.core/DiscardReason { // actron.core/DiscardReason.StoreClosed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/DiscardReason.StoreClosed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/DiscardReason.StoreClosed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/DiscardReason.StoreClosed.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.core/LaunchControl { // actron.core/LaunchControl|null[0]
+    final class CancelPrevious : actron.core/LaunchControl { // actron.core/LaunchControl.CancelPrevious|null[0]
+        constructor <init>(actron.core/LaunchLane? = ...) // actron.core/LaunchControl.CancelPrevious.<init>|<init>(actron.core.LaunchLane?){}[0]
+
+        final val lane // actron.core/LaunchControl.CancelPrevious.lane|{}lane[0]
+            final fun <get-lane>(): actron.core/LaunchLane? // actron.core/LaunchControl.CancelPrevious.lane.<get-lane>|<get-lane>(){}[0]
+
+        final fun component1(): actron.core/LaunchLane? // actron.core/LaunchControl.CancelPrevious.component1|component1(){}[0]
+        final fun copy(actron.core/LaunchLane? = ...): actron.core/LaunchControl.CancelPrevious // actron.core/LaunchControl.CancelPrevious.copy|copy(actron.core.LaunchLane?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/LaunchControl.CancelPrevious.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/LaunchControl.CancelPrevious.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/LaunchControl.CancelPrevious.toString|toString(){}[0]
+    }
+
+    final class DropIfRunning : actron.core/LaunchControl { // actron.core/LaunchControl.DropIfRunning|null[0]
+        constructor <init>(actron.core/LaunchLane? = ...) // actron.core/LaunchControl.DropIfRunning.<init>|<init>(actron.core.LaunchLane?){}[0]
+
+        final val lane // actron.core/LaunchControl.DropIfRunning.lane|{}lane[0]
+            final fun <get-lane>(): actron.core/LaunchLane? // actron.core/LaunchControl.DropIfRunning.lane.<get-lane>|<get-lane>(){}[0]
+
+        final fun component1(): actron.core/LaunchLane? // actron.core/LaunchControl.DropIfRunning.component1|component1(){}[0]
+        final fun copy(actron.core/LaunchLane? = ...): actron.core/LaunchControl.DropIfRunning // actron.core/LaunchControl.DropIfRunning.copy|copy(actron.core.LaunchLane?){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/LaunchControl.DropIfRunning.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/LaunchControl.DropIfRunning.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/LaunchControl.DropIfRunning.toString|toString(){}[0]
+    }
+
+    final object Untracked : actron.core/LaunchControl { // actron.core/LaunchControl.Untracked|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/LaunchControl.Untracked.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/LaunchControl.Untracked.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/LaunchControl.Untracked.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.core/ProcessingOutcome { // actron.core/ProcessingOutcome|null[0]
+    final class Failed : actron.core/ProcessingOutcome { // actron.core/ProcessingOutcome.Failed|null[0]
+        constructor <init>(kotlin/Throwable) // actron.core/ProcessingOutcome.Failed.<init>|<init>(kotlin.Throwable){}[0]
+
+        final val error // actron.core/ProcessingOutcome.Failed.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // actron.core/ProcessingOutcome.Failed.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): kotlin/Throwable // actron.core/ProcessingOutcome.Failed.component1|component1(){}[0]
+        final fun copy(kotlin/Throwable = ...): actron.core/ProcessingOutcome.Failed // actron.core/ProcessingOutcome.Failed.copy|copy(kotlin.Throwable){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/ProcessingOutcome.Failed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/ProcessingOutcome.Failed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/ProcessingOutcome.Failed.toString|toString(){}[0]
+    }
+
+    final class Handled : actron.core/ProcessingOutcome { // actron.core/ProcessingOutcome.Handled|null[0]
+        constructor <init>(kotlin/Int) // actron.core/ProcessingOutcome.Handled.<init>|<init>(kotlin.Int){}[0]
+
+        final val commits // actron.core/ProcessingOutcome.Handled.commits|{}commits[0]
+            final fun <get-commits>(): kotlin/Int // actron.core/ProcessingOutcome.Handled.commits.<get-commits>|<get-commits>(){}[0]
+
+        final fun component1(): kotlin/Int // actron.core/ProcessingOutcome.Handled.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): actron.core/ProcessingOutcome.Handled // actron.core/ProcessingOutcome.Handled.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/ProcessingOutcome.Handled.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/ProcessingOutcome.Handled.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/ProcessingOutcome.Handled.toString|toString(){}[0]
+    }
+
+    final class Recovered : actron.core/ProcessingOutcome { // actron.core/ProcessingOutcome.Recovered|null[0]
+        constructor <init>(kotlin/Throwable, kotlin/Int) // actron.core/ProcessingOutcome.Recovered.<init>|<init>(kotlin.Throwable;kotlin.Int){}[0]
+
+        final val commits // actron.core/ProcessingOutcome.Recovered.commits|{}commits[0]
+            final fun <get-commits>(): kotlin/Int // actron.core/ProcessingOutcome.Recovered.commits.<get-commits>|<get-commits>(){}[0]
+        final val error // actron.core/ProcessingOutcome.Recovered.error|{}error[0]
+            final fun <get-error>(): kotlin/Throwable // actron.core/ProcessingOutcome.Recovered.error.<get-error>|<get-error>(){}[0]
+
+        final fun component1(): kotlin/Throwable // actron.core/ProcessingOutcome.Recovered.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // actron.core/ProcessingOutcome.Recovered.component2|component2(){}[0]
+        final fun copy(kotlin/Throwable = ..., kotlin/Int = ...): actron.core/ProcessingOutcome.Recovered // actron.core/ProcessingOutcome.Recovered.copy|copy(kotlin.Throwable;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/ProcessingOutcome.Recovered.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/ProcessingOutcome.Recovered.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/ProcessingOutcome.Recovered.toString|toString(){}[0]
+    }
+
+    final object Cancelled : actron.core/ProcessingOutcome { // actron.core/ProcessingOutcome.Cancelled|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/ProcessingOutcome.Cancelled.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/ProcessingOutcome.Cancelled.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/ProcessingOutcome.Cancelled.toString|toString(){}[0]
+    }
+
+    final object Ignored : actron.core/ProcessingOutcome { // actron.core/ProcessingOutcome.Ignored|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/ProcessingOutcome.Ignored.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/ProcessingOutcome.Ignored.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/ProcessingOutcome.Ignored.toString|toString(){}[0]
+    }
+
+    final object Unchanged : actron.core/ProcessingOutcome { // actron.core/ProcessingOutcome.Unchanged|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/ProcessingOutcome.Unchanged.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/ProcessingOutcome.Unchanged.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/ProcessingOutcome.Unchanged.toString|toString(){}[0]
+    }
+}
+
+final class <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/StoreBuilder { // actron.core/StoreBuilder|null[0]
+    final val registeredActionHandlers // actron.core/StoreBuilder.registeredActionHandlers|{}registeredActionHandlers[0]
+        final fun <get-registeredActionHandlers>(): kotlin.collections/MutableList<actron.core/StoreBuilder.StateHandler<kotlin/Function2<#A, #B, kotlin/Boolean>, actron.core/ActionScope<#A, #B, #C, #A>>> // actron.core/StoreBuilder.registeredActionHandlers.<get-registeredActionHandlers>|<get-registeredActionHandlers>(){}[0]
+    final val registeredEnterHandlers // actron.core/StoreBuilder.registeredEnterHandlers|{}registeredEnterHandlers[0]
+        final fun <get-registeredEnterHandlers>(): kotlin.collections/MutableList<actron.core/StoreBuilder.StateHandler<kotlin/Function1<#A, kotlin/Boolean>, actron.core/EnterScope<#A, #C, #A>>> // actron.core/StoreBuilder.registeredEnterHandlers.<get-registeredEnterHandlers>|<get-registeredEnterHandlers>(){}[0]
+    final val registeredErrorHandlers // actron.core/StoreBuilder.registeredErrorHandlers|{}registeredErrorHandlers[0]
+        final fun <get-registeredErrorHandlers>(): kotlin.collections/MutableList<actron.core/StoreBuilder.StateHandler<kotlin/Function2<#A, kotlin/Exception, kotlin/Boolean>, actron.core/RecoverScope<#A, #C, #A, kotlin/Exception>>> // actron.core/StoreBuilder.registeredErrorHandlers.<get-registeredErrorHandlers>|<get-registeredErrorHandlers>(){}[0]
+    final val registeredExitHandlers // actron.core/StoreBuilder.registeredExitHandlers|{}registeredExitHandlers[0]
+        final fun <get-registeredExitHandlers>(): kotlin.collections/MutableList<actron.core/StoreBuilder.StateHandler<kotlin/Function1<#A, kotlin/Boolean>, actron.core/ExitScope<#A, #C, #A>>> // actron.core/StoreBuilder.registeredExitHandlers.<get-registeredExitHandlers>|<get-registeredExitHandlers>(){}[0]
+
+    final fun autoStartPolicy(actron.core/AutoStartPolicy) // actron.core/StoreBuilder.autoStartPolicy|autoStartPolicy(actron.core.AutoStartPolicy){}[0]
+    final fun coroutineContext(kotlin.coroutines/CoroutineContext) // actron.core/StoreBuilder.coroutineContext|coroutineContext(kotlin.coroutines.CoroutineContext){}[0]
+    final fun exceptionHandler(actron.core/ExceptionHandler) // actron.core/StoreBuilder.exceptionHandler|exceptionHandler(actron.core.ExceptionHandler){}[0]
+    final fun initialState(#A) // actron.core/StoreBuilder.initialState|initialState(1:0){}[0]
+    final fun pendingActionPolicy(actron.core/PendingActionPolicy) // actron.core/StoreBuilder.pendingActionPolicy|pendingActionPolicy(actron.core.PendingActionPolicy){}[0]
+    final fun plugin(actron.core/Plugin<#A, #B, #C>, kotlin/Array<out actron.core/Plugin<#A, #B, #C>>...) // actron.core/StoreBuilder.plugin|plugin(actron.core.Plugin<1:0,1:1,1:2>;kotlin.Array<out|actron.core.Plugin<1:0,1:1,1:2>>...){}[0]
+    final fun pluginExecutionPolicy(actron.core/PluginExecutionPolicy) // actron.core/StoreBuilder.pluginExecutionPolicy|pluginExecutionPolicy(actron.core.PluginExecutionPolicy){}[0]
+    final fun probe(actron.core/StoreProbe<#A, #B, #C>, kotlin/Array<out actron.core/StoreProbe<#A, #B, #C>>...) // actron.core/StoreBuilder.probe|probe(actron.core.StoreProbe<1:0,1:1,1:2>;kotlin.Array<out|actron.core.StoreProbe<1:0,1:1,1:2>>...){}[0]
+    final fun stateSaver(actron.core/StateSaver<#A>) // actron.core/StoreBuilder.stateSaver|stateSaver(actron.core.StateSaver<1:0>){}[0]
+    final fun validateRecovery(kotlin/Function2<#A, #A, kotlin/Unit>) // actron.core/StoreBuilder.validateRecovery|validateRecovery(kotlin.Function2<1:0,1:0,kotlin.Unit>){}[0]
+    final inline fun <#A1: reified #A> state(noinline kotlin/Function1<actron.core/StoreBuilder.StateHandlerConfig<#A, #B, #C, #A1>, kotlin/Unit>) // actron.core/StoreBuilder.state|state(kotlin.Function1<actron.core.StoreBuilder.StateHandlerConfig<1:0,1:1,1:2,0:0>,kotlin.Unit>){0§<1:0>}[0]
+
+    final class <#A1: actron.core/State, #B1: actron.core/Action, #C1: actron.core/Event, #D1: #A1> StateHandlerConfig { // actron.core/StoreBuilder.StateHandlerConfig|null[0]
+        constructor <init>() // actron.core/StoreBuilder.StateHandlerConfig.<init>|<init>(){}[0]
+
+        final val stateActionHandlers // actron.core/StoreBuilder.StateHandlerConfig.stateActionHandlers|{}stateActionHandlers[0]
+            final fun <get-stateActionHandlers>(): kotlin.collections/MutableList<actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler<kotlin/Function1<#B1, kotlin/Boolean>, actron.core/ActionScope<#A1, #B1, #C1, #D1>>> // actron.core/StoreBuilder.StateHandlerConfig.stateActionHandlers.<get-stateActionHandlers>|<get-stateActionHandlers>(){}[0]
+        final val stateEnterHandlers // actron.core/StoreBuilder.StateHandlerConfig.stateEnterHandlers|{}stateEnterHandlers[0]
+            final fun <get-stateEnterHandlers>(): kotlin.collections/MutableList<actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler<kotlin/Nothing?, actron.core/EnterScope<#A1, #C1, #D1>>> // actron.core/StoreBuilder.StateHandlerConfig.stateEnterHandlers.<get-stateEnterHandlers>|<get-stateEnterHandlers>(){}[0]
+        final val stateErrorHandlers // actron.core/StoreBuilder.StateHandlerConfig.stateErrorHandlers|{}stateErrorHandlers[0]
+            final fun <get-stateErrorHandlers>(): kotlin.collections/MutableList<actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler<kotlin/Function1<kotlin/Exception, kotlin/Boolean>, actron.core/RecoverScope<#A1, #C1, #D1, kotlin/Exception>>> // actron.core/StoreBuilder.StateHandlerConfig.stateErrorHandlers.<get-stateErrorHandlers>|<get-stateErrorHandlers>(){}[0]
+        final val stateExitHandlers // actron.core/StoreBuilder.StateHandlerConfig.stateExitHandlers|{}stateExitHandlers[0]
+            final fun <get-stateExitHandlers>(): kotlin.collections/MutableList<actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler<kotlin/Nothing?, actron.core/ExitScope<#A1, #C1, #D1>>> // actron.core/StoreBuilder.StateHandlerConfig.stateExitHandlers.<get-stateExitHandlers>|<get-stateExitHandlers>(){}[0]
+
+        final fun enter(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<actron.core/EnterScope<#A1, #C1, #D1>, kotlin/Unit>) // actron.core/StoreBuilder.StateHandlerConfig.enter|enter(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.EnterScope<1:0,1:2,1:3>,kotlin.Unit>){}[0]
+        final fun exit(kotlinx.coroutines/CoroutineDispatcher? = ..., kotlin.coroutines/SuspendFunction1<actron.core/ExitScope<#A1, #C1, #D1>, kotlin/Unit>) // actron.core/StoreBuilder.StateHandlerConfig.exit|exit(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.ExitScope<1:0,1:2,1:3>,kotlin.Unit>){}[0]
+        final inline fun <#A2: reified #B1> action(kotlinx.coroutines/CoroutineDispatcher? = ..., noinline kotlin.coroutines/SuspendFunction1<actron.core/ActionScope<#A1, #A2, #C1, #D1>, kotlin/Unit>) // actron.core/StoreBuilder.StateHandlerConfig.action|action(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.ActionScope<1:0,0:0,1:2,1:3>,kotlin.Unit>){0§<1:1>}[0]
+        final inline fun <#A2: reified kotlin/Exception> error(kotlinx.coroutines/CoroutineDispatcher? = ..., noinline kotlin.coroutines/SuspendFunction1<actron.core/RecoverScope<#A1, #C1, #D1, #A2>, kotlin/Unit>) // actron.core/StoreBuilder.StateHandlerConfig.error|error(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.RecoverScope<1:0,1:2,1:3,0:0>,kotlin.Unit>){0§<kotlin.Exception>}[0]
+        final inline fun <#A2: reified kotlin/Exception> recover(kotlinx.coroutines/CoroutineDispatcher? = ..., noinline kotlin.coroutines/SuspendFunction1<actron.core/RecoverScope<#A1, #C1, #D1, #A2>, kotlin/Unit>) // actron.core/StoreBuilder.StateHandlerConfig.recover|recover(kotlinx.coroutines.CoroutineDispatcher?;kotlin.coroutines.SuspendFunction1<actron.core.RecoverScope<1:0,1:2,1:3,0:0>,kotlin.Unit>){0§<kotlin.Exception>}[0]
+
+        final class <#A2: kotlin/Any?, #B2: actron.core/StoreScope> ThreadedHandler { // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler|null[0]
+            constructor <init>(kotlinx.coroutines/CoroutineDispatcher?, #A2, kotlin.coroutines/SuspendFunction1<#B2, kotlin/Unit>) // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.<init>|<init>(kotlinx.coroutines.CoroutineDispatcher?;1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>){}[0]
+            constructor <init>(kotlinx.coroutines/CoroutineDispatcher?, #A2, kotlin.coroutines/SuspendFunction1<#B2, kotlin/Unit>, kotlin.reflect/KClass<*>?) // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.<init>|<init>(kotlinx.coroutines.CoroutineDispatcher?;1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>;kotlin.reflect.KClass<*>?){}[0]
+
+            final val inputType // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.inputType|{}inputType[0]
+                final fun <get-inputType>(): kotlin.reflect/KClass<*>? // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.inputType.<get-inputType>|<get-inputType>(){}[0]
+            final val predicate // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.predicate|{}predicate[0]
+                final fun <get-predicate>(): #A2 // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.predicate.<get-predicate>|<get-predicate>(){}[0]
+
+            final suspend fun invoke(#B2) // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.invoke|invoke(1:1){}[0]
+        }
+    }
+
+    final class <#A1: kotlin/Any?, #B1: actron.core/StoreScope> StateHandler { // actron.core/StoreBuilder.StateHandler|null[0]
+        constructor <init>(#A1, kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit>) // actron.core/StoreBuilder.StateHandler.<init>|<init>(1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>){}[0]
+        constructor <init>(#A1, kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit>, actron.core/HandlerMatcher?) // actron.core/StoreBuilder.StateHandler.<init>|<init>(1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>;actron.core.HandlerMatcher?){}[0]
+
+        final val handler // actron.core/StoreBuilder.StateHandler.handler|{}handler[0]
+            final fun <get-handler>(): kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit> // actron.core/StoreBuilder.StateHandler.handler.<get-handler>|<get-handler>(){}[0]
+        final val matcher // actron.core/StoreBuilder.StateHandler.matcher|{}matcher[0]
+            final fun <get-matcher>(): actron.core/HandlerMatcher? // actron.core/StoreBuilder.StateHandler.matcher.<get-matcher>|<get-matcher>(){}[0]
+        final val predicate // actron.core/StoreBuilder.StateHandler.predicate|{}predicate[0]
+            final fun <get-predicate>(): #A1 // actron.core/StoreBuilder.StateHandler.predicate.<get-predicate>|<get-predicate>(){}[0]
+    }
+}
+
+final class <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/StorePatch { // actron.core/StorePatch|null[0]
+    constructor <init>(#A? = ..., kotlin.coroutines/CoroutineContext? = ..., actron.core/StateSaver<#A>? = ..., actron.core/ExceptionHandler? = ..., actron.core/AutoStartPolicy? = ..., actron.core/PendingActionPolicy? = ..., actron.core/PluginExecutionPolicy? = ..., kotlin.collections/List<actron.core/PluginPatch<#A, #B, #C>> = ..., kotlin.collections/List<actron.core/StoreProbe<#A, #B, #C>> = ...) // actron.core/StorePatch.<init>|<init>(1:0?;kotlin.coroutines.CoroutineContext?;actron.core.StateSaver<1:0>?;actron.core.ExceptionHandler?;actron.core.AutoStartPolicy?;actron.core.PendingActionPolicy?;actron.core.PluginExecutionPolicy?;kotlin.collections.List<actron.core.PluginPatch<1:0,1:1,1:2>>;kotlin.collections.List<actron.core.StoreProbe<1:0,1:1,1:2>>){}[0]
+
+    final val autoStartPolicy // actron.core/StorePatch.autoStartPolicy|{}autoStartPolicy[0]
+        final fun <get-autoStartPolicy>(): actron.core/AutoStartPolicy? // actron.core/StorePatch.autoStartPolicy.<get-autoStartPolicy>|<get-autoStartPolicy>(){}[0]
+    final val coroutineContext // actron.core/StorePatch.coroutineContext|{}coroutineContext[0]
+        final fun <get-coroutineContext>(): kotlin.coroutines/CoroutineContext? // actron.core/StorePatch.coroutineContext.<get-coroutineContext>|<get-coroutineContext>(){}[0]
+    final val exceptionHandler // actron.core/StorePatch.exceptionHandler|{}exceptionHandler[0]
+        final fun <get-exceptionHandler>(): actron.core/ExceptionHandler? // actron.core/StorePatch.exceptionHandler.<get-exceptionHandler>|<get-exceptionHandler>(){}[0]
+    final val initialState // actron.core/StorePatch.initialState|{}initialState[0]
+        final fun <get-initialState>(): #A? // actron.core/StorePatch.initialState.<get-initialState>|<get-initialState>(){}[0]
+    final val pendingActionPolicy // actron.core/StorePatch.pendingActionPolicy|{}pendingActionPolicy[0]
+        final fun <get-pendingActionPolicy>(): actron.core/PendingActionPolicy? // actron.core/StorePatch.pendingActionPolicy.<get-pendingActionPolicy>|<get-pendingActionPolicy>(){}[0]
+    final val pluginExecutionPolicy // actron.core/StorePatch.pluginExecutionPolicy|{}pluginExecutionPolicy[0]
+        final fun <get-pluginExecutionPolicy>(): actron.core/PluginExecutionPolicy? // actron.core/StorePatch.pluginExecutionPolicy.<get-pluginExecutionPolicy>|<get-pluginExecutionPolicy>(){}[0]
+    final val pluginPatches // actron.core/StorePatch.pluginPatches|{}pluginPatches[0]
+        final fun <get-pluginPatches>(): kotlin.collections/List<actron.core/PluginPatch<#A, #B, #C>> // actron.core/StorePatch.pluginPatches.<get-pluginPatches>|<get-pluginPatches>(){}[0]
+    final val probes // actron.core/StorePatch.probes|{}probes[0]
+        final fun <get-probes>(): kotlin.collections/List<actron.core/StoreProbe<#A, #B, #C>> // actron.core/StorePatch.probes.<get-probes>|<get-probes>(){}[0]
+    final val stateSaver // actron.core/StorePatch.stateSaver|{}stateSaver[0]
+        final fun <get-stateSaver>(): actron.core/StateSaver<#A>? // actron.core/StorePatch.stateSaver.<get-stateSaver>|<get-stateSaver>(){}[0]
+
+    final fun component1(): #A? // actron.core/StorePatch.component1|component1(){}[0]
+    final fun component2(): kotlin.coroutines/CoroutineContext? // actron.core/StorePatch.component2|component2(){}[0]
+    final fun component3(): actron.core/StateSaver<#A>? // actron.core/StorePatch.component3|component3(){}[0]
+    final fun component4(): actron.core/ExceptionHandler? // actron.core/StorePatch.component4|component4(){}[0]
+    final fun component5(): actron.core/AutoStartPolicy? // actron.core/StorePatch.component5|component5(){}[0]
+    final fun component6(): actron.core/PendingActionPolicy? // actron.core/StorePatch.component6|component6(){}[0]
+    final fun component7(): actron.core/PluginExecutionPolicy? // actron.core/StorePatch.component7|component7(){}[0]
+    final fun component8(): kotlin.collections/List<actron.core/PluginPatch<#A, #B, #C>> // actron.core/StorePatch.component8|component8(){}[0]
+    final fun component9(): kotlin.collections/List<actron.core/StoreProbe<#A, #B, #C>> // actron.core/StorePatch.component9|component9(){}[0]
+    final fun copy(#A? = ..., kotlin.coroutines/CoroutineContext? = ..., actron.core/StateSaver<#A>? = ..., actron.core/ExceptionHandler? = ..., actron.core/AutoStartPolicy? = ..., actron.core/PendingActionPolicy? = ..., actron.core/PluginExecutionPolicy? = ..., kotlin.collections/List<actron.core/PluginPatch<#A, #B, #C>> = ..., kotlin.collections/List<actron.core/StoreProbe<#A, #B, #C>> = ...): actron.core/StorePatch<#A, #B, #C> // actron.core/StorePatch.copy|copy(1:0?;kotlin.coroutines.CoroutineContext?;actron.core.StateSaver<1:0>?;actron.core.ExceptionHandler?;actron.core.AutoStartPolicy?;actron.core.PendingActionPolicy?;actron.core.PluginExecutionPolicy?;kotlin.collections.List<actron.core.PluginPatch<1:0,1:1,1:2>>;kotlin.collections.List<actron.core.StoreProbe<1:0,1:1,1:2>>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StorePatch.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.core/StorePatch.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.core/StorePatch.toString|toString(){}[0]
+}
+
+final class <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/StorePatchBuilder { // actron.core/StorePatchBuilder|null[0]
+    constructor <init>() // actron.core/StorePatchBuilder.<init>|<init>(){}[0]
+
+    final fun autoStartPolicy(actron.core/AutoStartPolicy) // actron.core/StorePatchBuilder.autoStartPolicy|autoStartPolicy(actron.core.AutoStartPolicy){}[0]
+    final fun build(): actron.core/StorePatch<#A, #B, #C> // actron.core/StorePatchBuilder.build|build(){}[0]
+    final fun clearPlugins() // actron.core/StorePatchBuilder.clearPlugins|clearPlugins(){}[0]
+    final fun coroutineContext(kotlin.coroutines/CoroutineContext) // actron.core/StorePatchBuilder.coroutineContext|coroutineContext(kotlin.coroutines.CoroutineContext){}[0]
+    final fun exceptionHandler(actron.core/ExceptionHandler) // actron.core/StorePatchBuilder.exceptionHandler|exceptionHandler(actron.core.ExceptionHandler){}[0]
+    final fun initialState(#A) // actron.core/StorePatchBuilder.initialState|initialState(1:0){}[0]
+    final fun pendingActionPolicy(actron.core/PendingActionPolicy) // actron.core/StorePatchBuilder.pendingActionPolicy|pendingActionPolicy(actron.core.PendingActionPolicy){}[0]
+    final fun plugin(actron.core/Plugin<#A, #B, #C>, kotlin/Array<out actron.core/Plugin<#A, #B, #C>>...) // actron.core/StorePatchBuilder.plugin|plugin(actron.core.Plugin<1:0,1:1,1:2>;kotlin.Array<out|actron.core.Plugin<1:0,1:1,1:2>>...){}[0]
+    final fun pluginExecutionPolicy(actron.core/PluginExecutionPolicy) // actron.core/StorePatchBuilder.pluginExecutionPolicy|pluginExecutionPolicy(actron.core.PluginExecutionPolicy){}[0]
+    final fun probe(actron.core/StoreProbe<#A, #B, #C>, kotlin/Array<out actron.core/StoreProbe<#A, #B, #C>>...) // actron.core/StorePatchBuilder.probe|probe(actron.core.StoreProbe<1:0,1:1,1:2>;kotlin.Array<out|actron.core.StoreProbe<1:0,1:1,1:2>>...){}[0]
+    final fun replacePlugins(actron.core/Plugin<#A, #B, #C>, kotlin/Array<out actron.core/Plugin<#A, #B, #C>>...) // actron.core/StorePatchBuilder.replacePlugins|replacePlugins(actron.core.Plugin<1:0,1:1,1:2>;kotlin.Array<out|actron.core.Plugin<1:0,1:1,1:2>>...){}[0]
+    final fun stateSaver(actron.core/StateSaver<#A>) // actron.core/StorePatchBuilder.stateSaver|stateSaver(actron.core.StateSaver<1:0>){}[0]
+}
+
+final class actron.core/ActionHandlerMatch { // actron.core/ActionHandlerMatch|null[0]
+    constructor <init>(kotlin/Int, kotlin.reflect/KClass<*>?, kotlin.reflect/KClass<*>?, kotlin/Boolean) // actron.core/ActionHandlerMatch.<init>|<init>(kotlin.Int;kotlin.reflect.KClass<*>?;kotlin.reflect.KClass<*>?;kotlin.Boolean){}[0]
+
+    final val actionType // actron.core/ActionHandlerMatch.actionType|{}actionType[0]
+        final fun <get-actionType>(): kotlin.reflect/KClass<*>? // actron.core/ActionHandlerMatch.actionType.<get-actionType>|<get-actionType>(){}[0]
+    final val index // actron.core/ActionHandlerMatch.index|{}index[0]
+        final fun <get-index>(): kotlin/Int // actron.core/ActionHandlerMatch.index.<get-index>|<get-index>(){}[0]
+    final val matches // actron.core/ActionHandlerMatch.matches|{}matches[0]
+        final fun <get-matches>(): kotlin/Boolean // actron.core/ActionHandlerMatch.matches.<get-matches>|<get-matches>(){}[0]
+    final val stateType // actron.core/ActionHandlerMatch.stateType|{}stateType[0]
+        final fun <get-stateType>(): kotlin.reflect/KClass<*>? // actron.core/ActionHandlerMatch.stateType.<get-stateType>|<get-stateType>(){}[0]
+}
+
+final class actron.core/HandlerMatcher { // actron.core/HandlerMatcher|null[0]
+    constructor <init>(kotlin.reflect/KClass<*>, kotlin.reflect/KClass<*>? = ...) // actron.core/HandlerMatcher.<init>|<init>(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>?){}[0]
+
+    final val inputType // actron.core/HandlerMatcher.inputType|{}inputType[0]
+        final fun <get-inputType>(): kotlin.reflect/KClass<*>? // actron.core/HandlerMatcher.inputType.<get-inputType>|<get-inputType>(){}[0]
+    final val stateType // actron.core/HandlerMatcher.stateType|{}stateType[0]
+        final fun <get-stateType>(): kotlin.reflect/KClass<*> // actron.core/HandlerMatcher.stateType.<get-stateType>|<get-stateType>(){}[0]
+
+    final fun component1(): kotlin.reflect/KClass<*> // actron.core/HandlerMatcher.component1|component1(){}[0]
+    final fun component2(): kotlin.reflect/KClass<*>? // actron.core/HandlerMatcher.component2|component2(){}[0]
+    final fun copy(kotlin.reflect/KClass<*> = ..., kotlin.reflect/KClass<*>? = ...): actron.core/HandlerMatcher // actron.core/HandlerMatcher.copy|copy(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/HandlerMatcher.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.core/HandlerMatcher.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.core/HandlerMatcher.toString|toString(){}[0]
+}
+
+final class actron.core/HandlerMetadata { // actron.core/HandlerMetadata|null[0]
+    constructor <init>(kotlin/Int, kotlin.reflect/KClass<*>?, kotlin.reflect/KClass<*>?) // actron.core/HandlerMetadata.<init>|<init>(kotlin.Int;kotlin.reflect.KClass<*>?;kotlin.reflect.KClass<*>?){}[0]
+
+    final val index // actron.core/HandlerMetadata.index|{}index[0]
+        final fun <get-index>(): kotlin/Int // actron.core/HandlerMetadata.index.<get-index>|<get-index>(){}[0]
+    final val inputType // actron.core/HandlerMetadata.inputType|{}inputType[0]
+        final fun <get-inputType>(): kotlin.reflect/KClass<*>? // actron.core/HandlerMetadata.inputType.<get-inputType>|<get-inputType>(){}[0]
+    final val stateType // actron.core/HandlerMetadata.stateType|{}stateType[0]
+        final fun <get-stateType>(): kotlin.reflect/KClass<*>? // actron.core/HandlerMetadata.stateType.<get-stateType>|<get-stateType>(){}[0]
+}
+
+final class actron.core/LaunchLane { // actron.core/LaunchLane|null[0]
+    constructor <init>() // actron.core/LaunchLane.<init>|<init>(){}[0]
+}
+
+final class actron.core/StoreHandlerMetadata { // actron.core/StoreHandlerMetadata|null[0]
+    constructor <init>(kotlin.collections/List<actron.core/HandlerMetadata>, kotlin.collections/List<actron.core/HandlerMetadata>, kotlin.collections/List<actron.core/HandlerMetadata>, kotlin.collections/List<actron.core/HandlerMetadata>) // actron.core/StoreHandlerMetadata.<init>|<init>(kotlin.collections.List<actron.core.HandlerMetadata>;kotlin.collections.List<actron.core.HandlerMetadata>;kotlin.collections.List<actron.core.HandlerMetadata>;kotlin.collections.List<actron.core.HandlerMetadata>){}[0]
+
+    final val action // actron.core/StoreHandlerMetadata.action|{}action[0]
+        final fun <get-action>(): kotlin.collections/List<actron.core/HandlerMetadata> // actron.core/StoreHandlerMetadata.action.<get-action>|<get-action>(){}[0]
+    final val enter // actron.core/StoreHandlerMetadata.enter|{}enter[0]
+        final fun <get-enter>(): kotlin.collections/List<actron.core/HandlerMetadata> // actron.core/StoreHandlerMetadata.enter.<get-enter>|<get-enter>(){}[0]
+    final val exit // actron.core/StoreHandlerMetadata.exit|{}exit[0]
+        final fun <get-exit>(): kotlin.collections/List<actron.core/HandlerMetadata> // actron.core/StoreHandlerMetadata.exit.<get-exit>|<get-exit>(){}[0]
+    final val recover // actron.core/StoreHandlerMetadata.recover|{}recover[0]
+        final fun <get-recover>(): kotlin.collections/List<actron.core/HandlerMetadata> // actron.core/StoreHandlerMetadata.recover.<get-recover>|<get-recover>(){}[0]
+}
+
+final class actron.core/StorePendingWork { // actron.core/StorePendingWork|null[0]
+    constructor <init>(kotlin/Int, kotlin/Int) // actron.core/StorePendingWork.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+    final val inputs // actron.core/StorePendingWork.inputs|{}inputs[0]
+        final fun <get-inputs>(): kotlin/Int // actron.core/StorePendingWork.inputs.<get-inputs>|<get-inputs>(){}[0]
+    final val isIdle // actron.core/StorePendingWork.isIdle|{}isIdle[0]
+        final fun <get-isIdle>(): kotlin/Boolean // actron.core/StorePendingWork.isIdle.<get-isIdle>|<get-isIdle>(){}[0]
+    final val launches // actron.core/StorePendingWork.launches|{}launches[0]
+        final fun <get-launches>(): kotlin/Int // actron.core/StorePendingWork.launches.<get-launches>|<get-launches>(){}[0]
+
+    final fun component1(): kotlin/Int // actron.core/StorePendingWork.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // actron.core/StorePendingWork.component2|component2(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Int = ...): actron.core/StorePendingWork // actron.core/StorePendingWork.copy|copy(kotlin.Int;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StorePendingWork.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.core/StorePendingWork.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.core/StorePendingWork.toString|toString(){}[0]
+}
+
+final value class actron.core/InputId { // actron.core/InputId|null[0]
+    constructor <init>(kotlin/Long) // actron.core/InputId.<init>|<init>(kotlin.Long){}[0]
+
+    final val value // actron.core/InputId.value|{}value[0]
+        final fun <get-value>(): kotlin/Long // actron.core/InputId.value.<get-value>|<get-value>(){}[0]
+
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/InputId.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.core/InputId.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.core/InputId.toString|toString(){}[0]
+}
+
+final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/Plugin(kotlin.coroutines/SuspendFunction2<actron.core/PluginScope<#A, #B>, #A, kotlin/Unit> = ..., kotlin.coroutines/SuspendFunction3<actron.core/PluginScope<#A, #B>, #A, #B, kotlin/Unit> = ..., kotlin.coroutines/SuspendFunction3<actron.core/PluginScope<#A, #B>, #A, #A, kotlin/Unit> = ..., kotlin.coroutines/SuspendFunction3<actron.core/PluginScope<#A, #B>, #A, #C, kotlin/Unit> = ...): actron.core/Plugin<#A, #B, #C> // actron.core/Plugin|Plugin(kotlin.coroutines.SuspendFunction2<actron.core.PluginScope<0:0,0:1>,0:0,kotlin.Unit>;kotlin.coroutines.SuspendFunction3<actron.core.PluginScope<0:0,0:1>,0:0,0:1,kotlin.Unit>;kotlin.coroutines.SuspendFunction3<actron.core.PluginScope<0:0,0:1>,0:0,0:0,kotlin.Unit>;kotlin.coroutines.SuspendFunction3<actron.core.PluginScope<0:0,0:1>,0:0,0:2,kotlin.Unit>){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
+final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/Store(#A? = ..., kotlin.coroutines/CoroutineContext? = ..., kotlin/Function1<actron.core/StoreBuilder<#A, #B, #C>, kotlin/Unit>): actron.core/Store<#A, #B, #C> // actron.core/Store|Store(0:0?;kotlin.coroutines.CoroutineContext?;kotlin.Function1<actron.core.StoreBuilder<0:0,0:1,0:2>,kotlin.Unit>){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
+final fun <#A: actron.core/State> actron.core/StateSaver(kotlin/Function1<#A, kotlin/Unit>, kotlin/Function0<#A?>): actron.core/StateSaver<#A> // actron.core/StateSaver|StateSaver(kotlin.Function1<0:0,kotlin.Unit>;kotlin.Function0<0:0?>){0§<actron.core.State>}[0]
+final fun actron.core/ExceptionHandler(kotlin/Function1<kotlin/Throwable, kotlin/Unit>): actron.core/ExceptionHandler // actron.core/ExceptionHandler|ExceptionHandler(kotlin.Function1<kotlin.Throwable,kotlin.Unit>){}[0]
+final suspend fun actron.core/currentInputId(): actron.core/InputId? // actron.core/currentInputId|currentInputId(){}[0]

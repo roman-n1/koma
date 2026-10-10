@@ -5,21 +5,21 @@
 
 ## Verdict
 
-- `koma-core`, `koma-test`, `koma-message`, `koma-logging`: production-ready for screen and
+- `actron-core`, `actron-test`, `actron-message`, `actron-logging`: production-ready for screen and
   session state machines. Eight review rounds with independent reviewers, soak tests on
   `Dispatchers.Default` and on every target, CI on JVM, Android host, iOS Simulator, JS and Wasm.
-- `koma-statechart`: usable, but `@ExperimentalKomaApi`; rounds 6–8 still found substantive
+- `actron-statechart`: usable, but `@ExperimentalActronApi`; rounds 6–8 still found substantive
   defects (history restore, lost failure reports). Expect a few more findings in the first weeks
   of real use and keep the regression-test habit.
-- `koma-compose`: works; the documented traps are `eventEffect` inside `stateContent` (misses
+- `actron-compose`: works; the documented traps are `eventEffect` inside `stateContent` (misses
   that state's `enter {}` events) and `rememberStateSaver` in repeated content without `key()`.
 
 ## Before the first release
 
 1. **Set `exceptionHandler` in every Store.** The default is `Rethrow`: a handler report becomes an
    uncaught exception, which crashes an Android process.
-2. **Do not use Koma as the message transport.** Delivery, ordering and retries live in the
-   database and an outbox; Koma drives the screens and the session.
+2. **Do not use Actron as the message transport.** Delivery, ordering and retries live in the
+   database and an outbox; Actron drives the screens and the session.
 3. **Decide the activity-dispatch semantics** (stability review, open questions): an action an
    activity dispatched is tied to its activation, so a heartbeat self-loop timer on the same node
    discards it. Either keep heartbeats in their own region (current rule) or change the gate to

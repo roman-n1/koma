@@ -1,0 +1,32 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:actron-compose>
+final class <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.compose/ViewStore { // actron.compose/ViewStore|null[0]
+    constructor <init>(#A, kotlin/Function1<#B, kotlin/Unit> = ..., kotlinx.coroutines.flow/Flow<#C> = ...) // actron.compose/ViewStore.<init>|<init>(1:0;kotlin.Function1<1:1,kotlin.Unit>;kotlinx.coroutines.flow.Flow<1:2>){}[0]
+
+    final val dispatch // actron.compose/ViewStore.dispatch|{}dispatch[0]
+        final fun <get-dispatch>(): kotlin/Function1<#B, kotlin/Unit> // actron.compose/ViewStore.dispatch.<get-dispatch>|<get-dispatch>(){}[0]
+    final val eventFlow // actron.compose/ViewStore.eventFlow|{}eventFlow[0]
+        final fun <get-eventFlow>(): kotlinx.coroutines.flow/Flow<#C> // actron.compose/ViewStore.eventFlow.<get-eventFlow>|<get-eventFlow>(){}[0]
+    final val state // actron.compose/ViewStore.state|{}state[0]
+        final fun <get-state>(): #A // actron.compose/ViewStore.state.<get-state>|<get-state>(){}[0]
+
+    final fun <#A1: #A> narrow(kotlin/Function1<#A, kotlin/Boolean>): actron.compose/ViewStore<#A1, #B, #C> // actron.compose/ViewStore.narrow|narrow(kotlin.Function1<1:0,kotlin.Boolean>){0§<1:0>}[0]
+    final fun <#A1: kotlin/Any?> select(kotlin/Function1<#A, #A1>, androidx.compose.runtime/Composer?, kotlin/Int): #A1 // actron.compose/ViewStore.select|select(kotlin.Function1<1:0,0:0>;androidx.compose.runtime.Composer?;kotlin.Int){0§<kotlin.Any?>}[0]
+    final inline fun <#A1: reified #A> render(kotlin/Function3<actron.compose/ViewStore<#A1, #B, #C>, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // actron.compose/ViewStore.render|render(kotlin.Function3<actron.compose.ViewStore<0:0,1:1,1:2>,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<1:0>}[0]
+    final inline fun <#A1: reified #A> stateContent(kotlin/Function3<actron.compose/ViewStore<#A1, #B, #C>, androidx.compose.runtime/Composer, kotlin/Int, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // actron.compose/ViewStore.stateContent|stateContent(kotlin.Function3<actron.compose.ViewStore<0:0,1:1,1:2>,androidx.compose.runtime.Composer,kotlin.Int,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<1:0>}[0]
+    final inline fun <#A1: reified #C> eventEffect(noinline kotlin/Function2<actron.compose/ViewStore<#A, #B, #C>, #A1, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // actron.compose/ViewStore.eventEffect|eventEffect(kotlin.Function2<actron.compose.ViewStore<1:0,1:1,1:2>,0:0,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<1:2>}[0]
+    final inline fun <#A1: reified #C> handle(noinline kotlin/Function2<actron.compose/ViewStore<#A, #B, #C>, #A1, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // actron.compose/ViewStore.handle|handle(kotlin.Function2<actron.compose.ViewStore<1:0,1:1,1:2>,0:0,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<1:2>}[0]
+}
+
+final val actron.compose/actron_compose_ViewStore$stableprop // actron.compose/actron_compose_ViewStore$stableprop|#static{}actron_compose_ViewStore$stableprop[0]
+
+final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.compose/rememberViewStore(actron.core/Store<#A, #B, #C>, kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): actron.compose/ViewStore<#A, #B, #C> // actron.compose/rememberViewStore|rememberViewStore(actron.core.Store<0:0,0:1,0:2>;kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
+final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.compose/rememberViewStore(kotlin/Any?, kotlin/Boolean, kotlin/Function0<actron.core/Store<#A, #B, #C>>, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): actron.compose/ViewStore<#A, #B, #C> // actron.compose/rememberViewStore|rememberViewStore(kotlin.Any?;kotlin.Boolean;kotlin.Function0<actron.core.Store<0:0,0:1,0:2>>;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
+final fun <#A: actron.core/State> actron.compose/rememberStateSaver(androidx.compose.runtime/Composer?, kotlin/Int): actron.core/StateSaver<#A> // actron.compose/rememberStateSaver|rememberStateSaver(androidx.compose.runtime.Composer?;kotlin.Int){0§<actron.core.State>}[0]
+final fun actron.compose/actron_compose_ViewStore$stableprop_getter(): kotlin/Int // actron.compose/actron_compose_ViewStore$stableprop_getter|actron_compose_ViewStore$stableprop_getter(){}[0]

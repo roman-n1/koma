@@ -1,15 +1,15 @@
-# A MachineStore is a Store koma-test can drive
+# A MachineStore is a Store actron-test can drive
 
 - Updated: 2026-10-01
 
 ## Background
 
-koma-test's `startAndAwait()`, `dispatchAndAwait()`, `patch {}` and `createRecorder()` speak to a
-Store through `StoreInternalApi`, which only Koma's own `StoreImpl` implemented. A `MachineStore`
+actron-test's `startAndAwait()`, `dispatchAndAwait()`, `patch {}` and `createRecorder()` speak to a
+Store through `StoreInternalApi`, which only Actron's own `StoreImpl` implemented. A `MachineStore`
 wraps such a Store but did not implement the bridge, so every one of these threw "only supported
-for Store instances created by Koma DSL" on it, and the machine's tests reached the inner store
+for Store instances created by Actron DSL" on it, and the machine's tests reached the inner store
 through an `internal` cast (`(store as MachineStoreImpl).inner.startAndAwait()`), which only
-tests inside `koma-statechart` can do. The author's roadmap (koma-kt/koma#189, item 2) asks for a
+tests inside `actron-statechart` can do. The author's roadmap (koma-kt/koma#189, item 2) asks for a
 TestStore-like API; the first step is that the store a messenger feature runs is reachable by
 the testing API at all.
 
@@ -62,7 +62,7 @@ Not adopted:
 
 ## Notes
 
-- Tests: [`MachineStoreTestBridgeTest`](../../koma-statechart/src/commonTest/kotlin/koma/statechart/machine/MachineStoreTestBridgeTest.kt):
+- Tests: [`MachineStoreTestBridgeTest`](../../actron-statechart/src/commonTest/kotlin/actron/statechart/machine/MachineStoreTestBridgeTest.kt):
   `startAndAwait` starts and `dispatchAndAwait` returns after the commit and before the command
   runs; a recorder records every snapshot and every effect, transient and retained, in decision
   order; an appended plugin sees the callers' actions, every state and every effect and dispatches
@@ -73,7 +73,7 @@ Not adopted:
   every action is decided exactly once, and the recorder holds one commit per action.
 - Next: `awaitIdle` for the commands and launches a decision started (the author's note
   `2026-05-10-await-launch-completion-in-tests.md`), then a recorder cursor and
-  `assertNoPendingWork`, then a `koma-statechart-test` module with a driver.
+  `assertNoPendingWork`, then a `actron-statechart-test` module with a driver.
 
 ## Related
 

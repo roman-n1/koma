@@ -4,7 +4,7 @@
 
 ## Background
 
-Koma allows registering multiple `Middleware`s.
+Actron allows registering multiple `Middleware`s.
 Whether each lifecycle hook runs serially in registration order or concurrently should be made explicit as part of the specification.
 
 `Middleware` is used as an extension point for separating concerns such as logging, message bridges, monitoring and auxiliary dispatches from the Store's core logic.

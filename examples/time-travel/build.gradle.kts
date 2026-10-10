@@ -9,7 +9,7 @@ kotlin {
     jvm()
     sourceSets {
         jvmMain.dependencies {
-            implementation(project(":koma-timetravel-compose"))
+            implementation(project(":actron-timetravel-compose"))
             implementation(compose.desktop.currentOs)
             implementation(compose.material3)
             implementation(libs.coroutines.core)
@@ -25,6 +25,6 @@ kotlin {
 
 compose.desktop {
     application {
-        mainClass = "koma.example.timetravel.MainKt"
+        mainClass = "actron.example.timetravel.MainKt"
     }
 }

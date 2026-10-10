@@ -57,7 +57,7 @@ interface ObservationHandle {
 ```
 
 Either way, what matters is not returning `AutoCloseable` itself but
-fixing the meaning as a thin Koma-specific handle type that corresponds to the callback-based API.
+fixing the meaning as a thin Actron-specific handle type that corresponds to the callback-based API.
 
 The implementation approach is simple: create a child job per subscription in the Store's internal scope and return a handle that stops that job.
 

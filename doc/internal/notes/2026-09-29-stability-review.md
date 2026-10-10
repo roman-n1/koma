@@ -4,13 +4,13 @@
 
 ## Background
 
-We plan to build the state machines of a KMP messenger on Koma, so the whole project was reviewed
+We plan to build the state machines of a KMP messenger on Actron, so the whole project was reviewed
 for bugs and missing tests. Each issue below was reproduced with a failing test before it was
 fixed; the tests stay as regression tests.
 
 ## Fixed
 
-Core (`koma-core`)
+Core (`actron-core`)
 
 - `store.state.first()`, `first {}` and `take(n)` never returned: `Store.state` collected in a
   child coroutine and then waited in `awaitCancellation()`, so an early stop only cancelled the
@@ -22,7 +22,7 @@ Core (`koma-core`)
   new state, so an action a plugin (or an unconfined state collector) dispatched in reaction to it
   was dropped. Pending actions are now cleared before the new state is committed.
 
-Messages (`koma-message`)
+Messages (`actron-message`)
 
 - An exception in a `receiveMessages {}` block ended that Store's subscription for good. It is now
   reported to the Store's exception handler and the subscription continues.
@@ -34,13 +34,13 @@ Messages (`koma-message`)
   (`SharedFlowImpl.updateBufferLocked`, visible with `-ea`) that lost the next message. The bus
   now has a buffer of 64 messages.
 
-Logging (`koma-logging`)
+Logging (`actron-logging`)
 
 - Every entry was logged in its own coroutine, so on `Dispatchers.Default` entries came out of
   order and pending ones were lost on `close()`. Without a dispatcher, entries are now logged from
   the hook itself.
 
-Statecharts (`koma-statechart`)
+Statecharts (`actron-statechart`)
 
 - Work started with `launch {}` in `onEnter` ran even when the step failed, if the hook suspended
   before failing. Such work is now sent only after every hook of the step has succeeded.
@@ -55,7 +55,7 @@ Statecharts (`koma-statechart`)
   over from the initial one and keeps the restored context.
 - Mermaid labels were written raw; line breaks and `;` split statements.
 
-Compose (`koma-compose`)
+Compose (`actron-compose`)
 
 - A callback created in `stateContent<S2> {}` (for example a double-tapped button) that ran after
   the Store moved to another state type but before recomposition threw `ClassCastException`. The
@@ -63,12 +63,12 @@ Compose (`koma-compose`)
 
 Build
 
-- `koma-compose`, `koma-logging`, `koma-message` and `koma-test` expose core types in their public
-  API but declared `koma-core` (and `compose.runtime`) as `implementation`; they are now `api`.
+- `actron-compose`, `actron-logging`, `actron-message` and `actron-test` expose core types in their public
+  API but declared `actron-core` (and `compose.runtime`) as `implementation`; they are now `api`.
 
 ## Fixed in the second round
 
-Core (`koma-core`)
+Core (`actron-core`)
 
 - Actions were not processed in dispatch order on a multi-threaded dispatcher (the default,
   `Dispatchers.Default`): every `dispatch()` launched its own coroutine, and coroutines scheduled
@@ -89,7 +89,7 @@ Core (`koma-core`)
   transition finishes. The same applies to `onEvent`: the handler that emitted the event
   continues. `onAction` and `onStart` failures still abort as before (nothing is committed yet).
 
-Statecharts (`koma-statechart`)
+Statecharts (`actron-statechart`)
 
 - The zero-delay timer loop check approximated what a firing enters (target, its descendants,
   its ancestors) and so missed loops through a parallel state re-entered from one of its
@@ -106,7 +106,7 @@ Statecharts (`koma-statechart`)
   failed; the failed hooks' context changes and launches are dropped, and the error reaches
   `recover {}` after the state is committed.
 
-Startup retry (`koma-core`, `koma-message`, `koma-test`)
+Startup retry (`actron-core`, `actron-message`, `actron-test`)
 
 - A startup whose initial `enter {}` failed was retried on the next dispatch, and the retry ran
   every plugin's `onStart` again: `receiveMessages {}` subscribed a second time, so every message
@@ -114,14 +114,14 @@ Startup retry (`koma-core`, `koma-message`, `koma-test`)
   start state once per attempt. Plugins are now started once per Store; only when a plugin's own
   `onStart` throws does the retry start the plugins again.
 
-Logging (`koma-logging`)
+Logging (`actron-logging`)
 
 - A `Logger` that threw (or a state whose `toString()` threw) aborted the action or transition
   being logged; after a variant change the new state was left half-entered (see the core fix
   above). `simpleLogging` now reports logger exceptions to the exception handler and lets the
   Store continue.
 
-Compose (`koma-compose`)
+Compose (`actron-compose`)
 
 - The narrowed `ViewStore` of `stateContent<S2> {}` remembered the last `S2` state only once
   `state` had been read while the Store was in `S2`. A callback that read `state` only when
@@ -137,7 +137,7 @@ The third round targeted long-lived, application-scope Stores: a multi-threaded 
 cancelled launches and transactions) found no lost update, deadlock or growth of internal
 bookkeeping. The findings below came from probing lifecycle edge paths.
 
-Core (`koma-core`)
+Core (`actron-core`)
 
 - A `CancellationException` thrown by user code was swallowed everywhere: an expired
   `withTimeout {}` in a handler, a launch or a transaction ended the work silently, without
@@ -161,7 +161,7 @@ Core (`koma-core`)
   with plain lists lost about 1% of 20 000 events from four activities. Plugin hook rounds are
   now serialized by their own lock; a plugin may keep plain state in its hooks.
 
-Statecharts (`koma-statechart`)
+Statecharts (`actron-statechart`)
 
 - On a fresh start, a failing enter hook of an outer node stopped the loop that created the
   activations, so the inner nodes had none: `startActivities` then failed with a
@@ -211,7 +211,7 @@ End-to-end messenger scenario (core + statechart + message + logging + test)
 - In `StateChartStore`, an expired `withTimeout {}` in an initial enter hook was treated as the
   Store's own cancellation, so the initial configuration lost its activities and timers (the
   round-3 fix covered other exceptions only). It now follows the core rule everywhere.
-- `koma-message`'s `message()` could not be called from statechart hooks and activities:
+- `actron-message`'s `message()` could not be called from statechart hooks and activities:
   `StoreScope` was sealed, so `ChartHookScope` and `ChartLaunchScope` could not implement it.
   `StoreScope` is now an open marker interface (binary compatible for callers) and the chart
   scopes implement it.
@@ -228,7 +228,7 @@ Statechart tooling (property-based fuzzing, 1200 random charts per property)
   matching the action is tried through the runtime's own selection, and the change is explained
   when one ends in the observed leaves.
 - It also rejected a transition into a history state that restored what a self-loop had
-  recorded, because Koma does not show a self-loop that keeps the leaves. The history such a
+  recorded, because Actron does not show a self-loop that keeps the leaves. The history such a
   self-loop may have recorded is now kept as a possibility next to the previous one.
 - `StateConfiguration`'s hash was the plain sum of its ids' hashes, so states named by a pattern
   (`R1_S2`) collapsed onto a few hash codes and the configuration graph degenerated to
@@ -358,7 +358,7 @@ found in these scenarios.
 
 Keep each tab's Store and StateSaver owned by that component instance. Repeated Compose content
 needs `key(tabInstanceId)`, including when two tabs use the same chat id. A shared chart definition
-or lane object is safe; sharing one Store shares its state and close lifecycle. `koma-message`
+or lane object is safe; sharing one Store shares its state and close lifecycle. `actron-message`
 is deliberately process-wide: include and filter a tab-instance id for tab-specific commands,
 or a chat id for domain updates intended for every open view of that chat.
 
@@ -399,7 +399,7 @@ history records of the same chart, gated dispatch). Five defects were reproduced
 - `project.group` and `project.version` stayed at `io.github.koma-kt` / `4.0.0` while the
   publications used `io.github.roman-n1` / `4.0.0-sc.1`, so a composite build substituted a
   different "group:artifact" than the published POMs name (the POMs themselves were consistent:
-  `koma-statechart-jvm` depends on `io.github.roman-n1:koma-core-jvm:4.0.0-sc.1`, checked with
+  `actron-statechart-jvm` depends on `io.github.roman-n1:actron-core-jvm:4.0.0-sc.1`, checked with
   `publishToMavenLocal`). The publish convention now sets both from the fork properties.
 
 Smaller items from the same review: `wasmJs { nodejs() }` got the same Mocha timeout as JS; the
@@ -412,7 +412,7 @@ the owners rin needs, the removal rule and `key()` for repeated content; `eventE
 which `enter {}` events it misses; `CLAUDE.md` names the Gradle tasks that exist (`allTests`,
 `jvmTest`, `iosSimulatorArm64Test`; there is no `test` task or iosX64 target); the README sample
 `rememberStateSaver<CounterState>()` compiles; the statechart README states the published
-coordinates, the `@InternalKomaApi` bridge, the recover-from-outside pattern and the heartbeat
+coordinates, the `@InternalActronApi` bridge, the recover-from-outside pattern and the heartbeat
 rule; the semantics, roadmap and comparison documents and three ADRs got addenda for what the
 rounds changed (timer removal on failure, restore checks, `MessageHub` buffer, report-and-continue
 at the persistence and observer boundaries, the `CancellationException` rule).
@@ -431,12 +431,12 @@ pre-releases only and signs only with the Central credentials in the environment
 
 A fresh-eyes review of what stages 1 to 3 of the
 [Time Travel handoff](../design/2026-09-29-time-travel-logging-handoff.md) added: the core
-probes, `koma-observability`, the pure machine and its executor. Each defect was reproduced with
+probes, `actron-observability`, the pure machine and its executor. Each defect was reproduced with
 a failing test in `MachineStoreTest` before it was fixed, and a multi-threaded soak
 (`MachineStoreSoakTest`: eight threads of superseding loads and transition-less ticks on
 `Dispatchers.Default`) found no lost update, stale result or leaked bookkeeping.
 
-Executor (`koma-statechart`, `koma.statechart.machine`)
+Executor (`actron-statechart`, `actron.statechart.machine`)
 
 - A command waiting in a `Sequential` or `Parallel` lane whose activation exited was still
   started once the lane freed up: the decision had deregistered it, so its results were ignored
@@ -512,7 +512,7 @@ the rules of every lane policy; the actor keeps the jobs, the timers, the last s
 carried out and the commands `ending` (finished here, their last input not yet decided by the
 machine). `MachineStore.checkpoint()` is that state as data (`ExecutorCheckpoint`), taken at a
 message boundary of the actor and checking itself: every command of its snapshot in exactly one
-place. A `koma-timetravel` recording begins at a checkpoint, carries it forward with the same
+place. A `actron-timetravel` recording begins at a checkpoint, carries it forward with the same
 `Lanes`, trims itself to a live checkpoint (`since`), and a branch runs the lanes with jobs that
 end when told to. The tests again aim at what no hand times:
 
@@ -564,7 +564,7 @@ a "foreign checkpoint" comes from a run that differs.
 
 ## Twelfth round: the journal on disk, damaged every way a disk can
 
-`koma-observability` gained its file format ([ADR](../adr/2026-09-30-journal-file-format.md)):
+`actron-observability` gained its file format ([ADR](../adr/2026-09-30-journal-file-format.md)):
 segments of checksummed frames over a `SegmentStorage` the platform supplies, a sink that
 rotates them, a reader that marks instead of throwing. What hands cannot reproduce here is the
 damage: a process dying at every byte of a write, a disk flipping any bit.

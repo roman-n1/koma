@@ -20,8 +20,8 @@ legacy path the handoff keeps; it is not replayable by construction.
 
 ## Decision
 
-`koma-statechart` gets a second, opt-in way to run a chart: the package
-[`koma.statechart.machine`](../../../koma-statechart/src/commonMain/kotlin/koma/statechart/machine/Machine.kt).
+`actron-statechart` gets a second, opt-in way to run a chart: the package
+[`actron.statechart.machine`](../../../actron-statechart/src/commonMain/kotlin/actron/statechart/machine/Machine.kt).
 This ADR covers the pure half (stage 2a). The executor, the commit protocol and the scheduler are
 stage 2b and get their own ADR.
 
@@ -29,7 +29,7 @@ stage 2b and get their own ADR.
   `(MachineSnapshot<C>, Action) -> Boolean`, pure transition effects `(C, Action) -> C` (the
   chart's existing effect labels) and pure enter and exit rules per node. Selection, exit and
   entry order, history and parallel regions are `StateChartRuntime`'s, unchanged.
-- **`MachineSnapshot<C>`** is a Koma `State`: definition id and version, revision,
+- **`MachineSnapshot<C>`** is a Actron `State`: definition id and version, revision,
   configuration, context, the activation of every active node, the registered commands (scope
   and lane), the scheduled timers (transition, activation, deadline) and the counters the next
   ids come from. It is the machine's part of a checkpoint; nothing in it is a coroutine, a
@@ -78,15 +78,15 @@ Not adopted:
 
 ## Notes
 
-- Tests: [`MachineTest`](../../../koma-statechart/src/commonTest/kotlin/koma/statechart/machine/MachineTest.kt)
+- Tests: [`MachineTest`](../../../actron-statechart/src/commonTest/kotlin/actron/statechart/machine/MachineTest.kt)
   pins start, steps, self-loops, equal business data with a command, effects, stale and completed
   and failed commands, timers (taken, guard false, cancelled on exit), throwing guards and rules,
   determinism and construction checks;
-  [`MachinePropertyTest`](../../../koma-statechart/src/commonTest/kotlin/koma/statechart/machine/MachinePropertyTest.kt)
+  [`MachinePropertyTest`](../../../actron-statechart/src/commonTest/kotlin/actron/statechart/machine/MachinePropertyTest.kt)
   walks random hierarchical, parallel, history and timer charts and checks determinism and the
   snapshot invariants after every step.
-- The `koma-statechart` module now depends on `koma-observability` for `FailureDescriptor`.
-- Stage 2b builds the executor on this: a Koma Store whose state is the `MachineSnapshot`, a
+- The `actron-statechart` module now depends on `actron-observability` for `FailureDescriptor`.
+- Stage 2b builds the executor on this: a Actron Store whose state is the `MachineSnapshot`, a
   handler that decides under the lock and commits the snapshot, and a scheduler that registers
   commands after the commit and outside the lock, runs `CommandHandler`s with the lane policies,
   feeds their results back as inputs, and fires timers through a swappable clock. The commit and

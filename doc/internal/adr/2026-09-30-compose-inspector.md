@@ -9,14 +9,14 @@ position with the snapshot before and after and their difference, the active nod
 and its cause, commands, timers, failures and an indicator of completeness; v2 adds seek, back
 and forward, virtual clocks, branches, a preview and the return to live, with the modes Live,
 Inspect, Replay and Branch visually distinct and every disabled button saying why. §3 places it
-in `koma-timetravel-compose`, late and optional, attached only to a debug application; §12 asks
+in `actron-timetravel-compose`, late and optional, attached only to a debug application; §12 asks
 CI to check that no debug UI is in a release dependency graph. The
 [inspector](./2026-09-30-inspector-read-model.md) already computes everything v1 shows.
 
 ## Decision
 
-- **A new module, `koma-timetravel-compose`,** on `koma-timetravel` and Compose Multiplatform
-  (runtime, foundation, material3), with the targets of `koma-compose` (Android, iOS, JVM, JS
+- **A new module, `actron-timetravel-compose`,** on `actron-timetravel` and Compose Multiplatform
+  (runtime, foundation, material3), with the targets of `actron-compose` (Android, iOS, JVM, JS
   and Wasm browsers). It is the only module with a UI dependency on the time-travel side, so
   keeping it out of a release build is keeping one artifact out.
 - **The screen shows the read model, and only it.** `InspectorScreen` renders `Inspector`:
@@ -39,7 +39,7 @@ CI to check that no debug UI is in a release dependency graph. The
 
 Not adopted:
 
-- Putting the screen into `koma-compose`: that module is the `ViewStore` of every app; the
+- Putting the screen into `actron-compose`: that module is the `ViewStore` of every app; the
   inspector would drag Compose foundation and the time-travel modules into release graphs.
 - A branch panel in this round: dispatching into a `GroupBranch` and answering its commands
   needs typed actions from the application; the screen would need an adapter per app. The mode
@@ -70,13 +70,13 @@ Not adopted:
   screen, when the screen is given a branch. The branch decides with the pure machines;
   nothing runs, and the live group is untouched.
 - **The definition is Mermaid text, not a drawing.** `StateChartDefinition.toMermaid(active)`
-  closes the diagram with a `classDef koma_active` and a `class` statement naming the active
+  closes the diagram with a `classDef actron_active` and a `class` statement naming the active
   states (by alias when they have one). `ReplayControls.mermaid()` draws the replay's position,
   `BranchControls.mermaid(store)` a member's; `DefinitionPanel` shows the text selectable, for
   pasting into a renderer. §11 allows Mermaid and forbids blocking the live runtime with
   diagram generation: text from the model only, and no renderer in the module.
 - **CI checks the direction of the graph.** `checkDebugGraph` in the root build fails when a
-  production module declares a dependency on `koma-timetravel` or `koma-timetravel-compose`
+  production module declares a dependency on `actron-timetravel` or `actron-timetravel-compose`
   in any configuration; it runs in the `apiCheck` job and under `check`. An app keeps the two
   modules in a debug source set; the library side of §12's promise is that nothing production
   pulls them in.

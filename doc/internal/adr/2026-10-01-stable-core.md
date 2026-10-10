@@ -4,10 +4,10 @@
 
 ## Background
 
-`5.0.0` without a suffix requires (roadmap, "Version 5.0") that `@ExperimentalKomaApi` is off
+`5.0.0` without a suffix requires (roadmap, "Version 5.0") that `@ExperimentalActronApi` is off
 the core of the machine and the journal, held by `apiCheck`, and that the formats are frozen
 ([format freeze policy](./2026-10-01-format-freeze-policy.md)). The marker was on every
-declaration of `koma-statechart`, `koma-observability` and `koma-timetravel` since they were
+declaration of `actron-statechart`, `actron-observability` and `actron-timetravel` since they were
 written: it said the API moved with every stage. The stages are over (tracks A to C); what the
 messenger will build on must not require an opt-in that says "this may change".
 
@@ -16,22 +16,22 @@ messenger will build on must not require an opt-in that says "this may change".
 The marker comes off in three steps, one PR each, in dependency order, so each is reviewable
 and `apiCheck` holds each module's surface from then on:
 
-- **5.0-3a, this ADR:** `InputId` in `koma-core` (the identity every journal record carries; a
-  stable journal cannot expose an experimental id) and every declaration of `koma-observability`:
+- **5.0-3a, this ADR:** `InputId` in `actron-core` (the identity every journal record carries; a
+  stable journal cannot expose an experimental id) and every declaration of `actron-observability`:
   the record model (`JournalRecord`, `JournalEntry` and its vocabulary), `RecordingSession` and
   `JournalConfig`, the payload policy, `JournalFormat`, the probe, the file format, `JournalFiles`,
   `JournalFileSink` and `SegmentStorage` with its implementations.
-- **5.0-3b:** `koma-statechart`, the chart model and the machine package: `Machine`,
+- **5.0-3b:** `actron-statechart`, the chart model and the machine package: `Machine`,
   `MachineStore`, `MachineSnapshot` and the inputs, `Decision`, `Lanes`, `ExecutorCheckpoint`,
   `MachineGroup` and its routes, the mailbox, the observers, the identities and the sources'
   data types (`SourceId`, `SourceSnapshot`). `ExternalSource` (the contract an adapter
   implements), `MachineStore.feed` and `MachineGroup.source` stay experimental: the sources'
   place in the cut is the least exercised part (no adapter runs in the messenger yet).
-- **5.0-3c:** the recording formats of `koma-timetravel`: `Recording`, `RecordedStep`,
+- **5.0-3c:** the recording formats of `actron-timetravel`: `Recording`, `RecordedStep`,
   `RecordingCodec` with `FormatMigration` and `DecodedRecording`, `GroupRecording` and
   `GroupRecorder`, `RecordingFileFormat`, `RecordingFileSink`, `RecordingFiles`,
   `GroupRecordingFileFormat`, `GroupRecordingFileSink`, `GroupRecordingFiles`. Replay,
-  branches, the inspector and `koma-timetravel-compose` stay experimental: they are debug
+  branches, the inspector and `actron-timetravel-compose` stay experimental: they are debug
   tooling, and the inspector's model is still growing (group-wide positions).
 
 What stays experimental keeps the marker on the declaration, not on the file, so the boundary
@@ -46,7 +46,7 @@ StateChartStoreBuilder.store receives ChartStoreConfiguration; its recover<T> ha
 only context, error, event and the underlying StoreScope. Context changes commit once after a
 successful handler. MachineStore and MachineTestDriver receive StoreConfiguration without state,
 initialState, pendingActionPolicy or raw recovery. Journal recording remains available through
-`koma.statechart.recordTo`. Settings and plugins keep their existing execution semantics.
+`actron.statechart.recordTo`. Settings and plugins keep their existing execution semantics.
 
 These declarations are promoted to stable together. This deliberately changes the previously
 experimental receiver contracts in the unreleased 5.0 alpha: remove raw state<ChartState<C>>
@@ -73,10 +73,10 @@ Not adopted:
   dumps do not carry it, so the surface was already held; what changes is that consumers no
   longer opt in), all JVM tests with `apiCheck` and `checkDebugGraph`, the module on Android
   host, JS Node and iOS Simulator.
-- 5.0-3b (2026-10-01): 94 markers off `koma-statechart`; the four that stay are on
+- 5.0-3b (2026-10-01): 94 markers off `actron-statechart`; the four that stay are on
   `ExternalSource`, both `feed`s and `MachineGroup.source`, and `MachineGroup` opts in without
   propagating for the sources it holds. The dumps did not change.
-- 5.0-3c (2026-10-01): 29 markers off the seven format files of `koma-timetravel`; 17 stay on
+- 5.0-3c (2026-10-01): 29 markers off the seven format files of `actron-timetravel`; 17 stay on
   replay, branches and the inspector. The dumps did not change.
 - Criterion (1) is met; `5.0.0` waits only for Roman's tag (5.0-4).
 

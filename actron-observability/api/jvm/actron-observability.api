@@ -1,0 +1,1126 @@
+public final class actron/observability/ActivationRef {
+	public fun <init> (Ljava/lang/String;J)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun copy (Ljava/lang/String;J)Lactron/observability/ActivationRef;
+	public static synthetic fun copy$default (Lactron/observability/ActivationRef;Ljava/lang/String;JILjava/lang/Object;)Lactron/observability/ActivationRef;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActivation ()J
+	public final fun getNode ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/Capability : java/lang/Enum {
+	public static final field DeterministicReplay Lactron/observability/Capability;
+	public static final field InspectOnly Lactron/observability/Capability;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lactron/observability/Capability;
+	public static fun values ()[Lactron/observability/Capability;
+}
+
+public final class actron/observability/CommandRef {
+	public fun <init> (JJLjava/lang/String;Ljava/lang/String;Lactron/observability/Payload;)V
+	public final fun component1 ()J
+	public final fun component2 ()J
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lactron/observability/Payload;
+	public final fun copy (JJLjava/lang/String;Ljava/lang/String;Lactron/observability/Payload;)Lactron/observability/CommandRef;
+	public static synthetic fun copy$default (Lactron/observability/CommandRef;JJLjava/lang/String;Ljava/lang/String;Lactron/observability/Payload;ILjava/lang/Object;)Lactron/observability/CommandRef;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCommand ()Lactron/observability/Payload;
+	public final fun getId ()J
+	public final fun getLane ()Ljava/lang/String;
+	public final fun getPolicy ()Ljava/lang/String;
+	public final fun getScope ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/DiscardDescriptor {
+	public fun <init> (Lactron/observability/DiscardKind;Lactron/observability/FailureDescriptor;)V
+	public synthetic fun <init> (Lactron/observability/DiscardKind;Lactron/observability/FailureDescriptor;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lactron/observability/DiscardKind;
+	public final fun component2 ()Lactron/observability/FailureDescriptor;
+	public final fun copy (Lactron/observability/DiscardKind;Lactron/observability/FailureDescriptor;)Lactron/observability/DiscardDescriptor;
+	public static synthetic fun copy$default (Lactron/observability/DiscardDescriptor;Lactron/observability/DiscardKind;Lactron/observability/FailureDescriptor;ILjava/lang/Object;)Lactron/observability/DiscardDescriptor;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFailure ()Lactron/observability/FailureDescriptor;
+	public final fun getKind ()Lactron/observability/DiscardKind;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/DiscardKind : java/lang/Enum {
+	public static final field ClearedExplicitly Lactron/observability/DiscardKind;
+	public static final field ClearedOnStateExit Lactron/observability/DiscardKind;
+	public static final field LaunchInactive Lactron/observability/DiscardKind;
+	public static final field Rejected Lactron/observability/DiscardKind;
+	public static final field Stale Lactron/observability/DiscardKind;
+	public static final field StartupFailed Lactron/observability/DiscardKind;
+	public static final field StoreClosed Lactron/observability/DiscardKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lactron/observability/DiscardKind;
+	public static fun values ()[Lactron/observability/DiscardKind;
+}
+
+public final class actron/observability/ExecutionMode : java/lang/Enum {
+	public static final field Live Lactron/observability/ExecutionMode;
+	public static final field Replay Lactron/observability/ExecutionMode;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lactron/observability/ExecutionMode;
+	public static fun values ()[Lactron/observability/ExecutionMode;
+}
+
+public final class actron/observability/FailureDescriptor {
+	public static final field Companion Lactron/observability/FailureDescriptor$Companion;
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lactron/observability/FailureDescriptor;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lactron/observability/FailureDescriptor;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lactron/observability/FailureDescriptor;
+	public final fun component4 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Lactron/observability/FailureDescriptor;Ljava/util/List;)Lactron/observability/FailureDescriptor;
+	public static synthetic fun copy$default (Lactron/observability/FailureDescriptor;Ljava/lang/String;Ljava/lang/String;Lactron/observability/FailureDescriptor;Ljava/util/List;ILjava/lang/Object;)Lactron/observability/FailureDescriptor;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Lactron/observability/FailureDescriptor;
+	public final fun getMessage ()Ljava/lang/String;
+	public final fun getSuppressed ()Ljava/util/List;
+	public final fun getType ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/FailureDescriptor$Companion {
+	public final fun getUnavailable ()Lactron/observability/FailureDescriptor;
+	public final fun of (Ljava/lang/Throwable;ZI)Lactron/observability/FailureDescriptor;
+	public static synthetic fun of$default (Lactron/observability/FailureDescriptor$Companion;Ljava/lang/Throwable;ZIILjava/lang/Object;)Lactron/observability/FailureDescriptor;
+}
+
+public final class actron/observability/GroupSeq {
+	public static final synthetic fun box-impl (J)Lactron/observability/GroupSeq;
+	public static fun constructor-impl (J)J
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (JLjava/lang/Object;)Z
+	public static final fun equals-impl0 (JJ)Z
+	public final fun getValue ()J
+	public fun hashCode ()I
+	public static fun hashCode-impl (J)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (J)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()J
+}
+
+public abstract interface class actron/observability/InputDescriptor {
+}
+
+public final class actron/observability/InputDescriptor$Dispatch : actron/observability/InputDescriptor {
+	public fun <init> (Lactron/observability/Payload;)V
+	public final fun component1 ()Lactron/observability/Payload;
+	public final fun copy (Lactron/observability/Payload;)Lactron/observability/InputDescriptor$Dispatch;
+	public static synthetic fun copy$default (Lactron/observability/InputDescriptor$Dispatch;Lactron/observability/Payload;ILjava/lang/Object;)Lactron/observability/InputDescriptor$Dispatch;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lactron/observability/Payload;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/InputDescriptor$Recovery : actron/observability/InputDescriptor {
+	public synthetic fun <init> (Lactron/observability/FailureDescriptor;Lactron/core/InputId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lactron/observability/FailureDescriptor;
+	public final fun component2-DS-bGsQ ()Lactron/core/InputId;
+	public final fun copy-jMDErnM (Lactron/observability/FailureDescriptor;Lactron/core/InputId;)Lactron/observability/InputDescriptor$Recovery;
+	public static synthetic fun copy-jMDErnM$default (Lactron/observability/InputDescriptor$Recovery;Lactron/observability/FailureDescriptor;Lactron/core/InputId;ILjava/lang/Object;)Lactron/observability/InputDescriptor$Recovery;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFailure ()Lactron/observability/FailureDescriptor;
+	public final fun getOrigin-DS-bGsQ ()Lactron/core/InputId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/InputDescriptor$Startup : actron/observability/InputDescriptor {
+	public static final field INSTANCE Lactron/observability/InputDescriptor$Startup;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/InputDescriptor$Transaction : actron/observability/InputDescriptor {
+	public synthetic fun <init> (Lactron/core/InputId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public final fun copy-Sp_oens (Lactron/core/InputId;)Lactron/observability/InputDescriptor$Transaction;
+	public static synthetic fun copy-Sp_oens$default (Lactron/observability/InputDescriptor$Transaction;Lactron/core/InputId;ILjava/lang/Object;)Lactron/observability/InputDescriptor$Transaction;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOrigin-DS-bGsQ ()Lactron/core/InputId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalConfig {
+	public fun <init> ()V
+	public fun <init> (IILkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (IILkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()Lkotlin/jvm/functions/Function1;
+	public final fun copy (IILkotlin/jvm/functions/Function1;)Lactron/observability/JournalConfig;
+	public static synthetic fun copy$default (Lactron/observability/JournalConfig;IILkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lactron/observability/JournalConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOnFailure ()Lkotlin/jvm/functions/Function1;
+	public final fun getRetainedRecords ()I
+	public final fun getWriterQueueCapacity ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/observability/JournalEntry {
+}
+
+public final class actron/observability/JournalEntry$BridgeDropped : actron/observability/JournalEntry {
+	public synthetic fun <init> (Lactron/observability/MessageRef;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lactron/observability/MessageRef;
+	public final fun component2-9ScXe1c ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy-bCeBJAs (Lactron/observability/MessageRef;Ljava/lang/String;Ljava/lang/String;)Lactron/observability/JournalEntry$BridgeDropped;
+	public static synthetic fun copy-bCeBJAs$default (Lactron/observability/JournalEntry$BridgeDropped;Lactron/observability/MessageRef;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lactron/observability/JournalEntry$BridgeDropped;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMessage ()Lactron/observability/MessageRef;
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getTo-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$BridgeReceived : actron/observability/JournalEntry {
+	public synthetic fun <init> (Lactron/core/InputId;Lactron/observability/MessageRef;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component2 ()Lactron/observability/MessageRef;
+	public final fun copy-3sQabHQ (Lactron/core/InputId;Lactron/observability/MessageRef;)Lactron/observability/JournalEntry$BridgeReceived;
+	public static synthetic fun copy-3sQabHQ$default (Lactron/observability/JournalEntry$BridgeReceived;Lactron/core/InputId;Lactron/observability/MessageRef;ILjava/lang/Object;)Lactron/observability/JournalEntry$BridgeReceived;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getMessage ()Lactron/observability/MessageRef;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$BridgeSent : actron/observability/JournalEntry {
+	public synthetic fun <init> (Lactron/core/InputId;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageRef;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lactron/core/InputId;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageRef;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component2 ()Lactron/observability/MessageRef;
+	public final fun component3-9ScXe1c ()Ljava/lang/String;
+	public final fun component4 ()Z
+	public final fun component5 ()Lactron/observability/MessageRef;
+	public final fun copy-eKLrw1g (Lactron/core/InputId;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageRef;)Lactron/observability/JournalEntry$BridgeSent;
+	public static synthetic fun copy-eKLrw1g$default (Lactron/observability/JournalEntry$BridgeSent;Lactron/core/InputId;Lactron/observability/MessageRef;Ljava/lang/String;ZLactron/observability/MessageRef;ILjava/lang/Object;)Lactron/observability/JournalEntry$BridgeSent;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Lactron/observability/MessageRef;
+	public final fun getDelivered ()Z
+	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getMessage ()Lactron/observability/MessageRef;
+	public final fun getTo-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$CheckpointCreated : actron/observability/JournalEntry {
+	public fun <init> (Ljava/util/List;Ljava/util/List;I)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()I
+	public final fun copy (Ljava/util/List;Ljava/util/List;I)Lactron/observability/JournalEntry$CheckpointCreated;
+	public static synthetic fun copy$default (Lactron/observability/JournalEntry$CheckpointCreated;Ljava/util/List;Ljava/util/List;IILjava/lang/Object;)Lactron/observability/JournalEntry$CheckpointCreated;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInFlight ()I
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getSources ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$CommandsAbandoned : actron/observability/JournalEntry {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;Ljava/util/List;)Lactron/observability/JournalEntry$CommandsAbandoned;
+	public static synthetic fun copy$default (Lactron/observability/JournalEntry$CommandsAbandoned;Ljava/lang/String;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lactron/observability/JournalEntry$CommandsAbandoned;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getQueued ()Ljava/util/List;
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getRunning ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$DecisionCommitted : actron/observability/JournalEntry {
+	public synthetic fun <init> (Lactron/core/InputId;JLjava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component10 ()Ljava/util/List;
+	public final fun component11 ()I
+	public final fun component2 ()J
+	public final fun component3 ()Ljava/util/List;
+	public final fun component4 ()Ljava/util/List;
+	public final fun component5 ()Ljava/util/List;
+	public final fun component6 ()Ljava/util/List;
+	public final fun component7 ()Ljava/util/List;
+	public final fun component8 ()Ljava/util/List;
+	public final fun component9 ()Ljava/util/List;
+	public final fun copy-2DaYmzs (Lactron/core/InputId;JLjava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;I)Lactron/observability/JournalEntry$DecisionCommitted;
+	public static synthetic fun copy-2DaYmzs$default (Lactron/observability/JournalEntry$DecisionCommitted;Lactron/core/InputId;JLjava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/List;IILjava/lang/Object;)Lactron/observability/JournalEntry$DecisionCommitted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActive ()Ljava/util/List;
+	public final fun getCancelledScopes ()Ljava/util/List;
+	public final fun getCommands ()Ljava/util/List;
+	public final fun getEffects ()I
+	public final fun getEntered ()Ljava/util/List;
+	public final fun getExited ()Ljava/util/List;
+	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getRevision ()J
+	public final fun getTimersCancelled ()Ljava/util/List;
+	public final fun getTimersScheduled ()Ljava/util/List;
+	public final fun getTransitions ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$DecisionIgnored : actron/observability/JournalEntry {
+	public synthetic fun <init> (Lactron/core/InputId;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-3sQabHQ (Lactron/core/InputId;Ljava/lang/String;)Lactron/observability/JournalEntry$DecisionIgnored;
+	public static synthetic fun copy-3sQabHQ$default (Lactron/observability/JournalEntry$DecisionIgnored;Lactron/core/InputId;Ljava/lang/String;ILjava/lang/Object;)Lactron/observability/JournalEntry$DecisionIgnored;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$EffectAcknowledged : actron/observability/JournalEntry {
+	public fun <init> (J)V
+	public final fun component1 ()J
+	public final fun copy (J)Lactron/observability/JournalEntry$EffectAcknowledged;
+	public static synthetic fun copy$default (Lactron/observability/JournalEntry$EffectAcknowledged;JILjava/lang/Object;)Lactron/observability/JournalEntry$EffectAcknowledged;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffect ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$EffectDiscarded : actron/observability/JournalEntry {
+	public fun <init> (JLjava/lang/String;)V
+	public final fun component1 ()J
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (JLjava/lang/String;)Lactron/observability/JournalEntry$EffectDiscarded;
+	public static synthetic fun copy$default (Lactron/observability/JournalEntry$EffectDiscarded;JLjava/lang/String;ILjava/lang/Object;)Lactron/observability/JournalEntry$EffectDiscarded;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffect ()J
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$EffectHandlingStarted : actron/observability/JournalEntry {
+	public fun <init> (JI)V
+	public final fun component1 ()J
+	public final fun component2 ()I
+	public final fun copy (JI)Lactron/observability/JournalEntry$EffectHandlingStarted;
+	public static synthetic fun copy$default (Lactron/observability/JournalEntry$EffectHandlingStarted;JIILjava/lang/Object;)Lactron/observability/JournalEntry$EffectHandlingStarted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAttempt ()I
+	public final fun getEffect ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$EffectQueued : actron/observability/JournalEntry {
+	public synthetic fun <init> (Lactron/core/InputId;JLjava/lang/String;Lactron/observability/Payload;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component2 ()J
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Lactron/observability/Payload;
+	public final fun copy-WiwGrfw (Lactron/core/InputId;JLjava/lang/String;Lactron/observability/Payload;)Lactron/observability/JournalEntry$EffectQueued;
+	public static synthetic fun copy-WiwGrfw$default (Lactron/observability/JournalEntry$EffectQueued;Lactron/core/InputId;JLjava/lang/String;Lactron/observability/Payload;ILjava/lang/Object;)Lactron/observability/JournalEntry$EffectQueued;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffect ()J
+	public final fun getEvent ()Lactron/observability/Payload;
+	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getPolicy ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$EventEmitted : actron/observability/JournalEntry {
+	public synthetic fun <init> (Lactron/core/InputId;Lactron/observability/Payload;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component2 ()Lactron/observability/Payload;
+	public final fun copy-3sQabHQ (Lactron/core/InputId;Lactron/observability/Payload;)Lactron/observability/JournalEntry$EventEmitted;
+	public static synthetic fun copy-3sQabHQ$default (Lactron/observability/JournalEntry$EventEmitted;Lactron/core/InputId;Lactron/observability/Payload;ILjava/lang/Object;)Lactron/observability/JournalEntry$EventEmitted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEvent ()Lactron/observability/Payload;
+	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$ExternalReceived : actron/observability/JournalEntry {
+	public synthetic fun <init> (Lactron/core/InputId;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy-3sQabHQ (Lactron/core/InputId;Ljava/lang/String;)Lactron/observability/JournalEntry$ExternalReceived;
+	public static synthetic fun copy-3sQabHQ$default (Lactron/observability/JournalEntry$ExternalReceived;Lactron/core/InputId;Ljava/lang/String;ILjava/lang/Object;)Lactron/observability/JournalEntry$ExternalReceived;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getSource ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$FailureReported : actron/observability/JournalEntry {
+	public synthetic fun <init> (Lactron/core/InputId;Lactron/observability/FailureDescriptor;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public final fun component2 ()Lactron/observability/FailureDescriptor;
+	public final fun copy-3sQabHQ (Lactron/core/InputId;Lactron/observability/FailureDescriptor;)Lactron/observability/JournalEntry$FailureReported;
+	public static synthetic fun copy-3sQabHQ$default (Lactron/observability/JournalEntry$FailureReported;Lactron/core/InputId;Lactron/observability/FailureDescriptor;ILjava/lang/Object;)Lactron/observability/JournalEntry$FailureReported;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFailure ()Lactron/observability/FailureDescriptor;
+	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$InputAccepted : actron/observability/JournalEntry {
+	public synthetic fun <init> (JLactron/observability/InputDescriptor;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-lqctDAI ()J
+	public final fun component2 ()Lactron/observability/InputDescriptor;
+	public final fun copy-Fs7QlLI (JLactron/observability/InputDescriptor;)Lactron/observability/JournalEntry$InputAccepted;
+	public static synthetic fun copy-Fs7QlLI$default (Lactron/observability/JournalEntry$InputAccepted;JLactron/observability/InputDescriptor;ILjava/lang/Object;)Lactron/observability/JournalEntry$InputAccepted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-lqctDAI ()J
+	public final fun getKind ()Lactron/observability/InputDescriptor;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$InputDiscarded : actron/observability/JournalEntry {
+	public synthetic fun <init> (JLactron/observability/DiscardDescriptor;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-lqctDAI ()J
+	public final fun component2 ()Lactron/observability/DiscardDescriptor;
+	public final fun copy-Fs7QlLI (JLactron/observability/DiscardDescriptor;)Lactron/observability/JournalEntry$InputDiscarded;
+	public static synthetic fun copy-Fs7QlLI$default (Lactron/observability/JournalEntry$InputDiscarded;JLactron/observability/DiscardDescriptor;ILjava/lang/Object;)Lactron/observability/JournalEntry$InputDiscarded;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-lqctDAI ()J
+	public final fun getReason ()Lactron/observability/DiscardDescriptor;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$InputRejected : actron/observability/JournalEntry {
+	public fun <init> (Lactron/observability/Payload;Ljava/lang/String;)V
+	public final fun component1 ()Lactron/observability/Payload;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Lactron/observability/Payload;Ljava/lang/String;)Lactron/observability/JournalEntry$InputRejected;
+	public static synthetic fun copy$default (Lactron/observability/JournalEntry$InputRejected;Lactron/observability/Payload;Ljava/lang/String;ILjava/lang/Object;)Lactron/observability/JournalEntry$InputRejected;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lactron/observability/Payload;
+	public final fun getReason ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$JournalGap : actron/observability/JournalEntry {
+	public fun <init> (J)V
+	public final fun component1 ()J
+	public final fun copy (J)Lactron/observability/JournalEntry$JournalGap;
+	public static synthetic fun copy$default (Lactron/observability/JournalEntry$JournalGap;JILjava/lang/Object;)Lactron/observability/JournalEntry$JournalGap;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDropped ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$ProcessingFinished : actron/observability/JournalEntry {
+	public synthetic fun <init> (JJLactron/observability/OutcomeDescriptor;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-lqctDAI ()J
+	public final fun component2 ()J
+	public final fun component3 ()Lactron/observability/OutcomeDescriptor;
+	public final fun component4-UwyO8pc ()J
+	public final fun copy-qTlDrzA (JJLactron/observability/OutcomeDescriptor;J)Lactron/observability/JournalEntry$ProcessingFinished;
+	public static synthetic fun copy-qTlDrzA$default (Lactron/observability/JournalEntry$ProcessingFinished;JJLactron/observability/OutcomeDescriptor;JILjava/lang/Object;)Lactron/observability/JournalEntry$ProcessingFinished;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDuration-UwyO8pc ()J
+	public final fun getInput-lqctDAI ()J
+	public final fun getOrdinal ()J
+	public final fun getOutcome ()Lactron/observability/OutcomeDescriptor;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$ProcessingStarted : actron/observability/JournalEntry {
+	public synthetic fun <init> (JJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-lqctDAI ()J
+	public final fun component2 ()J
+	public final fun copy-Fs7QlLI (JJ)Lactron/observability/JournalEntry$ProcessingStarted;
+	public static synthetic fun copy-Fs7QlLI$default (Lactron/observability/JournalEntry$ProcessingStarted;JJILjava/lang/Object;)Lactron/observability/JournalEntry$ProcessingStarted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-lqctDAI ()J
+	public final fun getOrdinal ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$RecordingStopped : actron/observability/JournalEntry {
+	public static final field INSTANCE Lactron/observability/JournalEntry$RecordingStopped;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$StateCommitted : actron/observability/JournalEntry {
+	public synthetic fun <init> (JJLactron/observability/Payload;Lactron/observability/Payload;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-lqctDAI ()J
+	public final fun component2 ()J
+	public final fun component3 ()Lactron/observability/Payload;
+	public final fun component4 ()Lactron/observability/Payload;
+	public final fun copy-kzrdfBM (JJLactron/observability/Payload;Lactron/observability/Payload;)Lactron/observability/JournalEntry$StateCommitted;
+	public static synthetic fun copy-kzrdfBM$default (Lactron/observability/JournalEntry$StateCommitted;JJLactron/observability/Payload;Lactron/observability/Payload;ILjava/lang/Object;)Lactron/observability/JournalEntry$StateCommitted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput-lqctDAI ()J
+	public final fun getPrevious ()Lactron/observability/Payload;
+	public final fun getRevision ()J
+	public final fun getState ()Lactron/observability/Payload;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$StoreClosed : actron/observability/JournalEntry {
+	public static final field INSTANCE Lactron/observability/JournalEntry$StoreClosed;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalEntry$StoreRegistered : actron/observability/JournalEntry {
+	public fun <init> (Lactron/observability/Capability;)V
+	public final fun component1 ()Lactron/observability/Capability;
+	public final fun copy (Lactron/observability/Capability;)Lactron/observability/JournalEntry$StoreRegistered;
+	public static synthetic fun copy$default (Lactron/observability/JournalEntry$StoreRegistered;Lactron/observability/Capability;ILjava/lang/Object;)Lactron/observability/JournalEntry$StoreRegistered;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCapability ()Lactron/observability/Capability;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/observability/JournalFailure {
+}
+
+public final class actron/observability/JournalFailure$PolicyFailed : actron/observability/JournalFailure {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-9ScXe1c ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/Throwable;
+	public final fun copy-toU0d-Q (Ljava/lang/String;Ljava/lang/Throwable;)Lactron/observability/JournalFailure$PolicyFailed;
+	public static synthetic fun copy-toU0d-Q$default (Lactron/observability/JournalFailure$PolicyFailed;Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)Lactron/observability/JournalFailure$PolicyFailed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/Throwable;
+	public final fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalFailure$SinkFailed : actron/observability/JournalFailure {
+	public fun <init> (Lactron/observability/JournalSink;Ljava/lang/Throwable;)V
+	public final fun component1 ()Lactron/observability/JournalSink;
+	public final fun component2 ()Ljava/lang/Throwable;
+	public final fun copy (Lactron/observability/JournalSink;Ljava/lang/Throwable;)Lactron/observability/JournalFailure$SinkFailed;
+	public static synthetic fun copy$default (Lactron/observability/JournalFailure$SinkFailed;Lactron/observability/JournalSink;Ljava/lang/Throwable;ILjava/lang/Object;)Lactron/observability/JournalFailure$SinkFailed;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getError ()Ljava/lang/Throwable;
+	public final fun getSink ()Lactron/observability/JournalSink;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/JournalFormat {
+	public static final field INSTANCE Lactron/observability/JournalFormat;
+	public final fun entry (Lactron/observability/JournalEntry;)Ljava/lang/String;
+	public final fun failure (Lactron/observability/FailureDescriptor;)Ljava/lang/String;
+	public final fun line (Lactron/observability/JournalRecord;)Ljava/lang/String;
+	public final fun payload (Lactron/observability/Payload;)Ljava/lang/String;
+}
+
+public final class actron/observability/JournalProbeKt {
+	public static final fun recordTo-mOBKkIs (Lactron/core/StoreBuilder;Lactron/observability/RecordingSession;Ljava/lang/String;Lactron/observability/PayloadPolicy;)V
+	public static final fun recordTo-mOBKkIs (Lactron/core/StorePatchBuilder;Lactron/observability/RecordingSession;Ljava/lang/String;Lactron/observability/PayloadPolicy;)V
+	public static synthetic fun recordTo-mOBKkIs$default (Lactron/core/StoreBuilder;Lactron/observability/RecordingSession;Ljava/lang/String;Lactron/observability/PayloadPolicy;ILjava/lang/Object;)V
+	public static synthetic fun recordTo-mOBKkIs$default (Lactron/core/StorePatchBuilder;Lactron/observability/RecordingSession;Ljava/lang/String;Lactron/observability/PayloadPolicy;ILjava/lang/Object;)V
+}
+
+public final class actron/observability/JournalRecord {
+	public synthetic fun <init> (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Lactron/observability/ExecutionMode;JLactron/observability/StoreSeq;JLactron/observability/JournalEntry;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2-ovQMC8w ()Ljava/lang/String;
+	public final fun component3-U-q8Myo ()Ljava/lang/String;
+	public final fun component4-5z6ymsY ()Ljava/lang/String;
+	public final fun component5 ()Lactron/observability/ExecutionMode;
+	public final fun component6-3lQgghE ()J
+	public final fun component7-RAXJKOs ()Lactron/observability/StoreSeq;
+	public final fun component8-UwyO8pc ()J
+	public final fun component9 ()Lactron/observability/JournalEntry;
+	public final fun copy-oORhSGs (ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Lactron/observability/ExecutionMode;JLactron/observability/StoreSeq;JLactron/observability/JournalEntry;)Lactron/observability/JournalRecord;
+	public static synthetic fun copy-oORhSGs$default (Lactron/observability/JournalRecord;ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Lactron/observability/ExecutionMode;JLactron/observability/StoreSeq;JLactron/observability/JournalEntry;ILjava/lang/Object;)Lactron/observability/JournalRecord;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getElapsed-UwyO8pc ()J
+	public final fun getEntry ()Lactron/observability/JournalEntry;
+	public final fun getFormatVersion ()I
+	public final fun getGroup-U-q8Myo ()Ljava/lang/String;
+	public final fun getGroupSeq-3lQgghE ()J
+	public final fun getMode ()Lactron/observability/ExecutionMode;
+	public final fun getSession-ovQMC8w ()Ljava/lang/String;
+	public final fun getStore-5z6ymsY ()Ljava/lang/String;
+	public final fun getStoreSeq-RAXJKOs ()Lactron/observability/StoreSeq;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/observability/JournalSink {
+	public abstract fun write (Lactron/observability/JournalRecord;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class actron/observability/JournalStats {
+	public fun <init> (JIJJJJJ)V
+	public final fun component1 ()J
+	public final fun component2 ()I
+	public final fun component3 ()J
+	public final fun component4 ()J
+	public final fun component5 ()J
+	public final fun component6 ()J
+	public final fun component7 ()J
+	public final fun copy (JIJJJJJ)Lactron/observability/JournalStats;
+	public static synthetic fun copy$default (Lactron/observability/JournalStats;JIJJJJJILjava/lang/Object;)Lactron/observability/JournalStats;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDroppedForSinks ()J
+	public final fun getEvicted ()J
+	public final fun getPolicyFailures ()J
+	public final fun getPublished ()J
+	public final fun getPublishedAfterStop ()J
+	public final fun getRetained ()I
+	public final fun getSinkFailures ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/MachineGroupId {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Lactron/observability/MachineGroupId;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class actron/observability/MessageRef {
+	public synthetic fun <init> (Ljava/lang/String;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-9ScXe1c ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun copy-toU0d-Q (Ljava/lang/String;J)Lactron/observability/MessageRef;
+	public static synthetic fun copy-toU0d-Q$default (Lactron/observability/MessageRef;Ljava/lang/String;JILjava/lang/Object;)Lactron/observability/MessageRef;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEffect ()J
+	public final fun getFrom-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/OutcomeDescriptor {
+	public fun <init> (Lactron/observability/OutcomeKind;ILactron/observability/FailureDescriptor;)V
+	public synthetic fun <init> (Lactron/observability/OutcomeKind;ILactron/observability/FailureDescriptor;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lactron/observability/OutcomeKind;
+	public final fun component2 ()I
+	public final fun component3 ()Lactron/observability/FailureDescriptor;
+	public final fun copy (Lactron/observability/OutcomeKind;ILactron/observability/FailureDescriptor;)Lactron/observability/OutcomeDescriptor;
+	public static synthetic fun copy$default (Lactron/observability/OutcomeDescriptor;Lactron/observability/OutcomeKind;ILactron/observability/FailureDescriptor;ILjava/lang/Object;)Lactron/observability/OutcomeDescriptor;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCommits ()I
+	public final fun getFailure ()Lactron/observability/FailureDescriptor;
+	public final fun getKind ()Lactron/observability/OutcomeKind;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/OutcomeKind : java/lang/Enum {
+	public static final field Cancelled Lactron/observability/OutcomeKind;
+	public static final field Failed Lactron/observability/OutcomeKind;
+	public static final field Handled Lactron/observability/OutcomeKind;
+	public static final field Ignored Lactron/observability/OutcomeKind;
+	public static final field Recovered Lactron/observability/OutcomeKind;
+	public static final field Unchanged Lactron/observability/OutcomeKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lactron/observability/OutcomeKind;
+	public static fun values ()[Lactron/observability/OutcomeKind;
+}
+
+public abstract interface class actron/observability/Payload {
+}
+
+public final class actron/observability/Payload$Described : actron/observability/Payload {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lactron/observability/Payload$Described;
+	public static synthetic fun copy$default (Lactron/observability/Payload$Described;Ljava/lang/String;ILjava/lang/Object;)Lactron/observability/Payload$Described;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getText ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/Payload$Omitted : actron/observability/Payload {
+	public static final field INSTANCE Lactron/observability/Payload$Omitted;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/Payload$Projected : actron/observability/Payload {
+	public fun <init> (Ljava/lang/String;Ljava/util/Map;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (Ljava/lang/String;Ljava/util/Map;)Lactron/observability/Payload$Projected;
+	public static synthetic fun copy$default (Lactron/observability/Payload$Projected;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Lactron/observability/Payload$Projected;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFields ()Ljava/util/Map;
+	public final fun getLabel ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/Payload$Retained : actron/observability/Payload {
+	public fun <init> (Ljava/lang/Object;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun copy (Ljava/lang/Object;)Lactron/observability/Payload$Retained;
+	public static synthetic fun copy$default (Lactron/observability/Payload$Retained;Ljava/lang/Object;ILjava/lang/Object;)Lactron/observability/Payload$Retained;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/Payload$Unavailable : actron/observability/Payload {
+	public static final field INSTANCE Lactron/observability/Payload$Unavailable;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/PayloadKt {
+	public static final fun PayloadPolicy (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)Lactron/observability/PayloadPolicy;
+	public static synthetic fun PayloadPolicy$default (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lactron/observability/PayloadPolicy;
+}
+
+public abstract interface class actron/observability/PayloadPolicy {
+	public static final field Companion Lactron/observability/PayloadPolicy$Companion;
+	public abstract fun action (Lactron/core/Action;)Lactron/observability/Payload;
+	public abstract fun event (Lactron/core/Event;)Lactron/observability/Payload;
+	public abstract fun failure (Ljava/lang/Throwable;)Lactron/observability/FailureDescriptor;
+	public abstract fun state (Lactron/core/State;)Lactron/observability/Payload;
+}
+
+public final class actron/observability/PayloadPolicy$Companion {
+	public final fun metadataOnly ()Lactron/observability/PayloadPolicy;
+	public final fun retainAll ()Lactron/observability/PayloadPolicy;
+}
+
+public final class actron/observability/RecordKt {
+	public static final field JOURNAL_FORMAT_VERSION I
+}
+
+public final class actron/observability/RecordingSession {
+	public synthetic fun <init> (Lkotlinx/coroutines/CoroutineScope;Ljava/lang/String;Ljava/lang/String;Lactron/observability/ExecutionMode;Lactron/observability/JournalConfig;Ljava/util/List;Lkotlin/time/TimeSource;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Lkotlinx/coroutines/CoroutineScope;Ljava/lang/String;Ljava/lang/String;Lactron/observability/ExecutionMode;Lactron/observability/JournalConfig;Ljava/util/List;Lkotlin/time/TimeSource;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun close (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun getGroup-U-q8Myo ()Ljava/lang/String;
+	public final fun getId-ovQMC8w ()Ljava/lang/String;
+	public final fun getMode ()Lactron/observability/ExecutionMode;
+	public final fun getStats ()Lactron/observability/JournalStats;
+	public final fun probe-toU0d-Q (Ljava/lang/String;Lactron/observability/PayloadPolicy;)Lactron/core/StoreProbe;
+	public final fun publish (Lactron/observability/JournalEntry;)Lactron/observability/JournalRecord;
+	public final fun publish-toU0d-Q (Ljava/lang/String;Lactron/observability/JournalEntry;)Lactron/observability/JournalRecord;
+	public final fun records ()Ljava/util/List;
+}
+
+public final class actron/observability/RuntimeSessionId {
+	public static final field Companion Lactron/observability/RuntimeSessionId$Companion;
+	public static final synthetic fun box-impl (Ljava/lang/String;)Lactron/observability/RuntimeSessionId;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class actron/observability/RuntimeSessionId$Companion {
+	public final fun random-ovQMC8w ()Ljava/lang/String;
+}
+
+public final class actron/observability/StoreInstanceId {
+	public static final synthetic fun box-impl (Ljava/lang/String;)Lactron/observability/StoreInstanceId;
+	public static fun constructor-impl (Ljava/lang/String;)Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (Ljava/lang/String;Ljava/lang/Object;)Z
+	public static final fun equals-impl0 (Ljava/lang/String;Ljava/lang/String;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static fun hashCode-impl (Ljava/lang/String;)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class actron/observability/StoreSeq {
+	public static final synthetic fun box-impl (J)Lactron/observability/StoreSeq;
+	public static fun constructor-impl (J)J
+	public fun equals (Ljava/lang/Object;)Z
+	public static fun equals-impl (JLjava/lang/Object;)Z
+	public static final fun equals-impl0 (JJ)Z
+	public final fun getValue ()J
+	public fun hashCode ()I
+	public static fun hashCode-impl (J)I
+	public fun toString ()Ljava/lang/String;
+	public static fun toString-impl (J)Ljava/lang/String;
+	public final synthetic fun unbox-impl ()J
+}
+
+public final class actron/observability/TimerRef {
+	public synthetic fun <init> (JIJJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()J
+	public final fun component2 ()I
+	public final fun component3 ()J
+	public final fun component4-UwyO8pc ()J
+	public final fun copy-Wn2Vu4Y (JIJJ)Lactron/observability/TimerRef;
+	public static synthetic fun copy-Wn2Vu4Y$default (Lactron/observability/TimerRef;JIJJILjava/lang/Object;)Lactron/observability/TimerRef;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getActivation ()J
+	public final fun getDeadline-UwyO8pc ()J
+	public final fun getId ()J
+	public final fun getTransition ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/DecodedSegment {
+	public fun <init> (Lactron/observability/file/SegmentHeader;Ljava/util/List;Lactron/observability/file/SegmentMark;Z)V
+	public final fun component1 ()Lactron/observability/file/SegmentHeader;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Lactron/observability/file/SegmentMark;
+	public final fun component4 ()Z
+	public final fun copy (Lactron/observability/file/SegmentHeader;Ljava/util/List;Lactron/observability/file/SegmentMark;Z)Lactron/observability/file/DecodedSegment;
+	public static synthetic fun copy$default (Lactron/observability/file/DecodedSegment;Lactron/observability/file/SegmentHeader;Ljava/util/List;Lactron/observability/file/SegmentMark;ZILjava/lang/Object;)Lactron/observability/file/DecodedSegment;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFinished ()Z
+	public final fun getHeader ()Lactron/observability/file/SegmentHeader;
+	public final fun getMark ()Lactron/observability/file/SegmentMark;
+	public final fun getRecords ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/FileSegmentStorage : actron/observability/file/SegmentStorage {
+	public fun <init> (Ljava/lang/String;)V
+	public fun append (Ljava/lang/String;)Lactron/observability/file/SegmentOutput;
+	public fun delete (Ljava/lang/String;)V
+	public fun list ()Ljava/util/List;
+	public fun read (Ljava/lang/String;)[B
+}
+
+public final class actron/observability/file/FramesRead {
+	public fun <init> (Ljava/util/List;Lactron/observability/file/SegmentMark;Z)V
+	public final fun getFinished ()Z
+	public final fun getFrames ()Ljava/util/List;
+	public final fun getMark ()Lactron/observability/file/SegmentMark;
+}
+
+public final class actron/observability/file/Framing {
+	public static final field INSTANCE Lactron/observability/file/Framing;
+	public static final field MAX_FRAME_BYTES I
+	public final fun frame ([B)[B
+	public final fun getEND ()[B
+	public final fun read (Ljava/lang/String;[B[B)Lactron/observability/file/FramesRead;
+}
+
+public final class actron/observability/file/Framing$Frame {
+	public fun <init> (I[B)V
+	public final fun getOffset ()I
+	public final fun getPayload ()[B
+}
+
+public final class actron/observability/file/InMemorySegmentStorage : actron/observability/file/SegmentStorage {
+	public fun <init> ()V
+	public fun append (Ljava/lang/String;)Lactron/observability/file/SegmentOutput;
+	public final fun corrupt (Ljava/lang/String;I)V
+	public fun delete (Ljava/lang/String;)V
+	public fun list ()Ljava/util/List;
+	public fun read (Ljava/lang/String;)[B
+	public final fun truncate (Ljava/lang/String;I)V
+}
+
+public final class actron/observability/file/JournalFileConfig {
+	public fun <init> ()V
+	public fun <init> (III)V
+	public synthetic fun <init> (IIIILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (III)Lactron/observability/file/JournalFileConfig;
+	public static synthetic fun copy$default (Lactron/observability/file/JournalFileConfig;IIIILjava/lang/Object;)Lactron/observability/file/JournalFileConfig;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFlushEveryRecords ()I
+	public final fun getMaxSegmentBytes ()I
+	public final fun getMaxSegments ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/JournalFileContents {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lactron/observability/file/JournalFileContents;
+	public static synthetic fun copy$default (Lactron/observability/file/JournalFileContents;Ljava/util/List;ILjava/lang/Object;)Lactron/observability/file/JournalFileContents;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEvents ()Ljava/util/List;
+	public final fun getMarks ()Ljava/util/List;
+	public final fun getRecords ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun isComplete ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/observability/file/JournalFileEvent {
+}
+
+public final class actron/observability/file/JournalFileEvent$Mark : actron/observability/file/JournalFileEvent {
+	public fun <init> (Lactron/observability/file/SegmentMark;)V
+	public final fun component1 ()Lactron/observability/file/SegmentMark;
+	public final fun copy (Lactron/observability/file/SegmentMark;)Lactron/observability/file/JournalFileEvent$Mark;
+	public static synthetic fun copy$default (Lactron/observability/file/JournalFileEvent$Mark;Lactron/observability/file/SegmentMark;ILjava/lang/Object;)Lactron/observability/file/JournalFileEvent$Mark;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMark ()Lactron/observability/file/SegmentMark;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/JournalFileEvent$Record : actron/observability/file/JournalFileEvent {
+	public fun <init> (Lactron/observability/JournalRecord;)V
+	public final fun component1 ()Lactron/observability/JournalRecord;
+	public final fun copy (Lactron/observability/JournalRecord;)Lactron/observability/file/JournalFileEvent$Record;
+	public static synthetic fun copy$default (Lactron/observability/file/JournalFileEvent$Record;Lactron/observability/JournalRecord;ILjava/lang/Object;)Lactron/observability/file/JournalFileEvent$Record;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRecord ()Lactron/observability/JournalRecord;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/JournalFileFormat {
+	public static final field EXTENSION Ljava/lang/String;
+	public static final field INSTANCE Lactron/observability/file/JournalFileFormat;
+	public static final field MAX_FRAME_BYTES I
+	public final fun decodeSegment (Ljava/lang/String;[B)Lactron/observability/file/DecodedSegment;
+	public final fun frame (Lactron/observability/JournalRecord;)[B
+	public final fun getEND ()[B
+	public final fun getMAGIC ()[B
+	public final fun header-R784UME (Ljava/lang/String;Ljava/lang/String;Lactron/observability/ExecutionMode;I)[B
+	public final fun parseSegmentName (Ljava/lang/String;)Lkotlin/Pair;
+	public final fun segmentName-B46ot6s (Ljava/lang/String;I)Ljava/lang/String;
+}
+
+public final class actron/observability/file/JournalFileFormatKt {
+	public static final field JOURNAL_FILE_FORMAT_VERSION I
+}
+
+public final class actron/observability/file/JournalFileSink : actron/observability/JournalSink {
+	public fun <init> (Lactron/observability/file/SegmentStorage;Lactron/observability/file/JournalFileConfig;)V
+	public synthetic fun <init> (Lactron/observability/file/SegmentStorage;Lactron/observability/file/JournalFileConfig;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun close ()V
+	public final fun flush ()V
+	public final fun getActiveSegment ()Ljava/lang/String;
+	public final fun getSegments ()Ljava/util/List;
+	public fun write (Lactron/observability/JournalRecord;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class actron/observability/file/JournalFiles {
+	public fun <init> (Lactron/observability/file/SegmentStorage;)V
+	public final fun exportLines-pFaES-k (Ljava/lang/String;)Ljava/util/List;
+	public final fun prune (J)Ljava/util/List;
+	public final fun read-pFaES-k (Ljava/lang/String;)Lactron/observability/file/JournalFileContents;
+	public final fun sessions ()Ljava/util/List;
+	public final fun tail-B46ot6s (Ljava/lang/String;I)Ljava/util/List;
+}
+
+public final class actron/observability/file/SegmentHeader {
+	public synthetic fun <init> (IILjava/lang/String;Ljava/lang/String;Lactron/observability/ExecutionMode;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()I
+	public final fun component2 ()I
+	public final fun component3-ovQMC8w ()Ljava/lang/String;
+	public final fun component4-U-q8Myo ()Ljava/lang/String;
+	public final fun component5 ()Lactron/observability/ExecutionMode;
+	public final fun component6 ()I
+	public final fun copy-afHmjOU (IILjava/lang/String;Ljava/lang/String;Lactron/observability/ExecutionMode;I)Lactron/observability/file/SegmentHeader;
+	public static synthetic fun copy-afHmjOU$default (Lactron/observability/file/SegmentHeader;IILjava/lang/String;Ljava/lang/String;Lactron/observability/ExecutionMode;IILjava/lang/Object;)Lactron/observability/file/SegmentHeader;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFileFormatVersion ()I
+	public final fun getGroup-U-q8Myo ()Ljava/lang/String;
+	public final fun getIndex ()I
+	public final fun getMode ()Lactron/observability/ExecutionMode;
+	public final fun getRecordFormatVersion ()I
+	public final fun getSession-ovQMC8w ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/SegmentInfo {
+	public fun <init> (Ljava/lang/String;JJ)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun component3 ()J
+	public final fun copy (Ljava/lang/String;JJ)Lactron/observability/file/SegmentInfo;
+	public static synthetic fun copy$default (Lactron/observability/file/SegmentInfo;Ljava/lang/String;JJILjava/lang/Object;)Lactron/observability/file/SegmentInfo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getModified ()J
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSize ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/observability/file/SegmentMark {
+}
+
+public final class actron/observability/file/SegmentMark$Corrupt : actron/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;IILjava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun component4 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;IILjava/lang/String;)Lactron/observability/file/SegmentMark$Corrupt;
+	public static synthetic fun copy$default (Lactron/observability/file/SegmentMark$Corrupt;Ljava/lang/String;IILjava/lang/String;ILjava/lang/Object;)Lactron/observability/file/SegmentMark$Corrupt;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOffset ()I
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getRecordsRead ()I
+	public final fun getSegment ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/SegmentMark$MissingSegments : actron/observability/file/SegmentMark {
+	public synthetic fun <init> (Ljava/lang/String;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-ovQMC8w ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy-AugkzB0 (Ljava/lang/String;II)Lactron/observability/file/SegmentMark$MissingSegments;
+	public static synthetic fun copy-AugkzB0$default (Lactron/observability/file/SegmentMark$MissingSegments;Ljava/lang/String;IIILjava/lang/Object;)Lactron/observability/file/SegmentMark$MissingSegments;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFromIndex ()I
+	public final fun getSession-ovQMC8w ()Ljava/lang/String;
+	public final fun getToIndex ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/SegmentMark$NotASegment : actron/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;)Lactron/observability/file/SegmentMark$NotASegment;
+	public static synthetic fun copy$default (Lactron/observability/file/SegmentMark$NotASegment;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lactron/observability/file/SegmentMark$NotASegment;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getSegment ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/SegmentMark$SequenceHole : actron/observability/file/SegmentMark {
+	public synthetic fun <init> (Ljava/lang/String;JJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-ovQMC8w ()Ljava/lang/String;
+	public final fun component2 ()J
+	public final fun component3 ()J
+	public final fun copy-AugkzB0 (Ljava/lang/String;JJ)Lactron/observability/file/SegmentMark$SequenceHole;
+	public static synthetic fun copy-AugkzB0$default (Lactron/observability/file/SegmentMark$SequenceHole;Ljava/lang/String;JJILjava/lang/Object;)Lactron/observability/file/SegmentMark$SequenceHole;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAfterGroupSeq ()J
+	public final fun getMissing ()J
+	public final fun getNextGroupSeq ()J
+	public final fun getSession-ovQMC8w ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/SegmentMark$TruncatedTail : actron/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;II)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (Ljava/lang/String;II)Lactron/observability/file/SegmentMark$TruncatedTail;
+	public static synthetic fun copy$default (Lactron/observability/file/SegmentMark$TruncatedTail;Ljava/lang/String;IIILjava/lang/Object;)Lactron/observability/file/SegmentMark$TruncatedTail;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRecordsRead ()I
+	public final fun getSegment ()Ljava/lang/String;
+	public final fun getTrailingBytes ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/SegmentMark$Unfinished : actron/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;I)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun copy (Ljava/lang/String;I)Lactron/observability/file/SegmentMark$Unfinished;
+	public static synthetic fun copy$default (Lactron/observability/file/SegmentMark$Unfinished;Ljava/lang/String;IILjava/lang/Object;)Lactron/observability/file/SegmentMark$Unfinished;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRecordsRead ()I
+	public final fun getSegment ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/observability/file/SegmentMark$UnsupportedFormat : actron/observability/file/SegmentMark {
+	public fun <init> (Ljava/lang/String;II)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (Ljava/lang/String;II)Lactron/observability/file/SegmentMark$UnsupportedFormat;
+	public static synthetic fun copy$default (Lactron/observability/file/SegmentMark$UnsupportedFormat;Ljava/lang/String;IIILjava/lang/Object;)Lactron/observability/file/SegmentMark$UnsupportedFormat;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getFileFormatVersion ()I
+	public final fun getRecordFormatVersion ()I
+	public final fun getSegment ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract interface class actron/observability/file/SegmentOutput : java/lang/AutoCloseable {
+	public abstract fun close ()V
+	public abstract fun flush ()V
+	public abstract fun write ([B)V
+}
+
+public abstract interface class actron/observability/file/SegmentStorage {
+	public abstract fun append (Ljava/lang/String;)Lactron/observability/file/SegmentOutput;
+	public abstract fun delete (Ljava/lang/String;)V
+	public abstract fun list ()Ljava/util/List;
+	public abstract fun read (Ljava/lang/String;)[B
+}
+

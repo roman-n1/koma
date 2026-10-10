@@ -1,7 +1,7 @@
 # Published-artifact consumer verification
 
 This is an **independent Gradle build**, with its own settings and two projects. It is not
-included by Koma's root settings. There are no `project(...)` dependencies on the library,
+included by Actron's root settings. There are no `project(...)` dependencies on the library,
 composite builds, dependency substitutions or `mavenLocal()` fallbacks. Fork coordinates are
 restricted to an isolated Maven repository, so cached or remotely published releases cannot
 silently substitute for the artifacts built by the check.
@@ -32,8 +32,8 @@ transitive dependencies; common code calls their APIs and compiles Compose ViewS
 usage. The JVM smoke executes ordinary Store, StateChartStore, MachineStore, the message bus
 and a logging plugin. CI builds with JDK 17 and executes the JVM smoke with a real JDK 11, so
 target-11 bytecode calling newer Java APIs is detected. Locally set
-`KOMA_CONSUMER_JAVA11_HOME=/path/to/jdk-11` to do the same; otherwise the local smoke uses the
-Gradle runtime and reports that limitation. `tooling` separately compiles MachineTestDriver, koma-test helpers and
+`ACTRON_CONSUMER_JAVA11_HOME=/path/to/jdk-11` to do the same; otherwise the local smoke uses the
+Gradle runtime and reports that limitation. `tooling` separately compiles MachineTestDriver, actron-test helpers and
 the Time Travel inspector. Graph checks require all eleven modules to be consumed and reject
 source-project substitution, mixed fork versions and test/debug modules in the app graph.
 

@@ -27,7 +27,7 @@ For the time being, the async boundary of `action` continues to be expressed thr
 ## Notes
 
 - Making `action {}` async by default makes the order of state transitions, the completion unit of `dispatchAndWait()`, the before/after relationship of middleware, and the meaning of `PendingActionPolicy` harder to read.
-- Koma takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". Therefore, marking the entry point of continuing work explicitly as `launch {}` is more consistent with the overall design.
+- Actron takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". Therefore, marking the entry point of continuing work explicitly as `launch {}` is more consistent with the overall design.
 - On the other hand, allowing long suspends or external I/O directly inside `action {}` makes it easy to block the whole Store. This problem can actually occur, but adopting default async as the solution has large side effects.
 - The proposal to make `action {}` non-suspend is sound as a philosophy, but it tends to conflict with the current DSL shape, including `event()`, and the runtime benefit is limited relative to the cost of introduction.
 - Adding `launch {}` carelessly increases the burden on users of managing consistency between multiple async jobs, preventing stale results from being adopted, and keeping event firing order readable. Therefore, `launch {}` remains an escape hatch that is used explicitly only where needed.

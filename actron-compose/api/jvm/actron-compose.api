@@ -1,0 +1,20 @@
+public final class actron/compose/StateSaverKt {
+	public static final fun rememberStateSaver (Landroidx/compose/runtime/Composer;I)Lactron/core/StateSaver;
+}
+
+public final class actron/compose/ViewStore {
+	public static final field $stable I
+	public fun <init> (Lactron/core/State;Lkotlin/jvm/functions/Function1;Lkotlinx/coroutines/flow/Flow;)V
+	public synthetic fun <init> (Lactron/core/State;Lkotlin/jvm/functions/Function1;Lkotlinx/coroutines/flow/Flow;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getDispatch ()Lkotlin/jvm/functions/Function1;
+	public final fun getEventFlow ()Lkotlinx/coroutines/flow/Flow;
+	public final fun getState ()Lactron/core/State;
+	public final fun narrow (Lkotlin/jvm/functions/Function1;)Lactron/compose/ViewStore;
+	public final fun select (Lkotlin/jvm/functions/Function1;Landroidx/compose/runtime/Composer;I)Ljava/lang/Object;
+}
+
+public final class actron/compose/ViewStoreKt {
+	public static final fun rememberViewStore (Lactron/core/Store;ZLandroidx/compose/runtime/Composer;II)Lactron/compose/ViewStore;
+	public static final fun rememberViewStore (Ljava/lang/Object;ZLkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;II)Lactron/compose/ViewStore;
+}
+

@@ -8,12 +8,12 @@ Stage 6 of the [handoff](../design/2026-09-29-time-travel-logging-handoff.md): s
 of one screen (root, Main, Bridge, adapters) recorded and replayed together, with a consistent
 cut (§8.1), a bridge that carries message ids and whose deliveries a replay applies once (§10),
 and the acceptance that nothing is delivered twice, no instances are mixed, and live keeps
-running. Until now `koma-timetravel` replayed one Store, and Stores talked through whatever the
+running. Until now `actron-timetravel` replayed one Store, and Stores talked through whatever the
 application wired between their events and dispatches, which no recording could relate.
 
 ## Decision
 
-The group lives in `koma-statechart` (`MachineGroup`, the live side) and `koma-timetravel`
+The group lives in `actron-statechart` (`MachineGroup`, the live side) and `actron-timetravel`
 (`GroupRecorder`, `GroupRecording`, `GroupReplaySession`, `GroupBranch`, the replay side).
 
 - **A bridge message is the effect it was routed from.** `MachineGroup.route(from, to, map)`
@@ -73,21 +73,21 @@ Not adopted:
   its inputs; a second delivery would be the double delivery §10 forbids.
 - Message ids of their own (a counter of the bridge): the effect id is already unique per
   sender and reproduced by a replay; a counter would differ between live and replay.
-- `koma-message` as the bridge: it is process-wide and unaddressed (§10); a group's bridge is
+- `actron-message` as the bridge: it is process-wide and unaddressed (§10); a group's bridge is
   addressed and recorded.
 
 ## Notes
 
-- Tests: [`MachineGroupTest`](../../../koma-statechart/src/commonTest/kotlin/koma/statechart/machine/MachineGroupTest.kt)
+- Tests: [`MachineGroupTest`](../../../actron-statechart/src/commonTest/kotlin/actron/statechart/machine/MachineGroupTest.kt)
   (routing with the sender's message id and one decision per message, an undelivered message
   journaled, delivery past the admission bound, a cut that freezes and lets inputs in after it
   in order, a result arriving during the cut applied once after it, a member that does not
   settle aborting the cut with the group resuming);
-  [`GroupReplaySessionTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/GroupReplaySessionTest.kt)
+  [`GroupReplaySessionTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/GroupReplaySessionTest.kt)
   (a recorded run replays in order, deliveries the recording cannot have produced are
   mismatches, a recording since a cut with a message in flight replays);
-  [`GroupBranchTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/GroupBranchTest.kt);
-  [`GroupCheckpointStormTest`](../../../koma-timetravel/src/commonTest/kotlin/koma/timetravel/GroupCheckpointStormTest.kt)
+  [`GroupBranchTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/GroupBranchTest.kt);
+  [`GroupCheckpointStormTest`](../../../actron-timetravel/src/commonTest/kotlin/actron/timetravel/GroupCheckpointStormTest.kt)
   (thirty cuts of two members exchanging messages under a four-thread storm: every cut's
   recording since it replays without a mismatch, which is the consistency of the cut proven
   by the recording, and every pick reached the root).

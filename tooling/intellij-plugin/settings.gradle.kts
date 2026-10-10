@@ -1,2 +1,2 @@
 pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }
-rootProject.name = "koma-intellij"
+rootProject.name = "actron-intellij"

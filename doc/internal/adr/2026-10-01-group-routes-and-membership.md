@@ -52,7 +52,7 @@ Not adopted, on purpose:
 - A child store, `scope` or `forEach` in the library (TCA's composition): the messenger's
   owner of composition is Decompose (retained instances, `InstanceKeeper`, a `StoreInstanceId`
   per tab); the library gives the wiring (routes) and the membership, not the tree.
-- A global typed bus: `koma-message` stays process-wide and outside replay (handoff §10); a
+- A global typed bus: `actron-message` stays process-wide and outside replay (handoff §10); a
   group's bridge is addressed and recorded.
 - `suspend ask()` inside a decision, or reading another member's `currentState` in `decide`:
   a decision is a pure function of its own snapshot and input; what another member knows

@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - Build all modules: `./gradlew build`
 - Run all tests: `./gradlew allTests`
-- Run single module tests: `./gradlew :koma-core:jvmTest` (or `:koma-core:allTests`)
-- Compose UI tests of `koma-timetravel-compose` run on the JVM desktop runtime: `./gradlew :koma-timetravel-compose:jvmTest`
+- Run single module tests: `./gradlew :actron-core:jvmTest` (or `:actron-core:allTests`)
+- Compose UI tests of `actron-timetravel-compose` run on the JVM desktop runtime: `./gradlew :actron-timetravel-compose:jvmTest`
 - Run specific test target: `./gradlew iosSimulatorArm64Test` (targets: jvm, iosArm64, iosSimulatorArm64, js, wasmJs, Android host)
 - Debug tests with: `./gradlew jvmTest --info`
 - Lint: `./gradlew lint`
@@ -17,7 +17,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Architecture Pattern
 
-- Follow the Koma state management pattern - one-way data flow
+- Follow the Actron state management pattern - one-way data flow
 - State → Action → New State with optional Event emission
 
 ### Types and Interfaces
@@ -28,7 +28,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### DSL Pattern
 
-- Use the @KomaStoreDsl annotation for builder APIs
+- Use the @ActronStoreDsl annotation for builder APIs
 - Follow the state{} and action{} block pattern
 - Handle recoverable exceptions in dedicated recover{} blocks
 
@@ -41,13 +41,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Documentation
 
 - Include state transition diagrams in tests
-- Document experimental APIs with @ExperimentalKomaApi
+- Document experimental APIs with @ExperimentalActronApi
 - Use KDoc comments for public APIs
 - Put internal design/spec notes under `doc/internal/` so they stay separate from user-facing docs
 
 ## Fork
 
-- This is the fork `roman-n1/koma` of `koma-kt/koma`, published as `io.github.roman-n1:*` (`koma.fork.version` in `gradle.properties`); `koma.upstream.base` names the upstream release it was last merged with
+- This is the fork `roman-n1/koma` of `koma-kt/koma`, published as `io.github.roman-n1:*` (`actron.fork.version` in `gradle.properties`); `actron.upstream.base` names the upstream release it was last merged with
 - Changes to the modules upstream owns are listed in the divergence inventory of `doc/internal/design/2026-09-28-statechart-roadmap.md`; keep it complete in the same PR as the change
 - `upstream-pr/<topic>` branches are single commits on the upstream tag, prepared per `doc/internal/notes/2026-10-01-upstream-series.md`
 - The five on-disk format versions are frozen under `doc/internal/adr/2026-10-01-format-freeze-policy.md`; a bump ships with a reader of the previous version, its test, the re-pinned golden and the table in `FormatVersionsTest`, in the same change

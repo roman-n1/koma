@@ -88,7 +88,7 @@ key still requires explicit versioning/review. Snapshot format is independent of
 recording formats, which are unchanged.
 
 behaviouralReviewArtifacts returns behaviour.diff, coverage.diff, before.mmd, after.mmd,
-matrix.md and model.koma.json. Coverage regressions and newly uncovered transitions/guard
+matrix.md and model.actron.json. Coverage regressions and newly uncovered transitions/guard
 branches are visible. Model-object property ordering does not create a behavioural change.
 The sample exporter asserts actual transition and guard coverage. The workflow reads the
 baseline from the PR base Git revision, publishes a summary/files, and fails known structural
@@ -98,7 +98,7 @@ The committed sample baseline is updated intentionally from the executable expor
 
 ```shell
 ./gradlew :behaviour-review:exportBehaviour
-cp verification/behaviour-review/build/behaviour-review/model.koma.json .koma/baselines/messenger-send.koma.json
+cp verification/behaviour-review/build/behaviour-review/model.actron.json .actron/baselines/messenger-send.actron.json
 ```
 
 Applications register their own machines/export tasks and baseline paths; the library cannot
@@ -107,7 +107,7 @@ Repository-relative source maps use positive line numbers and reject traversal/c
 IDE navigation additionally checks canonical project containment, including symlinks.
 
 The standalone plugin uses bundled Java/Kotlin/JSON APIs and declares K2 compatibility. Model
-references/Find Usages are scoped to one versioned export. Kotlin gutter resolves actual Koma
+references/Find Usages are scoped to one versioned export. Kotlin gutter resolves actual Actron
 DSL declarations rather than matching names from unrelated libraries. The canvas renders
 text natively; double-click navigates to source or model declaration. It shows at most 200
 nodes while retaining the complete transition list. SDK build/PSI tests and installable ZIP
@@ -136,9 +136,9 @@ OpenTelemetry spans describe receipt of a decision, not command IO duration. Par
 explicit, with bounded SpanContext metadata; missing SDK parents are flagged independently.
 Sentry and Crashlytics attach report-local keys rather than mutating global custom-key state.
 
-The modules are optional: koma-diagnostics supports every core KMP target;
-koma-diagnostics-sdk provides OpenTelemetry/Sentry on JVM and Android;
-koma-diagnostics-crashlytics is Android-only and isolates the Firebase dependency. iOS clients
+The modules are optional: actron-diagnostics supports every core KMP target;
+actron-diagnostics-sdk provides OpenTelemetry/Sentry on JVM and Android;
+actron-diagnostics-crashlytics is Android-only and isolates the Firebase dependency. iOS clients
 can implement the common DiagnosticSink using their application-owned native SDKs.
 BCV supports the common/JVM module APIs; the AGP Android-only Crashlytics target has no BCV
 extraction and is checked by host compilation and the SDK contract test.

@@ -20,13 +20,13 @@ val generatedConfig = tasks.register("generateSoakConfig") {
         require(duration in 3..3600) { "soakSeconds must be 3..3600" }
         val file = output.get().file("SoakConfig.kt").asFile
         file.parentFile.mkdirs()
-        file.writeText("package koma.soak\nconst val SOAK_SECONDS = $duration\nconst val SOAK_REPORT_DIRECTORY = \"$reports\"\n")
+        file.writeText("package actron.soak\nconst val SOAK_SECONDS = $duration\nconst val SOAK_REPORT_DIRECTORY = \"$reports\"\n")
     }
 }
 
 kotlin {
     android {
-        namespace = "koma.resources.soak"
+        namespace = "actron.resources.soak"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
         withDeviceTestBuilder { sourceSetTreeName = "deviceTest" }.configure {
@@ -38,11 +38,11 @@ kotlin {
         compilerOptions { jvmTarget = JvmTarget.JVM_11 }
         val defaultReachability = testRuns.create("defaultReachability") {
             setExecutionSourceFrom(compilations.getByName("test"))
-            executionTask.configure { useJUnit(); filter.includeTestsMatching("koma.soak.DefaultReachabilityTest*") }
+            executionTask.configure { useJUnit(); filter.includeTestsMatching("actron.soak.DefaultReachabilityTest*") }
         }
         testRuns.getByName("test").executionTask.configure {
             useJUnit()
-            filter.excludeTestsMatching("koma.soak.DefaultReachabilityTest*")
+            filter.excludeTestsMatching("actron.soak.DefaultReachabilityTest*")
             dependsOn(defaultReachability.executionTask)
         }
     }
@@ -54,7 +54,7 @@ kotlin {
         commonMain {
             kotlin.srcDir(generatedConfig)
             dependencies {
-                implementation(project(":koma-statechart"))
+                implementation(project(":actron-statechart"))
                 implementation(libs.coroutines.core)
                 implementation(libs.serialization.json)
             }
@@ -76,9 +76,9 @@ tasks.withType<AbstractTestTask>().configureEach {
 }
 tasks.withType<KotlinNativeSimulatorTest>().configureEach {
     if (name == "iosSimulatorArm64DefaultReachabilityTest") {
-        filter.includeTestsMatching("koma.soak.DefaultReachabilityTest*")
+        filter.includeTestsMatching("actron.soak.DefaultReachabilityTest*")
     } else if (name == "iosSimulatorArm64Test") {
-        filter.excludeTestsMatching("koma.soak.DefaultReachabilityTest*")
+        filter.excludeTestsMatching("actron.soak.DefaultReachabilityTest*")
         dependsOn("iosSimulatorArm64DefaultReachabilityTest")
     }
 }

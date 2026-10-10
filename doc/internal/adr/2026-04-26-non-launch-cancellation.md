@@ -22,7 +22,7 @@ No in-flight cancellation API is added for non-`launch` store work.
 
 - Non-`launch` store work is the completion unit of `dispatchAndWait()` and sits on the same serial pipeline as middleware execution and state transition decisions. Introducing mid-way cancellation makes it hard to read "how much has been applied", "are the middlewares considered complete" and "how are errors handled".
 - Running long suspend work or I/O directly inside an ordinary handler tends to block the whole Store, regardless of whether it can be cancelled. Such work is assumed to be moved to `launch {}`.
-- Koma takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". That is why `launch {}` work hangs off the state scope, and it is natural for explicit cancellation to be confined to that range first.
+- Actron takes the position that "an action is the trigger that starts processing, and the owner of in-flight work is the state". That is why `launch {}` work hangs off the state scope, and it is natural for explicit cancellation to be confined to that range first.
 - Therefore, `#190` is treated not as an entry point for general cancellation but as a local extension to the existing state-owned asynchronous work of `action { launch { ... } }`.
 
 ## Related

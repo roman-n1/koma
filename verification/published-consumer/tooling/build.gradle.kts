@@ -21,8 +21,8 @@ kotlin {
     sourceSets.commonMain.dependencies {
         val coordinate = providers.gradleProperty("consumer.group").get()
         val version = providers.gradleProperty("consumer.version").get()
-        implementation("$coordinate:koma-timetravel-compose:$version")
-        implementation("$coordinate:koma-statechart-test:$version")
+        implementation("$coordinate:actron-timetravel-compose:$version")
+        implementation("$coordinate:actron-statechart-test:$version")
         // Test tooling stays in its own consumer; it cannot mask missing production dependencies.
         implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${providers.gradleProperty("consumer.coroutines").get()}")
     }
