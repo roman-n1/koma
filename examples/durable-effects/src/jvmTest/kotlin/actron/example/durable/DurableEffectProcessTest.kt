@@ -244,6 +244,12 @@ class DurableEffectProcessTest {
                     }
                 }
                 assertEquals(next, session.saver.durable.value.pending)
+                // Persistence completes before the scheduler publishes this revision's effects.
+                // Wait for that real boundary before inspecting the retained mailbox.
+                val revision = session.saver.savedRevision.value
+                withTimeout(10_000) {
+                    while (session.store.checkpoint().snapshot.revision < revision) { }
+                }
                 assertEquals(listOf(next), session.store.mailbox.pending.map { it.event.intent })
                 withTimeout(10_000) { session.store.mailbox.subscribe().take(1).collect { session.handle(it) } }
                 assertEquals(35L, session.ledger.read().balance)
