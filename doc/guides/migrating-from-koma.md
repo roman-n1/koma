@@ -1,0 +1,40 @@
+# Migrating from Koma to Actron
+
+Actron is the new name of this Koma fork. This is a breaking source and binary rename:
+recompile applications and libraries that consume it. No compatibility aliases or Maven
+relocations are provided. The upstream Koma project retains its name and coordinates.
+
+| Before | After |
+|---|---|
+| `io.github.roman-n1:koma-<module>` | `io.github.roman-n1:actron-<module>` |
+| `koma.*` imports and Android namespaces | `actron.*` |
+| `ExperimentalKomaApi`, `InternalKomaApi`, `KomaStoreDsl` | `ExperimentalActronApi`, `InternalActronApi`, `ActronStoreDsl` |
+| `:koma-core` and other Gradle module paths | `:actron-core` and equivalent `:actron-*` paths |
+| `koma.publish` convention plugin | `actron.publish` |
+| `koma.*` Gradle properties / `KOMA_*` environment variables | `actron.*` / `ACTRON_*` |
+| `.koma/`, `*.koma.json` model artifacts | `.actron/`, `*.actron.json` |
+| Koma Behavioural Model IDE plugin | Actron Behavioural Model (`io.github.roman-n1.actron`) |
+
+The configured version remains `5.0.0-alpha.1`; the renamed artifacts have not been
+published by this change. For a local composite build, point `includeBuild` at the Actron
+checkout and request `io.github.roman-n1:actron-core:5.0.0-alpha.1` (plus optional modules).
+
+Update dependencies, imports, opt-ins, Gradle commands, scripts and model artifact paths
+together. Reinstall the IDE plugin under its new ID. The core Kotlin/Native, JS and Wasm
+library identity now belongs to Actron too; do not substitute Actron for a Koma dependency
+inside a previously compiled JAR or klib.
+
+A staged migration may retain upstream Koma for an old component and use Actron for a new
+one. Their types are distinct: a `koma.core.Store` cannot be passed to an Actron API.
+The [migration isolation fixture](../../verification/binary-consumer/README.md) exercises
+this boundary with a frozen upstream consumer and a new Actron consumer.
+
+The frozen journal/recording file magic bytes (`KOMAJRNL`, `KOMARECD`, `KOMAGRPO`) and
+format versions are retained so a branding change does not invalidate file framing.
+Regenerate exported model/coverage artifacts using Actron. Review application-owned
+persistence codecs and serialized type names before reusing old recordings or saved state;
+the package rename does not promise compatibility for those payloads. Keep old recordings
+and their matching Koma runtime until they have been migrated and verified.
+
+The GitHub source URL is still `roman-n1/koma`; repository hosting and Maven publication
+are separate from this source change. Upstream attribution and the MIT license are retained.

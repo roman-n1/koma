@@ -1,7 +1,7 @@
 # build-logic
 
-An included Gradle build for repository conventions, not a runtime Koma library. Its
-[convention project](convention/README.md) supplies the `koma.publish` plugin used by the
+An included Gradle build for repository conventions, not a runtime Actron library. Its
+[convention project](convention/README.md) supplies the `actron.publish` plugin used by the
 published modules. The runnable Time Travel example does not apply this plugin.
 
 Root `settings.gradle.kts` loads this build through `pluginManagement.includeBuild`.
@@ -18,3 +18,11 @@ Adding a library module means defining its targets/dependencies, applying the co
 declaring `publishConvention.artifactId`, including it in root settings and documenting its
 API. A debug application can be included without publishing; it must be explicitly classified
 by `checkDebugGraph` and excluded from library API dumps.
+
+## Release publishing
+
+Creating a GitHub prerelease runs the release checks. Uploading to Maven Central is opt-in:
+set the repository variable `MAVEN_CENTRAL_PUBLISH_ENABLED=true` only after configuring
+`MAVEN_CENTRAL_USERNAME`, `MAVEN_CENTRAL_PASSWORD`, `MAVEN_SIGNING_KEY_ID`,
+`MAVEN_SIGNING_PASSWORD` and `MAVEN_GPG_KEY_CONTENTS` as repository secrets. Without the
+variable, the Maven publish job is skipped; the GitHub release is still available.

@@ -35,12 +35,12 @@ jobs:
           profile: pixel_2
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
-          script: ./gradlew :koma-compose:connectedAndroidDeviceTest --max-workers=2
+          script: ./gradlew :actron-compose:connectedAndroidDeviceTest --max-workers=2
       - name: Upload device test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-compose-lifecycle-results
           path: |
-            koma-compose/build/reports/androidTests/
-            koma-compose/build/outputs/androidTest-results/
+            actron-compose/build/reports/androidTests/
+            actron-compose/build/outputs/androidTest-results/

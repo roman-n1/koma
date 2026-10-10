@@ -1,4 +1,0 @@
-public final class koma/statechart/compose/MailboxEffectKt {
-	public static final fun MailboxEffect (Lkoma/statechart/machine/EffectMailbox;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
-}
-

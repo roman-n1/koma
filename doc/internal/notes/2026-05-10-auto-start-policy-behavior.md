@@ -31,13 +31,13 @@ In either case, in the same way that "code can be written on the premise that st
 
 Even when the state changes during startup processing and the policy is `PendingActionPolicy.ClearOnStateExit`, **state class transitions during startup processing do not remove this dispatch or the dispatches made during startup processing**.
 
-In the implementation, `clearPendingActionsOnStateExitIfNeeded()` clears pending dispatches only when `isInitialized == true` ([StoreImpl.kt:727](../../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt:727)).
+In the implementation, `clearPendingActionsOnStateExitIfNeeded()` clears pending dispatches only when `isInitialized == true` ([StoreImpl.kt:727](../../../actron-core/src/commonMain/kotlin/actron/core/StoreImpl.kt:727)).
 
 #### Implementation notes
 
-- Currently, even when triggered by collect / `Store.start()`, dispatches are not removed on state class transitions during startup processing, but if in the future the behavior were to apply only when triggered by dispatch, the condition at [StoreImpl.kt:727](../../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt:727) would be changed as follows.
+- Currently, even when triggered by collect / `Store.start()`, dispatches are not removed on state class transitions during startup processing, but if in the future the behavior were to apply only when triggered by dispatch, the condition at [StoreImpl.kt:727](../../../actron-core/src/commonMain/kotlin/actron/core/StoreImpl.kt:727) would be changed as follows.
   - `if (pendingActionPolicy == PendingActionPolicy.ClearOnStateExit && !(activeDispatchJob != null && !isInitialized))`
-- If in the future a requirement arises to drop dispatches on state class transitions during startup processing, simply removing the `isInitialized == true` check in `clearPendingActionsOnStateExitIfNeeded()` is not enough; it is also necessary to prevent the execution of onActionDispatched() for a dispatch that has already entered the mutex at [StoreImpl.kt:194](../../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt:194).
+- If in the future a requirement arises to drop dispatches on state class transitions during startup processing, simply removing the `isInitialized == true` check in `clearPendingActionsOnStateExitIfNeeded()` is not enough; it is also necessary to prevent the execution of onActionDispatched() for a dispatch that has already entered the mutex at [StoreImpl.kt:194](../../../actron-core/src/commonMain/kotlin/actron/core/StoreImpl.kt:194).
 
 ### Rationale: ClearOnStateExit does not apply to the configuration phase in the first place
 
@@ -60,7 +60,7 @@ Therefore, transitions in the configuration phase are **outside the scope of** `
 
 ### Note: handler matching acts as an implicit safety valve
 
-The risk that "the configuration phase branches and a dispatch lands on an unexpected state class" is theoretically possible, but Koma's handler matching matches on the `(state class, action class)` pair, and if nothing matches it is a **silent no-op** ([StoreBuilder.kt:124-127](../../../koma-core/src/commonMain/kotlin/koma/core/StoreBuilder.kt:124)).
+The risk that "the configuration phase branches and a dispatch lands on an unexpected state class" is theoretically possible, but Actron's handler matching matches on the `(state class, action class)` pair, and if nothing matches it is a **silent no-op** ([StoreBuilder.kt:124-127](../../../actron-core/src/commonMain/kotlin/actron/core/StoreBuilder.kt:124)).
 
 So, for example, even if `OpenPost` is dispatched during a branching startup such as `Loading → if authenticated then Home else Login`, it is simply discarded if the `Login` side has no `action<OpenPost>`. An accident occurs only in the case where "the same action is intentionally handled in multiple state classes, and the side effects differ per state", which is a setup in which the user explicitly takes on the risk.
 

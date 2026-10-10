@@ -7,21 +7,22 @@ import zipfile
 from pathlib import Path
 
 repo, group, version, target = Path(sys.argv[1]), *sys.argv[2:]
-production = {"koma-core", "koma-compose", "koma-logging", "koma-message", "koma-statechart", "koma-observability", "koma-statechart-compose"}
-tooling = {"koma-test", "koma-statechart-test", "koma-timetravel", "koma-timetravel-compose"}
+production = {"actron-core", "actron-compose", "actron-logging", "actron-message", "actron-statechart", "actron-observability", "actron-statechart-compose"}
+tooling = {"actron-test", "actron-statechart-test", "actron-timetravel", "actron-timetravel-compose"}
 modules = production | tooling
 suffixes = {"jvm": ["jvm"], "android": ["android"], "js": ["js"], "wasm": ["wasm-js"], "ios": ["iosarm64", "iossimulatorarm64"]}[target]
 ns = {"m": "http://maven.apache.org/POM/4.0.0"}
 edges = {module: set() for module in modules}
 
 def dependency(owner, dependency_group, name, dependency_version):
-    if not name.startswith("koma-"):
+    assert not name.startswith("koma-"), (owner, "legacy Koma dependency", name)
+    if not name.startswith("actron-"):
         return
     assert dependency_group == group, (owner, "wrong dependency group", dependency_group, name)
     assert dependency_version == version, (owner, "wrong dependency version", name, dependency_version)
-    # Prefer the longest prefix: koma-statechart-test is not koma-statechart.
+    # Prefer the longest prefix: actron-statechart-test is not actron-statechart.
     base = max((module for module in modules if name == module or name.startswith(module + "-")), key=len, default=None)
-    assert base is not None, (owner, "unknown Koma artifact", name)
+    assert base is not None, (owner, "unknown Actron artifact", name)
     edges[owner].add(base)
 
 for module in sorted(modules):
@@ -32,6 +33,7 @@ for module in sorted(modules):
         assert pom.findtext("m:groupId", namespaces=ns) == group, artifact
         assert pom.findtext("m:artifactId", namespaces=ns) == artifact, artifact
         assert pom.findtext("m:version", namespaces=ns) == version, artifact
+        assert pom.findtext("m:name", namespaces=ns) == "Actron", artifact
         for item in pom.findall("m:dependencies/m:dependency", ns):
             dependency(module, item.findtext("m:groupId", namespaces=ns), item.findtext("m:artifactId", namespaces=ns), item.findtext("m:version", namespaces=ns))
         metadata = json.loads((folder / (stem + ".module")).read_text())
@@ -53,6 +55,7 @@ for module in sorted(modules):
                 if target == "jvm" and payload.suffix == ".jar":
                     with zipfile.ZipFile(payload) as jar:
                         for name in jar.namelist():
+                            assert not name.startswith("koma/"), (artifact, "legacy Koma package", name)
                             if name.endswith(".class"):
                                 assert int.from_bytes(jar.read(name)[6:8], "big") <= 55, (artifact, "bytecode newer than Java 11", name)
 

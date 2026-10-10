@@ -13,13 +13,13 @@ input queue; the scheduler never runs user code or waits for the network under t
 and commit have one linearization point; lanes with `Latest`, `Sequential`, `DropIfRunning` and
 `Parallel(limit)`; late results are checked by id under the store's serialization.
 
-Koma is the only runtime (handoff §1), so the executor must be built from a Koma Store, whose
+Actron is the only runtime (handoff §1), so the executor must be built from a Actron Store, whose
 lock, commit and plugin rounds already serialize processing.
 
 ## Decision
 
-[`MachineStore`](../../../koma-statechart/src/commonMain/kotlin/koma/statechart/machine/MachineStore.kt)
-is a `Store<MachineSnapshot<C>, A, E>` that wraps an inner Koma Store whose state is the
+[`MachineStore`](../../../actron-statechart/src/commonMain/kotlin/actron/statechart/machine/MachineStore.kt)
+is a `Store<MachineSnapshot<C>, A, E>` that wraps an inner Actron Store whose state is the
 snapshot and whose action type is `MachineInput<A>`.
 
 Under the inner store's lock:
@@ -31,7 +31,7 @@ Under the inner store's lock:
   single pending slot and registers the snapshot with `nextState {}`. `Ignored` commits nothing.
   `Failed` throws the cause: nothing is committed or registered, running commands are untouched,
   and the failure reaches `recover {}` and the exception handler like any handler failure.
-- Koma commits the snapshot and runs the plugins' `onState` after the commit, still under the
+- Actron commits the snapshot and runs the plugins' `onState` after the commit, still under the
   lock. The store's own plugin, registered last, takes the pending decision (checking it is the
   committed snapshot by identity), queues its events and hands it to the scheduler. Handing over
   is one `trySend` on an unbounded channel; nothing else runs under the lock.
@@ -59,8 +59,8 @@ Outside the lock, in the execution scope the application passes:
   virtual one.
 - **Events** of a decision go through a channel drained by one coroutine into the store's
   `event` flow: delivered after the commit, in decision order, never from the handler before the
-  commit (which is when Koma's own `event()` would emit).
-- **Close.** `close()` closes the inner store and cancels the execution scope's children. Koma's
+  commit (which is when Actron's own `event()` would emit).
+- **Close.** `close()` closes the inner store and cancels the execution scope's children. Actron's
   commit already checks the handler's cancellation before committing, so close before commit
   publishes nothing; close after commit cancels the actor before its turn, so nothing starts and
   running commands are cancelled. The scope must not be `Dispatchers.Unconfined`: launching
@@ -78,7 +78,7 @@ Not adopted:
 
 ## Notes
 
-- Tests: [`MachineStoreTest`](../../../koma-statechart/src/commonTest/kotlin/koma/statechart/machine/MachineStoreTest.kt)
+- Tests: [`MachineStoreTest`](../../../actron-statechart/src/commonTest/kotlin/actron/statechart/machine/MachineStoreTest.kt)
   covers commands starting only after the commit with the committed snapshot visible, results
   feeding back, activation exit cancelling commands, the three lane policies, timers on the clock
   and their cancellation, handler failure, failed decision leaving running work alone, `recover`
@@ -111,7 +111,7 @@ Not adopted:
   actions still wait for processing; `admit(action)` returns `Accepted` or `Rejected(pending,
   limit)`, and `dispatch` is `admit` with the answer dropped, as the handoff §4.3 asks
   ("`dispatch()` with `Unit` proves nothing"). The count is kept in the store (incremented at
-  admission, decremented when the input's handler starts) because Koma's own queue is unbounded.
+  admission, decremented when the input's handler starts) because Actron's own queue is unbounded.
   Inputs the machine's own work sends (results, completions, abandonments, timers) are never
   refused: refusing a result would leave the machine waiting for a command that already
   answered. A refused action is reported to the observers and never becomes an input.
@@ -125,7 +125,7 @@ Not adopted:
   next lanes and the effects for whoever runs the commands. The actor applies a change by
   cancelling, reporting the abandonments and launching, in that order, and owns nothing but the
   jobs, the timers, the last snapshot it carried out and the commands `ending` (finished here,
-  their last input not yet decided by the machine). A `koma-timetravel` recording carries the
+  their last input not yet decided by the machine). A `actron-timetravel` recording carries the
   same lanes forward, and a branch runs them with jobs that end the moment they are told to; one
   rule set, three executors. A cancelled command holds its place in the lane until its job has
   ended, so a `DropIfRunning` lane still busy with the exited activation's command drops the new

@@ -18,16 +18,16 @@ val suffix = mapOf("jvm" to "jvm", "android" to "android", "js" to "js", "wasm" 
 tasks.register("verifyPublishedGraphs") {
     group = "verification"
     doLast {
-        val productionNames = setOf("koma-core", "koma-compose", "koma-message", "koma-logging", "koma-observability", "koma-statechart", "koma-statechart-compose")
-        val allNames = productionNames + setOf("koma-test", "koma-statechart-test", "koma-timetravel", "koma-timetravel-compose")
+        val productionNames = setOf("actron-core", "actron-compose", "actron-message", "actron-logging", "actron-observability", "actron-statechart", "actron-statechart-compose")
+        val allNames = productionNames + setOf("actron-test", "actron-statechart-test", "actron-timetravel", "actron-timetravel-compose")
         fun modules(projectName: String): Set<String> {
             val configurationName = mapOf("jvm" to "jvmCompileClasspath", "android" to "androidCompileClasspath", "js" to "jsCompileClasspath", "wasm" to "wasmJsCompileClasspath", "ios" to "iosSimulatorArm64CompileKlibraries").getValue(target)
             val configuration = project(projectName).configurations.getByName(configurationName)
             val components = configuration.incoming.resolutionResult.allComponents.map { it.id }
             check(components.none { it is ProjectComponentIdentifier && it.projectPath != projectName }) { "Source project substitution in $projectName" }
-            val koma = components.filterIsInstance<ModuleComponentIdentifier>().filter { it.group == forkGroup }
-            check(koma.all { it.version == forkVersion }) { "Wrong fork version in $projectName: $koma" }
-            return koma.map { it.module.removeSuffix("-$suffix") }.toSet()
+            val actron = components.filterIsInstance<ModuleComponentIdentifier>().filter { it.group == forkGroup }
+            check(actron.all { it.version == forkVersion }) { "Wrong fork version in $projectName: $actron" }
+            return actron.map { it.module.removeSuffix("-$suffix") }.toSet()
         }
         val production = modules(":app")
         check(production == productionNames) { "Published production graph: $production; expected $productionNames" }

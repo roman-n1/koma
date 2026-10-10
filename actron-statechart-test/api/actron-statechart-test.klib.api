@@ -1,0 +1,651 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:actron-statechart-test>
+abstract fun interface <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/MachineInputGenerator { // actron.statechart.test/MachineInputGenerator|null[0]
+    abstract fun inputs(actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.machine/MachineTime): kotlin.collections/List<actron.statechart.machine/MachineInput<#B>> // actron.statechart.test/MachineInputGenerator.inputs|inputs(actron.statechart.machine.MachineSnapshot<1:0>;actron.statechart.machine.MachineTime){}[0]
+}
+
+sealed interface actron.statechart.test/CoverageTarget { // actron.statechart.test/CoverageTarget|null[0]
+    final class AllErrorPaths : actron.statechart.test/CoverageTarget { // actron.statechart.test/CoverageTarget.AllErrorPaths|null[0]
+        constructor <init>(kotlin.collections/Set<actron.statechart/StateId>) // actron.statechart.test/CoverageTarget.AllErrorPaths.<init>|<init>(kotlin.collections.Set<actron.statechart.StateId>){}[0]
+
+        final val errorStates // actron.statechart.test/CoverageTarget.AllErrorPaths.errorStates|{}errorStates[0]
+            final fun <get-errorStates>(): kotlin.collections/Set<actron.statechart/StateId> // actron.statechart.test/CoverageTarget.AllErrorPaths.errorStates.<get-errorStates>|<get-errorStates>(){}[0]
+
+        final fun component1(): kotlin.collections/Set<actron.statechart/StateId> // actron.statechart.test/CoverageTarget.AllErrorPaths.component1|component1(){}[0]
+        final fun copy(kotlin.collections/Set<actron.statechart/StateId> = ...): actron.statechart.test/CoverageTarget.AllErrorPaths // actron.statechart.test/CoverageTarget.AllErrorPaths.copy|copy(kotlin.collections.Set<actron.statechart.StateId>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageTarget.AllErrorPaths.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageTarget.AllErrorPaths.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/CoverageTarget.AllErrorPaths.toString|toString(){}[0]
+    }
+
+    final class Custom : actron.statechart.test/CoverageTarget { // actron.statechart.test/CoverageTarget.Custom|null[0]
+        constructor <init>(actron.statechart.test/CoverageRequirements) // actron.statechart.test/CoverageTarget.Custom.<init>|<init>(actron.statechart.test.CoverageRequirements){}[0]
+
+        final val requirements // actron.statechart.test/CoverageTarget.Custom.requirements|{}requirements[0]
+            final fun <get-requirements>(): actron.statechart.test/CoverageRequirements // actron.statechart.test/CoverageTarget.Custom.requirements.<get-requirements>|<get-requirements>(){}[0]
+
+        final fun component1(): actron.statechart.test/CoverageRequirements // actron.statechart.test/CoverageTarget.Custom.component1|component1(){}[0]
+        final fun copy(actron.statechart.test/CoverageRequirements = ...): actron.statechart.test/CoverageTarget.Custom // actron.statechart.test/CoverageTarget.Custom.copy|copy(actron.statechart.test.CoverageRequirements){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageTarget.Custom.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageTarget.Custom.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/CoverageTarget.Custom.toString|toString(){}[0]
+    }
+
+    final class TargetStates : actron.statechart.test/CoverageTarget { // actron.statechart.test/CoverageTarget.TargetStates|null[0]
+        constructor <init>(kotlin.collections/Set<actron.statechart/StateId>) // actron.statechart.test/CoverageTarget.TargetStates.<init>|<init>(kotlin.collections.Set<actron.statechart.StateId>){}[0]
+
+        final val states // actron.statechart.test/CoverageTarget.TargetStates.states|{}states[0]
+            final fun <get-states>(): kotlin.collections/Set<actron.statechart/StateId> // actron.statechart.test/CoverageTarget.TargetStates.states.<get-states>|<get-states>(){}[0]
+
+        final fun component1(): kotlin.collections/Set<actron.statechart/StateId> // actron.statechart.test/CoverageTarget.TargetStates.component1|component1(){}[0]
+        final fun copy(kotlin.collections/Set<actron.statechart/StateId> = ...): actron.statechart.test/CoverageTarget.TargetStates // actron.statechart.test/CoverageTarget.TargetStates.copy|copy(kotlin.collections.Set<actron.statechart.StateId>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageTarget.TargetStates.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageTarget.TargetStates.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/CoverageTarget.TargetStates.toString|toString(){}[0]
+    }
+
+    final object AllGuardOutcomes : actron.statechart.test/CoverageTarget { // actron.statechart.test/CoverageTarget.AllGuardOutcomes|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageTarget.AllGuardOutcomes.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageTarget.AllGuardOutcomes.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/CoverageTarget.AllGuardOutcomes.toString|toString(){}[0]
+    }
+
+    final object AllHistoryPaths : actron.statechart.test/CoverageTarget { // actron.statechart.test/CoverageTarget.AllHistoryPaths|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageTarget.AllHistoryPaths.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageTarget.AllHistoryPaths.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/CoverageTarget.AllHistoryPaths.toString|toString(){}[0]
+    }
+
+    final object AllStates : actron.statechart.test/CoverageTarget { // actron.statechart.test/CoverageTarget.AllStates|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageTarget.AllStates.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageTarget.AllStates.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/CoverageTarget.AllStates.toString|toString(){}[0]
+    }
+
+    final object AllTimerPaths : actron.statechart.test/CoverageTarget { // actron.statechart.test/CoverageTarget.AllTimerPaths|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageTarget.AllTimerPaths.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageTarget.AllTimerPaths.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/CoverageTarget.AllTimerPaths.toString|toString(){}[0]
+    }
+
+    final object AllTransitions : actron.statechart.test/CoverageTarget { // actron.statechart.test/CoverageTarget.AllTransitions|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageTarget.AllTransitions.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageTarget.AllTransitions.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/CoverageTarget.AllTransitions.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.statechart.test/ExplorationStrategy { // actron.statechart.test/ExplorationStrategy|null[0]
+    final class Cover : actron.statechart.test/ExplorationStrategy { // actron.statechart.test/ExplorationStrategy.Cover|null[0]
+        constructor <init>(actron.statechart.test/CoverageTarget) // actron.statechart.test/ExplorationStrategy.Cover.<init>|<init>(actron.statechart.test.CoverageTarget){}[0]
+
+        final val target // actron.statechart.test/ExplorationStrategy.Cover.target|{}target[0]
+            final fun <get-target>(): actron.statechart.test/CoverageTarget // actron.statechart.test/ExplorationStrategy.Cover.target.<get-target>|<get-target>(){}[0]
+
+        final fun component1(): actron.statechart.test/CoverageTarget // actron.statechart.test/ExplorationStrategy.Cover.component1|component1(){}[0]
+        final fun copy(actron.statechart.test/CoverageTarget = ...): actron.statechart.test/ExplorationStrategy.Cover // actron.statechart.test/ExplorationStrategy.Cover.copy|copy(actron.statechart.test.CoverageTarget){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/ExplorationStrategy.Cover.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/ExplorationStrategy.Cover.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/ExplorationStrategy.Cover.toString|toString(){}[0]
+    }
+
+    final class RandomWalk : actron.statechart.test/ExplorationStrategy { // actron.statechart.test/ExplorationStrategy.RandomWalk|null[0]
+        constructor <init>(kotlin/Int, kotlin/Int = ...) // actron.statechart.test/ExplorationStrategy.RandomWalk.<init>|<init>(kotlin.Int;kotlin.Int){}[0]
+
+        final val runs // actron.statechart.test/ExplorationStrategy.RandomWalk.runs|{}runs[0]
+            final fun <get-runs>(): kotlin/Int // actron.statechart.test/ExplorationStrategy.RandomWalk.runs.<get-runs>|<get-runs>(){}[0]
+        final val seed // actron.statechart.test/ExplorationStrategy.RandomWalk.seed|{}seed[0]
+            final fun <get-seed>(): kotlin/Int // actron.statechart.test/ExplorationStrategy.RandomWalk.seed.<get-seed>|<get-seed>(){}[0]
+
+        final fun component1(): kotlin/Int // actron.statechart.test/ExplorationStrategy.RandomWalk.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // actron.statechart.test/ExplorationStrategy.RandomWalk.component2|component2(){}[0]
+        final fun copy(kotlin/Int = ..., kotlin/Int = ...): actron.statechart.test/ExplorationStrategy.RandomWalk // actron.statechart.test/ExplorationStrategy.RandomWalk.copy|copy(kotlin.Int;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/ExplorationStrategy.RandomWalk.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/ExplorationStrategy.RandomWalk.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/ExplorationStrategy.RandomWalk.toString|toString(){}[0]
+    }
+
+    final object AllTransitions : actron.statechart.test/ExplorationStrategy { // actron.statechart.test/ExplorationStrategy.AllTransitions|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/ExplorationStrategy.AllTransitions.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/ExplorationStrategy.AllTransitions.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/ExplorationStrategy.AllTransitions.toString|toString(){}[0]
+    }
+
+    final object BreadthFirst : actron.statechart.test/ExplorationStrategy { // actron.statechart.test/ExplorationStrategy.BreadthFirst|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/ExplorationStrategy.BreadthFirst.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.statechart.test/ExplorationStrategy.BreadthFirst.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.statechart.test/ExplorationStrategy.BreadthFirst.toString|toString(){}[0]
+    }
+}
+
+final class <#A: actron.core/Action> actron.statechart.test/BehaviouralScenarioCoverage { // actron.statechart.test/BehaviouralScenarioCoverage|null[0]
+    constructor <init>(actron.statechart.test/MachineScenario<#A>, actron.statechart.test/MachineCoverage) // actron.statechart.test/BehaviouralScenarioCoverage.<init>|<init>(actron.statechart.test.MachineScenario<1:0>;actron.statechart.test.MachineCoverage){}[0]
+
+    final val coverage // actron.statechart.test/BehaviouralScenarioCoverage.coverage|{}coverage[0]
+        final fun <get-coverage>(): actron.statechart.test/MachineCoverage // actron.statechart.test/BehaviouralScenarioCoverage.coverage.<get-coverage>|<get-coverage>(){}[0]
+    final val scenario // actron.statechart.test/BehaviouralScenarioCoverage.scenario|{}scenario[0]
+        final fun <get-scenario>(): actron.statechart.test/MachineScenario<#A> // actron.statechart.test/BehaviouralScenarioCoverage.scenario.<get-scenario>|<get-scenario>(){}[0]
+
+    final fun component1(): actron.statechart.test/MachineScenario<#A> // actron.statechart.test/BehaviouralScenarioCoverage.component1|component1(){}[0]
+    final fun component2(): actron.statechart.test/MachineCoverage // actron.statechart.test/BehaviouralScenarioCoverage.component2|component2(){}[0]
+    final fun copy(actron.statechart.test/MachineScenario<#A> = ..., actron.statechart.test/MachineCoverage = ...): actron.statechart.test/BehaviouralScenarioCoverage<#A> // actron.statechart.test/BehaviouralScenarioCoverage.copy|copy(actron.statechart.test.MachineScenario<1:0>;actron.statechart.test.MachineCoverage){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/BehaviouralScenarioCoverage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/BehaviouralScenarioCoverage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/BehaviouralScenarioCoverage.toString|toString(){}[0]
+}
+
+final class <#A: actron.core/Action> actron.statechart.test/MachineScenario { // actron.statechart.test/MachineScenario|null[0]
+    constructor <init>(kotlin/String, kotlin.collections/List<actron.statechart.machine/MachineInput<#A>>) // actron.statechart.test/MachineScenario.<init>|<init>(kotlin.String;kotlin.collections.List<actron.statechart.machine.MachineInput<1:0>>){}[0]
+
+    final val inputs // actron.statechart.test/MachineScenario.inputs|{}inputs[0]
+        final fun <get-inputs>(): kotlin.collections/List<actron.statechart.machine/MachineInput<#A>> // actron.statechart.test/MachineScenario.inputs.<get-inputs>|<get-inputs>(){}[0]
+    final val name // actron.statechart.test/MachineScenario.name|{}name[0]
+        final fun <get-name>(): kotlin/String // actron.statechart.test/MachineScenario.name.<get-name>|<get-name>(){}[0]
+
+    final fun component1(): kotlin/String // actron.statechart.test/MachineScenario.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<actron.statechart.machine/MachineInput<#A>> // actron.statechart.test/MachineScenario.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin.collections/List<actron.statechart.machine/MachineInput<#A>> = ...): actron.statechart.test/MachineScenario<#A> // actron.statechart.test/MachineScenario.copy|copy(kotlin.String;kotlin.collections.List<actron.statechart.machine.MachineInput<1:0>>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/MachineScenario.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/MachineScenario.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/MachineScenario.toString|toString(){}[0]
+}
+
+final class <#A: actron.core/Action> actron.statechart.test/ScenarioCoverage { // actron.statechart.test/ScenarioCoverage|null[0]
+    constructor <init>(actron.statechart.test/MachineScenario<#A>, kotlin.collections/Set<actron.statechart.machine/TransitionId>) // actron.statechart.test/ScenarioCoverage.<init>|<init>(actron.statechart.test.MachineScenario<1:0>;kotlin.collections.Set<actron.statechart.machine.TransitionId>){}[0]
+
+    final val scenario // actron.statechart.test/ScenarioCoverage.scenario|{}scenario[0]
+        final fun <get-scenario>(): actron.statechart.test/MachineScenario<#A> // actron.statechart.test/ScenarioCoverage.scenario.<get-scenario>|<get-scenario>(){}[0]
+    final val transitions // actron.statechart.test/ScenarioCoverage.transitions|{}transitions[0]
+        final fun <get-transitions>(): kotlin.collections/Set<actron.statechart.machine/TransitionId> // actron.statechart.test/ScenarioCoverage.transitions.<get-transitions>|<get-transitions>(){}[0]
+
+    final fun component1(): actron.statechart.test/MachineScenario<#A> // actron.statechart.test/ScenarioCoverage.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Set<actron.statechart.machine/TransitionId> // actron.statechart.test/ScenarioCoverage.component2|component2(){}[0]
+    final fun copy(actron.statechart.test/MachineScenario<#A> = ..., kotlin.collections/Set<actron.statechart.machine/TransitionId> = ...): actron.statechart.test/ScenarioCoverage<#A> // actron.statechart.test/ScenarioCoverage.copy|copy(actron.statechart.test.MachineScenario<1:0>;kotlin.collections.Set<actron.statechart.machine.TransitionId>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/ScenarioCoverage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/ScenarioCoverage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/ScenarioCoverage.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> actron.statechart.test/MachineCoverageRecorder : actron.statechart.machine/DecisionTraceObserver<#A, #B, #C, #D> { // actron.statechart.test/MachineCoverageRecorder|null[0]
+    constructor <init>(actron.statechart.machine/Machine<#A, #B, #C, #D>) // actron.statechart.test/MachineCoverageRecorder.<init>|<init>(actron.statechart.machine.Machine<1:0,1:1,1:2,1:3>){}[0]
+
+    final fun onCommitted(actron.core/InputId?, actron.statechart.machine/MachineInput<#B>, actron.statechart.machine/Decision<#A, #C, #D>) // actron.statechart.test/MachineCoverageRecorder.onCommitted|onCommitted(actron.core.InputId?;actron.statechart.machine.MachineInput<1:1>;actron.statechart.machine.Decision<1:0,1:2,1:3>){}[0]
+    final fun onDecided(actron.core/InputId?, actron.statechart.machine/MachineInput<#B>, actron.statechart.machine/ExplainedDecision<#A, #C, #D>) // actron.statechart.test/MachineCoverageRecorder.onDecided|onDecided(actron.core.InputId?;actron.statechart.machine.MachineInput<1:1>;actron.statechart.machine.ExplainedDecision<1:0,1:2,1:3>){}[0]
+    final fun snapshot(): actron.statechart.test/MachineCoverage // actron.statechart.test/MachineCoverageRecorder.snapshot|snapshot(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> actron.statechart.test/MachineTestDriver { // actron.statechart.test/MachineTestDriver|null[0]
+    constructor <init>(actron.statechart.machine/Machine<#A, #B, #C, #D>, #A, kotlinx.coroutines.test/TestScope, actron.statechart.test/ScriptedCommandHandler<#C, #B> = ..., actron.statechart.machine/AdmissionPolicy = ..., actron.statechart.machine/MailboxConfig<#D> = ..., kotlin/Function1<actron.statechart/StoreConfiguration<actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.machine/MachineInput<#B>, #D>, kotlin/Unit> = ...) // actron.statechart.test/MachineTestDriver.<init>|<init>(actron.statechart.machine.Machine<1:0,1:1,1:2,1:3>;1:0;kotlinx.coroutines.test.TestScope;actron.statechart.test.ScriptedCommandHandler<1:2,1:1>;actron.statechart.machine.AdmissionPolicy;actron.statechart.machine.MailboxConfig<1:3>;kotlin.Function1<actron.statechart.StoreConfiguration<actron.statechart.machine.MachineSnapshot<1:0>,actron.statechart.machine.MachineInput<1:1>,1:3>,kotlin.Unit>){}[0]
+
+    final val coverage // actron.statechart.test/MachineTestDriver.coverage|{}coverage[0]
+        final fun <get-coverage>(): actron.statechart.test/MachineCoverage // actron.statechart.test/MachineTestDriver.coverage.<get-coverage>|<get-coverage>(){}[0]
+    final val failures // actron.statechart.test/MachineTestDriver.failures|{}failures[0]
+        final fun <get-failures>(): kotlin.collections/List<kotlin/Throwable> // actron.statechart.test/MachineTestDriver.failures.<get-failures>|<get-failures>(){}[0]
+    final val handler // actron.statechart.test/MachineTestDriver.handler|{}handler[0]
+        final fun <get-handler>(): actron.statechart.test/ScriptedCommandHandler<#C, #B> // actron.statechart.test/MachineTestDriver.handler.<get-handler>|<get-handler>(){}[0]
+    final val initialSnapshot // actron.statechart.test/MachineTestDriver.initialSnapshot|{}initialSnapshot[0]
+        final fun <get-initialSnapshot>(): actron.statechart.machine/MachineSnapshot<#A> // actron.statechart.test/MachineTestDriver.initialSnapshot.<get-initialSnapshot>|<get-initialSnapshot>(){}[0]
+    final val machine // actron.statechart.test/MachineTestDriver.machine|{}machine[0]
+        final fun <get-machine>(): actron.statechart.machine/Machine<#A, #B, #C, #D> // actron.statechart.test/MachineTestDriver.machine.<get-machine>|<get-machine>(){}[0]
+    final val pendingEffects // actron.statechart.test/MachineTestDriver.pendingEffects|{}pendingEffects[0]
+        final fun <get-pendingEffects>(): kotlin.collections/List<actron.statechart.machine/PendingEffect<#D>> // actron.statechart.test/MachineTestDriver.pendingEffects.<get-pendingEffects>|<get-pendingEffects>(){}[0]
+    final val recorder // actron.statechart.test/MachineTestDriver.recorder|{}recorder[0]
+        final fun <get-recorder>(): actron.test/StoreRecorder<actron.statechart.machine/MachineSnapshot<#A>, #B, #D> // actron.statechart.test/MachineTestDriver.recorder.<get-recorder>|<get-recorder>(){}[0]
+    final val runningCommands // actron.statechart.test/MachineTestDriver.runningCommands|{}runningCommands[0]
+        final fun <get-runningCommands>(): kotlin.collections/List<actron.statechart.machine/CommandEnvelope<#C>> // actron.statechart.test/MachineTestDriver.runningCommands.<get-runningCommands>|<get-runningCommands>(){}[0]
+    final val snapshot // actron.statechart.test/MachineTestDriver.snapshot|{}snapshot[0]
+        final fun <get-snapshot>(): actron.statechart.machine/MachineSnapshot<#A> // actron.statechart.test/MachineTestDriver.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
+    final val store // actron.statechart.test/MachineTestDriver.store|{}store[0]
+        final fun <get-store>(): actron.statechart.machine/MachineStore<#A, #B, #C, #D> // actron.statechart.test/MachineTestDriver.store.<get-store>|<get-store>(){}[0]
+
+    final fun acknowledge(actron.statechart.machine/EffectId): kotlin/Boolean // actron.statechart.test/MachineTestDriver.acknowledge|acknowledge(actron.statechart.machine.EffectId){}[0]
+    final fun assertActive(actron.statechart/StateId, kotlin/Array<out kotlin/String>...) // actron.statechart.test/MachineTestDriver.assertActive|assertActive(actron.statechart.StateId;kotlin.Array<out|kotlin.String>...){}[0]
+    final fun assertActive(kotlin.collections/Set<actron.statechart/StateId>) // actron.statechart.test/MachineTestDriver.assertActive|assertActive(kotlin.collections.Set<actron.statechart.StateId>){}[0]
+    final fun assertContext(#A) // actron.statechart.test/MachineTestDriver.assertContext|assertContext(1:0){}[0]
+    final fun assertInvariants() // actron.statechart.test/MachineTestDriver.assertInvariants|assertInvariants(){}[0]
+    final fun close() // actron.statechart.test/MachineTestDriver.close|close(){}[0]
+    final fun receiveEvent(kotlin/Function1<#D, kotlin/Boolean>): #D // actron.statechart.test/MachineTestDriver.receiveEvent|receiveEvent(kotlin.Function1<1:3,kotlin.Boolean>){}[0]
+    final fun sendLater(#B): actron.statechart.machine/Admission // actron.statechart.test/MachineTestDriver.sendLater|sendLater(1:1){}[0]
+    final inline fun <#A1: reified #D> receiveEvent(): #A1 // actron.statechart.test/MachineTestDriver.receiveEvent|receiveEvent(){0§<1:3>}[0]
+    final suspend fun advanceBy(kotlin.time/Duration): actron.statechart.machine/ExecutorCheckpoint<#A, #C> // actron.statechart.test/MachineTestDriver.advanceBy|advanceBy(kotlin.time.Duration){}[0]
+    final suspend fun advanceUntilIdle(): actron.statechart.machine/ExecutorCheckpoint<#A, #C> // actron.statechart.test/MachineTestDriver.advanceUntilIdle|advanceUntilIdle(){}[0]
+    final suspend fun answer(actron.statechart.machine/CommandId, #B): actron.statechart.machine/ExecutorCheckpoint<#A, #C> // actron.statechart.test/MachineTestDriver.answer|answer(actron.statechart.machine.CommandId;1:1){}[0]
+    final suspend fun assertNoPendingWork() // actron.statechart.test/MachineTestDriver.assertNoPendingWork|assertNoPendingWork(){}[0]
+    final suspend fun complete(actron.statechart.machine/CommandId): actron.statechart.machine/ExecutorCheckpoint<#A, #C> // actron.statechart.test/MachineTestDriver.complete|complete(actron.statechart.machine.CommandId){}[0]
+    final suspend fun fail(actron.statechart.machine/CommandId, kotlin/Throwable = ...): actron.statechart.machine/ExecutorCheckpoint<#A, #C> // actron.statechart.test/MachineTestDriver.fail|fail(actron.statechart.machine.CommandId;kotlin.Throwable){}[0]
+    final suspend fun send(#B): actron.statechart.machine/ExecutorCheckpoint<#A, #C> // actron.statechart.test/MachineTestDriver.send|send(1:1){}[0]
+    final suspend fun settle(kotlin.time/Duration = ...): actron.statechart.machine/ExecutorCheckpoint<#A, #C> // actron.statechart.test/MachineTestDriver.settle|settle(kotlin.time.Duration){}[0]
+    final suspend fun start(): actron.statechart.machine/ExecutorCheckpoint<#A, #C> // actron.statechart.test/MachineTestDriver.start|start(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/ActionGenerator { // actron.statechart.test/ActionGenerator|null[0]
+    constructor <init>(actron.statechart/ActionMatcher, kotlin/Function2<actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.machine/MachineTime, kotlin.collections/List<#B>>) // actron.statechart.test/ActionGenerator.<init>|<init>(actron.statechart.ActionMatcher;kotlin.Function2<actron.statechart.machine.MachineSnapshot<1:0>,actron.statechart.machine.MachineTime,kotlin.collections.List<1:1>>){}[0]
+
+    final val matcher // actron.statechart.test/ActionGenerator.matcher|{}matcher[0]
+        final fun <get-matcher>(): actron.statechart/ActionMatcher // actron.statechart.test/ActionGenerator.matcher.<get-matcher>|<get-matcher>(){}[0]
+
+    final fun actions(actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.machine/MachineTime): kotlin.collections/List<#B> // actron.statechart.test/ActionGenerator.actions|actions(actron.statechart.machine.MachineSnapshot<1:0>;actron.statechart.machine.MachineTime){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/BehaviouralExplorationReport { // actron.statechart.test/BehaviouralExplorationReport|null[0]
+    constructor <init>(actron.statechart.test/ExplorationReport<#A, #B>, kotlin.collections/List<actron.statechart.test/BehaviouralScenarioCoverage<#B>>) // actron.statechart.test/BehaviouralExplorationReport.<init>|<init>(actron.statechart.test.ExplorationReport<1:0,1:1>;kotlin.collections.List<actron.statechart.test.BehaviouralScenarioCoverage<1:1>>){}[0]
+
+    final val report // actron.statechart.test/BehaviouralExplorationReport.report|{}report[0]
+        final fun <get-report>(): actron.statechart.test/ExplorationReport<#A, #B> // actron.statechart.test/BehaviouralExplorationReport.report.<get-report>|<get-report>(){}[0]
+    final val scenarios // actron.statechart.test/BehaviouralExplorationReport.scenarios|{}scenarios[0]
+        final fun <get-scenarios>(): kotlin.collections/List<actron.statechart.test/BehaviouralScenarioCoverage<#B>> // actron.statechart.test/BehaviouralExplorationReport.scenarios.<get-scenarios>|<get-scenarios>(){}[0]
+
+    final fun component1(): actron.statechart.test/ExplorationReport<#A, #B> // actron.statechart.test/BehaviouralExplorationReport.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<actron.statechart.test/BehaviouralScenarioCoverage<#B>> // actron.statechart.test/BehaviouralExplorationReport.component2|component2(){}[0]
+    final fun copy(actron.statechart.test/ExplorationReport<#A, #B> = ..., kotlin.collections/List<actron.statechart.test/BehaviouralScenarioCoverage<#B>> = ...): actron.statechart.test/BehaviouralExplorationReport<#A, #B> // actron.statechart.test/BehaviouralExplorationReport.copy|copy(actron.statechart.test.ExplorationReport<1:0,1:1>;kotlin.collections.List<actron.statechart.test.BehaviouralScenarioCoverage<1:1>>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/BehaviouralExplorationReport.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/BehaviouralExplorationReport.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/BehaviouralExplorationReport.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/ExplorationReport { // actron.statechart.test/ExplorationReport|null[0]
+    constructor <init>(kotlin/Int, kotlin/Long, actron.statechart.test/MachineCoverage, kotlin.collections/List<actron.statechart.test/SequenceFailure<#A, #B>>, kotlin/Boolean, kotlin/Int, kotlin.collections/List<actron.statechart.test/MachineScenario<#B>> = ..., kotlin.collections/List<actron.statechart.test/ScenarioCoverage<#B>> = ...) // actron.statechart.test/ExplorationReport.<init>|<init>(kotlin.Int;kotlin.Long;actron.statechart.test.MachineCoverage;kotlin.collections.List<actron.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Int;kotlin.collections.List<actron.statechart.test.MachineScenario<1:1>>;kotlin.collections.List<actron.statechart.test.ScenarioCoverage<1:1>>){}[0]
+
+    final val coverage // actron.statechart.test/ExplorationReport.coverage|{}coverage[0]
+        final fun <get-coverage>(): actron.statechart.test/MachineCoverage // actron.statechart.test/ExplorationReport.coverage.<get-coverage>|<get-coverage>(){}[0]
+    final val coverageScenarios // actron.statechart.test/ExplorationReport.coverageScenarios|{}coverageScenarios[0]
+        final fun <get-coverageScenarios>(): kotlin.collections/List<actron.statechart.test/ScenarioCoverage<#B>> // actron.statechart.test/ExplorationReport.coverageScenarios.<get-coverageScenarios>|<get-coverageScenarios>(){}[0]
+    final val decisions // actron.statechart.test/ExplorationReport.decisions|{}decisions[0]
+        final fun <get-decisions>(): kotlin/Int // actron.statechart.test/ExplorationReport.decisions.<get-decisions>|<get-decisions>(){}[0]
+    final val failures // actron.statechart.test/ExplorationReport.failures|{}failures[0]
+        final fun <get-failures>(): kotlin.collections/List<actron.statechart.test/SequenceFailure<#A, #B>> // actron.statechart.test/ExplorationReport.failures.<get-failures>|<get-failures>(){}[0]
+    final val invariantsChecked // actron.statechart.test/ExplorationReport.invariantsChecked|{}invariantsChecked[0]
+        final fun <get-invariantsChecked>(): kotlin/Long // actron.statechart.test/ExplorationReport.invariantsChecked.<get-invariantsChecked>|<get-invariantsChecked>(){}[0]
+    final val maxDepth // actron.statechart.test/ExplorationReport.maxDepth|{}maxDepth[0]
+        final fun <get-maxDepth>(): kotlin/Int // actron.statechart.test/ExplorationReport.maxDepth.<get-maxDepth>|<get-maxDepth>(){}[0]
+    final val scenarios // actron.statechart.test/ExplorationReport.scenarios|{}scenarios[0]
+        final fun <get-scenarios>(): kotlin.collections/List<actron.statechart.test/MachineScenario<#B>> // actron.statechart.test/ExplorationReport.scenarios.<get-scenarios>|<get-scenarios>(){}[0]
+    final val truncated // actron.statechart.test/ExplorationReport.truncated|{}truncated[0]
+        final fun <get-truncated>(): kotlin/Boolean // actron.statechart.test/ExplorationReport.truncated.<get-truncated>|<get-truncated>(){}[0]
+
+    final fun assertSuccess() // actron.statechart.test/ExplorationReport.assertSuccess|assertSuccess(){}[0]
+    final fun component1(): kotlin/Int // actron.statechart.test/ExplorationReport.component1|component1(){}[0]
+    final fun component2(): kotlin/Long // actron.statechart.test/ExplorationReport.component2|component2(){}[0]
+    final fun component3(): actron.statechart.test/MachineCoverage // actron.statechart.test/ExplorationReport.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/List<actron.statechart.test/SequenceFailure<#A, #B>> // actron.statechart.test/ExplorationReport.component4|component4(){}[0]
+    final fun component5(): kotlin/Boolean // actron.statechart.test/ExplorationReport.component5|component5(){}[0]
+    final fun component6(): kotlin/Int // actron.statechart.test/ExplorationReport.component6|component6(){}[0]
+    final fun component7(): kotlin.collections/List<actron.statechart.test/MachineScenario<#B>> // actron.statechart.test/ExplorationReport.component7|component7(){}[0]
+    final fun component8(): kotlin.collections/List<actron.statechart.test/ScenarioCoverage<#B>> // actron.statechart.test/ExplorationReport.component8|component8(){}[0]
+    final fun copy(kotlin/Int = ..., kotlin/Long = ..., actron.statechart.test/MachineCoverage = ..., kotlin.collections/List<actron.statechart.test/SequenceFailure<#A, #B>> = ..., kotlin/Boolean = ..., kotlin/Int = ..., kotlin.collections/List<actron.statechart.test/MachineScenario<#B>> = ..., kotlin.collections/List<actron.statechart.test/ScenarioCoverage<#B>> = ...): actron.statechart.test/ExplorationReport<#A, #B> // actron.statechart.test/ExplorationReport.copy|copy(kotlin.Int;kotlin.Long;actron.statechart.test.MachineCoverage;kotlin.collections.List<actron.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Int;kotlin.collections.List<actron.statechart.test.MachineScenario<1:1>>;kotlin.collections.List<actron.statechart.test.ScenarioCoverage<1:1>>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/ExplorationReport.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/ExplorationReport.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/ExplorationReport.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/MachineTestPlan { // actron.statechart.test/MachineTestPlan|null[0]
+    constructor <init>(actron.statechart.machine/DefinitionId, actron.statechart.machine/DefinitionVersion, kotlin.collections/List<actron.statechart.test/MachineScenario<#B>>, kotlin.collections/Set<actron.statechart.machine/TransitionId>, kotlin.collections/Set<actron.statechart.machine/TransitionId>, kotlin.collections/List<actron.statechart.test/SequenceFailure<#A, #B>>, kotlin/Boolean, kotlin/Boolean, kotlin/Int) // actron.statechart.test/MachineTestPlan.<init>|<init>(actron.statechart.machine.DefinitionId;actron.statechart.machine.DefinitionVersion;kotlin.collections.List<actron.statechart.test.MachineScenario<1:1>>;kotlin.collections.Set<actron.statechart.machine.TransitionId>;kotlin.collections.Set<actron.statechart.machine.TransitionId>;kotlin.collections.List<actron.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Boolean;kotlin.Int){}[0]
+
+    final val definition // actron.statechart.test/MachineTestPlan.definition|{}definition[0]
+        final fun <get-definition>(): actron.statechart.machine/DefinitionId // actron.statechart.test/MachineTestPlan.definition.<get-definition>|<get-definition>(){}[0]
+    final val discoveryFailures // actron.statechart.test/MachineTestPlan.discoveryFailures|{}discoveryFailures[0]
+        final fun <get-discoveryFailures>(): kotlin.collections/List<actron.statechart.test/SequenceFailure<#A, #B>> // actron.statechart.test/MachineTestPlan.discoveryFailures.<get-discoveryFailures>|<get-discoveryFailures>(){}[0]
+    final val requiredTransitions // actron.statechart.test/MachineTestPlan.requiredTransitions|{}requiredTransitions[0]
+        final fun <get-requiredTransitions>(): kotlin.collections/Set<actron.statechart.machine/TransitionId> // actron.statechart.test/MachineTestPlan.requiredTransitions.<get-requiredTransitions>|<get-requiredTransitions>(){}[0]
+    final val scenarios // actron.statechart.test/MachineTestPlan.scenarios|{}scenarios[0]
+        final fun <get-scenarios>(): kotlin.collections/List<actron.statechart.test/MachineScenario<#B>> // actron.statechart.test/MachineTestPlan.scenarios.<get-scenarios>|<get-scenarios>(){}[0]
+    final val searchTruncated // actron.statechart.test/MachineTestPlan.searchTruncated|{}searchTruncated[0]
+        final fun <get-searchTruncated>(): kotlin/Boolean // actron.statechart.test/MachineTestPlan.searchTruncated.<get-searchTruncated>|<get-searchTruncated>(){}[0]
+    final val selectionAttempts // actron.statechart.test/MachineTestPlan.selectionAttempts|{}selectionAttempts[0]
+        final fun <get-selectionAttempts>(): kotlin/Int // actron.statechart.test/MachineTestPlan.selectionAttempts.<get-selectionAttempts>|<get-selectionAttempts>(){}[0]
+    final val selectionOptimal // actron.statechart.test/MachineTestPlan.selectionOptimal|{}selectionOptimal[0]
+        final fun <get-selectionOptimal>(): kotlin/Boolean // actron.statechart.test/MachineTestPlan.selectionOptimal.<get-selectionOptimal>|<get-selectionOptimal>(){}[0]
+    final val uncoveredTransitions // actron.statechart.test/MachineTestPlan.uncoveredTransitions|{}uncoveredTransitions[0]
+        final fun <get-uncoveredTransitions>(): kotlin.collections/Set<actron.statechart.machine/TransitionId> // actron.statechart.test/MachineTestPlan.uncoveredTransitions.<get-uncoveredTransitions>|<get-uncoveredTransitions>(){}[0]
+    final val version // actron.statechart.test/MachineTestPlan.version|{}version[0]
+        final fun <get-version>(): actron.statechart.machine/DefinitionVersion // actron.statechart.test/MachineTestPlan.version.<get-version>|<get-version>(){}[0]
+
+    final fun assertReady(kotlin/Boolean = ...) // actron.statechart.test/MachineTestPlan.assertReady|assertReady(kotlin.Boolean){}[0]
+    final fun component1(): actron.statechart.machine/DefinitionId // actron.statechart.test/MachineTestPlan.component1|component1(){}[0]
+    final fun component2(): actron.statechart.machine/DefinitionVersion // actron.statechart.test/MachineTestPlan.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<actron.statechart.test/MachineScenario<#B>> // actron.statechart.test/MachineTestPlan.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/Set<actron.statechart.machine/TransitionId> // actron.statechart.test/MachineTestPlan.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/Set<actron.statechart.machine/TransitionId> // actron.statechart.test/MachineTestPlan.component5|component5(){}[0]
+    final fun component6(): kotlin.collections/List<actron.statechart.test/SequenceFailure<#A, #B>> // actron.statechart.test/MachineTestPlan.component6|component6(){}[0]
+    final fun component7(): kotlin/Boolean // actron.statechart.test/MachineTestPlan.component7|component7(){}[0]
+    final fun component8(): kotlin/Boolean // actron.statechart.test/MachineTestPlan.component8|component8(){}[0]
+    final fun component9(): kotlin/Int // actron.statechart.test/MachineTestPlan.component9|component9(){}[0]
+    final fun copy(actron.statechart.machine/DefinitionId = ..., actron.statechart.machine/DefinitionVersion = ..., kotlin.collections/List<actron.statechart.test/MachineScenario<#B>> = ..., kotlin.collections/Set<actron.statechart.machine/TransitionId> = ..., kotlin.collections/Set<actron.statechart.machine/TransitionId> = ..., kotlin.collections/List<actron.statechart.test/SequenceFailure<#A, #B>> = ..., kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Int = ...): actron.statechart.test/MachineTestPlan<#A, #B> // actron.statechart.test/MachineTestPlan.copy|copy(actron.statechart.machine.DefinitionId;actron.statechart.machine.DefinitionVersion;kotlin.collections.List<actron.statechart.test.MachineScenario<1:1>>;kotlin.collections.Set<actron.statechart.machine.TransitionId>;kotlin.collections.Set<actron.statechart.machine.TransitionId>;kotlin.collections.List<actron.statechart.test.SequenceFailure<1:0,1:1>>;kotlin.Boolean;kotlin.Boolean;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/MachineTestPlan.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/MachineTestPlan.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/MachineTestPlan.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/ScenarioResult { // actron.statechart.test/ScenarioResult|null[0]
+    constructor <init>(actron.statechart.test/MachineScenario<#B>, actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.test/MachineCoverage, actron.statechart.test/SequenceFailure<#A, #B>? = ...) // actron.statechart.test/ScenarioResult.<init>|<init>(actron.statechart.test.MachineScenario<1:1>;actron.statechart.machine.MachineSnapshot<1:0>;actron.statechart.test.MachineCoverage;actron.statechart.test.SequenceFailure<1:0,1:1>?){}[0]
+
+    final val coverage // actron.statechart.test/ScenarioResult.coverage|{}coverage[0]
+        final fun <get-coverage>(): actron.statechart.test/MachineCoverage // actron.statechart.test/ScenarioResult.coverage.<get-coverage>|<get-coverage>(){}[0]
+    final val failure // actron.statechart.test/ScenarioResult.failure|{}failure[0]
+        final fun <get-failure>(): actron.statechart.test/SequenceFailure<#A, #B>? // actron.statechart.test/ScenarioResult.failure.<get-failure>|<get-failure>(){}[0]
+    final val scenario // actron.statechart.test/ScenarioResult.scenario|{}scenario[0]
+        final fun <get-scenario>(): actron.statechart.test/MachineScenario<#B> // actron.statechart.test/ScenarioResult.scenario.<get-scenario>|<get-scenario>(){}[0]
+    final val snapshot // actron.statechart.test/ScenarioResult.snapshot|{}snapshot[0]
+        final fun <get-snapshot>(): actron.statechart.machine/MachineSnapshot<#A> // actron.statechart.test/ScenarioResult.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
+
+    final fun component1(): actron.statechart.test/MachineScenario<#B> // actron.statechart.test/ScenarioResult.component1|component1(){}[0]
+    final fun component2(): actron.statechart.machine/MachineSnapshot<#A> // actron.statechart.test/ScenarioResult.component2|component2(){}[0]
+    final fun component3(): actron.statechart.test/MachineCoverage // actron.statechart.test/ScenarioResult.component3|component3(){}[0]
+    final fun component4(): actron.statechart.test/SequenceFailure<#A, #B>? // actron.statechart.test/ScenarioResult.component4|component4(){}[0]
+    final fun copy(actron.statechart.test/MachineScenario<#B> = ..., actron.statechart.machine/MachineSnapshot<#A> = ..., actron.statechart.test/MachineCoverage = ..., actron.statechart.test/SequenceFailure<#A, #B>? = ...): actron.statechart.test/ScenarioResult<#A, #B> // actron.statechart.test/ScenarioResult.copy|copy(actron.statechart.test.MachineScenario<1:1>;actron.statechart.machine.MachineSnapshot<1:0>;actron.statechart.test.MachineCoverage;actron.statechart.test.SequenceFailure<1:0,1:1>?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/ScenarioResult.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/ScenarioResult.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/ScenarioResult.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/ScriptedCommandHandler : actron.statechart.machine/CommandHandler<#A, #B> { // actron.statechart.test/ScriptedCommandHandler|null[0]
+    constructor <init>() // actron.statechart.test/ScriptedCommandHandler.<init>|<init>(){}[0]
+
+    final val cancelled // actron.statechart.test/ScriptedCommandHandler.cancelled|{}cancelled[0]
+        final fun <get-cancelled>(): kotlin.collections/List<actron.statechart.machine/CommandId> // actron.statechart.test/ScriptedCommandHandler.cancelled.<get-cancelled>|<get-cancelled>(){}[0]
+    final val running // actron.statechart.test/ScriptedCommandHandler.running|{}running[0]
+        final fun <get-running>(): kotlin.collections/List<actron.statechart.machine/CommandEnvelope<#A>> // actron.statechart.test/ScriptedCommandHandler.running.<get-running>|<get-running>(){}[0]
+    final val started // actron.statechart.test/ScriptedCommandHandler.started|{}started[0]
+        final fun <get-started>(): kotlin.collections/List<actron.statechart.machine/CommandEnvelope<#A>> // actron.statechart.test/ScriptedCommandHandler.started.<get-started>|<get-started>(){}[0]
+
+    final fun answer(actron.statechart.machine/CommandId, #B) // actron.statechart.test/ScriptedCommandHandler.answer|answer(actron.statechart.machine.CommandId;1:1){}[0]
+    final fun complete(actron.statechart.machine/CommandId) // actron.statechart.test/ScriptedCommandHandler.complete|complete(actron.statechart.machine.CommandId){}[0]
+    final fun fail(actron.statechart.machine/CommandId, kotlin/Throwable = ...) // actron.statechart.test/ScriptedCommandHandler.fail|fail(actron.statechart.machine.CommandId;kotlin.Throwable){}[0]
+    final suspend fun execute(actron.statechart.machine/CommandEnvelope<#A>, actron.statechart.machine/ResultSink<#B>) // actron.statechart.test/ScriptedCommandHandler.execute|execute(actron.statechart.machine.CommandEnvelope<1:0>;actron.statechart.machine.ResultSink<1:1>){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/SequenceFailure { // actron.statechart.test/SequenceFailure|null[0]
+    constructor <init>(kotlin.collections/List<actron.statechart.machine/MachineInput<#B>>, actron.statechart.machine/MachineSnapshot<#A>, kotlin.collections/List<actron.statechart.machine/InvariantViolation> = ..., actron.observability/FailureDescriptor? = ...) // actron.statechart.test/SequenceFailure.<init>|<init>(kotlin.collections.List<actron.statechart.machine.MachineInput<1:1>>;actron.statechart.machine.MachineSnapshot<1:0>;kotlin.collections.List<actron.statechart.machine.InvariantViolation>;actron.observability.FailureDescriptor?){}[0]
+
+    final val decisionFailure // actron.statechart.test/SequenceFailure.decisionFailure|{}decisionFailure[0]
+        final fun <get-decisionFailure>(): actron.observability/FailureDescriptor? // actron.statechart.test/SequenceFailure.decisionFailure.<get-decisionFailure>|<get-decisionFailure>(){}[0]
+    final val identities // actron.statechart.test/SequenceFailure.identities|{}identities[0]
+        final fun <get-identities>(): kotlin.collections/Set<kotlin/String> // actron.statechart.test/SequenceFailure.identities.<get-identities>|<get-identities>(){}[0]
+    final val inputs // actron.statechart.test/SequenceFailure.inputs|{}inputs[0]
+        final fun <get-inputs>(): kotlin.collections/List<actron.statechart.machine/MachineInput<#B>> // actron.statechart.test/SequenceFailure.inputs.<get-inputs>|<get-inputs>(){}[0]
+    final val snapshot // actron.statechart.test/SequenceFailure.snapshot|{}snapshot[0]
+        final fun <get-snapshot>(): actron.statechart.machine/MachineSnapshot<#A> // actron.statechart.test/SequenceFailure.snapshot.<get-snapshot>|<get-snapshot>(){}[0]
+    final val violations // actron.statechart.test/SequenceFailure.violations|{}violations[0]
+        final fun <get-violations>(): kotlin.collections/List<actron.statechart.machine/InvariantViolation> // actron.statechart.test/SequenceFailure.violations.<get-violations>|<get-violations>(){}[0]
+
+    final fun component1(): kotlin.collections/List<actron.statechart.machine/MachineInput<#B>> // actron.statechart.test/SequenceFailure.component1|component1(){}[0]
+    final fun component2(): actron.statechart.machine/MachineSnapshot<#A> // actron.statechart.test/SequenceFailure.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<actron.statechart.machine/InvariantViolation> // actron.statechart.test/SequenceFailure.component3|component3(){}[0]
+    final fun component4(): actron.observability/FailureDescriptor? // actron.statechart.test/SequenceFailure.component4|component4(){}[0]
+    final fun copy(kotlin.collections/List<actron.statechart.machine/MachineInput<#B>> = ..., actron.statechart.machine/MachineSnapshot<#A> = ..., kotlin.collections/List<actron.statechart.machine/InvariantViolation> = ..., actron.observability/FailureDescriptor? = ...): actron.statechart.test/SequenceFailure<#A, #B> // actron.statechart.test/SequenceFailure.copy|copy(kotlin.collections.List<actron.statechart.machine.MachineInput<1:1>>;actron.statechart.machine.MachineSnapshot<1:0>;kotlin.collections.List<actron.statechart.machine.InvariantViolation>;actron.observability.FailureDescriptor?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/SequenceFailure.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/SequenceFailure.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/SequenceFailure.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/ShrinkReport { // actron.statechart.test/ShrinkReport|null[0]
+    constructor <init>(actron.statechart.test/SequenceFailure<#A, #B>, kotlin/Int, kotlin/Boolean) // actron.statechart.test/ShrinkReport.<init>|<init>(actron.statechart.test.SequenceFailure<1:0,1:1>;kotlin.Int;kotlin.Boolean){}[0]
+
+    final val attempts // actron.statechart.test/ShrinkReport.attempts|{}attempts[0]
+        final fun <get-attempts>(): kotlin/Int // actron.statechart.test/ShrinkReport.attempts.<get-attempts>|<get-attempts>(){}[0]
+    final val failure // actron.statechart.test/ShrinkReport.failure|{}failure[0]
+        final fun <get-failure>(): actron.statechart.test/SequenceFailure<#A, #B> // actron.statechart.test/ShrinkReport.failure.<get-failure>|<get-failure>(){}[0]
+    final val truncated // actron.statechart.test/ShrinkReport.truncated|{}truncated[0]
+        final fun <get-truncated>(): kotlin/Boolean // actron.statechart.test/ShrinkReport.truncated.<get-truncated>|<get-truncated>(){}[0]
+
+    final fun component1(): actron.statechart.test/SequenceFailure<#A, #B> // actron.statechart.test/ShrinkReport.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // actron.statechart.test/ShrinkReport.component2|component2(){}[0]
+    final fun component3(): kotlin/Boolean // actron.statechart.test/ShrinkReport.component3|component3(){}[0]
+    final fun copy(actron.statechart.test/SequenceFailure<#A, #B> = ..., kotlin/Int = ..., kotlin/Boolean = ...): actron.statechart.test/ShrinkReport<#A, #B> // actron.statechart.test/ShrinkReport.copy|copy(actron.statechart.test.SequenceFailure<1:0,1:1>;kotlin.Int;kotlin.Boolean){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/ShrinkReport.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/ShrinkReport.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/ShrinkReport.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/TargetedTestPlan { // actron.statechart.test/TargetedTestPlan|null[0]
+    constructor <init>(actron.statechart.test/MachineTestPlan<#A, #B>, actron.statechart.test/CoverageRequirements, actron.statechart.test/CoverageRequirements) // actron.statechart.test/TargetedTestPlan.<init>|<init>(actron.statechart.test.MachineTestPlan<1:0,1:1>;actron.statechart.test.CoverageRequirements;actron.statechart.test.CoverageRequirements){}[0]
+
+    final val missing // actron.statechart.test/TargetedTestPlan.missing|{}missing[0]
+        final fun <get-missing>(): actron.statechart.test/CoverageRequirements // actron.statechart.test/TargetedTestPlan.missing.<get-missing>|<get-missing>(){}[0]
+    final val plan // actron.statechart.test/TargetedTestPlan.plan|{}plan[0]
+        final fun <get-plan>(): actron.statechart.test/MachineTestPlan<#A, #B> // actron.statechart.test/TargetedTestPlan.plan.<get-plan>|<get-plan>(){}[0]
+    final val requirements // actron.statechart.test/TargetedTestPlan.requirements|{}requirements[0]
+        final fun <get-requirements>(): actron.statechart.test/CoverageRequirements // actron.statechart.test/TargetedTestPlan.requirements.<get-requirements>|<get-requirements>(){}[0]
+
+    final fun assertReady(kotlin/Boolean = ...) // actron.statechart.test/TargetedTestPlan.assertReady|assertReady(kotlin.Boolean){}[0]
+    final fun component1(): actron.statechart.test/MachineTestPlan<#A, #B> // actron.statechart.test/TargetedTestPlan.component1|component1(){}[0]
+    final fun component2(): actron.statechart.test/CoverageRequirements // actron.statechart.test/TargetedTestPlan.component2|component2(){}[0]
+    final fun component3(): actron.statechart.test/CoverageRequirements // actron.statechart.test/TargetedTestPlan.component3|component3(){}[0]
+    final fun copy(actron.statechart.test/MachineTestPlan<#A, #B> = ..., actron.statechart.test/CoverageRequirements = ..., actron.statechart.test/CoverageRequirements = ...): actron.statechart.test/TargetedTestPlan<#A, #B> // actron.statechart.test/TargetedTestPlan.copy|copy(actron.statechart.test.MachineTestPlan<1:0,1:1>;actron.statechart.test.CoverageRequirements;actron.statechart.test.CoverageRequirements){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/TargetedTestPlan.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/TargetedTestPlan.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/TargetedTestPlan.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/TargetedTestPlanResult { // actron.statechart.test/TargetedTestPlanResult|null[0]
+    constructor <init>(actron.statechart.test/TargetedTestPlan<#A, #B>, actron.statechart.test/TestPlanResult<#A, #B>) // actron.statechart.test/TargetedTestPlanResult.<init>|<init>(actron.statechart.test.TargetedTestPlan<1:0,1:1>;actron.statechart.test.TestPlanResult<1:0,1:1>){}[0]
+
+    final val plan // actron.statechart.test/TargetedTestPlanResult.plan|{}plan[0]
+        final fun <get-plan>(): actron.statechart.test/TargetedTestPlan<#A, #B> // actron.statechart.test/TargetedTestPlanResult.plan.<get-plan>|<get-plan>(){}[0]
+    final val result // actron.statechart.test/TargetedTestPlanResult.result|{}result[0]
+        final fun <get-result>(): actron.statechart.test/TestPlanResult<#A, #B> // actron.statechart.test/TargetedTestPlanResult.result.<get-result>|<get-result>(){}[0]
+
+    final fun assertSuccess() // actron.statechart.test/TargetedTestPlanResult.assertSuccess|assertSuccess(){}[0]
+    final fun component1(): actron.statechart.test/TargetedTestPlan<#A, #B> // actron.statechart.test/TargetedTestPlanResult.component1|component1(){}[0]
+    final fun component2(): actron.statechart.test/TestPlanResult<#A, #B> // actron.statechart.test/TargetedTestPlanResult.component2|component2(){}[0]
+    final fun copy(actron.statechart.test/TargetedTestPlan<#A, #B> = ..., actron.statechart.test/TestPlanResult<#A, #B> = ...): actron.statechart.test/TargetedTestPlanResult<#A, #B> // actron.statechart.test/TargetedTestPlanResult.copy|copy(actron.statechart.test.TargetedTestPlan<1:0,1:1>;actron.statechart.test.TestPlanResult<1:0,1:1>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/TargetedTestPlanResult.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/TargetedTestPlanResult.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/TargetedTestPlanResult.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?, #B: actron.core/Action> actron.statechart.test/TestPlanResult { // actron.statechart.test/TestPlanResult|null[0]
+    constructor <init>(actron.statechart.test/MachineTestPlan<#A, #B>, kotlin.collections/List<actron.statechart.test/ScenarioResult<#A, #B>>, actron.statechart.test/MachineCoverage) // actron.statechart.test/TestPlanResult.<init>|<init>(actron.statechart.test.MachineTestPlan<1:0,1:1>;kotlin.collections.List<actron.statechart.test.ScenarioResult<1:0,1:1>>;actron.statechart.test.MachineCoverage){}[0]
+
+    final val coverage // actron.statechart.test/TestPlanResult.coverage|{}coverage[0]
+        final fun <get-coverage>(): actron.statechart.test/MachineCoverage // actron.statechart.test/TestPlanResult.coverage.<get-coverage>|<get-coverage>(){}[0]
+    final val failures // actron.statechart.test/TestPlanResult.failures|{}failures[0]
+        final fun <get-failures>(): kotlin.collections/List<actron.statechart.test/SequenceFailure<#A, #B>> // actron.statechart.test/TestPlanResult.failures.<get-failures>|<get-failures>(){}[0]
+    final val plan // actron.statechart.test/TestPlanResult.plan|{}plan[0]
+        final fun <get-plan>(): actron.statechart.test/MachineTestPlan<#A, #B> // actron.statechart.test/TestPlanResult.plan.<get-plan>|<get-plan>(){}[0]
+    final val scenarios // actron.statechart.test/TestPlanResult.scenarios|{}scenarios[0]
+        final fun <get-scenarios>(): kotlin.collections/List<actron.statechart.test/ScenarioResult<#A, #B>> // actron.statechart.test/TestPlanResult.scenarios.<get-scenarios>|<get-scenarios>(){}[0]
+
+    final fun assertSuccess() // actron.statechart.test/TestPlanResult.assertSuccess|assertSuccess(){}[0]
+    final fun component1(): actron.statechart.test/MachineTestPlan<#A, #B> // actron.statechart.test/TestPlanResult.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<actron.statechart.test/ScenarioResult<#A, #B>> // actron.statechart.test/TestPlanResult.component2|component2(){}[0]
+    final fun component3(): actron.statechart.test/MachineCoverage // actron.statechart.test/TestPlanResult.component3|component3(){}[0]
+    final fun copy(actron.statechart.test/MachineTestPlan<#A, #B> = ..., kotlin.collections/List<actron.statechart.test/ScenarioResult<#A, #B>> = ..., actron.statechart.test/MachineCoverage = ...): actron.statechart.test/TestPlanResult<#A, #B> // actron.statechart.test/TestPlanResult.copy|copy(actron.statechart.test.MachineTestPlan<1:0,1:1>;kotlin.collections.List<actron.statechart.test.ScenarioResult<1:0,1:1>>;actron.statechart.test.MachineCoverage){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/TestPlanResult.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/TestPlanResult.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/TestPlanResult.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?> actron.statechart.test/CoverageMetric { // actron.statechart.test/CoverageMetric|null[0]
+    constructor <init>(kotlin.collections/Set<#A>, kotlin.collections/Set<#A>) // actron.statechart.test/CoverageMetric.<init>|<init>(kotlin.collections.Set<1:0>;kotlin.collections.Set<1:0>){}[0]
+
+    final val covered // actron.statechart.test/CoverageMetric.covered|{}covered[0]
+        final fun <get-covered>(): kotlin.collections/Set<#A> // actron.statechart.test/CoverageMetric.covered.<get-covered>|<get-covered>(){}[0]
+    final val expected // actron.statechart.test/CoverageMetric.expected|{}expected[0]
+        final fun <get-expected>(): kotlin.collections/Set<#A> // actron.statechart.test/CoverageMetric.expected.<get-expected>|<get-expected>(){}[0]
+    final val missing // actron.statechart.test/CoverageMetric.missing|{}missing[0]
+        final fun <get-missing>(): kotlin.collections/Set<#A> // actron.statechart.test/CoverageMetric.missing.<get-missing>|<get-missing>(){}[0]
+    final val percent // actron.statechart.test/CoverageMetric.percent|{}percent[0]
+        final fun <get-percent>(): kotlin/Double // actron.statechart.test/CoverageMetric.percent.<get-percent>|<get-percent>(){}[0]
+
+    final fun component1(): kotlin.collections/Set<#A> // actron.statechart.test/CoverageMetric.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Set<#A> // actron.statechart.test/CoverageMetric.component2|component2(){}[0]
+    final fun copy(kotlin.collections/Set<#A> = ..., kotlin.collections/Set<#A> = ...): actron.statechart.test/CoverageMetric<#A> // actron.statechart.test/CoverageMetric.copy|copy(kotlin.collections.Set<1:0>;kotlin.collections.Set<1:0>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageMetric.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageMetric.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/CoverageMetric.toString|toString(){}[0]
+}
+
+final class <#A: kotlin/Any?> actron.statechart.test/MachinePendingWork { // actron.statechart.test/MachinePendingWork|null[0]
+    constructor <init>(kotlin.collections/List<actron.statechart.machine/CommandRegistration<#A>>, kotlin.collections/List<actron.statechart.machine/CommandRegistration<#A>>, kotlin.collections/List<actron.statechart.machine/CommandId>, kotlin.collections/Map<actron.statechart.machine/TimerId, kotlin.time/Duration>, kotlin.collections/List<actron.statechart.machine/PendingEffect<*>>) // actron.statechart.test/MachinePendingWork.<init>|<init>(kotlin.collections.List<actron.statechart.machine.CommandRegistration<1:0>>;kotlin.collections.List<actron.statechart.machine.CommandRegistration<1:0>>;kotlin.collections.List<actron.statechart.machine.CommandId>;kotlin.collections.Map<actron.statechart.machine.TimerId,kotlin.time.Duration>;kotlin.collections.List<actron.statechart.machine.PendingEffect<*>>){}[0]
+
+    final val effects // actron.statechart.test/MachinePendingWork.effects|{}effects[0]
+        final fun <get-effects>(): kotlin.collections/List<actron.statechart.machine/PendingEffect<*>> // actron.statechart.test/MachinePendingWork.effects.<get-effects>|<get-effects>(){}[0]
+    final val ending // actron.statechart.test/MachinePendingWork.ending|{}ending[0]
+        final fun <get-ending>(): kotlin.collections/List<actron.statechart.machine/CommandId> // actron.statechart.test/MachinePendingWork.ending.<get-ending>|<get-ending>(){}[0]
+    final val isIdle // actron.statechart.test/MachinePendingWork.isIdle|{}isIdle[0]
+        final fun <get-isIdle>(): kotlin/Boolean // actron.statechart.test/MachinePendingWork.isIdle.<get-isIdle>|<get-isIdle>(){}[0]
+    final val queued // actron.statechart.test/MachinePendingWork.queued|{}queued[0]
+        final fun <get-queued>(): kotlin.collections/List<actron.statechart.machine/CommandRegistration<#A>> // actron.statechart.test/MachinePendingWork.queued.<get-queued>|<get-queued>(){}[0]
+    final val running // actron.statechart.test/MachinePendingWork.running|{}running[0]
+        final fun <get-running>(): kotlin.collections/List<actron.statechart.machine/CommandRegistration<#A>> // actron.statechart.test/MachinePendingWork.running.<get-running>|<get-running>(){}[0]
+    final val timers // actron.statechart.test/MachinePendingWork.timers|{}timers[0]
+        final fun <get-timers>(): kotlin.collections/Map<actron.statechart.machine/TimerId, kotlin.time/Duration> // actron.statechart.test/MachinePendingWork.timers.<get-timers>|<get-timers>(){}[0]
+
+    final fun component1(): kotlin.collections/List<actron.statechart.machine/CommandRegistration<#A>> // actron.statechart.test/MachinePendingWork.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<actron.statechart.machine/CommandRegistration<#A>> // actron.statechart.test/MachinePendingWork.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/List<actron.statechart.machine/CommandId> // actron.statechart.test/MachinePendingWork.component3|component3(){}[0]
+    final fun component4(): kotlin.collections/Map<actron.statechart.machine/TimerId, kotlin.time/Duration> // actron.statechart.test/MachinePendingWork.component4|component4(){}[0]
+    final fun component5(): kotlin.collections/List<actron.statechart.machine/PendingEffect<*>> // actron.statechart.test/MachinePendingWork.component5|component5(){}[0]
+    final fun copy(kotlin.collections/List<actron.statechart.machine/CommandRegistration<#A>> = ..., kotlin.collections/List<actron.statechart.machine/CommandRegistration<#A>> = ..., kotlin.collections/List<actron.statechart.machine/CommandId> = ..., kotlin.collections/Map<actron.statechart.machine/TimerId, kotlin.time/Duration> = ..., kotlin.collections/List<actron.statechart.machine/PendingEffect<*>> = ...): actron.statechart.test/MachinePendingWork<#A> // actron.statechart.test/MachinePendingWork.copy|copy(kotlin.collections.List<actron.statechart.machine.CommandRegistration<1:0>>;kotlin.collections.List<actron.statechart.machine.CommandRegistration<1:0>>;kotlin.collections.List<actron.statechart.machine.CommandId>;kotlin.collections.Map<actron.statechart.machine.TimerId,kotlin.time.Duration>;kotlin.collections.List<actron.statechart.machine.PendingEffect<*>>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/MachinePendingWork.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/MachinePendingWork.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/MachinePendingWork.toString|toString(){}[0]
+}
+
+final class actron.statechart.test/BehaviouralSnapshot { // actron.statechart.test/BehaviouralSnapshot|null[0]
+    final val definition // actron.statechart.test/BehaviouralSnapshot.definition|{}definition[0]
+        final fun <get-definition>(): kotlin/String // actron.statechart.test/BehaviouralSnapshot.definition.<get-definition>|<get-definition>(){}[0]
+    final val mermaid // actron.statechart.test/BehaviouralSnapshot.mermaid|{}mermaid[0]
+        final fun <get-mermaid>(): kotlin/String // actron.statechart.test/BehaviouralSnapshot.mermaid.<get-mermaid>|<get-mermaid>(){}[0]
+    final val version // actron.statechart.test/BehaviouralSnapshot.version|{}version[0]
+        final fun <get-version>(): kotlin/String // actron.statechart.test/BehaviouralSnapshot.version.<get-version>|<get-version>(){}[0]
+
+    final fun toJson(): kotlin/String // actron.statechart.test/BehaviouralSnapshot.toJson|toJson(){}[0]
+
+    final object Companion { // actron.statechart.test/BehaviouralSnapshot.Companion|null[0]
+        final fun fromJson(kotlin/String): actron.statechart.test/BehaviouralSnapshot // actron.statechart.test/BehaviouralSnapshot.Companion.fromJson|fromJson(kotlin.String){}[0]
+    }
+}
+
+final class actron.statechart.test/CoverageRequirements { // actron.statechart.test/CoverageRequirements|null[0]
+    constructor <init>(kotlin.collections/Set<actron.statechart/StateId> = ..., kotlin.collections/Set<actron.statechart.machine/TransitionId> = ..., kotlin.collections/Set<actron.statechart.test/GuardOutcome> = ...) // actron.statechart.test/CoverageRequirements.<init>|<init>(kotlin.collections.Set<actron.statechart.StateId>;kotlin.collections.Set<actron.statechart.machine.TransitionId>;kotlin.collections.Set<actron.statechart.test.GuardOutcome>){}[0]
+
+    final val guards // actron.statechart.test/CoverageRequirements.guards|{}guards[0]
+        final fun <get-guards>(): kotlin.collections/Set<actron.statechart.test/GuardOutcome> // actron.statechart.test/CoverageRequirements.guards.<get-guards>|<get-guards>(){}[0]
+    final val isEmpty // actron.statechart.test/CoverageRequirements.isEmpty|{}isEmpty[0]
+        final fun <get-isEmpty>(): kotlin/Boolean // actron.statechart.test/CoverageRequirements.isEmpty.<get-isEmpty>|<get-isEmpty>(){}[0]
+    final val states // actron.statechart.test/CoverageRequirements.states|{}states[0]
+        final fun <get-states>(): kotlin.collections/Set<actron.statechart/StateId> // actron.statechart.test/CoverageRequirements.states.<get-states>|<get-states>(){}[0]
+    final val transitions // actron.statechart.test/CoverageRequirements.transitions|{}transitions[0]
+        final fun <get-transitions>(): kotlin.collections/Set<actron.statechart.machine/TransitionId> // actron.statechart.test/CoverageRequirements.transitions.<get-transitions>|<get-transitions>(){}[0]
+
+    final fun component1(): kotlin.collections/Set<actron.statechart/StateId> // actron.statechart.test/CoverageRequirements.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/Set<actron.statechart.machine/TransitionId> // actron.statechart.test/CoverageRequirements.component2|component2(){}[0]
+    final fun component3(): kotlin.collections/Set<actron.statechart.test/GuardOutcome> // actron.statechart.test/CoverageRequirements.component3|component3(){}[0]
+    final fun copy(kotlin.collections/Set<actron.statechart/StateId> = ..., kotlin.collections/Set<actron.statechart.machine/TransitionId> = ..., kotlin.collections/Set<actron.statechart.test/GuardOutcome> = ...): actron.statechart.test/CoverageRequirements // actron.statechart.test/CoverageRequirements.copy|copy(kotlin.collections.Set<actron.statechart.StateId>;kotlin.collections.Set<actron.statechart.machine.TransitionId>;kotlin.collections.Set<actron.statechart.test.GuardOutcome>){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/CoverageRequirements.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/CoverageRequirements.hashCode|hashCode(){}[0]
+    final fun missing(actron.statechart.test/MachineCoverage): actron.statechart.test/CoverageRequirements // actron.statechart.test/CoverageRequirements.missing|missing(actron.statechart.test.MachineCoverage){}[0]
+    final fun plus(actron.statechart.test/CoverageRequirements): actron.statechart.test/CoverageRequirements // actron.statechart.test/CoverageRequirements.plus|plus(actron.statechart.test.CoverageRequirements){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/CoverageRequirements.toString|toString(){}[0]
+}
+
+final class actron.statechart.test/GuardOutcome { // actron.statechart.test/GuardOutcome|null[0]
+    constructor <init>(actron.statechart.machine/TransitionId, kotlin/Boolean) // actron.statechart.test/GuardOutcome.<init>|<init>(actron.statechart.machine.TransitionId;kotlin.Boolean){}[0]
+
+    final val result // actron.statechart.test/GuardOutcome.result|{}result[0]
+        final fun <get-result>(): kotlin/Boolean // actron.statechart.test/GuardOutcome.result.<get-result>|<get-result>(){}[0]
+    final val transition // actron.statechart.test/GuardOutcome.transition|{}transition[0]
+        final fun <get-transition>(): actron.statechart.machine/TransitionId // actron.statechart.test/GuardOutcome.transition.<get-transition>|<get-transition>(){}[0]
+
+    final fun component1(): actron.statechart.machine/TransitionId // actron.statechart.test/GuardOutcome.component1|component1(){}[0]
+    final fun component2(): kotlin/Boolean // actron.statechart.test/GuardOutcome.component2|component2(){}[0]
+    final fun copy(actron.statechart.machine/TransitionId = ..., kotlin/Boolean = ...): actron.statechart.test/GuardOutcome // actron.statechart.test/GuardOutcome.copy|copy(actron.statechart.machine.TransitionId;kotlin.Boolean){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/GuardOutcome.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/GuardOutcome.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/GuardOutcome.toString|toString(){}[0]
+}
+
+final class actron.statechart.test/MachineCoverage { // actron.statechart.test/MachineCoverage|null[0]
+    constructor <init>(actron.statechart.test/CoverageMetric<actron.statechart/StateId>, actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId>, actron.statechart.test/CoverageMetric<actron.statechart.test/GuardOutcome>, actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId>, actron.statechart.machine/DefinitionId? = ..., actron.statechart.machine/DefinitionVersion? = ...) // actron.statechart.test/MachineCoverage.<init>|<init>(actron.statechart.test.CoverageMetric<actron.statechart.StateId>;actron.statechart.test.CoverageMetric<actron.statechart.machine.TransitionId>;actron.statechart.test.CoverageMetric<actron.statechart.test.GuardOutcome>;actron.statechart.test.CoverageMetric<actron.statechart.machine.TransitionId>;actron.statechart.machine.DefinitionId?;actron.statechart.machine.DefinitionVersion?){}[0]
+
+    final val definition // actron.statechart.test/MachineCoverage.definition|{}definition[0]
+        final fun <get-definition>(): actron.statechart.machine/DefinitionId? // actron.statechart.test/MachineCoverage.definition.<get-definition>|<get-definition>(){}[0]
+    final val guards // actron.statechart.test/MachineCoverage.guards|{}guards[0]
+        final fun <get-guards>(): actron.statechart.test/CoverageMetric<actron.statechart.test/GuardOutcome> // actron.statechart.test/MachineCoverage.guards.<get-guards>|<get-guards>(){}[0]
+    final val states // actron.statechart.test/MachineCoverage.states|{}states[0]
+        final fun <get-states>(): actron.statechart.test/CoverageMetric<actron.statechart/StateId> // actron.statechart.test/MachineCoverage.states.<get-states>|<get-states>(){}[0]
+    final val timers // actron.statechart.test/MachineCoverage.timers|{}timers[0]
+        final fun <get-timers>(): actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId> // actron.statechart.test/MachineCoverage.timers.<get-timers>|<get-timers>(){}[0]
+    final val transitions // actron.statechart.test/MachineCoverage.transitions|{}transitions[0]
+        final fun <get-transitions>(): actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId> // actron.statechart.test/MachineCoverage.transitions.<get-transitions>|<get-transitions>(){}[0]
+    final val version // actron.statechart.test/MachineCoverage.version|{}version[0]
+        final fun <get-version>(): actron.statechart.machine/DefinitionVersion? // actron.statechart.test/MachineCoverage.version.<get-version>|<get-version>(){}[0]
+
+    final fun component1(): actron.statechart.test/CoverageMetric<actron.statechart/StateId> // actron.statechart.test/MachineCoverage.component1|component1(){}[0]
+    final fun component2(): actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId> // actron.statechart.test/MachineCoverage.component2|component2(){}[0]
+    final fun component3(): actron.statechart.test/CoverageMetric<actron.statechart.test/GuardOutcome> // actron.statechart.test/MachineCoverage.component3|component3(){}[0]
+    final fun component4(): actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId> // actron.statechart.test/MachineCoverage.component4|component4(){}[0]
+    final fun component5(): actron.statechart.machine/DefinitionId? // actron.statechart.test/MachineCoverage.component5|component5(){}[0]
+    final fun component6(): actron.statechart.machine/DefinitionVersion? // actron.statechart.test/MachineCoverage.component6|component6(){}[0]
+    final fun copy(actron.statechart.test/CoverageMetric<actron.statechart/StateId> = ..., actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId> = ..., actron.statechart.test/CoverageMetric<actron.statechart.test/GuardOutcome> = ..., actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId> = ..., actron.statechart.machine/DefinitionId? = ..., actron.statechart.machine/DefinitionVersion? = ...): actron.statechart.test/MachineCoverage // actron.statechart.test/MachineCoverage.copy|copy(actron.statechart.test.CoverageMetric<actron.statechart.StateId>;actron.statechart.test.CoverageMetric<actron.statechart.machine.TransitionId>;actron.statechart.test.CoverageMetric<actron.statechart.test.GuardOutcome>;actron.statechart.test.CoverageMetric<actron.statechart.machine.TransitionId>;actron.statechart.machine.DefinitionId?;actron.statechart.machine.DefinitionVersion?){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/MachineCoverage.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/MachineCoverage.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/MachineCoverage.toString|toString(){}[0]
+}
+
+final class actron.statechart.test/ModelSource { // actron.statechart.test/ModelSource|null[0]
+    constructor <init>(kotlin/String, kotlin/Int) // actron.statechart.test/ModelSource.<init>|<init>(kotlin.String;kotlin.Int){}[0]
+
+    final val line // actron.statechart.test/ModelSource.line|{}line[0]
+        final fun <get-line>(): kotlin/Int // actron.statechart.test/ModelSource.line.<get-line>|<get-line>(){}[0]
+    final val path // actron.statechart.test/ModelSource.path|{}path[0]
+        final fun <get-path>(): kotlin/String // actron.statechart.test/ModelSource.path.<get-path>|<get-path>(){}[0]
+
+    final fun component1(): kotlin/String // actron.statechart.test/ModelSource.component1|component1(){}[0]
+    final fun component2(): kotlin/Int // actron.statechart.test/ModelSource.component2|component2(){}[0]
+    final fun copy(kotlin/String = ..., kotlin/Int = ...): actron.statechart.test/ModelSource // actron.statechart.test/ModelSource.copy|copy(kotlin.String;kotlin.Int){}[0]
+    final fun equals(kotlin/Any?): kotlin/Boolean // actron.statechart.test/ModelSource.equals|equals(kotlin.Any?){}[0]
+    final fun hashCode(): kotlin/Int // actron.statechart.test/ModelSource.hashCode|hashCode(){}[0]
+    final fun toString(): kotlin/String // actron.statechart.test/ModelSource.toString|toString(){}[0]
+}
+
+final class actron.statechart.test/VirtualMachineClock : actron.statechart.machine/MachineClock { // actron.statechart.test/VirtualMachineClock|null[0]
+    constructor <init>(kotlinx.coroutines.test/TestCoroutineScheduler, kotlin/Long = ...) // actron.statechart.test/VirtualMachineClock.<init>|<init>(kotlinx.coroutines.test.TestCoroutineScheduler;kotlin.Long){}[0]
+
+    final fun now(): actron.statechart.machine/MachineTime // actron.statechart.test/VirtualMachineClock.now|now(){}[0]
+    final suspend fun delayUntil(actron.statechart.machine/MachineTime) // actron.statechart.test/VirtualMachineClock.delayUntil|delayUntil(actron.statechart.machine.MachineTime){}[0]
+
+    final object Companion { // actron.statechart.test/VirtualMachineClock.Companion|null[0]
+        final fun startingNow(kotlinx.coroutines.test/TestCoroutineScheduler): actron.statechart.test/VirtualMachineClock // actron.statechart.test/VirtualMachineClock.Companion.startingNow|startingNow(kotlinx.coroutines.test.TestCoroutineScheduler){}[0]
+    }
+}
+
+final fun (actron.statechart.test/MachineCoverage).actron.statechart.test/assertTransitionsCovered(kotlin.collections/Set<actron.statechart.machine/TransitionId> = ...) // actron.statechart.test/assertTransitionsCovered|assertTransitionsCovered@actron.statechart.test.MachineCoverage(kotlin.collections.Set<actron.statechart.machine.TransitionId>){}[0]
+final fun (actron.statechart.test/MachineCoverage).actron.statechart.test/describe(actron.statechart/StateChartDefinition? = ...): kotlin/String // actron.statechart.test/describe|describe@actron.statechart.test.MachineCoverage(actron.statechart.StateChartDefinition?){}[0]
+final fun (actron.statechart.test/MachineCoverage).actron.statechart.test/describeGuards(actron.statechart/StateChartDefinition): kotlin/String // actron.statechart.test/describeGuards|describeGuards@actron.statechart.test.MachineCoverage(actron.statechart.StateChartDefinition){}[0]
+final fun (actron.statechart.test/MachineCoverage).actron.statechart.test/errorTransitions(actron.statechart/StateChartDefinition, kotlin.collections/Set<actron.statechart/StateId>): actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId> // actron.statechart.test/errorTransitions|errorTransitions@actron.statechart.test.MachineCoverage(actron.statechart.StateChartDefinition;kotlin.collections.Set<actron.statechart.StateId>){}[0]
+final fun (actron.statechart.test/MachineCoverage).actron.statechart.test/historyTransitions(actron.statechart/StateChartDefinition): actron.statechart.test/CoverageMetric<actron.statechart.machine/TransitionId> // actron.statechart.test/historyTransitions|historyTransitions@actron.statechart.test.MachineCoverage(actron.statechart.StateChartDefinition){}[0]
+final fun (actron.statechart.test/MachineCoverage).actron.statechart.test/merge(actron.statechart.test/MachineCoverage): actron.statechart.test/MachineCoverage // actron.statechart.test/merge|merge@actron.statechart.test.MachineCoverage(actron.statechart.test.MachineCoverage){}[0]
+final fun (actron.statechart/StateChartDefinition).actron.statechart.test/requirements(actron.statechart.test/CoverageTarget): actron.statechart.test/CoverageRequirements // actron.statechart.test/requirements|requirements@actron.statechart.StateChartDefinition(actron.statechart.test.CoverageTarget){}[0]
+final fun (kotlinx.coroutines.test/TestScope).actron.statechart.test/machineClock(): actron.statechart.test/VirtualMachineClock // actron.statechart.test/machineClock|machineClock@kotlinx.coroutines.test.TestScope(){}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/behaviouralSnapshot(actron.statechart.test/MachineCoverage, kotlin.collections/Map<kotlin/String, actron.statechart.test/ModelSource> = ..., kotlin.collections/Set<actron.statechart/StateId> = ..., kotlin.collections/Set<actron.statechart.machine/TransitionId> = ..., kotlin/Function1<actron.statechart/ActionMatcher, kotlin/String> = ...): actron.statechart.test/BehaviouralSnapshot // actron.statechart.test/behaviouralSnapshot|behaviouralSnapshot@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.test.MachineCoverage;kotlin.collections.Map<kotlin.String,actron.statechart.test.ModelSource>;kotlin.collections.Set<actron.statechart.StateId>;kotlin.collections.Set<actron.statechart.machine.TransitionId>;kotlin.Function1<actron.statechart.ActionMatcher,kotlin.String>){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/explore(actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.test/MachineInputGenerator<#A, #B>, actron.statechart.test/ExplorationStrategy = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., actron.statechart.machine/MachineTime = ...): actron.statechart.test/ExplorationReport<#A, #B> // actron.statechart.test/explore|explore@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;actron.statechart.test.MachineInputGenerator<0:0,0:1>;actron.statechart.test.ExplorationStrategy;kotlin.Int;kotlin.Int;kotlin.Int;actron.statechart.machine.MachineTime){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/exploreDetailed(actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.test/MachineInputGenerator<#A, #B>, actron.statechart.test/ExplorationStrategy = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., actron.statechart.machine/MachineTime = ...): actron.statechart.test/BehaviouralExplorationReport<#A, #B> // actron.statechart.test/exploreDetailed|exploreDetailed@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;actron.statechart.test.MachineInputGenerator<0:0,0:1>;actron.statechart.test.ExplorationStrategy;kotlin.Int;kotlin.Int;kotlin.Int;actron.statechart.machine.MachineTime){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/generateTestPlan(actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.test/MachineInputGenerator<#A, #B>, actron.statechart.test/CoverageTarget, kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., actron.statechart.machine/MachineTime = ...): actron.statechart.test/TargetedTestPlan<#A, #B> // actron.statechart.test/generateTestPlan|generateTestPlan@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;actron.statechart.test.MachineInputGenerator<0:0,0:1>;actron.statechart.test.CoverageTarget;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;actron.statechart.machine.MachineTime){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/generateTestPlan(actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.test/MachineInputGenerator<#A, #B>, actron.statechart.test/ExplorationStrategy = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., kotlin/Int = ..., actron.statechart.machine/MachineTime = ...): actron.statechart.test/MachineTestPlan<#A, #B> // actron.statechart.test/generateTestPlan|generateTestPlan@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;actron.statechart.test.MachineInputGenerator<0:0,0:1>;actron.statechart.test.ExplorationStrategy;kotlin.Int;kotlin.Int;kotlin.Int;kotlin.Int;actron.statechart.machine.MachineTime){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/inputGenerator(kotlin.collections/List<actron.statechart.test/ActionGenerator<#A, out #B>>, kotlin/Boolean = ..., kotlin/Boolean = ..., kotlin/Function2<actron.statechart.machine/MachineSnapshot<#A>, #B, kotlin/Boolean> = ..., actron.statechart.test/MachineInputGenerator<#A, #B> = ...): actron.statechart.test/MachineInputGenerator<#A, #B> // actron.statechart.test/inputGenerator|inputGenerator@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(kotlin.collections.List<actron.statechart.test.ActionGenerator<0:0,out|0:1>>;kotlin.Boolean;kotlin.Boolean;kotlin.Function2<actron.statechart.machine.MachineSnapshot<0:0>,0:1,kotlin.Boolean>;actron.statechart.test.MachineInputGenerator<0:0,0:1>){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/replaySequence(actron.statechart.machine/MachineSnapshot<#A>, kotlin.collections/List<actron.statechart.machine/MachineInput<#B>>): actron.statechart.test/SequenceFailure<#A, #B>? // actron.statechart.test/replaySequence|replaySequence@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;kotlin.collections.List<actron.statechart.machine.MachineInput<0:1>>){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/runPlan(actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.test/MachineTestPlan<#A, #B>): actron.statechart.test/TestPlanResult<#A, #B> // actron.statechart.test/runPlan|runPlan@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;actron.statechart.test.MachineTestPlan<0:0,0:1>){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/runPlan(actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.test/TargetedTestPlan<#A, #B>): actron.statechart.test/TargetedTestPlanResult<#A, #B> // actron.statechart.test/runPlan|runPlan@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;actron.statechart.test.TargetedTestPlan<0:0,0:1>){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/runScenario(actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.test/MachineScenario<#B>): actron.statechart.test/ScenarioResult<#A, #B> // actron.statechart.test/runScenario|runScenario@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;actron.statechart.test.MachineScenario<0:1>){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/shrink(actron.statechart.machine/MachineSnapshot<#A>, kotlin.collections/List<actron.statechart.machine/MachineInput<#B>>, kotlin/Int = ...): actron.statechart.test/ShrinkReport<#A, #B> // actron.statechart.test/shrink|shrink@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;kotlin.collections.List<actron.statechart.machine.MachineInput<0:1>>;kotlin.Int){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/Machine<#A, #B, #C, #D>).actron.statechart.test/shrink(actron.statechart.machine/MachineSnapshot<#A>, kotlin.collections/List<actron.statechart.machine/MachineInput<#B>>, kotlin/Int = ..., kotlin/Function2<actron.statechart.test/SequenceFailure<#A, #B>, actron.statechart.test/SequenceFailure<#A, #B>, kotlin/Boolean>): actron.statechart.test/ShrinkReport<#A, #B> // actron.statechart.test/shrink|shrink@actron.statechart.machine.Machine<0:0,0:1,0:2,0:3>(actron.statechart.machine.MachineSnapshot<0:0>;kotlin.collections.List<actron.statechart.machine.MachineInput<0:1>>;kotlin.Int;kotlin.Function2<actron.statechart.test.SequenceFailure<0:0,0:1>,actron.statechart.test.SequenceFailure<0:0,0:1>,kotlin.Boolean>){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.test/MachineTestDriver<#A, #B, #C, #D>).actron.statechart.test/explore(actron.statechart.test/MachineInputGenerator<#A, #B>, actron.statechart.test/ExplorationStrategy = ..., kotlin/Int = ..., kotlin/Int = ...): actron.statechart.test/ExplorationReport<#A, #B> // actron.statechart.test/explore|explore@actron.statechart.test.MachineTestDriver<0:0,0:1,0:2,0:3>(actron.statechart.test.MachineInputGenerator<0:0,0:1>;actron.statechart.test.ExplorationStrategy;kotlin.Int;kotlin.Int){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.test/MachineTestDriver<#A, #B, #C, #D>).actron.statechart.test/generateTestPlan(actron.statechart.test/MachineInputGenerator<#A, #B>, actron.statechart.test/CoverageTarget, kotlin/Int = ..., kotlin/Int = ...): actron.statechart.test/TargetedTestPlan<#A, #B> // actron.statechart.test/generateTestPlan|generateTestPlan@actron.statechart.test.MachineTestDriver<0:0,0:1,0:2,0:3>(actron.statechart.test.MachineInputGenerator<0:0,0:1>;actron.statechart.test.CoverageTarget;kotlin.Int;kotlin.Int){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.test/MachineTestDriver<#A, #B, #C, #D>).actron.statechart.test/generateTestPlan(actron.statechart.test/MachineInputGenerator<#A, #B>, kotlin/Int = ..., kotlin/Int = ...): actron.statechart.test/MachineTestPlan<#A, #B> // actron.statechart.test/generateTestPlan|generateTestPlan@actron.statechart.test.MachineTestDriver<0:0,0:1,0:2,0:3>(actron.statechart.test.MachineInputGenerator<0:0,0:1>;kotlin.Int;kotlin.Int){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.test/MachineTestDriver<#A, #B, #C, #D>).actron.statechart.test/verifyPlan(actron.statechart.test/MachineTestPlan<#A, #B>): actron.statechart.test/TestPlanResult<#A, #B> // actron.statechart.test/verifyPlan|verifyPlan@actron.statechart.test.MachineTestDriver<0:0,0:1,0:2,0:3>(actron.statechart.test.MachineTestPlan<0:0,0:1>){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.test/MachineTestDriver<#A, #B, #C, #D>).actron.statechart.test/verifyPlan(actron.statechart.test/TargetedTestPlan<#A, #B>): actron.statechart.test/TargetedTestPlanResult<#A, #B> // actron.statechart.test/verifyPlan|verifyPlan@actron.statechart.test.MachineTestDriver<0:0,0:1,0:2,0:3>(actron.statechart.test.TargetedTestPlan<0:0,0:1>){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final fun <#A: kotlin/Any?, #B: actron.core/Action> (actron.statechart.test/MachineInputGenerator<#A, #B>).actron.statechart.test/withTimers(): actron.statechart.test/MachineInputGenerator<#A, #B> // actron.statechart.test/withTimers|withTimers@actron.statechart.test.MachineInputGenerator<0:0,0:1>(){0§<kotlin.Any?>;1§<actron.core.Action>}[0]
+final fun <#A: kotlin/Any?, #B: kotlin/Any?> (actron.statechart.machine/ExecutorCheckpoint<#A, #B>).actron.statechart.test/pendingWork(): actron.statechart.test/MachinePendingWork<#B> // actron.statechart.test/pendingWork|pendingWork@actron.statechart.machine.ExecutorCheckpoint<0:0,0:1>(){0§<kotlin.Any?>;1§<kotlin.Any?>}[0]
+final fun actron.statechart.test/behaviouralReviewArtifacts(actron.statechart.test/BehaviouralSnapshot?, actron.statechart.test/BehaviouralSnapshot): kotlin.collections/Map<kotlin/String, kotlin/String> // actron.statechart.test/behaviouralReviewArtifacts|behaviouralReviewArtifacts(actron.statechart.test.BehaviouralSnapshot?;actron.statechart.test.BehaviouralSnapshot){}[0]
+final inline fun <#A: kotlin/Any?, #B: reified actron.core/Action> actron.statechart.test/actionGenerator(kotlin/String, noinline kotlin/Function2<actron.statechart.machine/MachineSnapshot<#A>, actron.statechart.machine/MachineTime, kotlin.collections/List<#B>>): actron.statechart.test/ActionGenerator<#A, #B> // actron.statechart.test/actionGenerator|actionGenerator(kotlin.String;kotlin.Function2<actron.statechart.machine.MachineSnapshot<0:0>,actron.statechart.machine.MachineTime,kotlin.collections.List<0:1>>){0§<kotlin.Any?>;1§<actron.core.Action>}[0]
+final suspend fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/MachineStore<#A, #B, #C, #D>).actron.statechart.test/assertNoPendingWork(actron.test/StoreRecorder<actron.statechart.machine/MachineSnapshot<#A>, #B, #D>? = ...) // actron.statechart.test/assertNoPendingWork|assertNoPendingWork@actron.statechart.machine.MachineStore<0:0,0:1,0:2,0:3>(actron.test.StoreRecorder<actron.statechart.machine.MachineSnapshot<0:0>,0:1,0:3>?){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]
+final suspend fun <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> (actron.statechart.machine/MachineStore<#A, #B, #C, #D>).actron.statechart.test/settle(kotlin.time/Duration = ...): actron.statechart.machine/ExecutorCheckpoint<#A, #C> // actron.statechart.test/settle|settle@actron.statechart.machine.MachineStore<0:0,0:1,0:2,0:3>(kotlin.time.Duration){0§<kotlin.Any?>;1§<actron.core.Action>;2§<kotlin.Any?>;3§<actron.core.Event>}[0]

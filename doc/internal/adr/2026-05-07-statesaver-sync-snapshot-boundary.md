@@ -4,7 +4,7 @@
 
 ## Background
 
-Koma's Store exposes `state: StateFlow<S>` and `currentState: S` as synchronous APIs.
+Actron's Store exposes `state: StateFlow<S>` and `currentState: S` as synchronous APIs.
 Since a `StateFlow` is constructed with an initial value, that initial value must be determined synchronously at Store creation.
 In the current implementation, if `stateSaver.restore()` returns a result, it is adopted as the initial value of `_state` / `StateFlow`.
 In other words, the behavior is not "show the declared `initialState` once, then replace it with the restore result", and changing this would also confuse users working with `StateFlow`.
@@ -97,10 +97,10 @@ Store {
 ### Constraints and trade-offs
 
 - `PluginScope` has no API for writing state directly (only via `dispatch`), so users need to define a "restore succeeded" Action and, if needed, a "restore failed" Action. This is an intentional constraint to preserve one-way data flow.
-- In Koma's DSL, `action {}` can only be written under `state {}`, so the handler for the restore Action is written only under the initial state (typically `Loading`). This is consistent, at the DSL level, with the intent that "the restore Action is meaningful only in the initial state".
+- In Actron's DSL, `action {}` can only be written under `state {}`, so the handler for the restore Action is written only under the initial state (typically `Loading`). This is consistent, at the DSL level, with the intent that "the restore Action is meaningful only in the initial state".
 
 ### Placement and delivery policy
 
-- No dependencies such as DataStore are brought into `koma-core` itself. Accepting `load` / `save` as `suspend` lambdas keeps it generic.
-- Proposal to provide it as a separate module (e.g. `koma-persistence`) or as a sample.
-- Release it under `@ExperimentalKomaApi` and decide on promotion to the mainline after observing actual usage.
+- No dependencies such as DataStore are brought into `actron-core` itself. Accepting `load` / `save` as `suspend` lambdas keeps it generic.
+- Proposal to provide it as a separate module (e.g. `actron-persistence`) or as a sample.
+- Release it under `@ExperimentalActronApi` and decide on promotion to the mainline after observing actual usage.

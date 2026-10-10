@@ -1,9 +1,0 @@
-// Klib ABI Dump
-// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
-// Rendering settings:
-// - Signature version: 2
-// - Show manifest properties: true
-// - Show declarations: true
-
-// Library unique name: <io.github.roman-n1:koma-statechart-compose>
-final fun <#A: koma.core/Event> koma.statechart.compose/MailboxEffect(koma.statechart.machine/EffectMailbox<#A>, kotlin.coroutines/SuspendFunction1<koma.statechart.machine/Delivery<#A>, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // koma.statechart.compose/MailboxEffect|MailboxEffect(koma.statechart.machine.EffectMailbox<0:0>;kotlin.coroutines.SuspendFunction1<koma.statechart.machine.Delivery<0:0>,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<koma.core.Event>}[0]

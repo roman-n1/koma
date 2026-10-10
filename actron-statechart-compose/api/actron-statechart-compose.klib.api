@@ -1,0 +1,9 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:actron-statechart-compose>
+final fun <#A: actron.core/Event> actron.statechart.compose/MailboxEffect(actron.statechart.machine/EffectMailbox<#A>, kotlin.coroutines/SuspendFunction1<actron.statechart.machine/Delivery<#A>, kotlin/Unit>, androidx.compose.runtime/Composer?, kotlin/Int) // actron.statechart.compose/MailboxEffect|MailboxEffect(actron.statechart.machine.EffectMailbox<0:0>;kotlin.coroutines.SuspendFunction1<actron.statechart.machine.Delivery<0:0>,kotlin.Unit>;androidx.compose.runtime.Composer?;kotlin.Int){0§<actron.core.Event>}[0]

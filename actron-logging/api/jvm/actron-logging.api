@@ -1,0 +1,38 @@
+public final class actron/logging/DefaultLogger : actron/logging/Logger {
+	public static final field INSTANCE Lactron/logging/DefaultLogger;
+	public final fun disable ()V
+	public fun log (Lactron/logging/Logger$Severity;Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function0;)V
+}
+
+public abstract interface class actron/logging/Logger {
+	public abstract fun log (Lactron/logging/Logger$Severity;Ljava/lang/String;Ljava/lang/Throwable;Lkotlin/jvm/functions/Function0;)V
+}
+
+public final class actron/logging/Logger$Severity : java/lang/Enum {
+	public static final field Debug Lactron/logging/Logger$Severity;
+	public static final field Error Lactron/logging/Logger$Severity;
+	public static final field Info Lactron/logging/Logger$Severity;
+	public static final field Verbose Lactron/logging/Logger$Severity;
+	public static final field Warn Lactron/logging/Logger$Severity;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lactron/logging/Logger$Severity;
+	public static fun values ()[Lactron/logging/Logger$Severity;
+}
+
+public final class actron/logging/LoggerJournalSink : actron/observability/JournalSink {
+	public static final field Companion Lactron/logging/LoggerJournalSink$Companion;
+	public fun <init> ()V
+	public fun <init> (Lactron/logging/Logger;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Lactron/logging/Logger;Ljava/lang/String;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun write (Lactron/observability/JournalRecord;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class actron/logging/LoggerJournalSink$Companion {
+	public final fun defaultSeverity (Lactron/observability/JournalRecord;)Lactron/logging/Logger$Severity;
+}
+
+public final class actron/logging/PluginKt {
+	public static final fun simpleLogging (Ljava/lang/String;Lactron/logging/Logger$Severity;Lactron/logging/Logger;Lkotlinx/coroutines/CoroutineDispatcher;)Lactron/core/Plugin;
+	public static synthetic fun simpleLogging$default (Ljava/lang/String;Lactron/logging/Logger$Severity;Lactron/logging/Logger;Lkotlinx/coroutines/CoroutineDispatcher;ILjava/lang/Object;)Lactron/core/Plugin;
+}
+

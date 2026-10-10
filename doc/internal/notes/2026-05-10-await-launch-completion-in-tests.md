@@ -4,7 +4,7 @@
 - Decided in the fork on 2026-10-01: [ADR](../adr/2026-10-01-await-idle-and-subscriptions.md).
   `StoreInternalApi.awaitIdle(timeout)` joins the state runtimes' launches and waits for queued
   inputs until stable; `subscribe {}` is the separate DSL for long-lived launches (the first
-  option below); `koma-test` exposes `awaitIdle()` and `pendingWork()`. Proposed upstream as one
+  option below); `actron-test` exposes `awaitIdle()` and `pendingWork()`. Proposed upstream as one
   change (`notes/2026-10-01-upstream-series.md`).
 
 ## Background
@@ -27,9 +27,9 @@ The approach is to add an API inside the Store that "waits until the currently r
 For convenience it is called `awaitIdle()` here.
 
 The footing for the implementation is already in place.
-`stateRuntimes` at [StoreImpl.kt:131](../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt) holds a `StateRuntime` per state class, and
-`StateRuntime` at [StoreImpl.kt:143](../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt) holds a `scope` and `actionLaunchJobs`.
-`launch {}` in enter / action is started on this scope via `launchInStateRuntime()` at [StoreImpl.kt:443](../../koma-core/src/commonMain/kotlin/koma/core/StoreImpl.kt).
+`stateRuntimes` at [StoreImpl.kt:131](../../actron-core/src/commonMain/kotlin/actron/core/StoreImpl.kt) holds a `StateRuntime` per state class, and
+`StateRuntime` at [StoreImpl.kt:143](../../actron-core/src/commonMain/kotlin/actron/core/StoreImpl.kt) holds a `scope` and `actionLaunchJobs`.
+`launch {}` in enter / action is started on this scope via `launchInStateRuntime()` at [StoreImpl.kt:443](../../actron-core/src/commonMain/kotlin/actron/core/StoreImpl.kt).
 Therefore, all currently tracked child jobs can be traversed and joined.
 
 The conceptual implementation is as follows.
@@ -66,7 +66,7 @@ There is no way to distinguish "processing" from "suspended and waiting in `coll
 `advanceUntilIdle` of `kotlinx-coroutines-test` can achieve this because
 it looks directly into the TestDispatcher's queue to determine "whether there are tasks waiting to run",
 and with a real dispatcher (`Dispatchers.IO` etc.) the same thing is fundamentally impossible.
-Given the approach of not using a TestDispatcher, this distinction has to be brought in on the Koma side in some form.
+Given the approach of not using a TestDispatcher, this distinction has to be brought in on the Actron side in some form.
 
 There are several conceivable directions.
 
@@ -86,9 +86,9 @@ There are several conceivable directions.
 
 It is natural to align with the same two-tier structure as the existing `startAndWait()` / `dispatchAndWait()`.
 
-- Add `suspend fun awaitIdle()` to [`StoreInternalApi`](../../koma-core/src/commonMain/kotlin/koma/core/StoreInternalApi.kt) (`@InternalKomaApi`) in `koma-core`
+- Add `suspend fun awaitIdle()` to [`StoreInternalApi`](../../actron-core/src/commonMain/kotlin/actron/core/StoreInternalApi.kt) (`@InternalActronApi`) in `actron-core`
 - Implement it in `StoreImpl`
-- Place a public extension in [`StoreExtensions`](../../koma-test/src/commonMain/kotlin/koma/test/StoreExtensions.kt) in `koma-test`, delegating to `requireStoreInternalApi().awaitIdle()`
+- Place a public extension in [`StoreExtensions`](../../actron-test/src/commonMain/kotlin/actron/test/StoreExtensions.kt) in `actron-test`, delegating to `requireStoreInternalApi().awaitIdle()`
 
 This makes the test wait APIs consistent as a graded set.
 
@@ -107,7 +107,7 @@ Calling `awaitIdle()` right after `dispatchAndWait(action)` would be the typical
 ## Open questions
 
 - API name. Which of `awaitIdle()` / `awaitAllLaunches()` / `quiesce()`
-- Name of the `koma-test` extension. Whether to expose it as `awaitIdle()` as-is, or under a different name matching the feel of `startAndWait()` / `dispatchAndWait()`
+- Name of the `actron-test` extension. Whether to expose it as `awaitIdle()` as-is, or under a different name matching the feel of `startAndWait()` / `dispatchAndWait()`
 - Tracking of Jobs of launches inside enter. They may not be in `actionLaunchJobs`, so whether to track launches started from enter in the same map, or to have a separate tracking path
 - Semantics of the iterated join. How to handle the case where new launches are queued endlessly during `awaitIdle` (timeout / upper bound on iterations / no guarantee at all)
 - How to distinguish long-lived launches. Which of the 4 proposals listed in the body to adopt

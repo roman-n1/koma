@@ -34,7 +34,7 @@ In other words, the state where "swapping values is safely effective until the S
 Building on this, add to `StoreInternalApi` an **API for rewriting environment settings that is allowed only before start**, in the same style as `attachObserver()`.
 
 ```kt
-@InternalKomaApi
+@InternalActronApi
 interface StoreInternalApi<S,A,E> {
     suspend fun dispatchAndWait(action: A)
     fun attachObserver(observer: StoreObserver<S,E>, notifyCurrentState: Boolean = true)
@@ -42,10 +42,10 @@ interface StoreInternalApi<S,A,E> {
 }
 ```
 
-The public extension is placed on the `koma-core` side.
+The public extension is placed on the `actron-core` side.
 
 ```kt
-@OptIn(InternalKomaApi::class)
+@OptIn(InternalActronApi::class)
 fun <S,A,E> Store<S,A,E>.applyOverrides(block: Overrides<S,A,E>): Store<S,A,E> {
     requireStoreInternalApi().applyOverrides(block)
     return this
@@ -101,7 +101,7 @@ val store = createMyStore().also {
 
 - The start check is expected to use the same criteria as the existing `attachObserver`: the `lazy` initialization of `coroutineScope` / `_state` or the `initializeIfNeeded()` call. No new mechanism is needed.
 - If `applyOverrides` is called after start, fail with an `IllegalStateException` rather than applying implicitly or silently ignoring. Align with the behavior of `attachObserver`.
-- The public extension is expected to be placed in `koma-core`. There is real demand for production use such as debug build / staging switching, so there is little necessity to confine it to `koma-test` as test-only. It is also consistent with the `Overrides<>` typealias and `StoreOverridesBuilder` being in `koma-core`.
+- The public extension is expected to be placed in `actron-core`. There is real demand for production use such as debug build / staging switching, so there is little necessity to confine it to `actron-test` as test-only. It is also consistent with the `Overrides<>` typealias and `StoreOverridesBuilder` being in `actron-core`.
 - The extension name `applyOverrides` is a placeholder. `withOverrides` strongly connotes an immutable copy, which does not fit the meaning of mutate-in-place. `overrides` collides with the existing typealias, but is short and readable. The final decision is made separately.
 - Even if the `overrides` argument is removed from the AppStore wrapper side, swapping from the test side remains possible in the form `AppStore(...) { ... }.applyOverrides { ... }`, so the intent of the current usage is not lost.
 

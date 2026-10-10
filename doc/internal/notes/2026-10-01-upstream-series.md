@@ -11,7 +11,7 @@
 The author's roadmap (koma-kt/koma#189) keeps the core small and puts test tooling hooks in the
 core, devtools in optional modules. The fork changed the core in three kinds of ways (stability
 fixes with regression tests, observation hooks, small public changes) and the companion modules
-in a few; see the inventory. Plan B (the statechart layer on unmodified Koma) is dropped, so the
+in a few; see the inventory. Plan B (the statechart layer on unmodified Actron) is dropped, so the
 way back is per row: each row is a small change the author can take on its own.
 
 ## Conventions
@@ -22,10 +22,10 @@ way back is per row: each row is a small change the author can take on its own.
   the U3 change. Two branches that touch the same function state the dependency explicitly.
 - No cherry-picks: the fork's fixes came in round-based commits that bundle several changes. For
   each item: copy the named regression tests into a new small test file on the branch, run
-  `./gradlew :koma-core:jvmTest --tests 'koma.core.<Test>'` on 4.0.0 and see them fail, port the
+  `./gradlew :actron-core:jvmTest --tests 'actron.core.<Test>'` on 4.0.0 and see them fail, port the
   final shape of the function from the fork's `StoreImpl.kt` without `trace {}`, `InputId`,
-  `QueuedInput` or `InsideStore` (unless the item is about them), then `:koma-core:jvmTest` and
-  `:koma-core:iosSimulatorArm64Test`. `git diff 4.0.0 upstream-pr/<topic> -- koma-core/src/commonMain`
+  `QueuedInput` or `InsideStore` (unless the item is about them), then `:actron-core:jvmTest` and
+  `:actron-core:iosSimulatorArm64Test`. `git diff 4.0.0 upstream-pr/<topic> -- actron-core/src/commonMain`
   must fit one screen. No `api/` dumps: upstream has no `apiCheck`.
 - Bugs: an upstream issue "Bug: …" with the failing test, and the PR the same day. Features
   (`awaitIdle`, `StoreProbe`): an issue first, the PR after a reply. At most two open upstream PRs
@@ -51,7 +51,7 @@ is separate from submitting an upstream PR:
 | C3 | `upstream-pr/logging-inline-entries` @ 9d41c49 | order test: entries out of order; the throwing-logger test passed on 4.0.0 (the log was in a launch), so it pins the report | JVM, iOS | the test waits by polling `currentState`: `state.first {}` hangs on 4.0.0 (U1) |
 | C4 | `upstream-pr/companion-api-deps` @ e8d889c | — (build files) | the four modules compile | |
 | U1 | `upstream-pr/state-first-hang` @ 481ae37 | timeout: `first()` never returns | core JVM (24 suites), iOS | |
-| U2 | `upstream-pr/exit-failure-keeps-runtime` @ 7968e5c | `[Koma] State scope is not found`; `Done` instead of `Active(100)` | core JVM, iOS | introduces `commitTransition`; the diff removes more than it adds |
+| U2 | `upstream-pr/exit-failure-keeps-runtime` @ 7968e5c | `[Actron] State scope is not found`; `Done` instead of `Active(100)` | core JVM, iOS | introduces `commitTransition`; the diff removes more than it adds |
 | U3 | `upstream-pr/no-commit-after-close` @ ce615da | `Box(1)` committed after close; `Done` entered; `recover {}` run | core JVM, iOS | on top of U2 (needs `commitTransition`); rebased once U2 lands |
 
 Next: U4 `dispatch-order`, U5, U6, U6b, U7, then the `awaitIdle` and `StoreProbe` issue texts.
@@ -62,11 +62,11 @@ Companion fixes first (cheap, away from `StoreImpl.kt`, independent of each othe
 
 | Item | Branch | Scope | Tests carried | Inventory |
 |---|---|---|---|---|
-| C1 | `upstream-pr/compose-state-content-narrowing` | `koma-compose`: the narrowed `ViewStore` of `stateContent` keeps the last `S2` | `ViewStoreJvmTest.stateContent_callbackRunAfterStateTypeChanged_readsLastNarrowedState`, `…_callbackThatNeverReadStateDuringComposition_readsLastNarrowedState` | d1 |
-| C2 | `upstream-pr/message-subscription-before-start` | `koma-message`: `onStart` waits for the subscription; a throwing receive block is reported and the subscription continues (the 64 buffer is mentioned, not proposed) | `MessageDeliveryTest.message_sentFromTheReceiversOwnStartup_isReceivedOnAMultiThreadedDispatcher`, `message_receiverKeepsItsSubscriptionAfterItsBlockThrows` | d5 |
-| C3 | `upstream-pr/logging-inline-entries` | `koma-logging`: log from the hook when no dispatcher is given; a throwing logger is reported | `LoggingOutputTest` | d3 |
-| C4 | `upstream-pr/companion-api-deps` | `api` instead of `implementation` for `koma-core` in the companion modules | — | d6 |
-| C5 | issue, then `upstream-pr/viewstore-select` | `koma-compose`: `ViewStore.select(mapper)` (#189 item 3, derived state); a feature, so an issue first, after C1 lands | `ViewStoreJvmTest.select_*` | d8 |
+| C1 | `upstream-pr/compose-state-content-narrowing` | `actron-compose`: the narrowed `ViewStore` of `stateContent` keeps the last `S2` | `ViewStoreJvmTest.stateContent_callbackRunAfterStateTypeChanged_readsLastNarrowedState`, `…_callbackThatNeverReadStateDuringComposition_readsLastNarrowedState` | d1 |
+| C2 | `upstream-pr/message-subscription-before-start` | `actron-message`: `onStart` waits for the subscription; a throwing receive block is reported and the subscription continues (the 64 buffer is mentioned, not proposed) | `MessageDeliveryTest.message_sentFromTheReceiversOwnStartup_isReceivedOnAMultiThreadedDispatcher`, `message_receiverKeepsItsSubscriptionAfterItsBlockThrows` | d5 |
+| C3 | `upstream-pr/logging-inline-entries` | `actron-logging`: log from the hook when no dispatcher is given; a throwing logger is reported | `LoggingOutputTest` | d3 |
+| C4 | `upstream-pr/companion-api-deps` | `api` instead of `implementation` for `actron-core` in the companion modules | — | d6 |
+| C5 | issue, then `upstream-pr/viewstore-select` | `actron-compose`: `ViewStore.select(mapper)` (#189 item 3, derived state); a feature, so an issue first, after C1 lands | `ViewStoreJvmTest.select_*` | d8 |
 
 Then the stability fixes, one by one:
 
@@ -81,7 +81,7 @@ Then the stability fixes, one by one:
 | U6b | `upstream-pr/every-plugin-every-round` | `hookFailure`: every plugin sees every round, fatal stays fatal | `aFailingPluginHook_doesNotHideTheRoundFromOtherPlugins`, `aFatalErrorFromASecondPlugin_staysFatal` | a9 | more opinionated; separate |
 | — | issue `awaitIdle` | the author's note `2026-05-10-await-launch-completion-in-tests.md`, answered by the fork's implementation of 2026-10-01 ([ADR](../adr/2026-10-01-await-idle-and-subscriptions.md)): queued inputs counted next to the traces, every child of the state runtimes' scopes joined until stable, `subscribe {}` as the separate DSL for long-lived launches; throws from inside the Store, so the PR carries the `InsideStore` fail-fast | `StoreAwaitIdleTest`, `StoreRecorderCursorTest`, `awaitingTheStoreFromInsideItsOwnHandler_failsFastInsteadOfDeadlocking`, `awaitingTheStoreFromAnOnEventRoundOfALaunchedEvent_failsFast` | a10, b7, c7, d7 | links #189 item 2 (`advanceUntilIdle`, `receiveEvent`, `assertNoPendingWork`); implemented in the fork, not yet sent; the recorder's cursor (d7) travels in the same PR |
 | U7 | `upstream-pr/observer-failure-continues-transition` | `reportWithoutAborting`, `processStateChange`, `processEventEmit`; `StateSaver`/`Plugin` KDoc | `stateSaverException_onVariantChange_stillEntersTheNewState`, `pluginOnStateException_onVariantChange_stillEntersTheNewState`, `pluginOnEventException_doesNotAbortTheEmittingHandler` | a5 | touches his ADR on the exception boundary: "not routing to `recover {}`, only not leaving a half-entered state"; after U1–U6 |
-| — | issue `StoreProbe` | "minimal, observation-only processing hook: the core half of #189 item 5"; non-suspending, called inline under the lock, its failure reported and never traced, no callback into the Store, no cost without probes, `@InternalKomaApi`; six things a `Plugin` cannot see, each pinned by a `StoreProbeTest` name | `StoreProbeTest` | b1, c1, c3 | (a) `StoreProbe`, `InputId`, `InputKind`, `DiscardReason` without `Stale`/`Rejected`, `ProcessingOutcome`, the five processing traces, `probe()`; (b) `EventEmitted`, `FailureReported`, `StoreClosed`, `currentInputId()` |
+| — | issue `StoreProbe` | "minimal, observation-only processing hook: the core half of #189 item 5"; non-suspending, called inline under the lock, its failure reported and never traced, no callback into the Store, no cost without probes, `@InternalActronApi`; six things a `Plugin` cannot see, each pinned by a `StoreProbeTest` name | `StoreProbeTest` | b1, c1, c3 | (a) `StoreProbe`, `InputId`, `InputKind`, `DiscardReason` without `Stale`/`Rejected`, `ProcessingOutcome`, the five processing traces, `probe()`; (b) `EventEmitted`, `FailureReported`, `StoreClosed`, `currentInputId()` |
 | U8 | issue only | the `CancellationException` rule (`rethrowIfNonRecoverable`) | `expiredWithTimeout_*`, `pluginHookTimingOut_failsTheActionUnderBothPolicies` | a7 | a semantic choice; a PR only if he agrees |
 
 Not proposed: `dispatchIf`, `validateRecovery`, the open `StoreScope` (fork-only by design, see the
@@ -99,9 +99,9 @@ inventory's "removable when"), steps 2–3 of the roadmap before #280 lands.
   `store {}` blocks stop being exposed; for `MachineStore` recovery is not exposed. Invalid
   recoveries become unrepresentable, the validator goes.
 - c2 open `StoreScope`: `ChartHookScope`/`ChartLaunchScope` stop extending `StoreScope` and expose
-  `val store: StoreScope`, so `koma-message`'s `message()` is `store.message(m)`.
-- d4 `koma-logging` → `koma-observability`: `LoggerJournalSink` and its test move to a
-  `koma-observability-logging` module.
+  `val store: StoreScope`, so `actron-message`'s `message()` is `store.message(m)`.
+- d4 `actron-logging` → `actron-observability`: `LoggerJournalSink` and its test move to a
+  `actron-observability-logging` module.
 
 ## Open questions
 

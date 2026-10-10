@@ -1,0 +1,4 @@
+public final class actron/statechart/compose/MailboxEffectKt {
+	public static final fun MailboxEffect (Lactron/statechart/machine/EffectMailbox;Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+}
+

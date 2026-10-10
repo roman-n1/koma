@@ -23,26 +23,26 @@ jobs:
       - name: Create isolated 8 MiB filesystem
         shell: bash
         run: |
-          directory="$RUNNER_TEMP/koma-enospc"
+          directory="$RUNNER_TEMP/actron-enospc"
           mkdir -p "$directory"
           sudo mount -t tmpfs -o size=8M,mode=1777 tmpfs "$directory"
-          touch "$directory/.koma-bounded-filesystem"
-          echo "KOMA_ENOSPC_DIRECTORY=$directory" >> "$GITHUB_ENV"
+          touch "$directory/.actron-bounded-filesystem"
+          echo "ACTRON_ENOSPC_DIRECTORY=$directory" >> "$GITHUB_ENV"
       - name: Process kill and actual ENOSPC regression tests
         shell: bash
         run: |
-          test -n "$KOMA_ENOSPC_DIRECTORY"
-          test -f "$KOMA_ENOSPC_DIRECTORY/.koma-bounded-filesystem"
-          ./gradlew :koma-timetravel:jvmTest --tests '*RecordingDurabilityJvmTest' --rerun-tasks
+          test -n "$ACTRON_ENOSPC_DIRECTORY"
+          test -f "$ACTRON_ENOSPC_DIRECTORY/.actron-bounded-filesystem"
+          ./gradlew :actron-timetravel:jvmTest --tests '*RecordingDurabilityJvmTest' --rerun-tasks
       - name: Unmount isolated filesystem
         if: always()
         shell: bash
         run: |
-          directory="$RUNNER_TEMP/koma-enospc"
+          directory="$RUNNER_TEMP/actron-enospc"
           if mountpoint -q "$directory"; then sudo umount "$directory"; fi
       - name: Upload test diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: recording-durability-reports
-          path: koma-timetravel/build/reports/tests/jvmTest
+          path: actron-timetravel/build/reports/tests/jvmTest

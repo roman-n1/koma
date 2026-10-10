@@ -8,7 +8,7 @@ version = "0.1.0"
 repositories { mavenCentral(); intellijPlatform { defaultRepositories() } }
 dependencies {
     intellijPlatform {
-        val localPath = providers.gradleProperty("koma.ide.path").orNull
+        val localPath = providers.gradleProperty("actron.ide.path").orNull
         if (localPath != null) local(localPath) else intellijIdea("2025.3.3")
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.kotlin")
@@ -20,8 +20,8 @@ dependencies {
 kotlin { jvmToolchain(21) }
 intellijPlatform {
     pluginConfiguration {
-        id = "io.github.roman-n1.koma"
-        name = "Koma Behavioural Model"
+        id = "io.github.roman-n1.actron"
+        name = "Actron Behavioural Model"
         version = "0.1.0"
         ideaVersion { sinceBuild = "253"; untilBuild = provider { null } }
     }

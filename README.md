@@ -1,23 +1,40 @@
-# Koma: MVI, statecharts and Time Travel for Kotlin Multiplatform
+# Actron: MVI, statecharts and Time Travel for Kotlin Multiplatform
 
-Koma helps you describe **what a feature can do in each state**. The UI sends actions; the
+Actron helps you describe **what a feature can do in each state**. The UI sends actions; the
 Store processes them and exposes immutable state. Use a small Store for a counter, explicit
 states for loading/retry flows, or a statechart when a feature has nested or parallel phases.
 
-This is [roman-n1/koma](https://github.com/roman-n1/koma), a fork of
-[koma-kt/koma](https://github.com/koma-kt/koma), based on upstream **4.0.0**. It adds an optional
-declarative statechart model, pure decision machines, structured recording and Time Travel.
-The original Store DSL remains available.
+## Why Actron?
+
+Actron combines two ideas:
+
+- **Act** — actions and events that drive application behavior.
+- **-tron** — a mechanism, engine, or machine.
+
+The name reflects what Actron is built around: explicit application behavior.
+Actron combines MVI, reducers, and statecharts into a behavioral engine where transitions
+are part of the model rather than hidden inside control flow.
+That makes behavior easier to execute, inspect, test, explain, and reproduce — including
+deterministic Time Travel, replay, and branching from previous execution checkpoints.
+
+**Model Behavior. Control State. Replay Time.**
+
+Actron was previously named Koma in this fork, based on upstream
+[koma-kt/koma](https://github.com/koma-kt/koma) **4.0.0**. The source repository is currently
+[roman-n1/koma](https://github.com/roman-n1/koma). It adds an optional declarative statechart
+model, pure decision machines, structured recording and Time Travel.
+The original Store DSL remains available under the `actron.*` packages.
+See [Migrating from Koma](doc/guides/migrating-from-koma.md) for the breaking rename.
 
 ## Start here
 
 | You want to… | Start with… |
 |---|---|
-| Understand actions, state and a Store | [The counter below](#1-a-store-for-a-counter), then [koma-core](koma-core/README.md) |
-| Model Loading → Content or Error | [koma-core](koma-core/README.md#states-for-a-loading-screen) |
-| Describe nested/parallel phases and draw their transitions | [koma-statechart](koma-statechart/README.md) |
+| Understand actions, state and a Store | [The counter below](#1-a-store-for-a-counter), then [actron-core](actron-core/README.md) |
+| Model Loading → Content or Error | [actron-core](actron-core/README.md#states-for-a-loading-screen) |
+| Describe nested/parallel phases and draw their transitions | [actron-statechart](actron-statechart/README.md) |
 | Keep I/O separate from decisions and replay them | [A pure Machine below](#3-a-machine-makes-decisions-io-runs-afterward) |
-| Connect a Store to Compose | [koma-compose](koma-compose/README.md) |
+| Connect a Store to Compose | [actron-compose](actron-compose/README.md) |
 | Reproduce a bug from a saved run | [The runnable Time Travel example](examples/time-travel/README.md) |
 | Handle retained effects across process death | [The durable outbox example](examples/durable-effects/README.md) |
 | Look up the full original Store DSL | [Store API guide](doc/guides/store-api.md) |
@@ -31,9 +48,9 @@ Three concepts are enough to start:
 - **Store** processes actions and publishes the resulting state: the count becomes 1.
 
 ```kotlin
-import koma.core.Action
-import koma.core.State
-import koma.core.Store
+import actron.core.Action
+import actron.core.State
+import actron.core.Store
 import kotlinx.coroutines.CoroutineScope
 
 data class CounterState(val count: Int = 0) : State
@@ -70,7 +87,7 @@ A **state machine** says which transitions are allowed. A **statechart** extends
 with hierarchy, parallel regions and history. Choose the smallest model that explains your
 feature's behaviour.
 
-| Shape | Example | Koma representation |
+| Shape | Example | Actron representation |
 |---|---|---|
 | One state with changing data | A counter or an editable form | A data class implementing `State` |
 | Flat, mutually exclusive phases | Idle → Loading → Content or Error | Sealed `State` variants, or `AtomicState` chart nodes |
@@ -122,8 +139,8 @@ changes and effects are data in that decision. `MachineStore` commits it, then a
 Here is a replay-ready counter, reusing `CounterAction` from the first example:
 
 ```kotlin
-import koma.statechart.*
-import koma.statechart.machine.*
+import actron.statechart.*
+import actron.statechart.machine.*
 
 data class CounterContext(val count: Int = 0)
 
@@ -155,13 +172,13 @@ val incremented = counterMachine.decide(
 
 An external self-transition exits and re-enters its node. For context-only changes without
 that lifetime change, a Machine can use `onAction`; see the
-[machine guide](koma-statechart/README.md#replay-ready-machine).
+[machine guide](actron-statechart/README.md#replay-ready-machine).
 
 The same approach works for a loader: entering Loading registers `FetchItems`, the handler
 calls a repository, and `ItemsLoaded` moves the machine to Content. Replay re-decides those
 recorded inputs and checks the resulting snapshots, commands and effects; it does not call
 the repository. Guards and effects are labelled in the model, with their implementations
-supplied to the runtime. See [the complete statechart guide](koma-statechart/README.md).
+supplied to the runtime. See [the complete statechart guide](actron-statechart/README.md).
 
 ## 4. Time Travel from a real saved run
 
@@ -189,31 +206,32 @@ Every library module has its own README with setup, examples and its contract.
 
 | Module | Purpose |
 |---|---|
-| [koma-core](koma-core/README.md) | Store DSL, immutable state, actions/events, coroutine lifetimes and persistence |
-| [koma-compose](koma-compose/README.md) | `ViewStore`, state rendering, derived UI values and transient event collection |
-| [koma-message](koma-message/README.md) | Process-wide message plugin for ordinary Stores |
-| [koma-logging](koma-logging/README.md) | Store logging and structured journal output |
-| [koma-test](koma-test/README.md) | Await processing, record states/events and diagnose handlers |
-| [koma-statechart](koma-statechart/README.md) | Declarative model, validation, diagrams, chart runtime and pure Machines |
-| [koma-statechart-compose](koma-statechart-compose/README.md) | Retained Machine effects delivered to Compose |
-| [koma-statechart-test](koma-statechart-test/README.md) | Scripted commands, virtual time and Machine test driver |
-| [koma-diagnostics](koma-diagnostics/README.md) | KMP causal traces for decisions, commands, timers and bridge effects |
-| [koma-diagnostics-sdk](koma-diagnostics-sdk/README.md) | Optional OpenTelemetry and Sentry adapters for JVM/Android |
-| [koma-diagnostics-crashlytics](koma-diagnostics-crashlytics/README.md) | Optional Android Crashlytics adapter |
-| [koma-observability](koma-observability/README.md) | Ordered, bounded diagnostic journal and file storage |
-| [koma-timetravel](koma-timetravel/README.md) | Recording, codecs, checkpoints, replay and isolated branches |
-| [koma-timetravel-compose](koma-timetravel-compose/README.md) | Inspector UI and group replay/experiment controls |
+| [actron-core](actron-core/README.md) | Store DSL, immutable state, actions/events, coroutine lifetimes and persistence |
+| [actron-compose](actron-compose/README.md) | `ViewStore`, state rendering, derived UI values and transient event collection |
+| [actron-message](actron-message/README.md) | Process-wide message plugin for ordinary Stores |
+| [actron-logging](actron-logging/README.md) | Store logging and structured journal output |
+| [actron-test](actron-test/README.md) | Await processing, record states/events and diagnose handlers |
+| [actron-statechart](actron-statechart/README.md) | Declarative model, validation, diagrams, chart runtime and pure Machines |
+| [actron-statechart-compose](actron-statechart-compose/README.md) | Retained Machine effects delivered to Compose |
+| [actron-statechart-test](actron-statechart-test/README.md) | Scripted commands, virtual time and Machine test driver |
+| [actron-diagnostics](actron-diagnostics/README.md) | KMP causal traces for decisions, commands, timers and bridge effects |
+| [actron-diagnostics-sdk](actron-diagnostics-sdk/README.md) | Optional OpenTelemetry and Sentry adapters for JVM/Android |
+| [actron-diagnostics-crashlytics](actron-diagnostics-crashlytics/README.md) | Optional Android Crashlytics adapter |
+| [actron-observability](actron-observability/README.md) | Ordered, bounded diagnostic journal and file storage |
+| [actron-timetravel](actron-timetravel/README.md) | Recording, codecs, checkpoints, replay and isolated branches |
+| [actron-timetravel-compose](actron-timetravel-compose/README.md) | Inspector UI and group replay/experiment controls |
 | [time-travel-example](examples/time-travel/README.md) | Runnable JVM debug application; not a published library |
 | [durable-effects-example](examples/durable-effects/README.md) | Runnable JVM outbox and idempotent-effect application; not a published library |
 
 ## Installation
 
-The fork's configured coordinates are **`io.github.roman-n1:<module>:5.0.0-alpha.1`**.
-No fork release is published yet; use a local checkout/composite build today:
+Actron's configured coordinates are **`io.github.roman-n1:<module>:5.0.0-alpha.1`**.
+GitHub releases provide source archives and may include an IDE plugin ZIP. Maven Central
+publication is separate; for development, use a local checkout/composite build:
 
 ```kotlin
 // settings.gradle.kts in your application
-includeBuild("../koma") // path to this repository; its root name is Koma
+includeBuild("../actron") // path to this repository; its root name is Actron
 ```
 
 ```kotlin
@@ -221,8 +239,8 @@ includeBuild("../koma") // path to this repository; its root name is Koma
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.roman-n1:koma-core:5.0.0-alpha.1")
-            // Optional: implementation("io.github.roman-n1:koma-statechart:5.0.0-alpha.1")
+            implementation("io.github.roman-n1:actron-core:5.0.0-alpha.1")
+            // Optional: implementation("io.github.roman-n1:actron-statechart:5.0.0-alpha.1")
         }
     }
 }
@@ -230,9 +248,9 @@ kotlin {
 
 The publishing convention sets the included projects' group/version, so Gradle substitutes
 the matching coordinates. Add only the modules you need. External sources and debug
-tools currently need `@OptIn(koma.core.ExperimentalKomaApi::class)` at their use sites.
-Keep all Koma modules on the same fork version; the original `io.github.koma-kt` classes and
-the fork's classes have the same packages and must not be mixed in one dependency graph.
+tools currently need `@OptIn(actron.core.ExperimentalActronApi::class)` at their use sites.
+Keep all Actron modules on the same version. Actron uses `actron.*` packages and requires
+recompiling consumers that previously imported `koma.*`; it is not a binary replacement.
 For an Android-only build, the same dependency line belongs in `dependencies { … }`.
 
 ## What differs from the original project?
@@ -270,5 +288,5 @@ records the individual changes and their route back upstream.
   [independent Maven consumer](verification/published-consumer/README.md); CI also compiles its
   Android, JS, Wasm and iOS variants.
 
-Previously compiled stable consumers are checked separately by the
-[binary upgrade fixture](verification/binary-consumer/README.md) on JVM, JS, Wasm and iOS.
+A frozen upstream Koma client running alongside Actron is checked by the
+[migration isolation fixture](verification/binary-consumer/README.md) on JVM, JS, Wasm and iOS.

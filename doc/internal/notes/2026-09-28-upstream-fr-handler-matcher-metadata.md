@@ -7,12 +7,12 @@
 
 **Title:** Proposal: keep matcher metadata in the handler registry (groundwork for routing diagnostics)
 
-Hello, and thank you for Koma.
+Hello, and thank you for Actron.
 
 I use it and like it very much. I especially like the direction of the recent
 releases: explicit state variants, state-scoped work, `LaunchControl`,
-`recover {}`, plugins and `koma-test`. Each step makes the state machine side of
-Koma stronger, and I would like to help in the same direction.
+`recover {}`, plugins and `actron-test`. Each step makes the state machine side of
+Actron stronger, and I would like to help in the same direction.
 
 Here is what I would like to propose as a first, small step.
 
@@ -21,7 +21,7 @@ Here is what I would like to propose as a first, small step.
 `doc/internal/notes/2026-04-25-unhandled-action-behavior.md` describes a
 diagnostics gap. From the outside, it is hard to tell an unhandled action from a
 handled action that did not change the state. Shadowing by first-match-wins is
-also hard to see. The note proposes routing diagnostics in `:koma-test`
+also hard to see. The note proposes routing diagnostics in `:actron-test`
 (`diagnoseActionMatches`, and an assert on the match count at dispatch time). It
 also mentions checks at `build()` time as a later option.
 
@@ -66,11 +66,11 @@ It touches `StoreBuilder.kt` and `StoreImpl.kt` and adds `HandlerMatcher.kt`.
 `StoreHandlerRegistryTest` checks that the matchers record the right types in
 first-match order for `enter`, `action`, `exit` and `recover`, including a broad
 `state<AppState> { action<AppAction> {} }` fallback registered last. The
-existing `koma-core` tests pass without changes.
+existing `actron-core` tests pass without changes.
 
 ### What it enables later
 
-1. The `:koma-test` routing diagnostics from the note. A failing test could say
+1. The `:actron-test` routing diagnostics from the note. A failing test could say
    "handler #3 `state<Loading> / action<Retry>` is shadowed by handler #1
    `state<AppState> / action<Retry>`" instead of only an index.
 2. Optional checks for possible shadowing at `build()` time or in tests. They
@@ -84,7 +84,7 @@ existing `koma-core` tests pass without changes.
 - No new runtime policy for unhandled actions. I agree with the note on this.
 
 If this direction is fine for you, I can open a small PR with this change first,
-and then a separate PR for the `:koma-test` diagnostics. I am also happy to
+and then a separate PR for the `:actron-test` diagnostics. I am also happy to
 change the naming or the shape to fit your plans.
 
 Thank you for your time.

@@ -1,7 +1,7 @@
 # Store API guide
 
 Detailed Store, Compose, plugin and testing reference, preserved from the former root README.
-Start with the [project overview](../../README.md) or the [core quick start](../../koma-core/README.md).
+Start with the [project overview](../../README.md) or the [core quick start](../../actron-core/README.md).
 Dependency setup and release availability are explained in the [installation guide](../../README.md#installation).
 
 ## Quick Look
@@ -94,20 +94,20 @@ class VerificationViewModel(private val repository: VerificationRepository) : Vi
 }
 ```
 
-## When Koma Fits Best
+## When Actron Fits Best
 
-Koma works especially well when a feature has multiple explicit UI or business states and the transition rules between them are important.
-By combining Kotlin `sealed class`/`sealed interface` with Koma's state machine DSL, you can keep each state's `enter{}`, `action{}`, `exit{}`, and `recover{}` behavior close together and make the transition rules easy to follow.
+Actron works especially well when a feature has multiple explicit UI or business states and the transition rules between them are important.
+By combining Kotlin `sealed class`/`sealed interface` with Actron's state machine DSL, you can keep each state's `enter{}`, `action{}`, `exit{}`, and `recover{}` behavior close together and make the transition rules easy to follow.
 
 ## Current Scope
 
-Koma currently focuses on the core pieces of state management: explicit state transitions, coroutine-based asynchronous work, state persistence, and plugin-driven extensions such as logging and inter-store messaging.
+Actron currently focuses on the core pieces of state management: explicit state transitions, coroutine-based asynchronous work, state persistence, and plugin-driven extensions such as logging and inter-store messaging.
 It keeps surrounding helper layers intentionally small, so dependencies and feature composition can stay in ordinary Kotlin, while the core Store logic remains portable across platforms.
 
 ## Table of Contents
 
 - [Quick Look](#quick-look)
-- [When Koma Fits Best](#when-koma-fits-best)
+- [When Actron Fits Best](#when-actron-fits-best)
 - [Current Scope](#current-scope)
 - [Installation](#installation)
 - [Usage](#usage)
@@ -137,7 +137,7 @@ It keeps surrounding helper layers intentionally small, so dependencies and feat
 ## Installation
 
 ```kt
-implementation("io.github.roman-n1:koma-core:5.0.0-alpha.1")
+implementation("io.github.roman-n1:actron-core:5.0.0-alpha.1")
 ```
 
 ## Usage
@@ -615,7 +615,7 @@ Then, processing of all Coroutines will stop.
 #### Specifying CoroutineDispatchers
 
 You can specify the execution thread (CoroutineDispatchers) in `enter{}`, `exit{}`, `action{}`, `recover{}`, and `launch{}` blocks, allowing you to locally control which thread each specific operation runs on.
-If you omit the dispatcher parameter, Koma keeps using the Store's current execution context for that operation.
+If you omit the dispatcher parameter, Actron keeps using the Store's current execution context for that operation.
 
 ```kt
 enter(Dispatchers.Default) {
@@ -650,7 +650,7 @@ enter {
 
 ### State Persistence
 
-You can prepare a [StateSaver](../../koma-core/src/commonMain/kotlin/koma/core/StateSaver.kt) to automatically handle *State* persistence:
+You can prepare a [StateSaver](../../actron-core/src/commonMain/kotlin/actron/core/StateSaver.kt) to automatically handle *State* persistence:
 
 ```kt
 val store: Store<CounterState, CounterAction, CounterEvent> = Store {
@@ -664,7 +664,7 @@ You can also create a `StateSaver` instance with the `StateSaver()` factory func
 
 ### Clear Pending Actions
 
-By default, Koma clears already queued actions when the store exits the current state and enters a different state variant.
+By default, Actron clears already queued actions when the store exits the current state and enters a different state variant.
 To keep queued actions across state exits, set `pendingActionPolicy(PendingActionPolicy.Keep)`.
 
 ```kt
@@ -697,7 +697,7 @@ fun CounterStore(
 
 On platforms where Store's `.state` (StateFlow) and `.event` (Flow) cannot be consumed directly (e.g., iOS), use `.collectState()` and `.collectEvent()`.
 If the *State* or *Event* changes, you will be notified through these callbacks.
-These callbacks run in the Store's execution context. Koma does not automatically switch to a UI thread, so move to the appropriate UI thread before touching UI components when needed.
+These callbacks run in the Store's execution context. Actron does not automatically switch to a UI thread, so move to the appropriate UI thread before touching UI components when needed.
 
 Store startup is lazy. By default, the Store starts on the first `.dispatch(...)` or when state collection begins through `.state` or `.collectState()`.
 If you want state collection not to start the Store automatically, set `autoStartPolicy(AutoStartPolicy.OnDispatch)` and call `.start()` when you want to trigger startup explicitly.
@@ -710,7 +710,7 @@ If you want state collection not to start the Store automatically, set `autoStar
 You can use Store's `.state` (StateFlow), `.event` (Flow), and `.dispatch()` directly, but we provide a mechanism for Compose.
 
 ```kt
-implementation("io.github.roman-n1:koma-compose:5.0.0-alpha.1")
+implementation("io.github.roman-n1:actron-compose:5.0.0-alpha.1")
 ```
 
 Create an instance of the `ViewStore` from a *Store* using the `rememberViewStore()` function.
@@ -992,7 +992,7 @@ Note that *State* is read-only in Plugin hooks.
 You can also create a `Plugin` instance with the `Plugin()` factory function.
 
 Plugin methods are suspending functions. The *Store* waits for plugin processing to complete before proceeding.
-When multiple plugin instances are registered, Koma invokes them concurrently by default.
+When multiple plugin instances are registered, Actron invokes them concurrently by default.
 If plugins must run one by one in registration order, set `pluginExecutionPolicy(PluginExecutionPolicy.InRegistrationOrder)`.
 
 ```kt
@@ -1006,14 +1006,14 @@ val store: Store<CounterState, CounterAction, CounterEvent> = Store {
 Because a long-running method can block the *Store*, start background work from the hook with `scope.launch { ... }`.
 
 In the next section, we introduce built-in plugins.
-The source code is the `:koma-logging` and `:koma-message` modules in this repository, so you can use it as a reference for your plugin implementation.
+The source code is the `:actron-logging` and `:actron-message` modules in this repository, so you can use it as a reference for your plugin implementation.
 
 ### Logging
 
 Plugin for logging Store operations.
 
 ```kt
-implementation("io.github.roman-n1:koma-logging:5.0.0-alpha.1")
+implementation("io.github.roman-n1:actron-logging:5.0.0-alpha.1")
 ```
 
 Apply the `simpleLogging()` plugin factory function to your *Store* to log actions, events, and state changes.
@@ -1036,14 +1036,14 @@ plugin(
 )
 ```
 
-If you want a different logging plugin shape entirely, implement your own Koma `Plugin` and reuse `Logger` or `DefaultLogger` from this module.
+If you want a different logging plugin shape entirely, implement your own Actron `Plugin` and reuse `Logger` or `DefaultLogger` from this module.
 
 ### Message
 
 Plugin for sending messages between *Stores*.
 
 ```kt
-implementation("io.github.roman-n1:koma-message:5.0.0-alpha.1")
+implementation("io.github.roman-n1:actron-message:5.0.0-alpha.1")
 ```
 
 First, prepare classes for messages.
@@ -1123,10 +1123,10 @@ fun CounterStore(
 
 ## Testing Store
 
-Add `:koma-test` to your test source set to use Koma's test helpers.
+Add `:actron-test` to your test source set to use Actron's test helpers.
 
 ```kt
-commonTestImplementation("io.github.roman-n1:koma-test:5.0.0-alpha.1")
+commonTestImplementation("io.github.roman-n1:actron-test:5.0.0-alpha.1")
 ```
 
 Use `dispatchAndAwait(action)` to dispatch an *Action* and suspend until the *Store* finishes processing it. It waits for startup (when needed), the matching `action {}` handler, and the resulting synchronous state transition work, but not for additional work launched with `launch {}`.

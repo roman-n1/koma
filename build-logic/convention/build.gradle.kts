@@ -4,7 +4,7 @@ plugins {
     `kotlin-dsl`
 }
 
-group = "koma.buildlogic"
+group = "actron.buildlogic"
 
 java {
     sourceCompatibility = JavaVersion.VERSION_17
@@ -34,8 +34,8 @@ tasks {
 gradlePlugin {
     plugins {
         register("publish") {
-            id = "koma.publish"
-            implementationClass = "koma.buildlogic.PublishConventionPlugin"
+            id = "actron.publish"
+            implementationClass = "actron.buildlogic.PublishConventionPlugin"
         }
     }
 }

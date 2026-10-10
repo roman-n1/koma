@@ -13,7 +13,7 @@ and in a `Logger`; after a process death nothing of it remained.
 
 ## Decision
 
-The format lives in `koma.observability.file`, in `koma-observability`, with no new dependency.
+The format lives in `actron.observability.file`, in `actron-observability`, with no new dependency.
 
 - **The platform supplies only the storage.** `SegmentStorage` is a handful of operations over
   named segments: list with size and modification time, read whole, delete, open for appending.
@@ -35,7 +35,7 @@ The format lives in `koma.observability.file`, in `koma-observability`, with no 
   the file keeps what was shown. Projections keep their label and fields; omitted and
   unavailable stay so; failures keep type, message, cause and suppressed. The journal file is
   what the inspector and the crash reporter read; the replay recording is `RecordingCodec` in
-  `koma-timetravel`.
+  `actron-timetravel`.
 - **The reader never throws on damage; it marks.** `JournalFileFormat.decodeSegment` returns the
   frames whose checksum and encoding held, in order, and a `SegmentMark` for where it stopped:
   `TruncatedTail` for a frame cut short (a crash; the partial bytes are dropped), `Unfinished`
@@ -67,15 +67,15 @@ Not adopted:
   gives the readable form.
 - Compression, encryption, or indexes: nothing here needs them yet; a segment is read whole.
 - Checkpoints in the journal file: the journal is `InspectOnly`; a replay range begins at a
-  checkpoint of a `koma-timetravel` recording (its own format).
+  checkpoint of a `actron-timetravel` recording (its own format).
 
 ## Notes
 
-- Tests: [`JournalFileFormatTest`](../../../koma-observability/src/commonTest/kotlin/koma/observability/file/JournalFileFormatTest.kt)
+- Tests: [`JournalFileFormatTest`](../../../actron-observability/src/commonTest/kotlin/actron/observability/file/JournalFileFormatTest.kt)
   round-trips every entry and payload kind, pins the bytes of a small segment, refuses a newer
   format, and, for what no hand reproduces, decodes every cut of a segment (always a prefix of
   the records with a mark) and every flipped bit of it (caught, never a wrong record);
-  [`JournalFileSinkTest`](../../../koma-observability/src/commonTest/kotlin/koma/observability/file/JournalFileSinkTest.kt)
+  [`JournalFileSinkTest`](../../../actron-observability/src/commonTest/kotlin/actron/observability/file/JournalFileSinkTest.kt)
   reads back what a session published, rotates and prunes, loses only the partial frame of a
   crash, skips the rest of a damaged segment and reads the next, explains holes by gap records,
   and covers the tail, the export and pruning across sessions;

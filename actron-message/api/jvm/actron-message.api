@@ -1,0 +1,11 @@
+public abstract interface class actron/message/Message {
+}
+
+public final class actron/message/MessageKt {
+	public static final fun message (Lactron/core/StoreScope;Lactron/message/Message;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class actron/message/PluginKt {
+	public static final fun receiveMessages (Lkotlin/jvm/functions/Function3;)Lactron/core/Plugin;
+}
+

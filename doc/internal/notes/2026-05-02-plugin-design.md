@@ -4,7 +4,7 @@
 
 ## Background
 
-Koma already has `Middleware`, but it has many hooks, and the internal `before/after` lifecycle is exposed directly in the public API.
+Actron already has `Middleware`, but it has many hooks, and the internal `before/after` lifecycle is exposed directly in the public API.
 
 On the other hand, for uses such as logging, analytics, message bridges, autosave and sync, hooks of the same granularity and nature as `Middleware` are not necessarily needed.
 We therefore want to move toward adding a `Plugin` with a smaller surface, separate from `Middleware`.

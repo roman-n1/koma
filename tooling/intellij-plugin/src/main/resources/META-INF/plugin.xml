@@ -1,17 +1,17 @@
 <idea-plugin>
-    <id>io.github.roman-n1.koma</id>
-    <name>Koma Behavioural Model</name>
-    <vendor url="https://github.com/roman-n1/koma">Koma contributors</vendor>
-    <description>Navigate Koma statechart declarations, inspect exported behavioural graphs and find model usages.</description>
+    <id>io.github.roman-n1.actron</id>
+    <name>Actron Behavioural Model</name>
+    <vendor url="https://github.com/roman-n1/koma">Actron contributors</vendor>
+    <description>Navigate Actron statechart declarations, inspect exported behavioural graphs and find model usages.</description>
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>
     <depends>org.jetbrains.kotlin</depends>
     <depends>com.intellij.modules.json</depends>
     <extensions defaultExtensionNs="com.intellij">
-        <codeInsight.lineMarkerProvider language="kotlin" implementationClass="koma.ide.KomaLineMarkerProvider"/>
-        <psi.referenceContributor language="JSON" implementation="koma.ide.KomaReferenceContributor"/>
-        <findUsagesHandlerFactory implementation="koma.ide.KomaFindUsagesHandlerFactory"/>
-        <toolWindow id="Koma" anchor="right" factoryClass="koma.ide.KomaToolWindowFactory"/>
+        <codeInsight.lineMarkerProvider language="kotlin" implementationClass="actron.ide.ActronLineMarkerProvider"/>
+        <psi.referenceContributor language="JSON" implementation="actron.ide.ActronReferenceContributor"/>
+        <findUsagesHandlerFactory implementation="actron.ide.ActronFindUsagesHandlerFactory"/>
+        <toolWindow id="Actron" anchor="right" factoryClass="actron.ide.ActronToolWindowFactory"/>
     </extensions>
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
         <supportsKotlinPluginMode supportsK1="false" supportsK2="true"/>

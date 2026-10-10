@@ -1,4 +1,4 @@
-name: Stable binary consumer
+name: Koma to Actron migration isolation
 on:
   pull_request:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 jobs:
   binary:
-    name: Stable binary (${{ matrix.target }})
+    name: Migration isolation (${{ matrix.target }})
     strategy:
       fail-fast: false
       matrix:
@@ -30,7 +30,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.x'
-      - name: Freeze a stable client and replace its runtime dependency
+      - name: Run a frozen Koma client alongside Actron
         run: scripts/verify-binary-consumer.sh ${{ matrix.target }}
       - uses: actions/upload-artifact@v4
         if: always()

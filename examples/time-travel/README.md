@@ -45,7 +45,7 @@ directory Open reads. Disk I/O runs off the UI thread, and cancellation still dr
 ./gradlew :time-travel-example:jvmTest
 ./gradlew :time-travel-example:run --args='--check'
 # optional parent directory (use an absolute path):
-./gradlew :time-travel-example:run --args='--check /tmp/koma-demo'
+./gradlew :time-travel-example:run --args='--check /tmp/actron-demo'
 ```
 
 The CLI exercises the same live-to-disk-to-replay path and checks the changed reducer,
@@ -56,10 +56,10 @@ The root `jvmTest` CI job includes this module's tests.
 
 ## How it is wired
 
-- [CheckoutDemo.kt](src/jvmMain/kotlin/koma/example/timetravel/CheckoutDemo.kt): serializable
+- [CheckoutDemo.kt](src/jvmMain/kotlin/actron/example/timetravel/CheckoutDemo.kt): serializable
   contexts/actions/commands/events, machine definitions, live handler, group routing,
   `RecordingSession`/`JournalFileSink`, `GroupRecordingFileSink`, close ordering and file loading.
-- [Main.kt](src/jvmMain/kotlin/koma/example/timetravel/Main.kt): file controls plus
+- [Main.kt](src/jvmMain/kotlin/actron/example/timetravel/Main.kt): file controls plus
   `InspectorState`, `GroupReplayControls`, `GroupTimeTravelControls` and `InspectorScreen`;
   the CLI follows the same path without composing a window.
 

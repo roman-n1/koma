@@ -1,17 +1,17 @@
-# Address-book picker pilot: what is in koma, what the messenger needs
+# Address-book picker pilot: what is in actron, what the messenger needs
 
 - Updated: 2026-09-30
 
 ## Background
 
 Stage 3 of the [handoff](../design/2026-09-29-time-travel-logging-handoff.md) is a pilot on one
-messenger scenario: the address-book picker's search. The koma side is done as a reference
+messenger scenario: the address-book picker's search. The actron side is done as a reference
 implementation in the statechart tests; the application side is not started, because it depends
 on decisions only the messenger can take. This note records both.
 
-## What the pilot shows (koma side)
+## What the pilot shows (actron side)
 
-[`AddressBookSearchMachine`](../../../koma-statechart/src/commonTest/kotlin/koma/statechart/example/picker/AddressBookSearchMachine.kt)
+[`AddressBookSearchMachine`](../../../actron-statechart/src/commonTest/kotlin/actron/statechart/example/picker/AddressBookSearchMachine.kt)
 mirrors `AddressBookPickerSearchComponentImpl` of `su.ivcs.messenger`:
 
 | Messenger today | Pilot |
@@ -25,7 +25,7 @@ mirrors `AddressBookPickerSearchComponentImpl` of `su.ivcs.messenger`:
 | Guest suggestions from `ValidateEmailUseCase` / `ValidateDialerInputUseCase` | Pure predicates injected into the machine; applied in the `storeContacts` effect |
 | Groups loaded in `init` with `getOrElse(emptyList())` | `LoadingGroups` region; `CommandFailure` leads to `GroupsReady` with the "all contacts" entry only |
 
-[`AddressBookSearchPilotTest`](../../../koma-statechart/src/commonTest/kotlin/koma/statechart/example/picker/AddressBookSearchPilotTest.kt)
+[`AddressBookSearchPilotTest`](../../../actron-statechart/src/commonTest/kotlin/actron/statechart/example/picker/AddressBookSearchPilotTest.kt)
 runs the scenarios of the handoff §13 on a `MachineStore` with a test clock and a fake
 repository: fast typing searches once with the last query; a slow answer to an old query never
 reaches the screen; closing during a request cancels it and commits nothing; selection updates
@@ -42,10 +42,10 @@ context-only updates, and the executor's `CommandAbandoned` for superseded comma
 
 Not started. Each item is a decision or a piece of wiring in `su.ivcs.messenger`:
 
-1. **Dependency.** The messenger does not include koma. Until the fork publishes a release, the
-   options are a composite build (`includeBuild` of a koma checkout or a git submodule) or
+1. **Dependency.** The messenger does not include actron. Until the fork publishes a release, the
+   options are a composite build (`includeBuild` of a actron checkout or a git submodule) or
    publishing `5.0.0-alpha.x` to Maven Central from a pre-release. The modules needed are
-   `koma-core`, `koma-statechart`, `koma-observability` and, for the log sink, `koma-logging`;
+   `actron-core`, `actron-statechart`, `actron-observability` and, for the log sink, `actron-logging`;
    all have Android targets.
 2. **Where the machine lives.** The chart, the machine and the `UiMapper` are pure Kotlin and
    fit `feature:address-book-picker:impl`; the commands are executed by a `CommandHandler` that

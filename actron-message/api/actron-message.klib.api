@@ -1,0 +1,12 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:actron-message>
+abstract interface actron.message/Message // actron.message/Message|null[0]
+
+final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.message/receiveMessages(kotlin.coroutines/SuspendFunction2<actron.core/PluginScope.LaunchScope<#A, #B>, actron.message/Message, kotlin/Unit>): actron.core/Plugin<#A, #B, #C> // actron.message/receiveMessages|receiveMessages(kotlin.coroutines.SuspendFunction2<actron.core.PluginScope.LaunchScope<0:0,0:1>,actron.message.Message,kotlin.Unit>){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
+final suspend fun (actron.core/StoreScope).actron.message/message(actron.message/Message) // actron.message/message|message@actron.core.StoreScope(actron.message.Message){}[0]

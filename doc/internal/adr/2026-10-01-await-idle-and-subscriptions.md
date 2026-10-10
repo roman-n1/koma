@@ -15,7 +15,7 @@ observer as soon as the state settled was one decision early on the CI runner (#
 
 ## Decision
 
-- **`StoreInternalApi.awaitIdle(timeout): StorePendingWork`** in `koma-core`, implemented by
+- **`StoreInternalApi.awaitIdle(timeout): StorePendingWork`** in `actron-core`, implemented by
   `StoreImpl`: wait until no accepted input is queued or being processed, then join every active
   child of every state runtime's scope that is not a subscription, and repeat until a round finds
   nothing, since a launch may dispatch or transact before it ends. Inputs are counted next to the
@@ -31,7 +31,7 @@ observer as soon as the state settled was one decision early on the CI runner (#
   leaves it out. The distinction is a property of the definition, readable by whoever reads the
   Store (a socket reader is not a request that finishes), which is the note's first option; a flag
   on `launch` would be forgotten in exactly the tests that hang, and quiescence is timing.
-  `koma-statechart`'s task runner, the Store-lifetime coroutine that runs activities and timers,
+  `actron-statechart`'s task runner, the Store-lifetime coroutine that runs activities and timers,
   is subscribed: activities and timers are the chart's data.
 - **`MachineStoreImpl.awaitIdle`** is a fixpoint over the inner store and the executor: inner
   idle, then a `checkpoint()` of the scheduler (the actor answers after every decision queued
@@ -41,7 +41,7 @@ observer as soon as the state settled was one decision early on the CI runner (#
   no longer uses `StoreProbe` to count inputs. A lifecycle probe still waits for
   `StoreClosed` before group close listeners classify undecided bridge deliveries as dropped;
   `close()` requests cancellation and may return before a committed observer finishes.
-- **koma-test**: `Store.awaitIdle(timeout = 10.seconds)` throws with the counts when the Store
+- **actron-test**: `Store.awaitIdle(timeout = 10.seconds)` throws with the counts when the Store
   is not idle in time; `Store.pendingWork()` reports without waiting. The timeout runs on the
   caller's clock: under `runTest`'s virtual time it expires as soon as the body suspends, so a
   Store on a real dispatcher is awaited under `withContext(Dispatchers.Default)`.
@@ -57,16 +57,16 @@ Not adopted:
 
 ## Notes
 
-- Tests: [`StoreAwaitIdleTest`](../../koma-core/src/commonTest/kotlin/koma/core/StoreAwaitIdleTest.kt)
+- Tests: [`StoreAwaitIdleTest`](../../actron-core/src/commonTest/kotlin/actron/core/StoreAwaitIdleTest.kt)
   (a fire-and-forget launch and what a launch dispatches or transacts are waited for; a
   subscription is not and counts as no launch; a timeout reports the pending launch and the Store
   is idle once it ends; an exited state's launches join at once; inside the Store it fails fast; a
   closed Store is idle; a storm of eight threads and eight hundred dispatches whose launches on
   `Dispatchers.Default` increment a counter, ten rounds: `awaitIdle` returns only when every
-  launched effect happened); [`StoreAwaitIdleExtensionTest`](../../koma-test/src/commonTest/kotlin/koma/test/StoreAwaitIdleExtensionTest.kt)
+  launched effect happened); [`StoreAwaitIdleExtensionTest`](../../actron-test/src/commonTest/kotlin/actron/test/StoreAwaitIdleExtensionTest.kt)
   (the wrappers' failure message and report); `MachineStoreTestBridgeTest` (the executor's
   results are decided before `awaitIdle` returns, a command that never answers is data);
-  [`StateChartAwaitIdleTest`](../../koma-statechart/src/commonTest/kotlin/koma/statechart/StateChartAwaitIdleTest.kt)
+  [`StateChartAwaitIdleTest`](../../actron-statechart/src/commonTest/kotlin/actron/statechart/StateChartAwaitIdleTest.kt)
   (idle while an activity runs and while a timer waits); `RecordingFileStormTest` now waits with
   the public `awaitIdle` instead of a probe.
 - Upstream: `awaitIdle` and `subscribe` are proposed as one change on the author's note
@@ -74,6 +74,6 @@ Not adopted:
 
 ## Related
 
-- [A MachineStore is a Store koma-test can drive](./2026-10-01-machine-store-test-bridge.md)
+- [A MachineStore is a Store actron-test can drive](./2026-10-01-machine-store-test-bridge.md)
 - [StoreProbe: observing the processing of a Store](./2026-09-29-store-probe-processing-observation.md)
 - [Time Travel and structured logging handoff](../design/2026-09-29-time-travel-logging-handoff.md), §12

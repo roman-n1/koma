@@ -5,7 +5,7 @@
 ## Background
 
 The [handoff](../design/2026-09-29-time-travel-logging-handoff.md) §5 to §7.1 fixes what a
-diagnostic journal for Koma Stores must guarantee before any file format or replay exists:
+diagnostic journal for Actron Stores must guarantee before any file format or replay exists:
 
 - Records of one group are ordered by a sequence assigned when the record is published into the
   shared in-memory journal, not when it is later written; allocation and publication are ordered
@@ -20,12 +20,12 @@ diagnostic journal for Koma Stores must guarantee before any file format or repl
 - A failing logger, codec or sink is isolated from business processing and cannot recurse.
 
 [`StoreProbe`](./2026-09-29-store-probe-processing-observation.md) supplies the traces; this ADR
-records how `koma-observability` turns them into a journal.
+records how `actron-observability` turns them into a journal.
 
 ## Decision
 
-`koma-observability` is a new module on `koma-core` (no Compose, no logging dependency).
-[`RecordingSession`](../../../koma-observability/src/commonMain/kotlin/koma/observability/RecordingSession.kt)
+`actron-observability` is a new module on `actron-core` (no Compose, no logging dependency).
+[`RecordingSession`](../../../actron-observability/src/commonMain/kotlin/actron/observability/RecordingSession.kt)
 is the journal of one `MachineGroupId` in one `RuntimeSessionId`.
 
 Identity and order:
@@ -101,13 +101,13 @@ Not adopted:
 - Not in this stage: file segments with framing and checksums, rotation, export, the group cut of
   §8.1, checkpoints, and the replay session. `JournalGap` and `RecordingStopped` are the only
   session-level records so far.
-- Tests: [`RecordingSessionTest`](../../../koma-observability/src/commonTest/kotlin/koma/observability/RecordingSessionTest.kt)
+- Tests: [`RecordingSessionTest`](../../../actron-observability/src/commonTest/kotlin/actron/observability/RecordingSessionTest.kt)
   (dense sequences from many threads, bounded retention, gap invariants, sink isolation, close),
-  [`JournalProbeTest`](../../../koma-observability/src/commonTest/kotlin/koma/observability/JournalProbeTest.kt)
+  [`JournalProbeTest`](../../../actron-observability/src/commonTest/kotlin/actron/observability/JournalProbeTest.kt)
   (entries of a running Store, policy before retention, durations from the session's time source,
   two Stores in one group, recording changes nothing about the Store),
-  [`PayloadPolicyTest`](../../../koma-observability/src/commonTest/kotlin/koma/observability/PayloadPolicyTest.kt)
-  and [`LoggerJournalSinkTest`](../../../koma-logging/src/commonTest/kotlin/koma/logging/LoggerJournalSinkTest.kt)
+  [`PayloadPolicyTest`](../../../actron-observability/src/commonTest/kotlin/actron/observability/PayloadPolicyTest.kt)
+  and [`LoggerJournalSinkTest`](../../../actron-logging/src/commonTest/kotlin/actron/logging/LoggerJournalSinkTest.kt)
   (no secret reaches the logger under the default policy).
 
 ## Related
@@ -126,7 +126,7 @@ machine's, the command payload is what a describer keeps, nothing by default) fo
 `StateCommitted` of the same input and revision; `DecisionIgnored` carries the machine's reason
 where the store's trace only says "unchanged"; `InputRejected` records an action refused at
 admission, which never became an input and so has no `InputId`. The input of a decision comes
-from `currentInputId()` of `koma-core`, the id carried by the coroutine that processes it, so the
+from `currentInputId()` of `actron-core`, the id carried by the coroutine that processes it, so the
 imprecision documented there (a startup processed inside the first dispatch) applies.
 
 ## Addendum (2026-09-30): budgets from measurements

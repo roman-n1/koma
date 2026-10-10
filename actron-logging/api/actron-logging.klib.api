@@ -1,0 +1,42 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64, js, wasmJs]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <io.github.roman-n1:actron-logging>
+abstract fun interface actron.logging/Logger { // actron.logging/Logger|null[0]
+    abstract fun log(actron.logging/Logger.Severity, kotlin/String, kotlin/Throwable?, kotlin/Function0<kotlin/String>) // actron.logging/Logger.log|log(actron.logging.Logger.Severity;kotlin.String;kotlin.Throwable?;kotlin.Function0<kotlin.String>){}[0]
+
+    final enum class Severity : kotlin/Enum<actron.logging/Logger.Severity> { // actron.logging/Logger.Severity|null[0]
+        enum entry Debug // actron.logging/Logger.Severity.Debug|null[0]
+        enum entry Error // actron.logging/Logger.Severity.Error|null[0]
+        enum entry Info // actron.logging/Logger.Severity.Info|null[0]
+        enum entry Verbose // actron.logging/Logger.Severity.Verbose|null[0]
+        enum entry Warn // actron.logging/Logger.Severity.Warn|null[0]
+
+        final val entries // actron.logging/Logger.Severity.entries|#static{}entries[0]
+            final fun <get-entries>(): kotlin.enums/EnumEntries<actron.logging/Logger.Severity> // actron.logging/Logger.Severity.entries.<get-entries>|<get-entries>#static(){}[0]
+
+        final fun valueOf(kotlin/String): actron.logging/Logger.Severity // actron.logging/Logger.Severity.valueOf|valueOf#static(kotlin.String){}[0]
+        final fun values(): kotlin/Array<actron.logging/Logger.Severity> // actron.logging/Logger.Severity.values|values#static(){}[0]
+    }
+}
+
+final class actron.logging/LoggerJournalSink : actron.observability/JournalSink { // actron.logging/LoggerJournalSink|null[0]
+    constructor <init>(actron.logging/Logger = ..., kotlin/String = ..., kotlin/Function1<actron.observability/JournalRecord<*, *, *>, actron.logging/Logger.Severity> = ..., kotlin/Function1<actron.observability/JournalRecord<*, *, *>, kotlin/String> = ...) // actron.logging/LoggerJournalSink.<init>|<init>(actron.logging.Logger;kotlin.String;kotlin.Function1<actron.observability.JournalRecord<*,*,*>,actron.logging.Logger.Severity>;kotlin.Function1<actron.observability.JournalRecord<*,*,*>,kotlin.String>){}[0]
+
+    final suspend fun write(actron.observability/JournalRecord<*, *, *>) // actron.logging/LoggerJournalSink.write|write(actron.observability.JournalRecord<*,*,*>){}[0]
+
+    final object Companion { // actron.logging/LoggerJournalSink.Companion|null[0]
+        final fun defaultSeverity(actron.observability/JournalRecord<*, *, *>): actron.logging/Logger.Severity // actron.logging/LoggerJournalSink.Companion.defaultSeverity|defaultSeverity(actron.observability.JournalRecord<*,*,*>){}[0]
+    }
+}
+
+final object actron.logging/DefaultLogger : actron.logging/Logger { // actron.logging/DefaultLogger|null[0]
+    final fun disable() // actron.logging/DefaultLogger.disable|disable(){}[0]
+    final fun log(actron.logging/Logger.Severity, kotlin/String, kotlin/Throwable?, kotlin/Function0<kotlin/String>) // actron.logging/DefaultLogger.log|log(actron.logging.Logger.Severity;kotlin.String;kotlin.Throwable?;kotlin.Function0<kotlin.String>){}[0]
+}
+
+final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.logging/simpleLogging(kotlin/String = ..., actron.logging/Logger.Severity = ..., actron.logging/Logger = ..., kotlinx.coroutines/CoroutineDispatcher? = ...): actron.core/Plugin<#A, #B, #C> // actron.logging/simpleLogging|simpleLogging(kotlin.String;actron.logging.Logger.Severity;actron.logging.Logger;kotlinx.coroutines.CoroutineDispatcher?){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]

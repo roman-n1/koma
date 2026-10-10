@@ -15,4 +15,4 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "binary-koma-runner"
+rootProject.name = "binary-actron-runner"

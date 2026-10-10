@@ -32,11 +32,11 @@ conflates, equal snapshots are not emitted, and a dropped action leaves no trace
 
 ## Decision
 
-`koma-core` gets an internal, additive observation API: [`StoreProbe`](../../../koma-core/src/commonMain/kotlin/koma/core/StoreProbe.kt)
-receives [`StoreTrace`](../../../koma-core/src/commonMain/kotlin/koma/core/StoreProbe.kt) values
+`actron-core` gets an internal, additive observation API: [`StoreProbe`](../../../actron-core/src/commonMain/kotlin/actron/core/StoreProbe.kt)
+receives [`StoreTrace`](../../../actron-core/src/commonMain/kotlin/actron/core/StoreProbe.kt) values
 at the processing boundaries of `StoreImpl`. Probes are registered with `StoreBuilder.probe()` or,
-before startup, through `StorePatch`. The API is `@InternalKomaApi`: it is the foundation for the
-`koma-observability` journal and the inspector, not a public extension point, and it is not an
+before startup, through `StorePatch`. The API is `@InternalActronApi`: it is the foundation for the
+`actron-observability` journal and the inspector, not a public extension point, and it is not an
 obligation for third-party `Store` implementations.
 
 Every mutation of a Store is the processing of one of four inputs, each with an `InputId`:
@@ -80,7 +80,7 @@ Rules of the probe:
   propagates as anywhere else.
 - Without probes the only cost is the id allocation and two counters; no trace is built.
 - Traces carry the live state, action, event and error objects. Retention, sequence numbers per
-  group, payload policy and sanitization are the journal's job, outside `koma-core`.
+  group, payload policy and sanitization are the journal's job, outside `actron-core`.
 
 Not adopted:
 
@@ -89,11 +89,11 @@ Not adopted:
 - A suspending probe or a probe with its own dispatcher: ordering would then depend on the
   dispatcher, which the handoff forbids for the journal.
 - Making probes public now: the trace vocabulary will move with stages 1 and 2 (commands, timers,
-  effects, group sequence). It stays `@InternalKomaApi` until the journal format is fixed.
+  effects, group sequence). It stays `@InternalActronApi` until the journal format is fixed.
 
 ## Notes
 
-- Test coverage: [`StoreProbeTest`](../../../koma-core/src/commonTest/kotlin/koma/core/StoreProbeTest.kt)
+- Test coverage: [`StoreProbeTest`](../../../actron-core/src/commonTest/kotlin/actron/core/StoreProbeTest.kt)
   pins the boundaries listed in the handoff §14: startup as an input, equal state versus
   `Ignored`, several commits for one input, recovered and unrecovered failures, saver failure
   under its input, launch failure as a recovery input, plugin start failure with the dropped
@@ -104,14 +104,14 @@ Not adopted:
   input, also when the failure was the startup's (the `ProcessingFinished(startup, Failed)` and
   `InputDiscarded(dispatch, StartupFailed)` traces name it). The startup input has no discard
   trace: a `StoreClosed` before its `ProcessingStarted` means it never ran.
-- In `koma-statechart`, activities and timers run in a work loop launched from the initial
+- In `actron-statechart`, activities and timers run in a work loop launched from the initial
   `enter {}`, so their transactions currently name the startup input as origin. Stage 2 replaces
   that path with the replay-ready command pipeline.
 - `Ignored` costs one pass over the action predicates per dispatch, only while probes are
   registered.
-- Follow-up in stage 1: `koma-observability` with the record envelope, `StoreSeq`/`GroupSeq` at
+- Follow-up in stage 1: `actron-observability` with the record envelope, `StoreSeq`/`GroupSeq` at
   publication, bounded retention, `PayloadPolicy` before retention, and the `Logger` adapter in
-  `koma-logging` that replaces `simpleLogging`'s `toString()` output.
+  `actron-logging` that replaces `simpleLogging`'s `toString()` output.
 
 ## Related
 

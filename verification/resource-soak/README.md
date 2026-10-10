@@ -39,7 +39,7 @@ these Stores and their UI consumers on an **owned fixed pool of four workers**, 
 separate owned writer worker for blocking journal I/O. Both pools are closed and their workers
 are terminated before each GC/memory snapshot; the report states this dispatcher configuration
 and requires zero owned workers after close. The common implementation is
-[ResourceSoak.kt](src/commonMain/kotlin/koma/soak/ResourceSoak.kt).
+[ResourceSoak.kt](src/commonMain/kotlin/actron/soak/ResourceSoak.kt).
 
 - Synthetic ASCII message bodies are approximately 4 KiB. Each Store's domain history retains
   at most 64 messages; there is no unbounded model history. Bursts deliberately exceed the

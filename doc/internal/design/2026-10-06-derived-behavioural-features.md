@@ -1,6 +1,6 @@
 # Derived behavioural features: first seven, version diff and transition matrix
 
-Scope selected from `koma-state-machine-derived-features.md`: items 1–7, followed by 9 and 10.
+Scope selected from `actron-state-machine-derived-features.md`: items 1–7, followed by 9 and 10.
 These APIs share the actual Machine selector and existing pure decision/invariant semantics.
 
 | Item | Public entry point | Contract |
@@ -101,7 +101,7 @@ val shrunk = machine.shrink(initial, failure.inputs) { original, candidate ->
 check(!shrunk.truncated)
 val regression = MachineScenario("reproduction", shrunk.failure.inputs)
 val rerun = machine.runScenario(initial, regression)
-// With the optional debug-only koma-timetravel module:
+// With the optional debug-only actron-timetravel module:
 val recording = machine.recordInputs(initial, regression.inputs)
 val replay = ReplaySession(machine, recording)
 ```
