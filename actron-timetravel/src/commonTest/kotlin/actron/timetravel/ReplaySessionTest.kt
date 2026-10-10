@@ -2,6 +2,8 @@
 
 package actron.timetravel
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
@@ -92,12 +94,12 @@ class ReplaySessionTest {
         root,
         listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root), AtomicState(content, parent = root)),
         listOf(
-            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
-            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, idle, Trigger.After(10.seconds), effect = "timeout"),
+            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("store")),
+            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, idle, Trigger.After(10.seconds), effect = actron.statechart.EffectKey("timeout")),
             Transition(content, loading, ActionMatcher.of<Act.Refresh>("Refresh")),
-            Transition(idle, idle, ActionMatcher.of<Act.Boom>("Boom"), guard = "boom"),
+            Transition(idle, idle, ActionMatcher.of<Act.Boom>("Boom"), guard = actron.statechart.GuardKey("boom")),
         ),
     )
 
@@ -169,7 +171,7 @@ class ReplaySessionTest {
         assertNull(session.verify())
         var matched = 0
         while (true) {
-            val step = session.stepForward() ?: break
+            val step = session.observedStepForward() ?: break
             assertIs<ReplayStep.Matched<Ctx, Act, Fetch, Ev>>(step)
             matched++
         }
@@ -198,9 +200,9 @@ class ReplaySessionTest {
         session.seek(recording.length)
         repeat(3) { assertTrue(session.stepBackward()) }
         assertEquals(recording.snapshotAt(recording.length - 3), session.snapshot)
-        repeat(3) { assertIs<ReplayStep.Matched<Ctx, Act, Fetch, Ev>>(session.stepForward()) }
+        repeat(3) { assertIs<ReplayStep.Matched<Ctx, Act, Fetch, Ev>>(session.observedStepForward()) }
         assertEquals(recording.snapshotAt(recording.length), session.snapshot)
-        assertNull(session.stepForward())
+        assertNull(session.observedStepForward())
         session.seek(0)
         assertTrue(!session.stepBackward())
         assertFailsWith<IllegalArgumentException> { session.seek(recording.length + 1) }
@@ -229,10 +231,10 @@ class ReplaySessionTest {
         assertTrue(mismatch.describe().startsWith("Replay diverged at step $firstLoaded"))
 
         session.seek(firstLoaded)
-        val step = session.stepForward()
+        val step = session.observedStepForward()
         assertIs<ReplayStep.Diverged<Ctx, Act, Fetch, Ev>>(step)
         assertEquals(firstLoaded, session.position, "a divergence does not advance")
-        assertIs<ReplayStep.Diverged<Ctx, Act, Fetch, Ev>>(session.stepForward())
+        assertIs<ReplayStep.Diverged<Ctx, Act, Fetch, Ev>>(session.observedStepForward())
         assertNull(session.verify(0, firstLoaded), "everything before it still matches")
     }
 
@@ -276,7 +278,7 @@ class ReplaySessionTest {
         val recorder = MachineRecorder(machine, Ctx(query = "other"))
         val start = machine.decide(machine.initialSnapshot(Ctx()), MachineInput.Start(MachineTime.Zero))
 
-        recorder.onCommitted(null, MachineInput.Start(MachineTime.Zero), start)
+        recorder.onCommitted(InputAttribution.Unattributed, MachineInput.Start(MachineTime.Zero), start)
 
         assertTrue(recorder.problem != null)
     }
@@ -296,7 +298,7 @@ class ReplaySessionTest {
         val failed = recording.steps.indexOfFirst { it is RecordedStep.Failed }
         val session = ReplaySession(machine, recording)
         session.seek(failed)
-        val step = session.stepForward()
+        val step = session.observedStepForward()
         val matched = assertIs<ReplayStep.Matched<Ctx, Act, Fetch, Ev>>(step)
         assertIs<DecisionOutcome.Failed>(matched.decision.outcome)
         assertEquals(FailureDescriptor(type = "IllegalStateException"), (recording.steps[failed] as RecordedStep.Failed).failure)

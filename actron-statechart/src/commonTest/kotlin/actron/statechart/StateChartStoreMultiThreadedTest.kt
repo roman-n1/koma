@@ -60,8 +60,8 @@ class StateChartStoreMultiThreadedTest {
             AtomicState(opened, ui),
         ),
         transitions = listOf(
-            Transition(closed, opened, toggle, effect = "count"),
-            Transition(opened, closed, toggle, effect = "count"),
+            Transition(closed, opened, toggle, effect = actron.statechart.EffectKey("count")),
+            Transition(opened, closed, toggle, effect = actron.statechart.EffectKey("count")),
         ),
     )
 

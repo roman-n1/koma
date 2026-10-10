@@ -37,15 +37,17 @@ import kotlin.time.Duration
  *
  * @param machine The machine to decide with; the checkpoint must be of its definition and version
  * @param start Where the branch begins
- * @param recording The run the checkpoint belongs to, for [reuseRecordedAnswers]; `null` when
- * there is none, in which case every answer comes from the caller
+ * @param recordedAnswers Supplies actual ordered command answers; by default all answers come from the caller
  */
 @ExperimentalActronApi
-class Branch<C, A : Action, CMD, E : Event>(
+class Branch<C : Any, A : Action, CMD : Any, E : Event>(
     private val machine: Machine<C, A, CMD, E>,
     start: ExecutorCheckpoint<C, CMD>,
-    private val recording: Recording<C, A, CMD, E>? = null,
+    private val recordedAnswers: (CommandRegistration<CMD>, StateId, MachineTime) -> List<MachineInput<A>> = { _, _, _ -> emptyList() },
 ) {
+    constructor(machine: Machine<C, A, CMD, E>, start: ExecutorCheckpoint<C, CMD>, recording: Recording<C, A, CMD, E>) :
+        this(machine, start, { registration, node, now -> recording.answersFor(registration, node, now) })
+
     init {
         require(start.snapshot.definition == machine.id && start.snapshot.version == machine.version) {
             "[Actron] The checkpoint is of ${start.snapshot.definition} ${start.snapshot.version}; the machine is ${machine.id} ${machine.version}"
@@ -61,7 +63,7 @@ class Branch<C, A : Action, CMD, E : Event>(
         private set
 
     private var lanes: Lanes<CMD> = start.lanes
-    private val ending = LinkedHashMap(start.ending)
+    private val ending: MutableMap<CommandId, CommandRegistration<CMD>> = start.ending.toMutableMap()
     private val decisions = mutableListOf<Decision<C, CMD, E>>()
 
     /** The executor's state the branch is at: a checkpoint of its own. */
@@ -142,43 +144,28 @@ class Branch<C, A : Action, CMD, E : Event>(
     /**
      * Answers the awaiting [command] the way the recording answered an equal command: same
      * command value, registered by the same node in the same lane. The recorded results,
-     * completion or failure are applied in their recorded order. `null` when there is no
-     * recording, the recording has no such command or no answer for it: the command keeps
+     * completion or failure are applied in their recorded order. An empty batch means no
+     * recorded answer was applied: the command keeps
      * awaiting, and the caller supplies the answer.
      */
-    fun reuseRecordedAnswers(command: CommandId): List<Decision<C, CMD, E>>? {
-        val recording = recording ?: return null
-        val registration = lanes.running[command] ?: ending[command] ?: return null
-        val node = snapshot.nodeOf(registration.scope) ?: return null
-        val recorded = recording.recordedRegistrations().firstOrNull { (recordedRegistration, recordedNode) ->
-            recordedRegistration.command == registration.command && recordedNode == node && recordedRegistration.lane == registration.lane
-        }?.first ?: return null
-        val answers = recording.steps.mapNotNull { step ->
-            when (val input = step.input) {
-                is MachineInput.CommandResult<A> -> if (input.command == recorded.id) MachineInput.CommandResult(command, input.action, now) else null
-                is MachineInput.CommandCompleted -> if (input.command == recorded.id) MachineInput.CommandCompleted(command, now) else null
-                is MachineInput.CommandFailed -> if (input.command == recorded.id) MachineInput.CommandFailed(command, input.failure, now) else null
-                else -> null
-            }
+    fun reuseRecordedAnswers(command: CommandId): List<Decision<C, CMD, E>> {
+        val registration: CommandRegistration<CMD> = when {
+            command in lanes.running -> lanes.running.getValue(command)
+            command in ending -> ending.getValue(command)
+            else -> return emptyList()
         }
-        if (answers.isEmpty()) return null
-        return answers.map { apply(it) }
+        for ((node, scope) in snapshot.activations) if (scope == registration.scope) {
+            return recordedAnswers(registration, node, now).map { apply(it) }
+        }
+        return emptyList()
     }
-
-    // The commands the recording registered, with the node that registered each: the ones its
-    // start already held and the ones its decisions added.
-    private fun Recording<C, A, CMD, E>.recordedRegistrations(): List<Pair<CommandRegistration<CMD>, StateId?>> =
-        start.registrations.values.map { it to start.snapshot.nodeOf(it.scope) } + steps.flatMap { step ->
-            if (step is RecordedStep.Committed) step.decision.commands.map { it to step.decision.snapshot.nodeOf(it.scope) } else emptyList()
-        }
 
     private fun requireAwaiting(command: CommandId) {
         if (command in lanes.running || command in ending) return
-        val lane = lanes.queued.entries.firstOrNull { (_, waiting) -> waiting.any { it.id == command } }?.key
-        throw IllegalArgumentException(
-            if (lane != null) "[Actron] Command $command is queued in lane $lane and has not started; it cannot be answered before the lane lets it run"
-            else "[Actron] Command $command is not awaiting in this branch",
-        )
+        for ((lane, waiting) in lanes.queued) if (waiting.any { it.id == command }) {
+            throw IllegalArgumentException("[Actron] Command $command is queued in lane $lane and has not started; it cannot be answered before the lane lets it run")
+        }
+        throw IllegalArgumentException("[Actron] Command $command is not awaiting in this branch")
     }
 
     private fun apply(input: MachineInput<A>): Decision<C, CMD, E> {
@@ -215,5 +202,26 @@ class Branch<C, A : Action, CMD, E : Event>(
         lanes = lanes.finished(id).lanes
     }
 
-    private fun MachineSnapshot<C>.nodeOf(scope: ActivationId): StateId? = activations.entries.firstOrNull { it.value == scope }?.key
+}
+
+/** Recorded command answers are genuine ordered input batches; a caller-driven branch reuses none. */
+private fun <C : Any, A : Action, CMD : Any, E : Event> Recording<C, A, CMD, E>.answersFor(
+    registration: CommandRegistration<CMD>, node: StateId, now: MachineTime,
+): List<MachineInput<A>> {
+    fun registrations(snapshot: MachineSnapshot<C>, commands: Collection<CommandRegistration<CMD>>): List<CommandRegistration<CMD>> =
+        commands.filter { candidate -> snapshot.activations[node] == candidate.scope }
+    val commands = registrations(start.snapshot, start.registrations.values) + steps.flatMap { step ->
+        if (step is RecordedStep.Committed) registrations(step.decision.snapshot, step.decision.commands) else emptyList()
+    }
+    for (recorded in commands) if (recorded.command == registration.command && recorded.lane == registration.lane) {
+        return buildList {
+            for (step in steps) when (val input = step.input) {
+                is MachineInput.CommandResult -> if (input.command == recorded.id) add(MachineInput.CommandResult(registration.id, input.action, now))
+                is MachineInput.CommandCompleted -> if (input.command == recorded.id) add(MachineInput.CommandCompleted(registration.id, now))
+                is MachineInput.CommandFailed -> if (input.command == recorded.id) add(MachineInput.CommandFailed(registration.id, input.failure, now))
+                else -> Unit
+            }
+        }
+    }
+    return emptyList()
 }

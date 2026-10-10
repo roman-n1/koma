@@ -2,6 +2,8 @@
 
 package actron.statechart.test
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.statechart.*
@@ -77,7 +79,7 @@ class DerivedFeaturesTest {
     @Test fun actualDriverCoverageIncludesGuardRejectionsAndCanBeMergedAcrossTests() = runTest {
         var calls = 0
         val guarded = Machine<Boolean, Action, Nothing, Event>(DefinitionId("coverage"), DefinitionVersion("1"),
-            StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), guard = "allowed")))) {
+            StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), guard = actron.statechart.GuardKey("allowed"))))) {
             guard("allowed") { snapshot, _ -> calls++; snapshot.context }
         }
         val denied = MachineTestDriver(guarded, false, this)
@@ -160,7 +162,7 @@ class DerivedFeaturesTest {
         assertFalse(minimal.truncated)
         assertEquals(3, minimal.failure.inputs.size)
         assertEquals(1, minimal.failure.snapshot.context)
-        assertEquals("IllegalStateException", minimal.failure.decisionFailure?.type)
+        assertEquals("IllegalStateException", minimal.failure.problems.filterIsInstance<SequenceProblem.Execution>().single().failure.typeLabel)
     }
 
     @Test fun allTransitionsStopsImmediatelyWithoutEvaluatingRemainingSiblingChoices() {
@@ -182,7 +184,7 @@ class DerivedFeaturesTest {
         assertFailsWith<IllegalArgumentException> { first.merge(second) }
         val recorder = MachineCoverageRecorder(machine)
         val foreign = next.decideExplained(next.initialSnapshot(Unit), MachineInput.Start(MachineTime.Zero))
-        assertFailsWith<IllegalArgumentException> { recorder.onDecided(null, MachineInput.Start(MachineTime.Zero), foreign) }
+        assertFailsWith<IllegalArgumentException> { recorder.onDecided(InputAttribution.Unattributed, MachineInput.Start(MachineTime.Zero), foreign) }
         assertTrue(recorder.snapshot().states.covered.isEmpty())
     }
 

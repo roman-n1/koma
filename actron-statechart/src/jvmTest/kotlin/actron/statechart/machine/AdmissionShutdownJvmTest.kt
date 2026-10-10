@@ -2,6 +2,8 @@
 
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import java.io.File
 import java.net.URLClassLoader
 import java.nio.file.Files
@@ -80,7 +82,7 @@ class AdmissionShutdownJvmTest {
         init {
             val root = StateId("root")
             val idle = StateId("idle")
-            val chart = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, root)), listOf(Transition(idle, idle, ActionMatcher.of<Tick>("tick"), effect = "increment")))
+            val chart = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, root)), listOf(Transition(idle, idle, ActionMatcher.of<Tick>("tick"), effect = actron.statechart.EffectKey("increment"))))
             val machine = Machine<Int, Tick, Nothing, Never>(DefinitionId("shutdown-counter"), DefinitionVersion("1"), chart) {
                 effect("increment") { count, _ -> count + 1 }
             }
@@ -202,7 +204,7 @@ class AdmissionShutdownJvmTest {
         val secondEntered = CountDownLatch(1)
         val secondRelease = CountDownLatch(1)
         val observer = object : DecisionObserver<Int, Tick, Nothing, Never> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<Tick>, decision: Decision<Int, Nothing, Never>) {
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<Tick>, decision: Decision<Int, Nothing, Never>) {
                 if (machineInput !is MachineInput.Dispatch) return
                 val first = decision.snapshot.context == 1
                 (if (first) firstEntered else secondEntered).countDown()
@@ -272,7 +274,7 @@ class AdmissionShutdownJvmTest {
     @Test fun inlineObserversCanReenterAdmissionAndCloseDuringThaw() = runBlocking {
         lateinit var store: MachineStore<Int, Tick, Nothing, Never>
         val observer = object : DecisionObserver<Int, Tick, Nothing, Never> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<Tick>, decision: Decision<Int, Nothing, Never>) {
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<Tick>, decision: Decision<Int, Nothing, Never>) {
                 if (machineInput !is MachineInput.Dispatch) return
                 if (decision.snapshot.context == 1) assertEquals(Admission.Accepted, store.admit(Tick))
                 else store.close()
@@ -298,7 +300,7 @@ class AdmissionShutdownJvmTest {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         val observer = object : DecisionObserver<Int, Tick, Nothing, Never> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<Tick>, decision: Decision<Int, Nothing, Never>) {
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<Tick>, decision: Decision<Int, Nothing, Never>) {
                 if (machineInput is MachineInput.Dispatch) {
                     entered.countDown()
                     check(release.await(10, TimeUnit.SECONDS))

@@ -1,5 +1,6 @@
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 
 plugins {
     alias(libs.plugins.android.kotlin.multiplatform.library) apply false
@@ -31,6 +32,34 @@ tasks.register("checkNullability") {
     group = "verification"
     description = "Rejects new nullable constructs and optional containers in library sources."
     dependsOn(":nullability-guard:checkPolicy")
+}
+
+val nullabilityPluginJar = layout.projectDirectory.file("verification/nullability-guard/build/libs/nullability-guard.jar")
+val nullabilityStrictMarker = layout.projectDirectory.file(".actron/nullability/strict")
+val finishingNullabilityMigration = gradle.startParameter.taskNames.any { it.substringAfterLast(':') == "finishMigration" }
+subprojects {
+    if (name.startsWith("actron-")) {
+        tasks.withType<KotlinCompilationTask<*>>().configureEach {
+            if (!name.contains("test", ignoreCase = true)) {
+                dependsOn(":nullability-guard:jar")
+                inputs.files(nullabilityPluginJar, nullabilityStrictMarker)
+                compilerOptions.freeCompilerArgs.addAll(
+                    "-Xplugin=${nullabilityPluginJar.asFile.absolutePath}",
+                    "-P", "plugin:actron-nullability:root=${rootProject.projectDir.absolutePath}",
+                    "-P", "plugin:actron-nullability:enforce=$finishingNullabilityMigration",
+                )
+            }
+        }
+    }
+}
+gradle.projectsEvaluated {
+    val libraryCompilations = subprojects.filter { it.name.startsWith("actron-") }.flatMap {
+        it.tasks.withType<KotlinCompilationTask<*>>().filter { task -> !task.name.contains("test", ignoreCase = true) }
+    }
+    tasks.named("checkNullability") { dependsOn(libraryCompilations) }
+    project(":nullability-guard").tasks.named("finishMigration") {
+        dependsOn(libraryCompilations)
+    }
 }
 
 // The time-travel modules are debug tooling (handoff §11, §12): no production module may depend

@@ -85,17 +85,17 @@ class StateChartHierarchyPropertyTest {
         // Entry starts right below a node that stayed active (or at the top).
         val top = result.entered.first()
         val topParent = chart.node(top)?.parent
-        assertTrue(topParent == null || (topParent in after.active && topParent !in result.entered), "seed $seed")
+        assertTrue(topParent == StateParent.Root || (topParent in after.active && topParent !in result.entered), "seed $seed")
         assertEquals(result.exited.distinct(), result.exited, "seed $seed")
         assertEquals(result.entered.distinct(), result.entered, "seed $seed")
     }
 
     private fun checkConfiguration(seed: Int, chart: StateChartDefinition, configuration: StateConfiguration) {
         val active = configuration.active
-        assertEquals(1, active.count { chart.node(it)?.parent == null }, "seed $seed: $active")
+        assertEquals(1, active.count { chart.node(it)?.parent == StateParent.Root }, "seed $seed: $active")
         for (id in active) {
             val node = assertNotNull(chart.node(id), "seed $seed")
-            node.parent?.let { assertTrue(it in active, "seed $seed: $id active without its parent") }
+            (node.parent as? StateId)?.let { assertTrue(it in active, "seed $seed: $id active without its parent") }
             val activeChildren = chart.childrenOf(id).count { it.id in active }
             assertEquals(if (node is CompoundState) 1 else 0, activeChildren, "seed $seed: $id has $activeChildren active children")
         }
@@ -121,7 +121,7 @@ class StateChartHierarchyPropertyTest {
             val depth = chart.states.maxOf { chart.ancestorsOf(it.id).size } + 1
             assertTrue(depth <= 4, "seed $seed: depth $depth")
             if (depth >= 3) deep++
-            if (chart.node(chart.initial)?.parent != null) nestedInitial++
+            if (chart.node(chart.initial)?.parent is StateId) nestedInitial++
             if (chart.transitions.any { chart.node(it.target) is CompoundState }) compoundTargets++
         }
         assertTrue(deep >= 100, "only $deep charts 3+ levels deep")
@@ -188,7 +188,7 @@ class StateChartHierarchyPropertyTest {
         assertEquals(StateConfiguration(setOf(chart.initial)), runtime.initialConfiguration(), "seed $seed")
         for (id in chart.states.map { it.id }) {
             for (action in RandomCharts.actions) {
-                val flat = chart.transitionsFrom(id).firstOrNull { HierarchyReference.matches(it.on, action) && (it.guard == null || table.holds(it.guard, action)) }
+                val flat = chart.transitionsFrom(id).firstOrNull { HierarchyReference.matches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action) && ((it.guard as? actron.statechart.GuardKey)?.name == null || table.holds((it.guard as actron.statechart.GuardKey).name, action)) }
                 val expected = flat?.let { StepResult.Transitioned(it) } ?: StepResult.Ignored
                 assertEquals(expected, runtime.step(RandomState(id), action), "seed $seed")
                 assertEquals(expected, runtime.step(StateConfiguration(setOf(id)), RandomState(id), action), "seed $seed")
@@ -225,25 +225,25 @@ class StateChartHierarchyPropertyTest {
         val nodes = first.values.toList()
         val issues = mutableListOf<ValidationIssue>()
         for (node in nodes) {
-            val parent = node.parent ?: continue
+            val parent = node.parent as? StateId ?: continue
             if (parent !in first) issues += ValidationIssue.UnknownParent(node.id, parent)
             else if (first[parent] is AtomicState) issues += ValidationIssue.AtomicParent(node.id, parent)
         }
         val onReportedCycle = mutableSetOf<StateId>()
         for (node in nodes) {
             // On a cycle iff following parents returns to the node.
-            var p = node.parent
+            var p = node.parent as? StateId
             var steps = 0
             while (p != null && p != node.id && steps <= nodes.size) {
-                p = first[p]?.parent
+                p = first[p]?.parent as? StateId
                 steps++
             }
             if (p != node.id || node.id in onReportedCycle) continue
             val cycle = mutableListOf(node.id)
-            var next = node.parent!!
+            var next = node.parent as StateId
             while (next != node.id) {
                 cycle += next
-                next = first.getValue(next).parent!!
+                next = first.getValue(next).parent as StateId
             }
             onReportedCycle += cycle
             issues += ValidationIssue.ParentCycle(cycle)
@@ -451,13 +451,13 @@ class StateChartHierarchyPropertyTest {
         // Transitions: each once, in declaration order within its block.
         val all = blocks.flatMap { b -> b.transitions.map { b.ref to it } }
         assertEquals(chart.transitions.size, all.size, "seed $seed")
-        fun line(t: Transition) = "${refOf.getValue(t.source)} --> ${refOf.getValue(t.target)} : ${t.on!!.name}" + (t.guard?.let { " [$it]" } ?: "")
+        fun line(t: Transition) = "${refOf.getValue(t.source)} --> ${refOf.getValue(t.target)} : ${(t.trigger as? actron.statechart.Trigger.OnAction)?.matcher!!.name}" + ((t.guard as? actron.statechart.GuardKey)?.name?.let { " [$it]" } ?: "")
         assertEquals(chart.transitions.map(::line).sorted(), all.map { it.second }.sorted(), "seed $seed")
         if (!wellFormed) return
 
         for (block in blocks) {
             val parent = block.ref?.let { idOf.getValue(it) }
-            val children = first.values.filter { it.parent == parent }
+            val children = first.values.filter { (it.parent as? StateId) == parent }
             // Inside a compound every child is declared; at the top only aliased atomic ones are.
             val expectedDeclared = children.filter { it !is CompoundState && (parent != null || refOf.getValue(it.id) != it.id.value) }.map { refOf.getValue(it.id) } +
                 (if (parent == null) ids.filter { it !in first && it !in plain }.map { refOf.getValue(it) } else emptyList())

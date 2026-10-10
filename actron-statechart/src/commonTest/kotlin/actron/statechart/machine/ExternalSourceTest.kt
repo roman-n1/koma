@@ -2,6 +2,8 @@
 
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
@@ -103,7 +105,7 @@ class ExternalSourceTest {
         val store = MachineStore(
             machine, Ctx(), CommandHandler<Nothing, Act> { _, _ -> }, executionScope, coroutineContext = dispatcher, admission = admission,
             observers = listOf(member, session.decisionsOf(listId), object : DecisionObserver<Ctx, Act, Nothing, Nothing> {
-                override fun onCommitted(input: InputId?, machineInput: MachineInput<Act>, decision: Decision<Ctx, Nothing, Nothing>) {
+                override fun onCommitted(input: InputAttribution, machineInput: MachineInput<Act>, decision: Decision<Ctx, Nothing, Nothing>) {
                     inputs += machineInput
                 }
             }),
@@ -183,14 +185,14 @@ class ExternalSourceTest {
         gate.complete(Unit)
         runCurrent()
 
-        val checkpoint = checkNotNull(cut.await())
+        val checkpoint = kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(cut.await()).checkpoint
         assertEquals(SourceSnapshot(pagingId, "paging", 1, mapOf("loaded" to "1", "generation" to "1")), checkpoint.sources.getValue(pagingId))
         assertEquals(listOf(0), (checkpoint.members.getValue(listId).snapshot.context as Ctx).pages, "the snapshot counts what the member decided")
         assertTrue(late.isCompleted && f.source.loaded == 2, "resumed after the cut: the load went through")
         assertEquals(listOf(0, 1), f.store.currentState.context.pages)
         val created = f.session.records().map { it.entry }.filterIsInstance<JournalEntry.CheckpointCreated>().single()
         assertEquals(JournalEntry.CheckpointCreated(listOf(listId), listOf("paging:list-1"), 0), created)
-        assertNull(f.session.records().first { it.entry is JournalEntry.CheckpointCreated }.store, "a record of the session itself")
+        assertEquals(actron.observability.RecordSubject.Session, f.session.records().first { it.entry is JournalEntry.CheckpointCreated }.store, "a record of the session itself")
         f.store.close()
     }
 
@@ -213,7 +215,7 @@ class ExternalSourceTest {
         advanceTimeBy(200.milliseconds)
         runCurrent()
 
-        assertNull(cut.await(), "the cut gave up on the source")
+        kotlin.test.assertIs<actron.statechart.machine.GroupCut.TimedOut>(cut.await(), "the cut gave up on the source")
         assertEquals(1, f.store.currentState.context.ticks, "the members were never frozen; the group went on")
         assertEquals(Admission.Accepted, f.source.load(0), "the paged source was resumed")
         runCurrent()

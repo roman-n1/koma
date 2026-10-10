@@ -69,7 +69,7 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
      * @return The derived value, read from Compose state
      */
     @Composable
-    fun <T> select(mapper: (S) -> T): T {
+    fun <T : Any> select(mapper: (S) -> T): T {
         val currentMapper = rememberUpdatedState(mapper)
         val derived = remember(this) { derivedStateOf { currentMapper.value(stateRef.value) } }
         return derived.value
@@ -102,19 +102,19 @@ class ViewStore<S : State, A : Action, E : Event> internal constructor(
      * Reads [source] (so Compose still tracks it) and returns its value while it is of type [S2],
      * otherwise the last value that was.
      */
-    private class NarrowedState<T, N : T>(
+    private class NarrowedState<T : Any, N : T>(
         private val source: ComposeState<T>,
         private val isNarrowed: (T) -> Boolean,
     ) : ComposeState<N> {
         // Seeded at creation: a callback that never read `state` during composition must still
         // find the last narrowed value after the Store moved on.
-        private var last: N? = source.value.takeIf(isNarrowed)?.narrowed()
+        private var last: N = source.value.narrowed()
 
         override val value: N
             get() {
                 val current = source.value
                 if (isNarrowed(current)) last = current.narrowed()
-                return last ?: current.narrowed()
+                return last
             }
 
         @Suppress("UNCHECKED_CAST")
@@ -217,7 +217,7 @@ fun <S : State, A : Action, E : Event> rememberViewStore(store: Store<S, A, E>, 
  * @return A ViewStore state holder backed by the remembered Store
  */
 @Composable
-fun <S : State, A : Action, E : Event> rememberViewStore(key: Any? = null, autoClose: Boolean = false, store: () -> Store<S, A, E>): ViewStore<S, A, E> {
+fun <S : State, A : Action, E : Event> rememberViewStore(key: Any = Unit, autoClose: Boolean = false, store: () -> Store<S, A, E>): ViewStore<S, A, E> {
     val rememberedStore = remember(key) { store() }
     val closeStoreOnDispose = remember(rememberedStore) { autoClose }
 

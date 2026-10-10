@@ -1,5 +1,11 @@
 package actron.soak
 
+import kotlin.test.assertEquals
+
+import kotlin.test.assertIs
+
+import actron.observability.file.SegmentActivity
+
 import actron.observability.JournalEntry
 import actron.observability.JournalSink
 import actron.observability.RecordingSession
@@ -36,10 +42,10 @@ class ResourceSoakTest {
         try {
             session.publish(JournalEntry.RecordingStopped)
             withTimeout(10_000) { opened.await() }
-            assertNotNull(sink.activeSegment)
+            assertIs<SegmentActivity.Writing>(sink.activeSegment)
             assertFailsWith<TimeoutCancellationException> { closeRecordingResources(session, sink, writerOwner, timeoutMillis = 100) }
             assertTrue(writerOwner.isCompleted && writerOwner.children.none())
-            assertNull(sink.activeSegment)
+            assertEquals(SegmentActivity.Closed, sink.activeSegment)
         } finally {
             writerOwner.cancelAndJoin()
             sink.close()

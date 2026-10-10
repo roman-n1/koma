@@ -18,7 +18,7 @@ class DslTest {
             }
         }
         val expected = StateChartDefinition(root, listOf(CompoundState(root, idle), AtomicState(idle, root), FinalState(done, root)),
-            listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), allowed.name, count.name)))
+            listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), (allowed.name)?.let { actron.statechart.GuardKey(it) } ?: actron.statechart.GuardCondition.Unconditional, (count.name)?.let { actron.statechart.EffectKey(it) } ?: actron.statechart.TransitionEffect.NoEffect)))
         assertEquals(expected, chart)
         assertTrue(chart.validate().isEmpty())
         assertTrue(chart.toMermaid().contains("[final]"))

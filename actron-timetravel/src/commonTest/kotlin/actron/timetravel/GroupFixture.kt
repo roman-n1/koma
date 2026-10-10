@@ -78,7 +78,7 @@ object GroupFixture {
 
     private val root = StateId("Root")
     private val idle = StateId("Idle")
-    private fun chart(matcher: ActionMatcher) = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, matcher, effect = "remember")))
+    private fun chart(matcher: ActionMatcher) = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, matcher, effect = actron.statechart.EffectKey("remember"))))
 
     val picker: Machine<PickerCtx, PickerAct, Fetch, PickerEv> = Machine(DefinitionId("picker"), DefinitionVersion("1"), chart(ActionMatcher.of<PickerAct.Pick>("Pick"))) {
         effect("remember") { c, a -> c.copy(last = (a as PickerAct.Pick).name) }
@@ -105,18 +105,18 @@ object GroupFixture {
     fun rootToPicker(event: RootEv): PickerAct? = (event as? RootEv.Applied)?.let { PickerAct.Ack(it.count) }
 
     fun MachineGroup.routeBoth() {
-        route(pickerId, rootId, ::pickerToRoot)
-        route(rootId, pickerId, ::rootToPicker)
+        route<PickerEv, RootAct>(pickerId, rootId) { event, carry -> pickerToRoot(event)?.let(carry) }
+        route<RootEv, PickerAct>(rootId, pickerId) { event, carry -> rootToPicker(event)?.let(carry) }
     }
 
     /** The same two routes as a request/reply pair named `apply`. */
     fun MachineGroup.routeAsPair(picker: MachineGroup.Member<PickerCtx, PickerAct, Fetch, PickerEv>, root: MachineGroup.Member<RootCtx, RootAct, Nothing, RootEv>) {
-        requestReply(picker, root, "apply", ::pickerToRoot, ::rootToPicker)
+        requestReply(picker, root, "apply", { event, carry -> pickerToRoot(event)?.let(carry) }, { event, carry -> rootToPicker(event)?.let(carry) })
     }
 
     val branchRoutes: List<GroupBranch.Route> = listOf(
-        GroupBranch.Route(pickerId, rootId) { (it as? PickerEv)?.let(::pickerToRoot) },
-        GroupBranch.Route(rootId, pickerId) { (it as? RootEv)?.let(::rootToPicker) },
+        GroupBranch.Route(pickerId, rootId) { event, carry -> (event as? PickerEv)?.let(::pickerToRoot)?.let(carry) },
+        GroupBranch.Route(rootId, pickerId) { event, carry -> (event as? RootEv)?.let(::rootToPicker)?.let(carry) },
     )
 
     /** A live, journaled, recorded group on a test dispatcher; [paired] routes as a request/reply pair. */

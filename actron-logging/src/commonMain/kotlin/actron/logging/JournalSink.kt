@@ -29,7 +29,7 @@ class LoggerJournalSink(
     private val format: (JournalRecord<*, *, *>) -> String = JournalFormat::line,
 ) : JournalSink {
     override suspend fun write(record: JournalRecord<*, *, *>) {
-        logger.log(severity = severity(record), tag = tag, throwable = null) { format(record) }
+        logger.log(severity = severity(record), tag = tag) { format(record) }
     }
 
     companion object {

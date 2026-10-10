@@ -24,7 +24,7 @@ import kotlin.time.Duration
  * @throws IllegalArgumentException if the lanes and [ending] are not a partition of the
  * snapshot's commands
  */
-data class ExecutorCheckpoint<C, CMD>(
+data class ExecutorCheckpoint<C : Any, CMD : Any>(
     val snapshot: MachineSnapshot<C>,
     val now: MachineTime,
     val lanes: Lanes<CMD> = Lanes(),
@@ -49,12 +49,16 @@ data class ExecutorCheckpoint<C, CMD>(
     val registrations: Map<CommandId, CommandRegistration<CMD>>
         get() = lanes.all + ending
 
-    /** What is left of the timer [id] at [now]; negative when it is due, `null` when not scheduled. */
-    fun remaining(id: TimerId): Duration? = snapshot.timers[id]?.let { it.deadline - now }
+    /** Reports time remaining for a scheduled timer, negative when overdue; false if unscheduled. */
+    fun remaining(id: TimerId, accept: (Duration) -> Unit): Boolean {
+        if (id !in snapshot.timers) return false
+        accept(snapshot.timers.getValue(id).deadline - now)
+        return true
+    }
 
     companion object {
         /** The checkpoint of a run that has not started: [snapshot] before any decision, clock at zero, nothing running. */
-        fun <C, CMD> initial(snapshot: MachineSnapshot<C>): ExecutorCheckpoint<C, CMD> {
+        fun <C : Any, CMD : Any> initial(snapshot: MachineSnapshot<C>): ExecutorCheckpoint<C, CMD> {
             require(!snapshot.isStarted) { "[Actron] An initial checkpoint is before the first decision; the snapshot is at revision ${snapshot.revision}" }
             return ExecutorCheckpoint(snapshot, MachineTime.Zero)
         }

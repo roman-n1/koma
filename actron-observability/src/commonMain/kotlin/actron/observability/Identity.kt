@@ -41,12 +41,13 @@ value class MachineGroupId(val value: String) {
  * name or a domain id such as a chat id.
  */
 @JvmInline
-value class StoreInstanceId(val value: String) {
+value class StoreInstanceId(val value: String) : RecordSubject {
     init {
         require(value.isNotBlank()) { "[Actron] StoreInstanceId must not be blank" }
     }
 
     override fun toString(): String = value
+    override fun withStore(visit: (StoreInstanceId) -> Unit) { visit(this) }
 }
 
 /**
@@ -55,16 +56,42 @@ value class StoreInstanceId(val value: String) {
  * the order of two records is the order they were published in, whatever thread published them.
  */
 @JvmInline
-value class GroupSeq(val value: Long) {
+value class GroupSeq(val value: Long) : JournalBoundary {
     override fun toString(): String = "#$value"
+    override fun precedes(record: GroupSeq): Boolean = value < record.value
+}
+
+/** A cut precedes all records or follows one published group record. */
+sealed interface JournalBoundary {
+    fun precedes(record: GroupSeq): Boolean
+    data object Beginning : JournalBoundary {
+        override fun precedes(record: GroupSeq): Boolean = true
+    }
 }
 
 /**
  * Position of a record among the records of one Store: 1 for the first, then dense.
  */
 @JvmInline
-value class StoreSeq(val value: Long) {
+value class StoreSeq(val value: Long) : RecordOrdinal {
     override fun toString(): String = "#$value"
+    override fun appendTo(text: StringBuilder) { text.append('/').append(value) }
+}
+
+/** A journal record describes a Store instance or the recording session itself. */
+sealed interface RecordSubject {
+    fun withStore(visit: (StoreInstanceId) -> Unit)
+    data object Session : RecordSubject {
+        override fun withStore(visit: (StoreInstanceId) -> Unit) {}
+    }
+}
+
+/** Session records use group order; Store records additionally carry a Store ordinal. */
+sealed interface RecordOrdinal {
+    fun appendTo(text: StringBuilder)
+    data object Session : RecordOrdinal {
+        override fun appendTo(text: StringBuilder) {}
+    }
 }
 
 /**

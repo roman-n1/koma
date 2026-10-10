@@ -24,6 +24,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -57,7 +58,7 @@ class CheckoutDemoTest {
                     controls.replay.seek(failure.position)
                     assertTrue(controls.replay.snapshot(CheckoutDemo.summaryId).isStarted, "The true recorded prefix must contain Summary Start")
                     controls.branchHere()
-                    val branch = checkNotNull(controls.branch)
+                    val branch = checkNotNull((controls.travel as actron.timetravel.compose.GroupTravel.Experiment).branch)
                     branch.answer(CheckoutDemo.answers.first(), branch.awaiting(CheckoutDemo.cartId).single().id)
                     assertEquals(CartContext(20, 100, 80), branch.snapshot(CheckoutDemo.cartId).context)
                     assertEquals(SummaryContext(80), branch.snapshot(CheckoutDemo.summaryId).context)
@@ -129,24 +130,24 @@ class CheckoutDemoTest {
 
             val controls = loaded.controls(fixed = true)
             controls.replay.verify()
-            val failure = controls.replay.verification.orEmpty().filterIsInstance<GroupMismatch.Replay>().single()
+            val failure = (controls.replay.verification as actron.timetravel.compose.GroupVerification.Checked).problems.filterIsInstance<GroupMismatch.Replay>().single()
             assertEquals(CheckoutDemo.cartId, failure.store)
             assertTrue(failure.mismatch.differences.any { "context" in it })
             controls.replay.seek(failure.position)
             val checkpoints = controls.replay.members.associateWith { controls.replay.checkpoint(it) }
             controls.replay.stepForward()
-            assertNotNull(controls.replay.divergence)
+            assertIs<actron.timetravel.compose.GroupReplayMovement.Diverged>(controls.replay.movement)
             assertEquals(failure.position, controls.replay.position)
             assertTrue(controls.replay.snapshot(CheckoutDemo.cartId).isActive(CheckoutDemo.loading))
 
             controls.branchHere()
-            val branch = checkNotNull(controls.branch)
+            val branch = checkNotNull((controls.travel as actron.timetravel.compose.GroupTravel.Experiment).branch)
             branch.answer(CheckoutDemo.answers.first(), branch.awaiting(CheckoutDemo.cartId).single().id)
             assertEquals(CartContext(20, 100, 80), branch.snapshot(CheckoutDemo.cartId).context)
             assertEquals(SummaryContext(80), branch.snapshot(CheckoutDemo.summaryId).context)
             assertEquals(checkpoints, controls.replay.members.associateWith { controls.replay.checkpoint(it) })
             controls.returnToReplay()
-            assertNotNull(controls.replay.divergence)
+            assertIs<actron.timetravel.compose.GroupReplayMovement.Diverged>(controls.replay.movement)
             assertEquals(failure.position, controls.replay.position)
             assertEquals(1, calls.get(), "replay, verification and branch must never re-execute the price handler")
             assertEquals(loaded.recording.order, CheckoutDemo.load(recorded.directory).recording.order)

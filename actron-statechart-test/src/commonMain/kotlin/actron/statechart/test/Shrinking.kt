@@ -5,30 +5,33 @@ import actron.core.Event
 import actron.statechart.machine.*
 
 /** Replay attempts and the smallest reproducing prefix found within the budget. */
-data class ShrinkReport<C, A : Action>(
+data class ShrinkReport<C : Any, A : Action>(
     val failure: SequenceFailure<C, A>,
     val attempts: Int,
     val truncated: Boolean,
 )
 
 /** Replays inputs from the same snapshot and reports the first failure, without executing IO. */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.replaySequence(
-    initial: MachineSnapshot<C>, inputs: List<MachineInput<A>>,
-): SequenceFailure<C, A>? {
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.replaySequence(
+    initial: MachineSnapshot<C>, inputs: List<MachineInput<A>>, accept: (SequenceFailure<C, A>) -> Unit,
+): Boolean {
     val initialViolations = if (initial.isStarted) checkInvariants(initial) else {
         require(initial.definition == id && initial.version == version) { "[Actron] Snapshot belongs to another machine or version" }
         emptyList()
     }
-    if (initialViolations.isNotEmpty()) return SequenceFailure(emptyList(), initial, initialViolations)
+    if (initialViolations.isNotEmpty()) {
+        accept(SequenceFailure(emptyList(), initial, listOf(SequenceProblem.Invariants(initialViolations))))
+        return true
+    }
     var snapshot = initial
     val prefix = mutableListOf<MachineInput<A>>()
     for (input in inputs) {
         prefix += input
         val decision = decide(snapshot, input)
-        sequenceFailure(prefix, decision)?.let { return it }
+        if (sequenceFailure(prefix, decision, accept)) return true
         snapshot = decision.snapshot
     }
-    return null
+    return false
 }
 
 /**
@@ -39,20 +42,22 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.replaySequence(
  * An untruncated result is deletion-minimal, not guaranteed globally shortest. No payload shrinking
  * or reassigning recorded command ids is implied. [maxAttempts] bounds replay work.
  */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.shrink(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.shrink(
     initial: MachineSnapshot<C>, inputs: List<MachineInput<A>>, maxAttempts: Int = 1_000,
 ): ShrinkReport<C, A> = shrink(initial, inputs, maxAttempts) { original, candidate ->
     candidate.identities.any { it in original.identities }
 }
 
 /** Custom semantic failure matching; the pure predicate must accept the original failure itself. */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.shrink(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.shrink(
     initial: MachineSnapshot<C>, inputs: List<MachineInput<A>>, maxAttempts: Int = 1_000,
     preservesFailure: (original: SequenceFailure<C, A>, candidate: SequenceFailure<C, A>) -> Boolean,
 ): ShrinkReport<C, A> {
     require(maxAttempts > 0) { "[Actron] Shrinking needs a positive attempt budget" }
     var attempts = 1
-    var best = requireNotNull(replaySequence(initial, inputs)) { "[Actron] Sequence does not fail" }
+    var observed: () -> SequenceFailure<C, A> = { error("[Actron] Failure callback was not called") }
+    require(replaySequence(initial, inputs) { failure -> observed = { failure } }) { "[Actron] Sequence does not fail" }
+    var best = observed()
     val original = best
     require(preservesFailure(original, original)) { "[Actron] Preservation predicate rejected the original failure" }
     var size = maxOf(1, best.inputs.size / 2)
@@ -64,12 +69,13 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.shrink(
             if (attempts >= maxAttempts) { truncated = true; break }
             val candidate = best.inputs.take(position) + best.inputs.drop(position + size)
             attempts++
-            val failure = replaySequence(initial, candidate)
-            if (failure != null && preservesFailure(original, failure)) {
-                best = failure
-                reduced = true
-                break
+            replaySequence(initial, candidate) { failure ->
+                if (preservesFailure(original, failure)) {
+                    best = failure
+                    reduced = true
+                }
             }
+            if (reduced) break
             position += size
         }
         if (truncated) break

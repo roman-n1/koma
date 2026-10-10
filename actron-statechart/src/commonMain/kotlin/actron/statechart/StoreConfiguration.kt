@@ -45,7 +45,7 @@ open class StoreConfiguration<S : State, A : Action, E : Event> internal constru
 
 /** Recovery of chart data without access to configuration, timers, or arbitrary state writes. */
 @ActronStoreDsl
-interface ChartRecoveryScope<C, E : Event, T : Exception> {
+interface ChartRecoveryScope<C : Any, E : Event, T : Exception> {
     /** The underlying handler scope, for extensions such as `store.message(...)`. */
     val store: StoreScope
     /** The failure being handled. */
@@ -58,7 +58,7 @@ interface ChartRecoveryScope<C, E : Event, T : Exception> {
 
 /** Chart runtime settings and recovery handlers which can change context only. */
 @ActronStoreDsl
-class ChartStoreConfiguration<C, A : Action, E : Event> internal constructor(
+class ChartStoreConfiguration<C : Any, A : Action, E : Event> internal constructor(
     delegate: StoreBuilder<ChartState<C>, A, E>,
 ) : StoreConfiguration<ChartState<C>, A, E>(delegate) {
     /**

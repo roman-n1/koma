@@ -41,24 +41,33 @@ class GroupReplayControls(val session: GroupReplaySession) {
     var position: Int by mutableStateOf(session.position)
         private set
 
-    var divergence: GroupMismatch? by mutableStateOf(null)
+    var movement: GroupReplayMovement by mutableStateOf(GroupReplayMovement.Open)
         private set
 
-    /** All problems found by the last [verify], or null before verification. Does not move. */
-    var verification: List<GroupMismatch>? by mutableStateOf(null)
+    /** Whether verification ran, with every problem it found. Does not move. */
+    var verification: GroupVerification by mutableStateOf(GroupVerification.Unchecked)
         private set
 
     val length: Int get() = session.length
     val members: List<StoreInstanceId> = session.members.keys.sortedBy { it.value }
     val canStepBackward: Boolean get() = position > 0
-    val canStepForward: Boolean get() = position < length && divergence == null
+    val canStepForward: Boolean get() = position < length && movement is GroupReplayMovement.Open
 
-    val forwardUnavailable: String?
-        get() = divergence?.explain() ?: if (position == length) "at the end of the group recording" else null
+    val forwardAvailability: actron.timetravel.inspect.Availability
+        get() {
+            val current = movement
+            if (current is GroupReplayMovement.Diverged) return actron.timetravel.inspect.Availability.Unavailable(listOf(current.mismatch.explain()))
+            if (position == length) return actron.timetravel.inspect.Availability.Unavailable(listOf("at the end of the group recording"))
+            return actron.timetravel.inspect.Availability.Available
+        }
 
-    /** The failing input, or the last input before the cursor; null at the initial position. */
-    val selected: GroupReplayPosition?
-        get() = (divergence?.position ?: (position - 1)).takeIf { it in 0 until length }?.let(::at)
+    val hasSelection: Boolean get() = movement is GroupReplayMovement.Diverged || position > 0
+    fun selectedPosition(): GroupReplayPosition {
+        val current = movement
+        val index = if (current is GroupReplayMovement.Diverged) current.mismatch.position else position - 1
+        check(index in 0 until length) { "[Actron] Before the first recorded group input" }
+        return at(index)
+    }
 
     fun at(index: Int): GroupReplayPosition {
         val step = session.recording.order[index]
@@ -83,28 +92,39 @@ class GroupReplayControls(val session: GroupReplaySession) {
     fun stepForward() {
         if (!canStepForward) return
         when (val step = session.stepForward()) {
-            null -> Unit
-            is GroupReplayStep.Matched -> divergence = null
-            is GroupReplayStep.Diverged -> divergence = step.mismatch
+            is GroupReplayStep.Finished -> Unit
+            is GroupReplayStep.Matched -> movement = GroupReplayMovement.Open
+            is GroupReplayStep.Diverged -> movement = GroupReplayMovement.Diverged(step.mismatch)
         }
         position = session.position
     }
 
     fun stepBackward() {
         session.stepBackward()
-        divergence = null
+        movement = GroupReplayMovement.Open
         position = session.position
     }
 
     fun seek(target: Int) {
         session.seek(target.coerceIn(0, length))
-        divergence = null
+        movement = GroupReplayMovement.Open
         position = session.position
     }
 
     fun verify() {
-        verification = session.verify()
+        verification = GroupVerification.Checked(session.verify())
     }
+}
+
+@ExperimentalActronApi
+sealed interface GroupReplayMovement {
+    data object Open : GroupReplayMovement
+    data class Diverged(val mismatch: GroupMismatch) : GroupReplayMovement
+}
+@ExperimentalActronApi
+sealed interface GroupVerification {
+    data object Unchecked : GroupVerification
+    data class Checked(val problems: List<GroupMismatch>) : GroupVerification
 }
 
 @OptIn(ExperimentalActronApi::class)

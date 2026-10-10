@@ -8,12 +8,12 @@ import actron.core.State
  * What the journal keeps of a state, action or event, as decided by the [PayloadPolicy] before
  * the record is retained anywhere.
  */
-sealed interface Payload<out T> {
+sealed interface Payload<out T : Any> {
     /**
      * The live object, kept as is. For debug recordings the policy explicitly allows; the object
      * is then also what the sinks print.
      */
-    data class Retained<out T>(val value: T) : Payload<T>
+    data class Retained<out T : Any>(val value: T) : Payload<T>
 
     /**
      * A safe projection: a label chosen by the policy and the fields it allowed, already masked
@@ -40,45 +40,88 @@ sealed interface Payload<out T> {
     data object Unavailable : Payload<Nothing>
 }
 
-/**
- * A safe description of a failure: never the `Throwable` itself, and by default without its
- * message, which may carry data the logs must not.
- *
- * @property type A label for the kind of failure, or `null` when the policy withholds it
- * @property message The message, only when the policy allows messages
- * @property cause The description of the cause, so causality survives sanitization
- * @property suppressed The descriptions of the suppressed exceptions
- */
-data class FailureDescriptor(
-    val type: String?,
-    val message: String? = null,
-    val cause: FailureDescriptor? = null,
-    val suppressed: List<FailureDescriptor> = emptyList(),
-) {
-    companion object {
-        /**
-         * A descriptor for a failure the policy could not describe.
-         */
-        val Unavailable: FailureDescriptor = FailureDescriptor(type = null)
+/** Disclosed failure metadata. These profiles preserve whether each field was withheld. */
+sealed interface FailureDetails {
+    val attributes: Map<String, String>
 
-        /**
-         * Describes [error] with the simple class names of it, its causes and its suppressed
-         * exceptions, and with the messages only when [includeMessages] is true. Causes are
-         * followed [maxDepth] levels down, and a cycle stops the walk.
-         */
+    data object Redacted : FailureDetails {
+        override val attributes: Map<String, String> = emptyMap()
+    }
+    data class MetadataOnly(val type: String) : FailureDetails {
+        override val attributes: Map<String, String> get() = mapOf("type" to type)
+    }
+    data class Detailed(val type: String, val message: String) : FailureDetails {
+        override val attributes: Map<String, String> get() = mapOf("type" to type, "message" to message)
+    }
+    /** Legacy/custom policies can disclose a message while withholding its class name. */
+    data class AnonymousMessage(val message: String) : FailureDetails {
+        override val attributes: Map<String, String> get() = mapOf("message" to message)
+    }
+}
+
+/** Edges of the sanitized exception graph, retained in their original order. */
+sealed interface FailureRelation {
+    val failure: FailureDescriptor
+    data class Cause(override val failure: FailureDescriptor) : FailureRelation
+    data class Suppressed(override val failure: FailureDescriptor) : FailureRelation
+}
+
+/** A sanitized failure graph. It never retains a Throwable or an undisclosed message. */
+data class FailureDescriptor(
+    val details: FailureDetails,
+    val related: List<FailureRelation> = emptyList(),
+) {
+    init { require(related.count { it is FailureRelation.Cause } <= 1) { "[Actron] A failure has one primary cause" } }
+    constructor(type: String) : this(FailureDetails.MetadataOnly(type))
+    constructor(type: String, message: String) : this(FailureDetails.Detailed(type, message))
+    constructor(type: String, cause: FailureDescriptor) : this(FailureDetails.MetadataOnly(type), listOf(FailureRelation.Cause(cause)))
+    constructor(type: String, message: String, cause: FailureDescriptor, suppressed: List<FailureDescriptor> = emptyList()) :
+        this(FailureDetails.Detailed(type, message), listOf(FailureRelation.Cause(cause)) + suppressed.map { FailureRelation.Suppressed(it) })
+
+    /** Label for textual identities; withheld metadata is never serialized as this display text. */
+    val typeLabel: String get() = details.attributes["type"] ?: "null"
+    val suppressed: List<FailureDescriptor> get() = related.filterIsInstance<FailureRelation.Suppressed>().map { it.failure }
+    val hasCause: Boolean get() = related.any { it is FailureRelation.Cause }
+
+    fun withType(accept: (String) -> Unit) {
+        if ("type" in details.attributes) accept(details.attributes.getValue("type"))
+    }
+    fun withMessage(accept: (String) -> Unit) {
+        if ("message" in details.attributes) accept(details.attributes.getValue("message"))
+    }
+    fun withCause(accept: (FailureDescriptor) -> Unit): Boolean {
+        for (link in related) if (link is FailureRelation.Cause) { accept(link.failure); return true }
+        return false
+    }
+    fun sameType(other: FailureDescriptor): Boolean {
+        val left = details.attributes; val right = other.details.attributes
+        return ("type" in left) == ("type" in right) && ("type" !in left || left.getValue("type") == right.getValue("type"))
+    }
+
+    companion object {
+        val Unavailable: FailureDescriptor = FailureDescriptor(FailureDetails.Redacted)
+
+        /** Follows causes to [maxDepth], excludes cycles, and discloses messages only on request. */
         fun of(error: Throwable, includeMessages: Boolean = false, maxDepth: Int = 8): FailureDescriptor =
             describe(error, includeMessages, maxDepth, mutableSetOf())
 
         private fun describe(error: Throwable, includeMessages: Boolean, depth: Int, seen: MutableSet<Throwable>): FailureDescriptor {
             seen += error
-            val cause = error.cause?.takeIf { depth > 0 && it !in seen }?.let { describe(it, includeMessages, depth - 1, seen) }
-            val suppressed = if (depth > 0) error.suppressedExceptions.filter { it !in seen }.map { describe(it, includeMessages, depth - 1, seen) } else emptyList()
-            return FailureDescriptor(
-                type = error::class.simpleName,
-                message = error.message.takeIf { includeMessages },
-                cause = cause,
-                suppressed = suppressed,
-            )
+            val related = mutableListOf<FailureRelation>()
+            if (depth > 0) {
+                error.cause?.let { cause ->
+                    if (cause !in seen) related += FailureRelation.Cause(describe(cause, includeMessages, depth - 1, seen))
+                }
+                val suppressed = error.suppressedExceptions.filter { it !in seen }
+                for (failure in suppressed) related += FailureRelation.Suppressed(describe(failure, includeMessages, depth - 1, seen))
+            }
+            var details: FailureDetails = FailureDetails.Redacted
+            error::class.simpleName?.let { details = FailureDetails.MetadataOnly(it) }
+            if (includeMessages) error.message?.let { message ->
+                val named = details
+                details = if (named is FailureDetails.MetadataOnly) FailureDetails.Detailed(named.type, message) else FailureDetails.AnonymousMessage(message)
+            }
+            return FailureDescriptor(details, related)
         }
     }
 }

@@ -1,5 +1,7 @@
 package actron.diagnostics
 
+import actron.core.InputAttribution
+
 import actron.core.*
 import actron.observability.StoreInstanceId
 import actron.observability.FailureDescriptor
@@ -51,10 +53,10 @@ class CausalTraceTest {
         val send = MachineInput.Dispatch(Go, MachineTime.Zero)
         observer.onDecided(InputId(1), send, machine.decideExplained(base, send))
         val stale = MachineInput.CommandCompleted(CommandId(999), MachineTime.Zero)
-        observer.onDecided(null, stale, machine.decideExplained(base, stale))
+        observer.onDecided(InputAttribution.Unattributed, stale, machine.decideExplained(base, stale))
         val event = hub.snapshot().single()
         assertTrue(event.incomplete)
-        assertNull(event.origin.input)
+        assertEquals(InputAttribution.Unattributed, event.origin.input)
         assertTrue(event.trace.value.contains("unknown"))
         assertEquals("ignored:StaleCommand", event.outcome)
     }
@@ -74,12 +76,27 @@ class CausalTraceTest {
         assertEquals(hub.snapshot().first().origin, event.parent)
     }
 
+    @Test fun redactedDecisionTypeFallsBackToCommandMetadataWithoutRetainingMessages() {
+        val origin = TraceOrigin(StoreInstanceId("privacy"), InputId(1), 1)
+        val event = CausalTraceEvent(DefinitionId("trace"), DefinitionVersion("1"), origin, TraceLineage.Root(origin),
+            "command-failed", MachineTime.Zero, TraceProvenance.Command(CommandId(2)), emptyList(), emptyList(), emptyList(),
+            TraceAssessment.Receipt("failed", listOf(
+                TraceFault.of(FailureSource.Decision, FailureDescriptor.Unavailable),
+                TraceFault.of(FailureSource.Command, FailureDescriptor("RemoteFailure", "message-secret")),
+            )))
+        val attributes = event.attributes()
+        assertEquals("RemoteFailure", attributes["actron.failure.type"])
+        assertEquals("Decision", attributes["actron.failure.source"], "the decision is the primary failure even when its type was withheld")
+        assertFalse(attributes.containsKey("actron.failure.typeLabel"), "the established exporter key is unchanged")
+        assertFalse(event.toString().contains("message-secret"), "a trace must discard private messages before retention")
+    }
+
     private class Storage : DurableMachineStorage<Int, String> {
         var checkpoint: DurableCheckpoint<Int, String>? = null
         var reject = false
-        override suspend fun load(): DurableCheckpoint<Int, String>? = checkpoint
-        override suspend fun commit(expectedGeneration: Long?, checkpoint: DurableCheckpoint<Int, String>): Boolean {
-            if (reject || expectedGeneration != this.checkpoint?.generation) return false
+        override suspend fun read(accept: (DurableCheckpoint<Int, String>) -> Unit): Boolean { checkpoint?.let(accept); return checkpoint != null }
+        override suspend fun commit(expectedGeneration: actron.statechart.machine.DurableGeneration, checkpoint: DurableCheckpoint<Int, String>): Boolean {
+            if (reject || expectedGeneration != (this.checkpoint?.generation?.let { actron.statechart.machine.DurableGeneration.Existing(it) } ?: actron.statechart.machine.DurableGeneration.Fresh)) return false
             this.checkpoint = checkpoint
             return true
         }
@@ -88,12 +105,12 @@ class CausalTraceTest {
     @Test fun persistedCommitSupportsExplicitOutboxProvenanceWithoutInventingGuardObservations() = runTest {
         val machine = machine(); val hub = CausalTraceHub(); val store = StoreInstanceId("durable")
         val storage = Storage()
-        val durable = DurableMachine(machine, storage) { IdempotencyKey("operation") }
+        val durable = DurableMachine(machine, storage) { _, classify -> classify(IdempotencyKey("operation")) }
         durable.initialize(0, MachineTime.Zero)
         val sent = durable.commit(MachineInput.Dispatch(Go, MachineTime.Zero))
         val registration = sent.checkpoint.outbox.values.single().registration
         val first = hub.recordPersisted(machine, store, InputId(1), sent)
-        val completed = assertNotNull(durable.executeNext(DurableCommandHandler { _, _, _ -> null }) { MachineTime.Zero })
+        val completed = assertNotNull(durable.executeObserved(DurableCommandHandler { _, _, _, emit -> }) { MachineTime.Zero })
         val next = hub.recordPersisted(machine, store, InputId(2), completed, registration)
         assertEquals(first.origin, next.parent)
         assertEquals(first.trace, next.trace)
@@ -104,7 +121,7 @@ class CausalTraceTest {
 
     @Test fun failedStorageCommitProducesNoPersistedDiagnosticEvent() = runTest {
         val machine = machine(); val storage = Storage(); val hub = CausalTraceHub()
-        val durable = DurableMachine(machine, storage) { IdempotencyKey("operation") }
+        val durable = DurableMachine(machine, storage) { _, classify -> classify(IdempotencyKey("operation")) }
         durable.initialize(0, MachineTime.Zero)
         storage.reject = true
         assertFailsWith<DurableConflictException> {
@@ -113,4 +130,20 @@ class CausalTraceTest {
         }
         assertTrue(hub.snapshot().isEmpty())
     }
+}
+
+private suspend fun <C : Any, A : actron.core.Action, CMD : Any, E : actron.core.Event> DurableMachine<C, A, CMD, E>.executeObserved(
+    handler: DurableCommandHandler<CMD, A>, now: () -> MachineTime,
+): DurableCommit<C, CMD, E>? {
+    var observed: DurableCommit<C, CMD, E>? = null
+    val executed = executeNext(handler, { check(observed == null); observed = it }, now)
+    kotlin.test.assertEquals(observed != null, executed)
+    return observed
+}
+
+private suspend fun <C : Any, A : actron.core.Action, CMD : Any, E : actron.core.Event> DurableMachine<C, A, CMD, E>.restoreObserved(): DurableCheckpoint<C, CMD>? {
+    var observed: DurableCheckpoint<C, CMD>? = null
+    val found = restore { check(observed == null); observed = it }
+    kotlin.test.assertEquals(observed != null, found)
+    return observed
 }

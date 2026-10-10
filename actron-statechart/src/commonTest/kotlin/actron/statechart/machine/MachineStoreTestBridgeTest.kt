@@ -90,7 +90,7 @@ class MachineStoreTestBridgeTest {
         listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root), AtomicState(content, parent = root)),
         listOf(
             Transition(idle, loading, ActionMatcher.of<Act.Load>("Load")),
-            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "count"),
+            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("count")),
             Transition(content, loading, ActionMatcher.of<Act.Load>("Load")),
         ),
     )
@@ -314,7 +314,7 @@ class MachineStoreTestBridgeTest {
                 }
                 launch {
                     repeat(30) {
-                        if (group.checkpoint(5.seconds) == null) failedCuts++
+                        if (group.checkpoint(5.seconds) !is actron.statechart.machine.GroupCut.Ready) failedCuts++
                         delay(Random.nextLong(0, 2).milliseconds)
                     }
                 }

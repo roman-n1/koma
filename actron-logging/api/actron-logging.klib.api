@@ -7,7 +7,8 @@
 
 // Library unique name: <io.github.roman-n1:actron-logging>
 abstract fun interface actron.logging/Logger { // actron.logging/Logger|null[0]
-    abstract fun log(actron.logging/Logger.Severity, kotlin/String, kotlin/Throwable?, kotlin/Function0<kotlin/String>) // actron.logging/Logger.log|log(actron.logging.Logger.Severity;kotlin.String;kotlin.Throwable?;kotlin.Function0<kotlin.String>){}[0]
+    abstract fun log(actron.logging/Logger.Severity, kotlin/String, kotlin/Function0<kotlin/String>) // actron.logging/Logger.log|log(actron.logging.Logger.Severity;kotlin.String;kotlin.Function0<kotlin.String>){}[0]
+    open fun log(actron.logging/Logger.Severity, kotlin/String, kotlin/Throwable, kotlin/Function0<kotlin/String>) // actron.logging/Logger.log|log(actron.logging.Logger.Severity;kotlin.String;kotlin.Throwable;kotlin.Function0<kotlin.String>){}[0]
 
     final enum class Severity : kotlin/Enum<actron.logging/Logger.Severity> { // actron.logging/Logger.Severity|null[0]
         enum entry Debug // actron.logging/Logger.Severity.Debug|null[0]
@@ -36,7 +37,8 @@ final class actron.logging/LoggerJournalSink : actron.observability/JournalSink 
 
 final object actron.logging/DefaultLogger : actron.logging/Logger { // actron.logging/DefaultLogger|null[0]
     final fun disable() // actron.logging/DefaultLogger.disable|disable(){}[0]
-    final fun log(actron.logging/Logger.Severity, kotlin/String, kotlin/Throwable?, kotlin/Function0<kotlin/String>) // actron.logging/DefaultLogger.log|log(actron.logging.Logger.Severity;kotlin.String;kotlin.Throwable?;kotlin.Function0<kotlin.String>){}[0]
+    final fun log(actron.logging/Logger.Severity, kotlin/String, kotlin/Function0<kotlin/String>) // actron.logging/DefaultLogger.log|log(actron.logging.Logger.Severity;kotlin.String;kotlin.Function0<kotlin.String>){}[0]
+    final fun log(actron.logging/Logger.Severity, kotlin/String, kotlin/Throwable, kotlin/Function0<kotlin/String>) // actron.logging/DefaultLogger.log|log(actron.logging.Logger.Severity;kotlin.String;kotlin.Throwable;kotlin.Function0<kotlin.String>){}[0]
 }
 
 final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.logging/simpleLogging(kotlin/String = ..., actron.logging/Logger.Severity = ..., actron.logging/Logger = ..., kotlin.coroutines/CoroutineContext = ...): actron.core/Plugin<#A, #B, #C> // actron.logging/simpleLogging|simpleLogging(kotlin.String;actron.logging.Logger.Severity;actron.logging.Logger;kotlin.coroutines.CoroutineContext){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]

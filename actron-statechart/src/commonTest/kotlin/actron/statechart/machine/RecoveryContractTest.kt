@@ -16,7 +16,7 @@ class RecoveryContractTest {
         val ordinary = executor.recoveryContract().commands.single()
         assertEquals(RecoveryPolicy.CancelOnExit, ordinary.policy)
         assertFalse(ordinary.survivesExit)
-        assertNull(ordinary.mayReexecute)
+        assertEquals(RepeatSafety.ApplicationDecision, ordinary.repeatSafety)
         assertTrue(ordinary.hasPersistedPayload)
         val key = IdempotencyKey("business-operation")
         val checkpoint = DurableCheckpoint(0, start.snapshot, MachineTime.Zero,
@@ -24,12 +24,12 @@ class RecoveryContractTest {
         val durable = checkpoint.recoveryContract().commands.single()
         assertEquals(RecoveryPolicy.DurableIdempotent, durable.policy)
         assertTrue(durable.survivesExit)
-        assertEquals(true, durable.mayReexecute)
+        assertEquals(RepeatSafety.IdempotentRetry, durable.repeatSafety)
         assertEquals(2, durable.attempts)
         val receipt = checkpoint.copy(snapshot = start.snapshot.copy(commands = emptyMap()),
             outbox = mapOf(key to checkpoint.outbox.getValue(key).copy(status = DurableStatus.Completed)))
             .recoveryContract().commands.single()
         assertEquals(RecoveryPolicy.CompletedReceipt, receipt.policy)
-        assertEquals(false, receipt.mayReexecute)
+        assertEquals(RepeatSafety.ReceiptSuppresses, receipt.repeatSafety)
     }
 }

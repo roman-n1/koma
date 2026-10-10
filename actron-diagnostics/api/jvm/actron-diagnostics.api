@@ -3,49 +3,40 @@ public final class actron/diagnostics/BehaviouralDiagnosticException : java/lang
 }
 
 public final class actron/diagnostics/CausalTraceEvent {
-	public synthetic fun <init> (Lactron/diagnostics/TraceId;Ljava/lang/String;Ljava/lang/String;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Ljava/lang/String;JLactron/statechart/machine/CommandId;Lactron/statechart/machine/TimerId;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/statechart/machine/DecisionExplanation;Ljava/lang/String;Ljava/lang/String;ZLactron/diagnostics/FailureSource;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (Lactron/diagnostics/TraceId;Ljava/lang/String;Ljava/lang/String;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Ljava/lang/String;JLactron/statechart/machine/CommandId;Lactron/statechart/machine/TimerId;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/statechart/machine/DecisionExplanation;Ljava/lang/String;Ljava/lang/String;ZLactron/diagnostics/FailureSource;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1 ()Lactron/diagnostics/TraceId;
-	public final fun component10-wOLMekA ()Lactron/statechart/machine/TimerId;
-	public final fun component11 ()Ljava/util/List;
-	public final fun component12 ()Ljava/util/List;
-	public final fun component13 ()Ljava/util/List;
-	public final fun component14 ()Lactron/statechart/machine/DecisionExplanation;
-	public final fun component15 ()Ljava/lang/String;
-	public final fun component16 ()Ljava/lang/String;
-	public final fun component17 ()Z
-	public final fun component18 ()Lactron/diagnostics/FailureSource;
-	public final fun component2-xjbjqhw ()Ljava/lang/String;
-	public final fun component3-o3eglpc ()Ljava/lang/String;
-	public final fun component4 ()Lactron/diagnostics/TraceOrigin;
-	public final fun component5 ()Lactron/diagnostics/TraceOrigin;
-	public final fun component6 ()Lactron/diagnostics/TraceOrigin;
-	public final fun component7 ()Ljava/lang/String;
-	public final fun component8-8PHqNVw ()J
-	public final fun component9-0Yx4aXM ()Lactron/statechart/machine/CommandId;
-	public final fun copy-IG1snJk (Lactron/diagnostics/TraceId;Ljava/lang/String;Ljava/lang/String;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Ljava/lang/String;JLactron/statechart/machine/CommandId;Lactron/statechart/machine/TimerId;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/statechart/machine/DecisionExplanation;Ljava/lang/String;Ljava/lang/String;ZLactron/diagnostics/FailureSource;)Lactron/diagnostics/CausalTraceEvent;
-	public static synthetic fun copy-IG1snJk$default (Lactron/diagnostics/CausalTraceEvent;Lactron/diagnostics/TraceId;Ljava/lang/String;Ljava/lang/String;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Ljava/lang/String;JLactron/statechart/machine/CommandId;Lactron/statechart/machine/TimerId;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/statechart/machine/DecisionExplanation;Ljava/lang/String;Ljava/lang/String;ZLactron/diagnostics/FailureSource;ILjava/lang/Object;)Lactron/diagnostics/CausalTraceEvent;
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceLineage;Ljava/lang/String;JLactron/diagnostics/TraceProvenance;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/diagnostics/TraceAssessment;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-xjbjqhw ()Ljava/lang/String;
+	public final fun component10 ()Ljava/util/List;
+	public final fun component11 ()Lactron/diagnostics/TraceAssessment;
+	public final fun component2-o3eglpc ()Ljava/lang/String;
+	public final fun component3 ()Lactron/diagnostics/TraceOrigin;
+	public final fun component4 ()Lactron/diagnostics/TraceLineage;
+	public final fun component5 ()Ljava/lang/String;
+	public final fun component6-8PHqNVw ()J
+	public final fun component7 ()Lactron/diagnostics/TraceProvenance;
+	public final fun component8 ()Ljava/util/List;
+	public final fun component9 ()Ljava/util/List;
+	public final fun copy-rMpQKKg (Ljava/lang/String;Ljava/lang/String;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceLineage;Ljava/lang/String;JLactron/diagnostics/TraceProvenance;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/diagnostics/TraceAssessment;)Lactron/diagnostics/CausalTraceEvent;
+	public static synthetic fun copy-rMpQKKg$default (Lactron/diagnostics/CausalTraceEvent;Ljava/lang/String;Ljava/lang/String;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceLineage;Ljava/lang/String;JLactron/diagnostics/TraceProvenance;Ljava/util/List;Ljava/util/List;Ljava/util/List;Lactron/diagnostics/TraceAssessment;ILjava/lang/Object;)Lactron/diagnostics/CausalTraceEvent;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getCommand-0Yx4aXM ()Lactron/statechart/machine/CommandId;
+	public final fun getAssessment ()Lactron/diagnostics/TraceAssessment;
 	public final fun getCommands ()Ljava/util/List;
 	public final fun getDefinition-xjbjqhw ()Ljava/lang/String;
 	public final fun getEffects ()Ljava/util/List;
-	public final fun getFailureSource ()Lactron/diagnostics/FailureSource;
-	public final fun getFailureType ()Ljava/lang/String;
 	public final fun getIncomplete ()Z
 	public final fun getInputKind ()Ljava/lang/String;
+	public final fun getLineage ()Lactron/diagnostics/TraceLineage;
 	public final fun getNow-8PHqNVw ()J
 	public final fun getOrigin ()Lactron/diagnostics/TraceOrigin;
 	public final fun getOutcome ()Ljava/lang/String;
-	public final fun getParent ()Lactron/diagnostics/TraceOrigin;
+	public final fun getParent ()Lactron/diagnostics/TraceParent;
+	public final fun getProvenance ()Lactron/diagnostics/TraceProvenance;
 	public final fun getRoot ()Lactron/diagnostics/TraceOrigin;
-	public final fun getSelection ()Lactron/statechart/machine/DecisionExplanation;
-	public final fun getTimer-wOLMekA ()Lactron/statechart/machine/TimerId;
 	public final fun getTrace ()Lactron/diagnostics/TraceId;
 	public final fun getTransitions ()Ljava/util/List;
 	public final fun getVersion-o3eglpc ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+	public final fun withFailureType (Lkotlin/jvm/functions/Function1;)Z
 }
 
 public final class actron/diagnostics/CausalTraceHub {
@@ -53,8 +44,8 @@ public final class actron/diagnostics/CausalTraceHub {
 	public fun <init> (ILactron/diagnostics/DiagnosticSink;)V
 	public synthetic fun <init> (ILactron/diagnostics/DiagnosticSink;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun observer-KT2w-xQ (Lactron/statechart/machine/Machine;Ljava/lang/String;)Lactron/statechart/machine/DecisionTraceObserver;
-	public final fun recordPersisted-_prgov4 (Lactron/statechart/machine/Machine;Ljava/lang/String;Lactron/core/InputId;Lactron/statechart/machine/DurableCommit;Lactron/statechart/machine/CommandId;)Lactron/diagnostics/CausalTraceEvent;
-	public static synthetic fun recordPersisted-_prgov4$default (Lactron/diagnostics/CausalTraceHub;Lactron/statechart/machine/Machine;Ljava/lang/String;Lactron/core/InputId;Lactron/statechart/machine/DurableCommit;Lactron/statechart/machine/CommandId;ILjava/lang/Object;)Lactron/diagnostics/CausalTraceEvent;
+	public final fun recordPersisted-Mahuouc (Lactron/statechart/machine/Machine;Ljava/lang/String;Lactron/core/InputAttribution;Lactron/statechart/machine/DurableCommit;)Lactron/diagnostics/CausalTraceEvent;
+	public final fun recordPersisted-pCeeb1o (Lactron/statechart/machine/Machine;Ljava/lang/String;Lactron/core/InputAttribution;Lactron/statechart/machine/DurableCommit;J)Lactron/diagnostics/CausalTraceEvent;
 	public final fun snapshot ()Ljava/util/List;
 }
 
@@ -74,6 +65,56 @@ public final class actron/diagnostics/FailureSource : java/lang/Enum {
 	public static fun values ()[Lactron/diagnostics/FailureSource;
 }
 
+public abstract interface class actron/diagnostics/TraceAssessment {
+	public abstract fun getFaults ()Ljava/util/List;
+	public abstract fun getOutcome ()Ljava/lang/String;
+	public abstract fun withSelection (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/diagnostics/TraceAssessment$Decided : actron/diagnostics/TraceAssessment {
+	public fun <init> (Lactron/statechart/machine/DecisionExplanation;Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (Lactron/statechart/machine/DecisionExplanation;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lactron/statechart/machine/DecisionExplanation;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Lactron/statechart/machine/DecisionExplanation;Ljava/lang/String;Ljava/util/List;)Lactron/diagnostics/TraceAssessment$Decided;
+	public static synthetic fun copy$default (Lactron/diagnostics/TraceAssessment$Decided;Lactron/statechart/machine/DecisionExplanation;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lactron/diagnostics/TraceAssessment$Decided;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExplanation ()Lactron/statechart/machine/DecisionExplanation;
+	public fun getFaults ()Ljava/util/List;
+	public fun getOutcome ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withSelection (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/diagnostics/TraceAssessment$Receipt : actron/diagnostics/TraceAssessment {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;)Lactron/diagnostics/TraceAssessment$Receipt;
+	public static synthetic fun copy$default (Lactron/diagnostics/TraceAssessment$Receipt;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lactron/diagnostics/TraceAssessment$Receipt;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getFaults ()Ljava/util/List;
+	public fun getOutcome ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withSelection (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/diagnostics/TraceFault {
+	public static final field Companion Lactron/diagnostics/TraceFault$Companion;
+	public synthetic fun <init> (Lactron/diagnostics/FailureSource;Lactron/observability/FailureDetails;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getSource ()Lactron/diagnostics/FailureSource;
+	public fun toString ()Ljava/lang/String;
+	public final fun withType (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/diagnostics/TraceFault$Companion {
+	public final fun of (Lactron/diagnostics/FailureSource;Lactron/observability/FailureDescriptor;)Lactron/diagnostics/TraceFault;
+}
+
 public final class actron/diagnostics/TraceId {
 	public fun <init> (Ljava/lang/String;)V
 	public final fun component1 ()Ljava/lang/String;
@@ -85,17 +126,136 @@ public final class actron/diagnostics/TraceId {
 	public fun toString ()Ljava/lang/String;
 }
 
-public final class actron/diagnostics/TraceOrigin {
-	public synthetic fun <init> (Ljava/lang/String;Lactron/core/InputId;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1-9ScXe1c ()Ljava/lang/String;
-	public final fun component2-DS-bGsQ ()Lactron/core/InputId;
-	public final fun component3 ()J
-	public final fun copy-Q5kOK34 (Ljava/lang/String;Lactron/core/InputId;J)Lactron/diagnostics/TraceOrigin;
-	public static synthetic fun copy-Q5kOK34$default (Lactron/diagnostics/TraceOrigin;Ljava/lang/String;Lactron/core/InputId;JILjava/lang/Object;)Lactron/diagnostics/TraceOrigin;
+public abstract interface class actron/diagnostics/TraceLineage {
+	public abstract fun getIncomplete ()Z
+	public abstract fun getParent ()Lactron/diagnostics/TraceParent;
+	public abstract fun getRoot ()Lactron/diagnostics/TraceOrigin;
+	public abstract fun getTrace ()Lactron/diagnostics/TraceId;
+}
+
+public final class actron/diagnostics/TraceLineage$Linked : actron/diagnostics/TraceLineage {
+	public fun <init> (Lactron/diagnostics/TraceId;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Z)V
+	public final fun component1 ()Lactron/diagnostics/TraceId;
+	public final fun component2 ()Lactron/diagnostics/TraceOrigin;
+	public final fun component3 ()Lactron/diagnostics/TraceOrigin;
+	public final fun component4 ()Z
+	public final fun copy (Lactron/diagnostics/TraceId;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;Z)Lactron/diagnostics/TraceLineage$Linked;
+	public static synthetic fun copy$default (Lactron/diagnostics/TraceLineage$Linked;Lactron/diagnostics/TraceId;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceOrigin;ZILjava/lang/Object;)Lactron/diagnostics/TraceLineage$Linked;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public fun getIncomplete ()Z
+	public fun getParent ()Lactron/diagnostics/TraceOrigin;
+	public synthetic fun getParent ()Lactron/diagnostics/TraceParent;
+	public fun getRoot ()Lactron/diagnostics/TraceOrigin;
+	public fun getTrace ()Lactron/diagnostics/TraceId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/diagnostics/TraceLineage$Root : actron/diagnostics/TraceLineage {
+	public fun <init> (Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceId;)V
+	public synthetic fun <init> (Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceId;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lactron/diagnostics/TraceOrigin;
+	public final fun component2 ()Lactron/diagnostics/TraceId;
+	public final fun copy (Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceId;)Lactron/diagnostics/TraceLineage$Root;
+	public static synthetic fun copy$default (Lactron/diagnostics/TraceLineage$Root;Lactron/diagnostics/TraceOrigin;Lactron/diagnostics/TraceId;ILjava/lang/Object;)Lactron/diagnostics/TraceLineage$Root;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getIncomplete ()Z
+	public fun getParent ()Lactron/diagnostics/TraceParent;
+	public fun getRoot ()Lactron/diagnostics/TraceOrigin;
+	public fun getTrace ()Lactron/diagnostics/TraceId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/diagnostics/TraceLineage$Unresolved : actron/diagnostics/TraceLineage {
+	public fun <init> (Lactron/diagnostics/TraceOrigin;)V
+	public final fun component1 ()Lactron/diagnostics/TraceOrigin;
+	public final fun copy (Lactron/diagnostics/TraceOrigin;)Lactron/diagnostics/TraceLineage$Unresolved;
+	public static synthetic fun copy$default (Lactron/diagnostics/TraceLineage$Unresolved;Lactron/diagnostics/TraceOrigin;ILjava/lang/Object;)Lactron/diagnostics/TraceLineage$Unresolved;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getIncomplete ()Z
+	public fun getParent ()Lactron/diagnostics/TraceParent;
+	public fun getRoot ()Lactron/diagnostics/TraceOrigin;
+	public fun getTrace ()Lactron/diagnostics/TraceId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/diagnostics/TraceOrigin : actron/diagnostics/TraceParent {
+	public synthetic fun <init> (Ljava/lang/String;Lactron/core/InputAttribution;JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1-9ScXe1c ()Ljava/lang/String;
+	public final fun component2 ()Lactron/core/InputAttribution;
+	public final fun component3 ()J
+	public final fun copy-8Qj-jWY (Ljava/lang/String;Lactron/core/InputAttribution;J)Lactron/diagnostics/TraceOrigin;
+	public static synthetic fun copy-8Qj-jWY$default (Lactron/diagnostics/TraceOrigin;Ljava/lang/String;Lactron/core/InputAttribution;JILjava/lang/Object;)Lactron/diagnostics/TraceOrigin;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInput ()Lactron/core/InputAttribution;
+	public fun getLinked ()Z
 	public final fun getSequence ()J
 	public final fun getStore-9ScXe1c ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withParent (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class actron/diagnostics/TraceParent {
+	public abstract fun getLinked ()Z
+	public abstract fun withParent (Lkotlin/jvm/functions/Function1;)V
+}
+
+public final class actron/diagnostics/TraceParent$Root : actron/diagnostics/TraceParent {
+	public static final field INSTANCE Lactron/diagnostics/TraceParent$Root;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getLinked ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+	public fun withParent (Lkotlin/jvm/functions/Function1;)V
+}
+
+public abstract interface class actron/diagnostics/TraceProvenance {
+	public abstract fun attributes (Ljava/util/Map;)V
+}
+
+public final class actron/diagnostics/TraceProvenance$Bridge : actron/diagnostics/TraceProvenance {
+	public fun <init> (Lactron/statechart/machine/MessageId;)V
+	public fun attributes (Ljava/util/Map;)V
+	public final fun component1 ()Lactron/statechart/machine/MessageId;
+	public final fun copy (Lactron/statechart/machine/MessageId;)Lactron/diagnostics/TraceProvenance$Bridge;
+	public static synthetic fun copy$default (Lactron/diagnostics/TraceProvenance$Bridge;Lactron/statechart/machine/MessageId;ILjava/lang/Object;)Lactron/diagnostics/TraceProvenance$Bridge;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMessage ()Lactron/statechart/machine/MessageId;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/diagnostics/TraceProvenance$Command : actron/diagnostics/TraceProvenance {
+	public synthetic fun <init> (JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun attributes (Ljava/util/Map;)V
+	public final fun component1-Urik2aY ()J
+	public final fun copy-hs9yZvY (J)Lactron/diagnostics/TraceProvenance$Command;
+	public static synthetic fun copy-hs9yZvY$default (Lactron/diagnostics/TraceProvenance$Command;JILjava/lang/Object;)Lactron/diagnostics/TraceProvenance$Command;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-Urik2aY ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/diagnostics/TraceProvenance$Local : actron/diagnostics/TraceProvenance {
+	public static final field INSTANCE Lactron/diagnostics/TraceProvenance$Local;
+	public fun attributes (Ljava/util/Map;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/diagnostics/TraceProvenance$Timer : actron/diagnostics/TraceProvenance {
+	public synthetic fun <init> (JLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun attributes (Ljava/util/Map;)V
+	public final fun component1-rl4Ve6k ()J
+	public final fun copy-jIa6dpI (J)Lactron/diagnostics/TraceProvenance$Timer;
+	public static synthetic fun copy-jIa6dpI$default (Lactron/diagnostics/TraceProvenance$Timer;JILjava/lang/Object;)Lactron/diagnostics/TraceProvenance$Timer;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getId-rl4Ve6k ()J
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

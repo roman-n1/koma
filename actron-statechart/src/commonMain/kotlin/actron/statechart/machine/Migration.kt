@@ -5,7 +5,7 @@ import actron.core.Event
 import actron.statechart.isConsistent
 
 /** A semantic snapshot migration, independent of file-format codecs. */
-class SnapshotMigration<From, To>(
+class SnapshotMigration<From : Any, To : Any>(
     val from: DefinitionVersion,
     val to: DefinitionVersion,
     val transform: (MachineSnapshot<From>) -> MachineSnapshot<To>,
@@ -14,10 +14,10 @@ class SnapshotMigration<From, To>(
 }
 
 /** Checks restored data before it can allocate work or accept new inputs. */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.validateSnapshot(snapshot: MachineSnapshot<C>): List<String> =
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.validateSnapshot(snapshot: MachineSnapshot<C>): List<String> =
     validateSnapshotStructure(snapshot) + checkInvariantsForRestore(snapshot)
 
-internal fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.validateSnapshotStructure(snapshot: MachineSnapshot<C>): List<String> = buildList {
+internal fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.validateSnapshotStructure(snapshot: MachineSnapshot<C>): List<String> = buildList {
     if (snapshot.definition != id) add("definition differs")
     if (snapshot.version != version) add("version differs")
     if (snapshot.revision < 0) add("negative revision")
@@ -31,17 +31,17 @@ internal fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.validateSnaps
     if (snapshot.activations.values.any { it.value <= 0 || it.value > snapshot.counters.activations }) add("invalid activation counters")
     if (snapshot.commands.any { (id, record) -> id.value <= 0 || id.value > snapshot.counters.commands || record.scope !in snapshot.activations.values }) add("invalid command ids/scopes")
     if (snapshot.timers.any { (id, record) ->
-        val transition = chart.transitions.getOrNull(record.transition.index)
-        id.value <= 0 || id.value > snapshot.counters.timers || transition?.isTimer != true || snapshot.activations[transition.source] != record.activation
+        id.value <= 0 || id.value > snapshot.counters.timers || record.transition.index !in chart.transitions.indices ||
+            chart.transitions[record.transition.index].let { transition -> !transition.isTimer || snapshot.activations[transition.source] != record.activation }
     }) add("invalid timers")
     if (listOf(snapshot.counters.activations, snapshot.counters.commands, snapshot.counters.timers, snapshot.counters.effects).any { it < 0 }) add("negative counters")
 }
 
-private fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.checkInvariantsForRestore(snapshot: MachineSnapshot<C>): List<String> =
+private fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.checkInvariantsForRestore(snapshot: MachineSnapshot<C>): List<String> =
     if (snapshot.definition == id && snapshot.version == version && snapshot.isStarted) checkInvariants(snapshot).map { "invariant ${it.name} failed" } else emptyList()
 
 /** Applies one typed migration and validates the target's complete configuration, work and invariants. */
-fun <From, To, A : Action, CMD, E : Event> Machine<To, A, CMD, E>.migrateSnapshot(
+fun <From : Any, To : Any, A : Action, CMD : Any, E : Event> Machine<To, A, CMD, E>.migrateSnapshot(
     snapshot: MachineSnapshot<From>, migration: SnapshotMigration<From, To>,
 ): MachineSnapshot<To> {
     require(snapshot.definition == id && snapshot.version == migration.from && version == migration.to) { "[Actron] Migration endpoints do not match" }
@@ -52,7 +52,7 @@ fun <From, To, A : Action, CMD, E : Event> Machine<To, A, CMD, E>.migrateSnapsho
 }
 
 /** Version-chain migration for an unchanged context type; duplicate and cyclic routes are rejected. */
-class SnapshotMigrations<C>(migrations: List<SnapshotMigration<C, C>>) {
+class SnapshotMigrations<C : Any>(migrations: List<SnapshotMigration<C, C>>) {
     private val routes = migrations.associateBy { it.from }
     init {
         require(routes.size == migrations.size) { "[Actron] Ambiguous migration routes" }

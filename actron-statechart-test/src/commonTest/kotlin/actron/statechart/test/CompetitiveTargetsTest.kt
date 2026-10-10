@@ -14,7 +14,7 @@ class CompetitiveTargetsTest {
     private val done = StateId("done")
     private val go = ActionMatcher.of<Go>("go")
     private fun machine() = Machine<Unit, Action, Nothing, Event>(DefinitionId("targets"), DefinitionVersion("1"),
-        StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, go, guard = "allowed")))) {
+        StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, go, guard = actron.statechart.GuardKey("allowed"))))) {
         guard("allowed") { _, action -> (action as Go).allowed }
     }
 

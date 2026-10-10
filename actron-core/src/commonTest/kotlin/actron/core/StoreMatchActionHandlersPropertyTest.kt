@@ -51,7 +51,7 @@ class StoreMatchActionHandlersPropertyTest {
                 assertEquals(planned.map { it.matches(s, a) }, matches.map { it.matches }, context)
                 assertEquals(registry.action.map { it?.stateType }, matches.map { it.stateType }, context)
                 assertEquals(registry.action.map { it?.inputType }, matches.map { it.actionType }, context)
-                legacyMatches += matches.count { it.matches && it.actionType == null }
+                legacyMatches += matches.count { it.matches && it.actionType == RtAction::class }
             }
         }
         assertTrue(legacyMatches > 100, "legacy handlers should match sometimes, saw $legacyMatches")

@@ -277,29 +277,29 @@ sealed interface <#A: out actron.core/Action> actron.core/InputKind { // actron.
     }
 
     final class Recovery : actron.core/InputKind<kotlin/Nothing> { // actron.core/InputKind.Recovery|null[0]
-        constructor <init>(kotlin/Throwable, actron.core/InputId?) // actron.core/InputKind.Recovery.<init>|<init>(kotlin.Throwable;actron.core.InputId?){}[0]
+        constructor <init>(kotlin/Throwable, actron.core/InputAttribution) // actron.core/InputKind.Recovery.<init>|<init>(kotlin.Throwable;actron.core.InputAttribution){}[0]
 
         final val error // actron.core/InputKind.Recovery.error|{}error[0]
             final fun <get-error>(): kotlin/Throwable // actron.core/InputKind.Recovery.error.<get-error>|<get-error>(){}[0]
         final val origin // actron.core/InputKind.Recovery.origin|{}origin[0]
-            final fun <get-origin>(): actron.core/InputId? // actron.core/InputKind.Recovery.origin.<get-origin>|<get-origin>(){}[0]
+            final fun <get-origin>(): actron.core/InputAttribution // actron.core/InputKind.Recovery.origin.<get-origin>|<get-origin>(){}[0]
 
         final fun component1(): kotlin/Throwable // actron.core/InputKind.Recovery.component1|component1(){}[0]
-        final fun component2(): actron.core/InputId? // actron.core/InputKind.Recovery.component2|component2(){}[0]
-        final fun copy(kotlin/Throwable = ..., actron.core/InputId? = ...): actron.core/InputKind.Recovery // actron.core/InputKind.Recovery.copy|copy(kotlin.Throwable;actron.core.InputId?){}[0]
+        final fun component2(): actron.core/InputAttribution // actron.core/InputKind.Recovery.component2|component2(){}[0]
+        final fun copy(kotlin/Throwable = ..., actron.core/InputAttribution = ...): actron.core/InputKind.Recovery // actron.core/InputKind.Recovery.copy|copy(kotlin.Throwable;actron.core.InputAttribution){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/InputKind.Recovery.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.core/InputKind.Recovery.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.core/InputKind.Recovery.toString|toString(){}[0]
     }
 
     final class Transaction : actron.core/InputKind<kotlin/Nothing> { // actron.core/InputKind.Transaction|null[0]
-        constructor <init>(actron.core/InputId?) // actron.core/InputKind.Transaction.<init>|<init>(actron.core.InputId?){}[0]
+        constructor <init>(actron.core/InputAttribution) // actron.core/InputKind.Transaction.<init>|<init>(actron.core.InputAttribution){}[0]
 
         final val origin // actron.core/InputKind.Transaction.origin|{}origin[0]
-            final fun <get-origin>(): actron.core/InputId? // actron.core/InputKind.Transaction.origin.<get-origin>|<get-origin>(){}[0]
+            final fun <get-origin>(): actron.core/InputAttribution // actron.core/InputKind.Transaction.origin.<get-origin>|<get-origin>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.core/InputKind.Transaction.component1|component1(){}[0]
-        final fun copy(actron.core/InputId? = ...): actron.core/InputKind.Transaction // actron.core/InputKind.Transaction.copy|copy(actron.core.InputId?){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.core/InputKind.Transaction.component1|component1(){}[0]
+        final fun copy(actron.core/InputAttribution = ...): actron.core/InputKind.Transaction // actron.core/InputKind.Transaction.copy|copy(actron.core.InputAttribution){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/InputKind.Transaction.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.core/InputKind.Transaction.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.core/InputKind.Transaction.toString|toString(){}[0]
@@ -330,16 +330,16 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
     }
 
     final class <#A1: out actron.core/Event> EventEmitted : actron.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, #A1> { // actron.core/StoreTrace.EventEmitted|null[0]
-        constructor <init>(actron.core/InputId?, #A1) // actron.core/StoreTrace.EventEmitted.<init>|<init>(actron.core.InputId?;1:0){}[0]
+        constructor <init>(actron.core/InputAttribution, #A1) // actron.core/StoreTrace.EventEmitted.<init>|<init>(actron.core.InputAttribution;1:0){}[0]
 
         final val event // actron.core/StoreTrace.EventEmitted.event|{}event[0]
             final fun <get-event>(): #A1 // actron.core/StoreTrace.EventEmitted.event.<get-event>|<get-event>(){}[0]
         final val input // actron.core/StoreTrace.EventEmitted.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.core/StoreTrace.EventEmitted.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.core/StoreTrace.EventEmitted.input.<get-input>|<get-input>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.core/StoreTrace.EventEmitted.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.core/StoreTrace.EventEmitted.component1|component1(){}[0]
         final fun component2(): #A1 // actron.core/StoreTrace.EventEmitted.component2|component2(){}[0]
-        final fun copy(actron.core/InputId? = ..., #A1 = ...): actron.core/StoreTrace.EventEmitted<#A1> // actron.core/StoreTrace.EventEmitted.copy|copy(actron.core.InputId?;1:0){}[0]
+        final fun copy(actron.core/InputAttribution = ..., #A1 = ...): actron.core/StoreTrace.EventEmitted<#A1> // actron.core/StoreTrace.EventEmitted.copy|copy(actron.core.InputAttribution;1:0){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.EventEmitted.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.core/StoreTrace.EventEmitted.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.core/StoreTrace.EventEmitted.toString|toString(){}[0]
@@ -368,16 +368,16 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
     }
 
     final class FailureReported : actron.core/StoreTrace<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.core/StoreTrace.FailureReported|null[0]
-        constructor <init>(actron.core/InputId?, kotlin/Throwable) // actron.core/StoreTrace.FailureReported.<init>|<init>(actron.core.InputId?;kotlin.Throwable){}[0]
+        constructor <init>(actron.core/InputAttribution, kotlin/Throwable) // actron.core/StoreTrace.FailureReported.<init>|<init>(actron.core.InputAttribution;kotlin.Throwable){}[0]
 
         final val error // actron.core/StoreTrace.FailureReported.error|{}error[0]
             final fun <get-error>(): kotlin/Throwable // actron.core/StoreTrace.FailureReported.error.<get-error>|<get-error>(){}[0]
         final val input // actron.core/StoreTrace.FailureReported.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.core/StoreTrace.FailureReported.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.core/StoreTrace.FailureReported.input.<get-input>|<get-input>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.core/StoreTrace.FailureReported.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.core/StoreTrace.FailureReported.component1|component1(){}[0]
         final fun component2(): kotlin/Throwable // actron.core/StoreTrace.FailureReported.component2|component2(){}[0]
-        final fun copy(actron.core/InputId? = ..., kotlin/Throwable = ...): actron.core/StoreTrace.FailureReported // actron.core/StoreTrace.FailureReported.copy|copy(actron.core.InputId?;kotlin.Throwable){}[0]
+        final fun copy(actron.core/InputAttribution = ..., kotlin/Throwable = ...): actron.core/StoreTrace.FailureReported // actron.core/StoreTrace.FailureReported.copy|copy(actron.core.InputAttribution;kotlin.Throwable){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/StoreTrace.FailureReported.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.core/StoreTrace.FailureReported.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.core/StoreTrace.FailureReported.toString|toString(){}[0]
@@ -592,6 +592,19 @@ sealed interface actron.core/DiscardReason { // actron.core/DiscardReason|null[0
     }
 }
 
+sealed interface actron.core/InputAttribution { // actron.core/InputAttribution|null[0]
+    abstract fun correlate(kotlin/Function1<actron.core/InputId, kotlin/Unit>) // actron.core/InputAttribution.correlate|correlate(kotlin.Function1<actron.core.InputId,kotlin.Unit>){}[0]
+    abstract fun describe(): kotlin/String // actron.core/InputAttribution.describe|describe(){}[0]
+
+    final object Unattributed : actron.core/InputAttribution { // actron.core/InputAttribution.Unattributed|null[0]
+        final fun correlate(kotlin/Function1<actron.core/InputId, kotlin/Unit>) // actron.core/InputAttribution.Unattributed.correlate|correlate(kotlin.Function1<actron.core.InputId,kotlin.Unit>){}[0]
+        final fun describe(): kotlin/String // actron.core/InputAttribution.Unattributed.describe|describe(){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/InputAttribution.Unattributed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.core/InputAttribution.Unattributed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.core/InputAttribution.Unattributed.toString|toString(){}[0]
+    }
+}
+
 sealed interface actron.core/LaunchControl { // actron.core/LaunchControl|null[0]
     final class CancelPrevious : actron.core/LaunchControl { // actron.core/LaunchControl.CancelPrevious|null[0]
         constructor <init>(actron.core/LaunchLane = ...) // actron.core/LaunchControl.CancelPrevious.<init>|<init>(actron.core.LaunchLane){}[0]
@@ -728,12 +741,11 @@ final class <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Even
         final inline fun <#A2: reified kotlin/Exception> error(kotlin.coroutines/CoroutineContext = ..., noinline kotlin.coroutines/SuspendFunction1<actron.core/RecoverScope<#A1, #C1, #D1, #A2>, kotlin/Unit>) // actron.core/StoreBuilder.StateHandlerConfig.error|error(kotlin.coroutines.CoroutineContext;kotlin.coroutines.SuspendFunction1<actron.core.RecoverScope<1:0,1:2,1:3,0:0>,kotlin.Unit>){0§<kotlin.Exception>}[0]
         final inline fun <#A2: reified kotlin/Exception> recover(kotlin.coroutines/CoroutineContext = ..., noinline kotlin.coroutines/SuspendFunction1<actron.core/RecoverScope<#A1, #C1, #D1, #A2>, kotlin/Unit>) // actron.core/StoreBuilder.StateHandlerConfig.recover|recover(kotlin.coroutines.CoroutineContext;kotlin.coroutines.SuspendFunction1<actron.core.RecoverScope<1:0,1:2,1:3,0:0>,kotlin.Unit>){0§<kotlin.Exception>}[0]
 
-        final class <#A2: kotlin/Any?, #B2: actron.core/StoreScope> ThreadedHandler { // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler|null[0]
-            constructor <init>(kotlin.coroutines/CoroutineContext, #A2, kotlin.coroutines/SuspendFunction1<#B2, kotlin/Unit>) // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.<init>|<init>(kotlin.coroutines.CoroutineContext;1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>){}[0]
-            constructor <init>(kotlin.coroutines/CoroutineContext, #A2, kotlin.coroutines/SuspendFunction1<#B2, kotlin/Unit>, kotlin.reflect/KClass<*>?) // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.<init>|<init>(kotlin.coroutines.CoroutineContext;1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>;kotlin.reflect.KClass<*>?){}[0]
+        final class <#A2: kotlin/Any, #B2: actron.core/StoreScope> ThreadedHandler { // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler|null[0]
+            constructor <init>(kotlin.coroutines/CoroutineContext, #A2, kotlin.coroutines/SuspendFunction1<#B2, kotlin/Unit>, kotlin.reflect/KClass<*>) // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.<init>|<init>(kotlin.coroutines.CoroutineContext;1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>;kotlin.reflect.KClass<*>){}[0]
 
             final val inputType // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.inputType|{}inputType[0]
-                final fun <get-inputType>(): kotlin.reflect/KClass<*>? // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.inputType.<get-inputType>|<get-inputType>(){}[0]
+                final fun <get-inputType>(): kotlin.reflect/KClass<*> // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.inputType.<get-inputType>|<get-inputType>(){}[0]
             final val predicate // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.predicate|{}predicate[0]
                 final fun <get-predicate>(): #A2 // actron.core/StoreBuilder.StateHandlerConfig.ThreadedHandler.predicate.<get-predicate>|<get-predicate>(){}[0]
 
@@ -741,14 +753,13 @@ final class <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Even
         }
     }
 
-    final class <#A1: kotlin/Any?, #B1: actron.core/StoreScope> StateHandler { // actron.core/StoreBuilder.StateHandler|null[0]
-        constructor <init>(#A1, kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit>) // actron.core/StoreBuilder.StateHandler.<init>|<init>(1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>){}[0]
-        constructor <init>(#A1, kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit>, actron.core/HandlerMatcher?) // actron.core/StoreBuilder.StateHandler.<init>|<init>(1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>;actron.core.HandlerMatcher?){}[0]
+    final class <#A1: kotlin/Any, #B1: actron.core/StoreScope> StateHandler { // actron.core/StoreBuilder.StateHandler|null[0]
+        constructor <init>(#A1, kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit>, actron.core/HandlerMatcher) // actron.core/StoreBuilder.StateHandler.<init>|<init>(1:0;kotlin.coroutines.SuspendFunction1<1:1,kotlin.Unit>;actron.core.HandlerMatcher){}[0]
 
         final val handler // actron.core/StoreBuilder.StateHandler.handler|{}handler[0]
             final fun <get-handler>(): kotlin.coroutines/SuspendFunction1<#B1, kotlin/Unit> // actron.core/StoreBuilder.StateHandler.handler.<get-handler>|<get-handler>(){}[0]
         final val matcher // actron.core/StoreBuilder.StateHandler.matcher|{}matcher[0]
-            final fun <get-matcher>(): actron.core/HandlerMatcher? // actron.core/StoreBuilder.StateHandler.matcher.<get-matcher>|<get-matcher>(){}[0]
+            final fun <get-matcher>(): actron.core/HandlerMatcher // actron.core/StoreBuilder.StateHandler.matcher.<get-matcher>|<get-matcher>(){}[0]
         final val predicate // actron.core/StoreBuilder.StateHandler.predicate|{}predicate[0]
             final fun <get-predicate>(): #A1 // actron.core/StoreBuilder.StateHandler.predicate.<get-predicate>|<get-predicate>(){}[0]
     }
@@ -791,43 +802,43 @@ final class <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Even
 }
 
 final class actron.core/ActionHandlerMatch { // actron.core/ActionHandlerMatch|null[0]
-    constructor <init>(kotlin/Int, kotlin.reflect/KClass<*>?, kotlin.reflect/KClass<*>?, kotlin/Boolean) // actron.core/ActionHandlerMatch.<init>|<init>(kotlin.Int;kotlin.reflect.KClass<*>?;kotlin.reflect.KClass<*>?;kotlin.Boolean){}[0]
+    constructor <init>(kotlin/Int, kotlin.reflect/KClass<*>, kotlin.reflect/KClass<*>, kotlin/Boolean) // actron.core/ActionHandlerMatch.<init>|<init>(kotlin.Int;kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>;kotlin.Boolean){}[0]
 
     final val actionType // actron.core/ActionHandlerMatch.actionType|{}actionType[0]
-        final fun <get-actionType>(): kotlin.reflect/KClass<*>? // actron.core/ActionHandlerMatch.actionType.<get-actionType>|<get-actionType>(){}[0]
+        final fun <get-actionType>(): kotlin.reflect/KClass<*> // actron.core/ActionHandlerMatch.actionType.<get-actionType>|<get-actionType>(){}[0]
     final val index // actron.core/ActionHandlerMatch.index|{}index[0]
         final fun <get-index>(): kotlin/Int // actron.core/ActionHandlerMatch.index.<get-index>|<get-index>(){}[0]
     final val matches // actron.core/ActionHandlerMatch.matches|{}matches[0]
         final fun <get-matches>(): kotlin/Boolean // actron.core/ActionHandlerMatch.matches.<get-matches>|<get-matches>(){}[0]
     final val stateType // actron.core/ActionHandlerMatch.stateType|{}stateType[0]
-        final fun <get-stateType>(): kotlin.reflect/KClass<*>? // actron.core/ActionHandlerMatch.stateType.<get-stateType>|<get-stateType>(){}[0]
+        final fun <get-stateType>(): kotlin.reflect/KClass<*> // actron.core/ActionHandlerMatch.stateType.<get-stateType>|<get-stateType>(){}[0]
 }
 
 final class actron.core/HandlerMatcher { // actron.core/HandlerMatcher|null[0]
-    constructor <init>(kotlin.reflect/KClass<*>, kotlin.reflect/KClass<*>? = ...) // actron.core/HandlerMatcher.<init>|<init>(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>?){}[0]
+    constructor <init>(kotlin.reflect/KClass<*>, kotlin.reflect/KClass<*> = ...) // actron.core/HandlerMatcher.<init>|<init>(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>){}[0]
 
     final val inputType // actron.core/HandlerMatcher.inputType|{}inputType[0]
-        final fun <get-inputType>(): kotlin.reflect/KClass<*>? // actron.core/HandlerMatcher.inputType.<get-inputType>|<get-inputType>(){}[0]
+        final fun <get-inputType>(): kotlin.reflect/KClass<*> // actron.core/HandlerMatcher.inputType.<get-inputType>|<get-inputType>(){}[0]
     final val stateType // actron.core/HandlerMatcher.stateType|{}stateType[0]
         final fun <get-stateType>(): kotlin.reflect/KClass<*> // actron.core/HandlerMatcher.stateType.<get-stateType>|<get-stateType>(){}[0]
 
     final fun component1(): kotlin.reflect/KClass<*> // actron.core/HandlerMatcher.component1|component1(){}[0]
-    final fun component2(): kotlin.reflect/KClass<*>? // actron.core/HandlerMatcher.component2|component2(){}[0]
-    final fun copy(kotlin.reflect/KClass<*> = ..., kotlin.reflect/KClass<*>? = ...): actron.core/HandlerMatcher // actron.core/HandlerMatcher.copy|copy(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>?){}[0]
+    final fun component2(): kotlin.reflect/KClass<*> // actron.core/HandlerMatcher.component2|component2(){}[0]
+    final fun copy(kotlin.reflect/KClass<*> = ..., kotlin.reflect/KClass<*> = ...): actron.core/HandlerMatcher // actron.core/HandlerMatcher.copy|copy(kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/HandlerMatcher.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.core/HandlerMatcher.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.core/HandlerMatcher.toString|toString(){}[0]
 }
 
 final class actron.core/HandlerMetadata { // actron.core/HandlerMetadata|null[0]
-    constructor <init>(kotlin/Int, kotlin.reflect/KClass<*>?, kotlin.reflect/KClass<*>?) // actron.core/HandlerMetadata.<init>|<init>(kotlin.Int;kotlin.reflect.KClass<*>?;kotlin.reflect.KClass<*>?){}[0]
+    constructor <init>(kotlin/Int, kotlin.reflect/KClass<*>, kotlin.reflect/KClass<*>) // actron.core/HandlerMetadata.<init>|<init>(kotlin.Int;kotlin.reflect.KClass<*>;kotlin.reflect.KClass<*>){}[0]
 
     final val index // actron.core/HandlerMetadata.index|{}index[0]
         final fun <get-index>(): kotlin/Int // actron.core/HandlerMetadata.index.<get-index>|<get-index>(){}[0]
     final val inputType // actron.core/HandlerMetadata.inputType|{}inputType[0]
-        final fun <get-inputType>(): kotlin.reflect/KClass<*>? // actron.core/HandlerMetadata.inputType.<get-inputType>|<get-inputType>(){}[0]
+        final fun <get-inputType>(): kotlin.reflect/KClass<*> // actron.core/HandlerMetadata.inputType.<get-inputType>|<get-inputType>(){}[0]
     final val stateType // actron.core/HandlerMetadata.stateType|{}stateType[0]
-        final fun <get-stateType>(): kotlin.reflect/KClass<*>? // actron.core/HandlerMetadata.stateType.<get-stateType>|<get-stateType>(){}[0]
+        final fun <get-stateType>(): kotlin.reflect/KClass<*> // actron.core/HandlerMetadata.stateType.<get-stateType>|<get-stateType>(){}[0]
 }
 
 final class actron.core/LaunchLane { // actron.core/LaunchLane|null[0]
@@ -870,12 +881,14 @@ final class actron.core/StorePendingWork { // actron.core/StorePendingWork|null[
     final fun toString(): kotlin/String // actron.core/StorePendingWork.toString|toString(){}[0]
 }
 
-final value class actron.core/InputId { // actron.core/InputId|null[0]
+final value class actron.core/InputId : actron.core/InputAttribution { // actron.core/InputId|null[0]
     constructor <init>(kotlin/Long) // actron.core/InputId.<init>|<init>(kotlin.Long){}[0]
 
     final val value // actron.core/InputId.value|{}value[0]
         final fun <get-value>(): kotlin/Long // actron.core/InputId.value.<get-value>|<get-value>(){}[0]
 
+    final fun correlate(kotlin/Function1<actron.core/InputId, kotlin/Unit>) // actron.core/InputId.correlate|correlate(kotlin.Function1<actron.core.InputId,kotlin.Unit>){}[0]
+    final fun describe(): kotlin/String // actron.core/InputId.describe|describe(){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.core/InputId.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.core/InputId.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.core/InputId.toString|toString(){}[0]
@@ -886,4 +899,4 @@ final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event>
 final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.core/Store(kotlin.coroutines/CoroutineContext = ..., kotlin/Function1<actron.core/StoreBuilder<#A, #B, #C>, kotlin/Unit>): actron.core/Store<#A, #B, #C> // actron.core/Store|Store(kotlin.coroutines.CoroutineContext;kotlin.Function1<actron.core.StoreBuilder<0:0,0:1,0:2>,kotlin.Unit>){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
 final fun <#A: actron.core/State> actron.core/StateSaver(kotlin/Function1<#A, kotlin/Unit>, kotlin/Function1<#A, #A>): actron.core/StateSaver<#A> // actron.core/StateSaver|StateSaver(kotlin.Function1<0:0,kotlin.Unit>;kotlin.Function1<0:0,0:0>){0§<actron.core.State>}[0]
 final fun actron.core/ExceptionHandler(kotlin/Function1<kotlin/Throwable, kotlin/Unit>): actron.core/ExceptionHandler // actron.core/ExceptionHandler|ExceptionHandler(kotlin.Function1<kotlin.Throwable,kotlin.Unit>){}[0]
-final suspend fun actron.core/currentInputId(): actron.core/InputId? // actron.core/currentInputId|currentInputId(){}[0]
+final suspend fun actron.core/currentInputId(): actron.core/InputAttribution // actron.core/currentInputId|currentInputId(){}[0]

@@ -75,7 +75,7 @@ class GroupMembershipStormTest {
 
     private val root = StateId("Root")
     private val idle = StateId("Idle")
-    private fun chart(matcher: ActionMatcher) = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, matcher, effect = "remember")))
+    private fun chart(matcher: ActionMatcher) = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, matcher, effect = actron.statechart.EffectKey("remember"))))
 
     private val picker = Machine<PickerCtx, PickerAct, Nothing, PickerEv>(DefinitionId("picker"), DefinitionVersion("1"), chart(ActionMatcher.of<PickerAct.Pick>("Pick"))) {
         effect("remember") { c, a -> c.copy(last = (a as PickerAct.Pick).name) }
@@ -96,7 +96,7 @@ class GroupMembershipStormTest {
         val group = MachineGroup(session)
         val pickerMember = group.member<PickerCtx, PickerAct, Nothing, PickerEv>(pickerId)
         val rootMember = group.member<RootCtx, RootAct, Nothing, Nothing>(rootId)
-        group.route(pickerMember, rootMember) { picked: PickerEv -> (picked as? PickerEv.Picked)?.let { RootAct.Apply(it.name) } }
+        group.route(pickerMember, rootMember) { picked: PickerEv, carry -> (picked as? PickerEv.Picked)?.let { carry(RootAct.Apply(it.name)) } }
         val pickerStore = MachineStore(picker, PickerCtx(), CommandHandler<Nothing, PickerAct> { _, _ -> }, executionScope, coroutineContext = Dispatchers.Default, observers = listOf(pickerMember)) {
             exceptionHandler(ExceptionHandler.Ignore)
         }
@@ -145,7 +145,7 @@ class GroupMembershipStormTest {
                 }
                 launch {
                     repeat(10) {
-                        if (group.checkpoint(5.seconds) == null) failedCuts++ else cuts++
+                        if (group.checkpoint(5.seconds) !is actron.statechart.machine.GroupCut.Ready) failedCuts++ else cuts++
                         delay(Random.nextLong(0, 3).milliseconds)
                     }
                 }

@@ -69,7 +69,7 @@ class JournalFileSinkTest {
     private val store = StoreInstanceId("s")
 
     private fun record(seq: Long, entry: JournalEntry<*, *, *>, session: RuntimeSessionId = this.session, store: StoreInstanceId? = this.store) =
-        JournalRecord(JOURNAL_FORMAT_VERSION, session, group, store, ExecutionMode.Live, GroupSeq(seq), store?.let { StoreSeq(seq) }, seq.milliseconds, entry)
+        JournalRecord(JOURNAL_FORMAT_VERSION, session, group, store ?: actron.observability.RecordSubject.Session, ExecutionMode.Live, GroupSeq(seq), store?.let { StoreSeq(seq) } ?: actron.observability.RecordOrdinal.Session, seq.milliseconds, entry)
 
     @Test
     fun whatTheSessionPublishes_isReadBack_withRetainedPayloadsAsText() = runTest {
@@ -116,7 +116,7 @@ class JournalFileSinkTest {
         for (record in records) sink.write(record)
         val before = sink.segments
         assertEquals(3, before.size, before.toString())
-        assertTrue(sink.activeSegment == before.last())
+        assertEquals(SegmentActivity.Writing(before.last()), sink.activeSegment)
         sink.close()
 
         val contents = JournalFiles(storage).read(session)
@@ -137,7 +137,7 @@ class JournalFileSinkTest {
         val sink = JournalFileSink(storage)
         val records = (1L..5L).map { record(it, JournalEntry.ProcessingStarted(InputId(it), it)) }
         for (record in records) sink.write(record)
-        val active = checkNotNull(sink.activeSegment)
+        val active = assertIs<SegmentActivity.Writing>(sink.activeSegment).name
         val size = storage.list().single().size.toInt()
         // The process died three bytes before the last frame was complete.
         storage.truncate(active, size - 3)
@@ -211,7 +211,7 @@ class JournalFileSinkTest {
         sink.close()
         sink.close()
         sink.write(record(3, JournalEntry.StoreClosed))
-        assertEquals(null, sink.activeSegment)
+        assertEquals(SegmentActivity.Closed, sink.activeSegment)
         assertEquals(listOf(1L), JournalFiles(storage).read(session).records.map { it.groupSeq.value })
     }
 

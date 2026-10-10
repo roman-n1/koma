@@ -44,7 +44,7 @@ class StateChartDefinitionTest {
         initial = idle,
         states = listOf(AtomicState(idle), AtomicState(loading), AtomicState(ready), AtomicState(error)),
         transitions = listOf(
-            Transition(idle, loading, submit, guard = "isValid"),
+            Transition(idle, loading, submit, guard = actron.statechart.GuardKey("isValid")),
             Transition(idle, error, submit),
             Transition(loading, ready, loaded),
             Transition(loading, error, failed),
@@ -84,7 +84,7 @@ class StateChartDefinitionTest {
     @Test
     fun transitionsFromKeepsDeclarationOrder() {
         assertEquals(
-            listOf(Transition(idle, loading, submit, guard = "isValid"), Transition(idle, error, submit)),
+            listOf(Transition(idle, loading, submit, guard = actron.statechart.GuardKey("isValid")), Transition(idle, error, submit)),
             chart.transitionsFrom(idle),
         )
     }
@@ -182,7 +182,7 @@ class StateChartDefinitionTest {
     @Test
     fun guardedOverlapIsNotShadowing() {
         val guarded = shadowing.copy(
-            transitions = listOf(Transition(chatIdle, cleared, anyChat, guard = "isEmpty"), Transition(chatIdle, sending, send)),
+            transitions = listOf(Transition(chatIdle, cleared, anyChat, guard = actron.statechart.GuardKey("isEmpty")), Transition(chatIdle, sending, send)),
         )
 
         assertEquals(emptyList(), guarded.validate(chatSamples))

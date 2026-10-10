@@ -2,6 +2,8 @@
 
 package actron.observability.file
 
+import actron.core.InputAttribution
+
 import actron.core.ExperimentalActronApi
 import actron.core.InputId
 import actron.observability.ActivationRef
@@ -48,7 +50,7 @@ class JournalFileFormatTest {
     private val store = StoreInstanceId("store-a")
 
     private fun record(seq: Long, entry: JournalEntry<*, *, *>, store: StoreInstanceId? = this.store, storeSeq: Long? = seq, elapsed: Duration = seq.milliseconds) =
-        JournalRecord(JOURNAL_FORMAT_VERSION, session, group, store, ExecutionMode.Live, GroupSeq(seq), storeSeq?.let(::StoreSeq), elapsed, entry)
+        JournalRecord(JOURNAL_FORMAT_VERSION, session, group, store ?: actron.observability.RecordSubject.Session, ExecutionMode.Live, GroupSeq(seq), storeSeq?.let(::StoreSeq) ?: actron.observability.RecordOrdinal.Session, elapsed, entry)
 
     private data class Loaded(val items: List<String>) : actron.core.Event
 
@@ -58,13 +60,13 @@ class JournalFileFormatTest {
         record(2, JournalEntry.InputAccepted(InputId(1), InputDescriptor.Startup)),
         record(3, JournalEntry.InputAccepted(InputId(2), InputDescriptor.Dispatch(Payload.Projected("Load", mapOf("q" to "cats", "n" to "3"))))),
         record(4, JournalEntry.InputAccepted(InputId(3), InputDescriptor.Transaction(InputId(2)))),
-        record(5, JournalEntry.InputAccepted(InputId(4), InputDescriptor.Recovery(FailureDescriptor("IOException", "boom", FailureDescriptor("SocketException"), listOf(FailureDescriptor("Suppressed"))), null))),
+        record(5, JournalEntry.InputAccepted(InputId(4), InputDescriptor.Recovery(FailureDescriptor("IOException", "boom", FailureDescriptor("SocketException"), listOf(FailureDescriptor("Suppressed"))), InputAttribution.Unattributed))),
         record(6, JournalEntry.InputDiscarded(InputId(4), DiscardDescriptor(DiscardKind.Rejected, FailureDescriptor("IllegalStateException")))),
         record(7, JournalEntry.InputDiscarded(InputId(5), DiscardDescriptor(DiscardKind.StoreClosed))),
         record(8, JournalEntry.ProcessingStarted(InputId(2), 1)),
         record(9, JournalEntry.StateCommitted(InputId(2), 1, Payload.Omitted, Payload.Unavailable)),
-        record(10, JournalEntry.EventEmitted(null, Payload.Retained(Loaded(listOf("tom", "felix"))))),
-        record(11, JournalEntry.FailureReported(InputId(2), FailureDescriptor(null))),
+        record(10, JournalEntry.EventEmitted(InputAttribution.Unattributed, Payload.Retained(Loaded(listOf("tom", "felix"))))),
+        record(11, JournalEntry.FailureReported(InputId(2), FailureDescriptor.Unavailable)),
         record(12, JournalEntry.ProcessingFinished(InputId(2), 1, OutcomeDescriptor(OutcomeKind.Recovered, 2, FailureDescriptor("X")), 812.microseconds)),
         record(13, JournalEntry.ProcessingFinished(InputId(3), 2, OutcomeDescriptor(OutcomeKind.Unchanged), Duration.ZERO)),
         record(14, JournalEntry.StoreClosed),
@@ -73,14 +75,14 @@ class JournalFileFormatTest {
             16,
             JournalEntry.DecisionCommitted(
                 InputId(5), 3, listOf("Root", "Loading"), listOf(0, 2), listOf(ActivationRef("Idle", 2)), listOf(ActivationRef("Loading", 3)),
-                listOf(CommandRef(1, 3, "net", "Latest", Payload.Described("Fetch(cats)")), CommandRef(2, 3, null, null, Payload.Omitted)),
+                listOf(CommandRef(1, 3, "net", "Latest", Payload.Described("Fetch(cats)")), CommandRef(2, 3, actron.observability.CommandExecution.Independent, Payload.Omitted)),
                 listOf(2L), listOf(TimerRef(1, 3, 3, 10.seconds)), listOf(7L), 2,
             ),
         ),
-        record(17, JournalEntry.DecisionIgnored(null, "NoTransition")),
+        record(17, JournalEntry.DecisionIgnored(InputAttribution.Unattributed, "NoTransition")),
         record(18, JournalEntry.JournalGap(3), store = null, storeSeq = null),
         record(19, JournalEntry.BridgeSent(InputId(5), MessageRef(store, 1), StoreInstanceId("root-1"), delivered = true, cause = MessageRef(StoreInstanceId("root-1"), 4))),
-        record(20, JournalEntry.BridgeSent(null, MessageRef(store, 2), StoreInstanceId("nobody"), delivered = false)),
+        record(20, JournalEntry.BridgeSent(InputAttribution.Unattributed, MessageRef(store, 2), StoreInstanceId("nobody"), delivered = false)),
         record(21, JournalEntry.BridgeReceived(InputId(6), MessageRef(StoreInstanceId("root-1"), 1))),
         record(22, JournalEntry.EffectQueued(InputId(6), 4, "Retained", Payload.Projected("Navigate", mapOf("to" to "chat")))),
         record(23, JournalEntry.EffectHandlingStarted(4, 2)),
@@ -138,7 +140,7 @@ class JournalFileFormatTest {
 
         assertEquals(6, decoded.header?.recordFormatVersion)
         val sent = expected[18].entry as JournalEntry.BridgeSent
-        assertEquals(listOf(expected[0].entry, sent.copy(cause = null)), decoded.records.map { it.entry }, "a reader of a version reads every earlier one: variants only grow at the end, fields at the end of a variant")
+        assertEquals(listOf(expected[0].entry, sent.copy(cause = actron.observability.MessageCause.Unprompted)), decoded.records.map { it.entry }, "a reader of a version reads every earlier one: variants only grow at the end, fields at the end of a variant")
         assertNull(decoded.mark)
     }
 

@@ -84,6 +84,7 @@ class InMemorySegmentStorage : SegmentStorage {
         locked {
             segments.remove(name)
             modified.remove(name)
+            Unit
         }
     }
 
@@ -117,7 +118,7 @@ class InMemorySegmentStorage : SegmentStorage {
         }
     }
 
-    private inline fun <T> locked(block: () -> T): T {
+    private inline fun <T : Any> locked(block: () -> T): T {
         while (!lock.tryLock()) {
             // Spin: the holder copies a segment or appends to one.
         }

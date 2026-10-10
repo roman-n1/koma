@@ -5,7 +5,7 @@ import actron.core.Event
 import actron.statechart.machine.*
 
 /** Executable transition-coverage plan. Optimality is within the prefixes discovered by the bounded search. */
-data class MachineTestPlan<C, A : Action>(
+data class MachineTestPlan<C : Any, A : Action>(
     val definition: DefinitionId,
     val version: DefinitionVersion,
     val scenarios: List<MachineScenario<A>>,
@@ -26,20 +26,32 @@ data class MachineTestPlan<C, A : Action>(
 }
 
 /** Result of running one typed scenario without command handlers or external IO. */
-data class ScenarioResult<C, A : Action>(
-    val scenario: MachineScenario<A>,
-    val snapshot: MachineSnapshot<C>,
-    val coverage: MachineCoverage,
-    val failure: SequenceFailure<C, A>? = null,
-)
+sealed interface ScenarioResult<C : Any, A : Action> {
+    val scenario: MachineScenario<A>
+    val snapshot: MachineSnapshot<C>
+    val coverage: MachineCoverage
+    fun onFailure(accept: (SequenceFailure<C, A>) -> Unit)
+
+    data class Passed<C : Any, A : Action>(
+        override val scenario: MachineScenario<A>, override val snapshot: MachineSnapshot<C>, override val coverage: MachineCoverage,
+    ) : ScenarioResult<C, A> {
+        override fun onFailure(accept: (SequenceFailure<C, A>) -> Unit) = Unit
+    }
+    data class Failed<C : Any, A : Action>(
+        override val scenario: MachineScenario<A>, override val snapshot: MachineSnapshot<C>, override val coverage: MachineCoverage,
+        val failure: SequenceFailure<C, A>,
+    ) : ScenarioResult<C, A> {
+        override fun onFailure(accept: (SequenceFailure<C, A>) -> Unit) = accept(failure)
+    }
+}
 
 /** Actual coverage of the selected scenarios, not the exploration's larger candidate pool. */
-data class TestPlanResult<C, A : Action>(
+data class TestPlanResult<C : Any, A : Action>(
     val plan: MachineTestPlan<C, A>,
     val scenarios: List<ScenarioResult<C, A>>,
     val coverage: MachineCoverage,
 ) {
-    val failures: List<SequenceFailure<C, A>> get() = scenarios.mapNotNull { it.failure }
+    val failures: List<SequenceFailure<C, A>> get() = buildList { scenarios.forEach { it.onFailure(::add) } }
 
     fun assertSuccess() {
         plan.assertReady()
@@ -51,7 +63,7 @@ data class TestPlanResult<C, A : Action>(
 internal data class Selection(val indices: List<Int>, val attempts: Int, val optimal: Boolean)
 
 /** Bounded exact set cover, seeded by a complete greedy cover so budget exhaustion never drops coverage. */
-internal fun <T> selectCoverage(candidates: List<Set<T>>, lengths: List<Int>, target: Set<T>, maxAttempts: Int): Selection {
+internal fun <T : Any> selectCoverage(candidates: List<Set<T>>, lengths: List<Int>, target: Set<T>, maxAttempts: Int): Selection {
     if (target.isEmpty()) return Selection(emptyList(), 0, true)
     var remaining = target
     val greedy = mutableListOf<Int>()
@@ -75,8 +87,7 @@ internal fun <T> selectCoverage(candidates: List<Set<T>>, lengths: List<Int>, ta
             return
         }
         if (chosen.size >= best.size) return
-        val previous = visited[missing]
-        if (previous != null && previous <= chosen.size) return
+        if (missing in visited && visited.getValue(missing) <= chosen.size) return
         visited[missing] = chosen.size
         val next = missing.minBy { id -> candidates.count { id in it } }
         val choices = candidates.indices.filter { next in candidates[it] }
@@ -98,7 +109,7 @@ internal fun <T> selectCoverage(candidates: List<Set<T>>, lengths: List<Int>, ta
  * Breadth-first discovery can find longer prefixes that combine several branches; AllTransitions
  * stops earlier. Neither claims global optimality beyond supplied payloads and search depth.
  */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.generateTestPlan(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.generateTestPlan(
     initial: MachineSnapshot<C>,
     generator: MachineInputGenerator<C, A>,
     strategy: ExplorationStrategy = ExplorationStrategy.BreadthFirst,
@@ -120,7 +131,7 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.generateTestPlan(
 }
 
 /** Runs actual inputs from the same initial data; checks invariants after each stable decision. Never executes returned intents. */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.runScenario(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.runScenario(
     initial: MachineSnapshot<C>, scenario: MachineScenario<A>,
 ): ScenarioResult<C, A> {
     require(initial.definition == id && initial.version == version) { "[Actron] Scenario snapshot belongs to another machine or version" }
@@ -128,24 +139,24 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.runScenario(
     recorder.observeInitial(initial)
     var snapshot = initial
     val initialViolations = if (initial.isStarted) checkInvariants(initial) else emptyList()
-    if (initialViolations.isNotEmpty()) return ScenarioResult(scenario, initial, recorder.snapshot(), SequenceFailure(emptyList(), initial, initialViolations))
+    if (initialViolations.isNotEmpty()) return ScenarioResult.Failed(scenario, initial, recorder.snapshot(), SequenceFailure(emptyList(), initial, listOf(SequenceProblem.Invariants(initialViolations))))
     val prefix = mutableListOf<MachineInput<A>>()
-    var time: MachineTime? = null
-    for (input in scenario.inputs) {
-        require(time == null || input.now >= time) { "[Actron] Scenario moved logical time backwards" }
+    var time = MachineTime.Zero
+    for ((index, input) in scenario.inputs.withIndex()) {
+        require(index == 0 || input.now >= time) { "[Actron] Scenario moved logical time backwards" }
         time = input.now
         prefix += input
         val explained = decideExplained(snapshot, input)
         recorder.accept(explained)
         snapshot = explained.decision.snapshot
-        val failure = sequenceFailure(prefix, explained.decision)
-        if (failure != null) return ScenarioResult(scenario, snapshot, recorder.snapshot(), failure)
+        var result: ScenarioResult<C, A> = ScenarioResult.Passed(scenario, snapshot, recorder.snapshot())
+        if (sequenceFailure(prefix, explained.decision) { failure -> result = ScenarioResult.Failed(scenario, snapshot, recorder.snapshot(), failure) }) return result
     }
-    return ScenarioResult(scenario, snapshot, recorder.snapshot())
+    return ScenarioResult.Passed(scenario, snapshot, recorder.snapshot())
 }
 
 /** Replays each selected scenario independently, preserving payloads, command ids and virtual times. */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.runPlan(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.runPlan(
     initial: MachineSnapshot<C>, plan: MachineTestPlan<C, A>,
 ): TestPlanResult<C, A> {
     require(plan.definition == id && plan.version == version) { "[Actron] Test plan belongs to another machine or version" }
@@ -157,11 +168,11 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.runPlan(
 
 /** IO-free model discovery alongside this driver's live tests. It does not mutate the live Store. */
 @actron.core.ExperimentalActronApi
-fun <C, A : Action, CMD, E : Event> MachineTestDriver<C, A, CMD, E>.generateTestPlan(
+fun <C : Any, A : Action, CMD : Any, E : Event> MachineTestDriver<C, A, CMD, E>.generateTestPlan(
     generator: MachineInputGenerator<C, A>, maxDepth: Int = 10, maxDecisions: Int = 10_000,
 ): MachineTestPlan<C, A> = machine.generateTestPlan(initialSnapshot, generator, maxDepth = maxDepth, maxDecisions = maxDecisions)
 
 /** Verifies a plan against independent pure snapshots; live command handlers and Store state are untouched. */
 @actron.core.ExperimentalActronApi
-fun <C, A : Action, CMD, E : Event> MachineTestDriver<C, A, CMD, E>.verifyPlan(plan: MachineTestPlan<C, A>): TestPlanResult<C, A> =
+fun <C : Any, A : Action, CMD : Any, E : Event> MachineTestDriver<C, A, CMD, E>.verifyPlan(plan: MachineTestPlan<C, A>): TestPlanResult<C, A> =
     machine.runPlan(initialSnapshot, plan)

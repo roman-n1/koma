@@ -11,7 +11,7 @@ class BehaviouralArtifactsTest {
     private data object Go : Action
     private val idle = StateId("idle"); private val done = StateId("done")
     private fun machine(version: String, guard: String? = null) = Machine<Unit, Action, Nothing, Event>(DefinitionId("review"), DefinitionVersion(version),
-        StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), guard)))) {
+        StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), (guard)?.let { actron.statechart.GuardKey(it) } ?: actron.statechart.GuardCondition.Unconditional)))) {
         if (guard != null) guard(guard) { _, _ -> false }
     }
     private fun coverage(machine: Machine<Unit, Action, Nothing, Event>, covered: Boolean): MachineCoverage =

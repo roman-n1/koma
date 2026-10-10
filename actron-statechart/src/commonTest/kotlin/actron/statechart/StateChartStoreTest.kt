@@ -107,16 +107,16 @@ class StateChartStoreTest {
     private val settings = StateId("Settings")
 
     private val drop = Transition(connected, reconnecting, ActionMatcher.of<MessengerAction.Drop>("Drop"))
-    private val retry = Transition(reconnecting, reconnecting, Trigger.After(5.seconds), guard = "canRetry", effect = "countAttempt")
-    private val giveUp = Transition(reconnecting, offline, Trigger.After(5.seconds), guard = "outOfRetries")
-    private val restore = Transition(reconnecting, connected, ActionMatcher.of<MessengerAction.Restore>("Restore"), effect = "resetAttempts")
-    private val connect = Transition(offline, connected, ActionMatcher.of<MessengerAction.Connect>("Connect"), effect = "resetAttempts")
+    private val retry = Transition(reconnecting, reconnecting, Trigger.After(5.seconds), guard = actron.statechart.GuardKey("canRetry"), effect = actron.statechart.EffectKey("countAttempt"))
+    private val giveUp = Transition(reconnecting, offline, Trigger.After(5.seconds), guard = actron.statechart.GuardKey("outOfRetries"))
+    private val restore = Transition(reconnecting, connected, ActionMatcher.of<MessengerAction.Restore>("Restore"), effect = actron.statechart.EffectKey("resetAttempts"))
+    private val connect = Transition(offline, connected, ActionMatcher.of<MessengerAction.Connect>("Connect"), effect = actron.statechart.EffectKey("resetAttempts"))
     private val open = Transition(inbox, conversation, ActionMatcher.of<MessengerAction.Open>("Open"))
     private val back = Transition(conversation, inbox, ActionMatcher.of<MessengerAction.Back>("Back"))
     private val keyPress = Transition(reading, typing, ActionMatcher.of<MessengerAction.KeyPress>("KeyPress"))
     private val keepTyping = Transition(typing, typing, ActionMatcher.of<MessengerAction.KeyPress>("KeyPress"))
     private val typingTimeout = Transition(typing, reading, Trigger.After(3.seconds))
-    private val send = Transition(typing, reading, ActionMatcher.of<MessengerAction.Send>("Send"), effect = "countSent")
+    private val send = Transition(typing, reading, ActionMatcher.of<MessengerAction.Send>("Send"), effect = actron.statechart.EffectKey("countSent"))
     private val openSettings = Transition(chat, settings, ActionMatcher.of<MessengerAction.OpenSettings>("OpenSettings"))
     private val close = Transition(settings, chatHistory, ActionMatcher.of<MessengerAction.Close>("Close"))
 
@@ -561,7 +561,7 @@ class StateChartStoreTest {
     @Test
     fun hooksEmitEventsOnStartAndOnSteps() = runTest {
         val store = messenger {
-            onEnter(main) { event(MessengerEvent.Note("started ${action == null}")) }
+            onEnter(main) { event(MessengerEvent.Note("started ${action == ChartInitialization}")) }
             onExit(connected) { event(MessengerEvent.Note("left $node on $action")) }
         }
         val recorder = store.createRecorder()

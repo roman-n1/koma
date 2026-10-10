@@ -84,12 +84,12 @@ class MachineTest {
             AtomicState(error, parent = session),
         ),
         transitions = listOf(
-            Transition(idle, loading, load, effect = "rememberQuery"), // T0
-            Transition(loading, content, loaded, effect = "storeItems"), // T1
-            Transition(loading, loading, failed, guard = "canRetry", effect = "countAttempt"), // T2
+            Transition(idle, loading, load, effect = actron.statechart.EffectKey("rememberQuery")), // T0
+            Transition(loading, content, loaded, effect = actron.statechart.EffectKey("storeItems")), // T1
+            Transition(loading, loading, failed, guard = actron.statechart.GuardKey("canRetry"), effect = actron.statechart.EffectKey("countAttempt")), // T2
             Transition(loading, error, failed), // T3
             Transition(loading, error, Trigger.After(10.seconds)), // T4
-            Transition(error, loading, load, effect = "resetAttempts"), // T5
+            Transition(error, loading, load, effect = actron.statechart.EffectKey("resetAttempts")), // T5
             Transition(content, loading, refresh), // T6
         ),
     )
@@ -114,9 +114,9 @@ class MachineTest {
     private fun started(machine: Machine<ListContext, ListAction, ListCommand, ListEvent> = machine()): MachineSnapshot<ListContext> =
         machine.decide(machine.initialSnapshot(ListContext()), MachineInput.Start(t0)).snapshot
 
-    private fun <C, CMD, E : Event> Decision<C, CMD, E>.handled(): Decision<C, CMD, E> = also { assertEquals(DecisionOutcome.Handled, it.outcome) }
+    private fun <C : Any, CMD : Any, E : Event> Decision<C, CMD, E>.handled(): Decision<C, CMD, E> = also { assertEquals(DecisionOutcome.Handled, it.outcome) }
 
-    private fun <C, CMD, E : Event> Decision<C, CMD, E>.ignored(reason: IgnoreReason): Decision<C, CMD, E> = also { assertEquals(DecisionOutcome.Ignored(reason), it.outcome) }
+    private fun <C : Any, CMD : Any, E : Event> Decision<C, CMD, E>.ignored(reason: IgnoreReason): Decision<C, CMD, E> = also { assertEquals(DecisionOutcome.Ignored(reason), it.outcome) }
 
     // --- start ---
 
@@ -327,7 +327,7 @@ class MachineTest {
         val guarded = StateChartDefinition(
             initial = loading,
             states = listOf(AtomicState(loading), AtomicState(error)),
-            transitions = listOf(Transition(loading, error, Trigger.After(1.seconds), guard = "never")),
+            transitions = listOf(Transition(loading, error, Trigger.After(1.seconds), guard = actron.statechart.GuardKey("never"))),
         )
         val machine = Machine<ListContext, ListAction, ListCommand, ListEvent>(DefinitionId("guarded"), DefinitionVersion("1"), guarded) {
             guard("never") { _, action -> assertIs<TimerFired>(action); false }

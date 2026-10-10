@@ -1,5 +1,7 @@
 package actron.timetravel.file
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.InputId
@@ -78,7 +80,7 @@ data class RecordingFileStats(val recorded: Long, val written: Long, val dropped
  * @param storage Where the segments go
  * @param scope Runs the writer; choose a dispatcher fit for the storage's I/O
  */
-class RecordingFileSink<C, A : Action, CMD, E : Event>(
+class RecordingFileSink<C : Any, A : Action, CMD : Any, E : Event>(
     private val store: StoreInstanceId,
     private val machine: Machine<C, A, CMD, E>,
     context: C,
@@ -95,16 +97,20 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
     private var dropped = 0L
     private var closed = false
 
-    /** Why this recording cannot be replayed from its beginning, or `null`. */
-    var problem: String? = null
+    /** Whether the sink observed the initial snapshot it was configured to replay from. */
+    var origin: actron.timetravel.RecordingOrigin = actron.timetravel.RecordingOrigin.InitialSnapshot
         private set
 
-    private class Item<C, A : Action, CMD, E : Event>(val step: RecordedStep<C, A, CMD, E>, val index: Int, val before: ExecutorCheckpoint<C, CMD>, val beginSegment: Boolean)
+    private class Item<C : Any, A : Action, CMD : Any, E : Event>(val step: RecordedStep<C, A, CMD, E>, val index: Int, val before: ExecutorCheckpoint<C, CMD>, val beginSegment: Boolean)
 
     private val queue = Channel<Item<C, A, CMD, E>>(config.queueCapacity)
 
     // Writer state: touched only by the writer.
-    private var output: SegmentOutput? = null
+    private sealed interface SegmentWriter {
+        data object Detached : SegmentWriter
+        data class Active(val output: SegmentOutput) : SegmentWriter
+    }
+    private var segmentWriter: SegmentWriter = SegmentWriter.Detached
     private var segmentIndex = -1
     private var segmentBytes = 0
     private var segmentSteps = 0
@@ -113,7 +119,7 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
     private var failed = false
 
     private val writer: Job = scope.launch {
-        var failure: Throwable? = null
+        var completion: Result<Unit> = Result.success(Unit)
         try {
             for (item in queue) {
                 if (failed) continue
@@ -122,19 +128,19 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
                 } catch (e: Exception) {
                     if (e is CancellationException && !currentCoroutineContext().isActive) throw e
                     failed = true
-                    release(e)
+                    release(Result.failure(e))
                     notifyFailure(e)
                 }
             }
             if (!failed) finish()
         } catch (t: Throwable) {
-            failure = t
+            completion = Result.failure(t)
             if (t is CancellationException || t !is Exception) throw t
             notifyFailure(t)
         } finally {
             // Cancellation leaves an unfinished segment; never append END to a failed frame.
             try {
-                release(failure)
+                release(completion)
             } finally {
                 locked { closed = true }
                 queue.cancel()
@@ -150,18 +156,21 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
         }
     }
 
-    private fun release(failure: Throwable?) {
-        val output = output ?: return
-        this.output = null
-        closeOutput(output, failure)
+    private fun release(completion: Result<Unit>) {
+        val active = segmentWriter
+        if (active !is SegmentWriter.Active) return
+        segmentWriter = SegmentWriter.Detached
+        closeOutput(active.output, completion)
     }
 
-    private fun closeOutput(output: SegmentOutput, failure: Throwable?) {
+    private fun closeOutput(output: SegmentOutput, completion: Result<Unit>) {
         try {
             output.close()
         } catch (t: Throwable) {
-            if (failure == null) throw t
-            if (failure !== t) failure.addSuppressed(t)
+            completion.fold(
+                onSuccess = { throw t },
+                onFailure = { primary -> if (primary !== t) primary.addSuppressed(t) },
+            )
         }
     }
 
@@ -171,21 +180,21 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
 
     /** The Store's segments present in the storage, oldest first. */
     val segments: List<String>
-        get() = storage.list().mapNotNull { info -> RecordingFileFormat.parseSegmentName(info.name)?.takeIf { it.first == store }?.let { it.second to info.name } }
+        get() = RecordingFileFormat.namedSegments(storage, store)
             .sortedBy { it.first }.map { it.second }
 
-    override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+    override fun onCommitted(input: InputAttribution, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
         locked {
             if (nextStep == 0 && machineInput is MachineInput.Start && machine.decide(current.snapshot, machineInput).snapshot != decision.snapshot) {
-                problem = "the run did not start from the sink's initial snapshot (a restored snapshot started over?)"
+                origin = actron.timetravel.RecordingOrigin.UnknownBeginning("the run did not start from the sink's initial snapshot (a restored snapshot started over?)")
             }
         }
         record(RecordedStep.Committed(machineInput, decision))
     }
 
-    override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) = record(RecordedStep.Ignored(machineInput, reason))
+    override fun onIgnored(input: InputAttribution, machineInput: MachineInput<A>, reason: IgnoreReason) = record(RecordedStep.Ignored(machineInput, reason))
 
-    override fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) = record(RecordedStep.Failed(machineInput, failure))
+    override fun onFailed(input: InputAttribution, machineInput: MachineInput<A>, failure: FailureDescriptor) = record(RecordedStep.Failed(machineInput, failure))
 
     /** Finishes the active segment with the end frame and stops the writer. Steps after this are dropped. */
     suspend fun close() {
@@ -218,12 +227,14 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
 
     private fun write(item: Item<C, A, CMD, E>) {
         val frame = RecordingFileFormat.stepFrame(codec.encodeStep(item.step))
-        if (item.beginSegment || (segmentSteps > 0 && segmentBytes + frame.size > config.maxSegmentBytes) || output == null) {
+        if (item.beginSegment || (segmentSteps > 0 && segmentBytes + frame.size > config.maxSegmentBytes) || segmentWriter is SegmentWriter.Detached) {
             finish()
             open(item)
             retain()
         }
-        val output = checkNotNull(output)
+        val active = segmentWriter
+        check(active is SegmentWriter.Active)
+        val output = active.output
         output.write(frame)
         segmentBytes += frame.size
         segmentSteps++
@@ -239,7 +250,7 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
         val header = RecordingFileFormat.header(machine.id, machine.version, store, segmentIndex, item.index)
         val checkpoint = RecordingFileFormat.checkpointFrame(codec.encodeCheckpoint(item.before))
         val output = storage.append(RecordingFileFormat.segmentName(store, segmentIndex))
-        this.output = output
+        segmentWriter = SegmentWriter.Active(output)
         output.write(header)
         output.write(checkpoint)
         segmentBytes = header.size + checkpoint.size
@@ -247,28 +258,30 @@ class RecordingFileSink<C, A : Action, CMD, E : Event>(
         unflushed = 0
     }
 
-    private fun nextIndex(): Int = storage.list().mapNotNull { RecordingFileFormat.parseSegmentName(it.name) }.filter { it.first == store }.maxOfOrNull { it.second }?.plus(1) ?: 0
+    private fun nextIndex(): Int = RecordingFileFormat.namedSegments(storage, store).maxOfOrNull { it.first }?.plus(1) ?: 0
 
     private fun finish() {
-        val output = output ?: return
-        this.output = null
-        var failure: Throwable? = null
+        val active = segmentWriter
+        if (active !is SegmentWriter.Active) return
+        val output = active.output
+        segmentWriter = SegmentWriter.Detached
+        var completion: Result<Unit> = Result.success(Unit)
         try {
             output.write(Framing.END)
         } catch (t: Throwable) {
-            failure = t
+            completion = Result.failure(t)
             throw t
         } finally {
-            closeOutput(output, failure)
+            closeOutput(output, completion)
         }
     }
 
     private fun retain() {
-        val mine = storage.list().mapNotNull { info -> RecordingFileFormat.parseSegmentName(info.name)?.takeIf { it.first == store }?.let { it.second to info.name } }.sortedBy { it.first }
+        val mine = RecordingFileFormat.namedSegments(storage, store).sortedBy { it.first }
         for ((_, name) in mine.dropLast(config.maxSegments)) storage.delete(name)
     }
 
-    private inline fun <T> locked(block: () -> T): T {
+    private inline fun <T : Any> locked(block: () -> T): T {
         while (!lock.tryLock()) {
             // Spin: the holder carries one step forward.
         }

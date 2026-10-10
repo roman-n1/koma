@@ -88,6 +88,25 @@ abstract interface actron.observability.file/SegmentStorage { // actron.observab
     abstract fun read(kotlin/String): kotlin/ByteArray // actron.observability.file/SegmentStorage.read|read(kotlin.String){}[0]
 }
 
+abstract interface actron.observability/JournalPublisher { // actron.observability/JournalPublisher|null[0]
+    abstract val boundary // actron.observability/JournalPublisher.boundary|{}boundary[0]
+        abstract fun <get-boundary>(): actron.observability/JournalBoundary // actron.observability/JournalPublisher.boundary.<get-boundary>|<get-boundary>(){}[0]
+
+    abstract fun publish(actron.observability/JournalEntry<*, *, *>) // actron.observability/JournalPublisher.publish|publish(actron.observability.JournalEntry<*,*,*>){}[0]
+    abstract fun publish(actron.observability/StoreInstanceId, actron.observability/JournalEntry<*, *, *>) // actron.observability/JournalPublisher.publish|publish(actron.observability.StoreInstanceId;actron.observability.JournalEntry<*,*,*>){}[0]
+
+    final object Disabled : actron.observability/JournalPublisher { // actron.observability/JournalPublisher.Disabled|null[0]
+        final val boundary // actron.observability/JournalPublisher.Disabled.boundary|{}boundary[0]
+            final fun <get-boundary>(): actron.observability/JournalBoundary // actron.observability/JournalPublisher.Disabled.boundary.<get-boundary>|<get-boundary>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalPublisher.Disabled.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/JournalPublisher.Disabled.hashCode|hashCode(){}[0]
+        final fun publish(actron.observability/JournalEntry<*, *, *>) // actron.observability/JournalPublisher.Disabled.publish|publish(actron.observability.JournalEntry<*,*,*>){}[0]
+        final fun publish(actron.observability/StoreInstanceId, actron.observability/JournalEntry<*, *, *>) // actron.observability/JournalPublisher.Disabled.publish|publish(actron.observability.StoreInstanceId;actron.observability.JournalEntry<*,*,*>){}[0]
+        final fun toString(): kotlin/String // actron.observability/JournalPublisher.Disabled.toString|toString(){}[0]
+    }
+}
+
 sealed interface <#A: out actron.core/Action> actron.observability/InputDescriptor { // actron.observability/InputDescriptor|null[0]
     final class <#A1: out actron.core/Action> Dispatch : actron.observability/InputDescriptor<#A1> { // actron.observability/InputDescriptor.Dispatch|null[0]
         constructor <init>(actron.observability/Payload<#A1>) // actron.observability/InputDescriptor.Dispatch.<init>|<init>(actron.observability.Payload<1:0>){}[0]
@@ -103,29 +122,29 @@ sealed interface <#A: out actron.core/Action> actron.observability/InputDescript
     }
 
     final class Recovery : actron.observability/InputDescriptor<kotlin/Nothing> { // actron.observability/InputDescriptor.Recovery|null[0]
-        constructor <init>(actron.observability/FailureDescriptor, actron.core/InputId?) // actron.observability/InputDescriptor.Recovery.<init>|<init>(actron.observability.FailureDescriptor;actron.core.InputId?){}[0]
+        constructor <init>(actron.observability/FailureDescriptor, actron.core/InputAttribution) // actron.observability/InputDescriptor.Recovery.<init>|<init>(actron.observability.FailureDescriptor;actron.core.InputAttribution){}[0]
 
         final val failure // actron.observability/InputDescriptor.Recovery.failure|{}failure[0]
             final fun <get-failure>(): actron.observability/FailureDescriptor // actron.observability/InputDescriptor.Recovery.failure.<get-failure>|<get-failure>(){}[0]
         final val origin // actron.observability/InputDescriptor.Recovery.origin|{}origin[0]
-            final fun <get-origin>(): actron.core/InputId? // actron.observability/InputDescriptor.Recovery.origin.<get-origin>|<get-origin>(){}[0]
+            final fun <get-origin>(): actron.core/InputAttribution // actron.observability/InputDescriptor.Recovery.origin.<get-origin>|<get-origin>(){}[0]
 
         final fun component1(): actron.observability/FailureDescriptor // actron.observability/InputDescriptor.Recovery.component1|component1(){}[0]
-        final fun component2(): actron.core/InputId? // actron.observability/InputDescriptor.Recovery.component2|component2(){}[0]
-        final fun copy(actron.observability/FailureDescriptor = ..., actron.core/InputId? = ...): actron.observability/InputDescriptor.Recovery // actron.observability/InputDescriptor.Recovery.copy|copy(actron.observability.FailureDescriptor;actron.core.InputId?){}[0]
+        final fun component2(): actron.core/InputAttribution // actron.observability/InputDescriptor.Recovery.component2|component2(){}[0]
+        final fun copy(actron.observability/FailureDescriptor = ..., actron.core/InputAttribution = ...): actron.observability/InputDescriptor.Recovery // actron.observability/InputDescriptor.Recovery.copy|copy(actron.observability.FailureDescriptor;actron.core.InputAttribution){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/InputDescriptor.Recovery.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/InputDescriptor.Recovery.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/InputDescriptor.Recovery.toString|toString(){}[0]
     }
 
     final class Transaction : actron.observability/InputDescriptor<kotlin/Nothing> { // actron.observability/InputDescriptor.Transaction|null[0]
-        constructor <init>(actron.core/InputId?) // actron.observability/InputDescriptor.Transaction.<init>|<init>(actron.core.InputId?){}[0]
+        constructor <init>(actron.core/InputAttribution) // actron.observability/InputDescriptor.Transaction.<init>|<init>(actron.core.InputAttribution){}[0]
 
         final val origin // actron.observability/InputDescriptor.Transaction.origin|{}origin[0]
-            final fun <get-origin>(): actron.core/InputId? // actron.observability/InputDescriptor.Transaction.origin.<get-origin>|<get-origin>(){}[0]
+            final fun <get-origin>(): actron.core/InputAttribution // actron.observability/InputDescriptor.Transaction.origin.<get-origin>|<get-origin>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.observability/InputDescriptor.Transaction.component1|component1(){}[0]
-        final fun copy(actron.core/InputId? = ...): actron.observability/InputDescriptor.Transaction // actron.observability/InputDescriptor.Transaction.copy|copy(actron.core.InputId?){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.observability/InputDescriptor.Transaction.component1|component1(){}[0]
+        final fun copy(actron.core/InputAttribution = ...): actron.observability/InputDescriptor.Transaction // actron.observability/InputDescriptor.Transaction.copy|copy(actron.core.InputAttribution){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/InputDescriptor.Transaction.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/InputDescriptor.Transaction.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/InputDescriptor.Transaction.toString|toString(){}[0]
@@ -172,38 +191,38 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
     }
 
     final class <#A1: out actron.core/Event> EffectQueued : actron.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, #A1> { // actron.observability/JournalEntry.EffectQueued|null[0]
-        constructor <init>(actron.core/InputId?, kotlin/Long, kotlin/String, actron.observability/Payload<#A1>) // actron.observability/JournalEntry.EffectQueued.<init>|<init>(actron.core.InputId?;kotlin.Long;kotlin.String;actron.observability.Payload<1:0>){}[0]
+        constructor <init>(actron.core/InputAttribution, kotlin/Long, kotlin/String, actron.observability/Payload<#A1>) // actron.observability/JournalEntry.EffectQueued.<init>|<init>(actron.core.InputAttribution;kotlin.Long;kotlin.String;actron.observability.Payload<1:0>){}[0]
 
         final val effect // actron.observability/JournalEntry.EffectQueued.effect|{}effect[0]
             final fun <get-effect>(): kotlin/Long // actron.observability/JournalEntry.EffectQueued.effect.<get-effect>|<get-effect>(){}[0]
         final val event // actron.observability/JournalEntry.EffectQueued.event|{}event[0]
             final fun <get-event>(): actron.observability/Payload<#A1> // actron.observability/JournalEntry.EffectQueued.event.<get-event>|<get-event>(){}[0]
         final val input // actron.observability/JournalEntry.EffectQueued.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.observability/JournalEntry.EffectQueued.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.observability/JournalEntry.EffectQueued.input.<get-input>|<get-input>(){}[0]
         final val policy // actron.observability/JournalEntry.EffectQueued.policy|{}policy[0]
             final fun <get-policy>(): kotlin/String // actron.observability/JournalEntry.EffectQueued.policy.<get-policy>|<get-policy>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.observability/JournalEntry.EffectQueued.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.observability/JournalEntry.EffectQueued.component1|component1(){}[0]
         final fun component2(): kotlin/Long // actron.observability/JournalEntry.EffectQueued.component2|component2(){}[0]
         final fun component3(): kotlin/String // actron.observability/JournalEntry.EffectQueued.component3|component3(){}[0]
         final fun component4(): actron.observability/Payload<#A1> // actron.observability/JournalEntry.EffectQueued.component4|component4(){}[0]
-        final fun copy(actron.core/InputId? = ..., kotlin/Long = ..., kotlin/String = ..., actron.observability/Payload<#A1> = ...): actron.observability/JournalEntry.EffectQueued<#A1> // actron.observability/JournalEntry.EffectQueued.copy|copy(actron.core.InputId?;kotlin.Long;kotlin.String;actron.observability.Payload<1:0>){}[0]
+        final fun copy(actron.core/InputAttribution = ..., kotlin/Long = ..., kotlin/String = ..., actron.observability/Payload<#A1> = ...): actron.observability/JournalEntry.EffectQueued<#A1> // actron.observability/JournalEntry.EffectQueued.copy|copy(actron.core.InputAttribution;kotlin.Long;kotlin.String;actron.observability.Payload<1:0>){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalEntry.EffectQueued.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/JournalEntry.EffectQueued.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/JournalEntry.EffectQueued.toString|toString(){}[0]
     }
 
     final class <#A1: out actron.core/Event> EventEmitted : actron.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, #A1> { // actron.observability/JournalEntry.EventEmitted|null[0]
-        constructor <init>(actron.core/InputId?, actron.observability/Payload<#A1>) // actron.observability/JournalEntry.EventEmitted.<init>|<init>(actron.core.InputId?;actron.observability.Payload<1:0>){}[0]
+        constructor <init>(actron.core/InputAttribution, actron.observability/Payload<#A1>) // actron.observability/JournalEntry.EventEmitted.<init>|<init>(actron.core.InputAttribution;actron.observability.Payload<1:0>){}[0]
 
         final val event // actron.observability/JournalEntry.EventEmitted.event|{}event[0]
             final fun <get-event>(): actron.observability/Payload<#A1> // actron.observability/JournalEntry.EventEmitted.event.<get-event>|<get-event>(){}[0]
         final val input // actron.observability/JournalEntry.EventEmitted.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.observability/JournalEntry.EventEmitted.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.observability/JournalEntry.EventEmitted.input.<get-input>|<get-input>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.observability/JournalEntry.EventEmitted.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.observability/JournalEntry.EventEmitted.component1|component1(){}[0]
         final fun component2(): actron.observability/Payload<#A1> // actron.observability/JournalEntry.EventEmitted.component2|component2(){}[0]
-        final fun copy(actron.core/InputId? = ..., actron.observability/Payload<#A1> = ...): actron.observability/JournalEntry.EventEmitted<#A1> // actron.observability/JournalEntry.EventEmitted.copy|copy(actron.core.InputId?;actron.observability.Payload<1:0>){}[0]
+        final fun copy(actron.core/InputAttribution = ..., actron.observability/Payload<#A1> = ...): actron.observability/JournalEntry.EventEmitted<#A1> // actron.observability/JournalEntry.EventEmitted.copy|copy(actron.core.InputAttribution;actron.observability.Payload<1:0>){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalEntry.EventEmitted.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/JournalEntry.EventEmitted.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/JournalEntry.EventEmitted.toString|toString(){}[0]
@@ -251,41 +270,41 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
     }
 
     final class BridgeReceived : actron.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.observability/JournalEntry.BridgeReceived|null[0]
-        constructor <init>(actron.core/InputId?, actron.observability/MessageRef) // actron.observability/JournalEntry.BridgeReceived.<init>|<init>(actron.core.InputId?;actron.observability.MessageRef){}[0]
+        constructor <init>(actron.core/InputAttribution, actron.observability/MessageRef) // actron.observability/JournalEntry.BridgeReceived.<init>|<init>(actron.core.InputAttribution;actron.observability.MessageRef){}[0]
 
         final val input // actron.observability/JournalEntry.BridgeReceived.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.observability/JournalEntry.BridgeReceived.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.observability/JournalEntry.BridgeReceived.input.<get-input>|<get-input>(){}[0]
         final val message // actron.observability/JournalEntry.BridgeReceived.message|{}message[0]
             final fun <get-message>(): actron.observability/MessageRef // actron.observability/JournalEntry.BridgeReceived.message.<get-message>|<get-message>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.observability/JournalEntry.BridgeReceived.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.observability/JournalEntry.BridgeReceived.component1|component1(){}[0]
         final fun component2(): actron.observability/MessageRef // actron.observability/JournalEntry.BridgeReceived.component2|component2(){}[0]
-        final fun copy(actron.core/InputId? = ..., actron.observability/MessageRef = ...): actron.observability/JournalEntry.BridgeReceived // actron.observability/JournalEntry.BridgeReceived.copy|copy(actron.core.InputId?;actron.observability.MessageRef){}[0]
+        final fun copy(actron.core/InputAttribution = ..., actron.observability/MessageRef = ...): actron.observability/JournalEntry.BridgeReceived // actron.observability/JournalEntry.BridgeReceived.copy|copy(actron.core.InputAttribution;actron.observability.MessageRef){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalEntry.BridgeReceived.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/JournalEntry.BridgeReceived.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/JournalEntry.BridgeReceived.toString|toString(){}[0]
     }
 
     final class BridgeSent : actron.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.observability/JournalEntry.BridgeSent|null[0]
-        constructor <init>(actron.core/InputId?, actron.observability/MessageRef, actron.observability/StoreInstanceId, kotlin/Boolean, actron.observability/MessageRef? = ...) // actron.observability/JournalEntry.BridgeSent.<init>|<init>(actron.core.InputId?;actron.observability.MessageRef;actron.observability.StoreInstanceId;kotlin.Boolean;actron.observability.MessageRef?){}[0]
+        constructor <init>(actron.core/InputAttribution, actron.observability/MessageRef, actron.observability/StoreInstanceId, kotlin/Boolean, actron.observability/MessageCause = ...) // actron.observability/JournalEntry.BridgeSent.<init>|<init>(actron.core.InputAttribution;actron.observability.MessageRef;actron.observability.StoreInstanceId;kotlin.Boolean;actron.observability.MessageCause){}[0]
 
         final val cause // actron.observability/JournalEntry.BridgeSent.cause|{}cause[0]
-            final fun <get-cause>(): actron.observability/MessageRef? // actron.observability/JournalEntry.BridgeSent.cause.<get-cause>|<get-cause>(){}[0]
+            final fun <get-cause>(): actron.observability/MessageCause // actron.observability/JournalEntry.BridgeSent.cause.<get-cause>|<get-cause>(){}[0]
         final val delivered // actron.observability/JournalEntry.BridgeSent.delivered|{}delivered[0]
             final fun <get-delivered>(): kotlin/Boolean // actron.observability/JournalEntry.BridgeSent.delivered.<get-delivered>|<get-delivered>(){}[0]
         final val input // actron.observability/JournalEntry.BridgeSent.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.observability/JournalEntry.BridgeSent.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.observability/JournalEntry.BridgeSent.input.<get-input>|<get-input>(){}[0]
         final val message // actron.observability/JournalEntry.BridgeSent.message|{}message[0]
             final fun <get-message>(): actron.observability/MessageRef // actron.observability/JournalEntry.BridgeSent.message.<get-message>|<get-message>(){}[0]
         final val to // actron.observability/JournalEntry.BridgeSent.to|{}to[0]
             final fun <get-to>(): actron.observability/StoreInstanceId // actron.observability/JournalEntry.BridgeSent.to.<get-to>|<get-to>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.observability/JournalEntry.BridgeSent.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.observability/JournalEntry.BridgeSent.component1|component1(){}[0]
         final fun component2(): actron.observability/MessageRef // actron.observability/JournalEntry.BridgeSent.component2|component2(){}[0]
         final fun component3(): actron.observability/StoreInstanceId // actron.observability/JournalEntry.BridgeSent.component3|component3(){}[0]
         final fun component4(): kotlin/Boolean // actron.observability/JournalEntry.BridgeSent.component4|component4(){}[0]
-        final fun component5(): actron.observability/MessageRef? // actron.observability/JournalEntry.BridgeSent.component5|component5(){}[0]
-        final fun copy(actron.core/InputId? = ..., actron.observability/MessageRef = ..., actron.observability/StoreInstanceId = ..., kotlin/Boolean = ..., actron.observability/MessageRef? = ...): actron.observability/JournalEntry.BridgeSent // actron.observability/JournalEntry.BridgeSent.copy|copy(actron.core.InputId?;actron.observability.MessageRef;actron.observability.StoreInstanceId;kotlin.Boolean;actron.observability.MessageRef?){}[0]
+        final fun component5(): actron.observability/MessageCause // actron.observability/JournalEntry.BridgeSent.component5|component5(){}[0]
+        final fun copy(actron.core/InputAttribution = ..., actron.observability/MessageRef = ..., actron.observability/StoreInstanceId = ..., kotlin/Boolean = ..., actron.observability/MessageCause = ...): actron.observability/JournalEntry.BridgeSent // actron.observability/JournalEntry.BridgeSent.copy|copy(actron.core.InputAttribution;actron.observability.MessageRef;actron.observability.StoreInstanceId;kotlin.Boolean;actron.observability.MessageCause){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalEntry.BridgeSent.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/JournalEntry.BridgeSent.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/JournalEntry.BridgeSent.toString|toString(){}[0]
@@ -330,7 +349,7 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
     }
 
     final class DecisionCommitted : actron.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.observability/JournalEntry.DecisionCommitted|null[0]
-        constructor <init>(actron.core/InputId?, kotlin/Long, kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/Int>, kotlin.collections/List<actron.observability/ActivationRef>, kotlin.collections/List<actron.observability/ActivationRef>, kotlin.collections/List<actron.observability/CommandRef>, kotlin.collections/List<kotlin/Long>, kotlin.collections/List<actron.observability/TimerRef>, kotlin.collections/List<kotlin/Long>, kotlin/Int) // actron.observability/JournalEntry.DecisionCommitted.<init>|<init>(actron.core.InputId?;kotlin.Long;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<actron.observability.ActivationRef>;kotlin.collections.List<actron.observability.ActivationRef>;kotlin.collections.List<actron.observability.CommandRef>;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<actron.observability.TimerRef>;kotlin.collections.List<kotlin.Long>;kotlin.Int){}[0]
+        constructor <init>(actron.core/InputAttribution, kotlin/Long, kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/Int>, kotlin.collections/List<actron.observability/ActivationRef>, kotlin.collections/List<actron.observability/ActivationRef>, kotlin.collections/List<actron.observability/CommandRef>, kotlin.collections/List<kotlin/Long>, kotlin.collections/List<actron.observability/TimerRef>, kotlin.collections/List<kotlin/Long>, kotlin/Int) // actron.observability/JournalEntry.DecisionCommitted.<init>|<init>(actron.core.InputAttribution;kotlin.Long;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<actron.observability.ActivationRef>;kotlin.collections.List<actron.observability.ActivationRef>;kotlin.collections.List<actron.observability.CommandRef>;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<actron.observability.TimerRef>;kotlin.collections.List<kotlin.Long>;kotlin.Int){}[0]
 
         final val active // actron.observability/JournalEntry.DecisionCommitted.active|{}active[0]
             final fun <get-active>(): kotlin.collections/List<kotlin/String> // actron.observability/JournalEntry.DecisionCommitted.active.<get-active>|<get-active>(){}[0]
@@ -345,7 +364,7 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
         final val exited // actron.observability/JournalEntry.DecisionCommitted.exited|{}exited[0]
             final fun <get-exited>(): kotlin.collections/List<actron.observability/ActivationRef> // actron.observability/JournalEntry.DecisionCommitted.exited.<get-exited>|<get-exited>(){}[0]
         final val input // actron.observability/JournalEntry.DecisionCommitted.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.observability/JournalEntry.DecisionCommitted.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.observability/JournalEntry.DecisionCommitted.input.<get-input>|<get-input>(){}[0]
         final val revision // actron.observability/JournalEntry.DecisionCommitted.revision|{}revision[0]
             final fun <get-revision>(): kotlin/Long // actron.observability/JournalEntry.DecisionCommitted.revision.<get-revision>|<get-revision>(){}[0]
         final val timersCancelled // actron.observability/JournalEntry.DecisionCommitted.timersCancelled|{}timersCancelled[0]
@@ -355,7 +374,7 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
         final val transitions // actron.observability/JournalEntry.DecisionCommitted.transitions|{}transitions[0]
             final fun <get-transitions>(): kotlin.collections/List<kotlin/Int> // actron.observability/JournalEntry.DecisionCommitted.transitions.<get-transitions>|<get-transitions>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.observability/JournalEntry.DecisionCommitted.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.observability/JournalEntry.DecisionCommitted.component1|component1(){}[0]
         final fun component10(): kotlin.collections/List<kotlin/Long> // actron.observability/JournalEntry.DecisionCommitted.component10|component10(){}[0]
         final fun component11(): kotlin/Int // actron.observability/JournalEntry.DecisionCommitted.component11|component11(){}[0]
         final fun component2(): kotlin/Long // actron.observability/JournalEntry.DecisionCommitted.component2|component2(){}[0]
@@ -366,23 +385,23 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
         final fun component7(): kotlin.collections/List<actron.observability/CommandRef> // actron.observability/JournalEntry.DecisionCommitted.component7|component7(){}[0]
         final fun component8(): kotlin.collections/List<kotlin/Long> // actron.observability/JournalEntry.DecisionCommitted.component8|component8(){}[0]
         final fun component9(): kotlin.collections/List<actron.observability/TimerRef> // actron.observability/JournalEntry.DecisionCommitted.component9|component9(){}[0]
-        final fun copy(actron.core/InputId? = ..., kotlin/Long = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<kotlin/Int> = ..., kotlin.collections/List<actron.observability/ActivationRef> = ..., kotlin.collections/List<actron.observability/ActivationRef> = ..., kotlin.collections/List<actron.observability/CommandRef> = ..., kotlin.collections/List<kotlin/Long> = ..., kotlin.collections/List<actron.observability/TimerRef> = ..., kotlin.collections/List<kotlin/Long> = ..., kotlin/Int = ...): actron.observability/JournalEntry.DecisionCommitted // actron.observability/JournalEntry.DecisionCommitted.copy|copy(actron.core.InputId?;kotlin.Long;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<actron.observability.ActivationRef>;kotlin.collections.List<actron.observability.ActivationRef>;kotlin.collections.List<actron.observability.CommandRef>;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<actron.observability.TimerRef>;kotlin.collections.List<kotlin.Long>;kotlin.Int){}[0]
+        final fun copy(actron.core/InputAttribution = ..., kotlin/Long = ..., kotlin.collections/List<kotlin/String> = ..., kotlin.collections/List<kotlin/Int> = ..., kotlin.collections/List<actron.observability/ActivationRef> = ..., kotlin.collections/List<actron.observability/ActivationRef> = ..., kotlin.collections/List<actron.observability/CommandRef> = ..., kotlin.collections/List<kotlin/Long> = ..., kotlin.collections/List<actron.observability/TimerRef> = ..., kotlin.collections/List<kotlin/Long> = ..., kotlin/Int = ...): actron.observability/JournalEntry.DecisionCommitted // actron.observability/JournalEntry.DecisionCommitted.copy|copy(actron.core.InputAttribution;kotlin.Long;kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.Int>;kotlin.collections.List<actron.observability.ActivationRef>;kotlin.collections.List<actron.observability.ActivationRef>;kotlin.collections.List<actron.observability.CommandRef>;kotlin.collections.List<kotlin.Long>;kotlin.collections.List<actron.observability.TimerRef>;kotlin.collections.List<kotlin.Long>;kotlin.Int){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalEntry.DecisionCommitted.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/JournalEntry.DecisionCommitted.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/JournalEntry.DecisionCommitted.toString|toString(){}[0]
     }
 
     final class DecisionIgnored : actron.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.observability/JournalEntry.DecisionIgnored|null[0]
-        constructor <init>(actron.core/InputId?, kotlin/String) // actron.observability/JournalEntry.DecisionIgnored.<init>|<init>(actron.core.InputId?;kotlin.String){}[0]
+        constructor <init>(actron.core/InputAttribution, kotlin/String) // actron.observability/JournalEntry.DecisionIgnored.<init>|<init>(actron.core.InputAttribution;kotlin.String){}[0]
 
         final val input // actron.observability/JournalEntry.DecisionIgnored.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.observability/JournalEntry.DecisionIgnored.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.observability/JournalEntry.DecisionIgnored.input.<get-input>|<get-input>(){}[0]
         final val reason // actron.observability/JournalEntry.DecisionIgnored.reason|{}reason[0]
             final fun <get-reason>(): kotlin/String // actron.observability/JournalEntry.DecisionIgnored.reason.<get-reason>|<get-reason>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.observability/JournalEntry.DecisionIgnored.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.observability/JournalEntry.DecisionIgnored.component1|component1(){}[0]
         final fun component2(): kotlin/String // actron.observability/JournalEntry.DecisionIgnored.component2|component2(){}[0]
-        final fun copy(actron.core/InputId? = ..., kotlin/String = ...): actron.observability/JournalEntry.DecisionIgnored // actron.observability/JournalEntry.DecisionIgnored.copy|copy(actron.core.InputId?;kotlin.String){}[0]
+        final fun copy(actron.core/InputAttribution = ..., kotlin/String = ...): actron.observability/JournalEntry.DecisionIgnored // actron.observability/JournalEntry.DecisionIgnored.copy|copy(actron.core.InputAttribution;kotlin.String){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalEntry.DecisionIgnored.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/JournalEntry.DecisionIgnored.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/JournalEntry.DecisionIgnored.toString|toString(){}[0]
@@ -434,32 +453,32 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
     }
 
     final class ExternalReceived : actron.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.observability/JournalEntry.ExternalReceived|null[0]
-        constructor <init>(actron.core/InputId?, kotlin/String) // actron.observability/JournalEntry.ExternalReceived.<init>|<init>(actron.core.InputId?;kotlin.String){}[0]
+        constructor <init>(actron.core/InputAttribution, kotlin/String) // actron.observability/JournalEntry.ExternalReceived.<init>|<init>(actron.core.InputAttribution;kotlin.String){}[0]
 
         final val input // actron.observability/JournalEntry.ExternalReceived.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.observability/JournalEntry.ExternalReceived.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.observability/JournalEntry.ExternalReceived.input.<get-input>|<get-input>(){}[0]
         final val source // actron.observability/JournalEntry.ExternalReceived.source|{}source[0]
             final fun <get-source>(): kotlin/String // actron.observability/JournalEntry.ExternalReceived.source.<get-source>|<get-source>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.observability/JournalEntry.ExternalReceived.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.observability/JournalEntry.ExternalReceived.component1|component1(){}[0]
         final fun component2(): kotlin/String // actron.observability/JournalEntry.ExternalReceived.component2|component2(){}[0]
-        final fun copy(actron.core/InputId? = ..., kotlin/String = ...): actron.observability/JournalEntry.ExternalReceived // actron.observability/JournalEntry.ExternalReceived.copy|copy(actron.core.InputId?;kotlin.String){}[0]
+        final fun copy(actron.core/InputAttribution = ..., kotlin/String = ...): actron.observability/JournalEntry.ExternalReceived // actron.observability/JournalEntry.ExternalReceived.copy|copy(actron.core.InputAttribution;kotlin.String){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalEntry.ExternalReceived.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/JournalEntry.ExternalReceived.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/JournalEntry.ExternalReceived.toString|toString(){}[0]
     }
 
     final class FailureReported : actron.observability/JournalEntry<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing> { // actron.observability/JournalEntry.FailureReported|null[0]
-        constructor <init>(actron.core/InputId?, actron.observability/FailureDescriptor) // actron.observability/JournalEntry.FailureReported.<init>|<init>(actron.core.InputId?;actron.observability.FailureDescriptor){}[0]
+        constructor <init>(actron.core/InputAttribution, actron.observability/FailureDescriptor) // actron.observability/JournalEntry.FailureReported.<init>|<init>(actron.core.InputAttribution;actron.observability.FailureDescriptor){}[0]
 
         final val failure // actron.observability/JournalEntry.FailureReported.failure|{}failure[0]
             final fun <get-failure>(): actron.observability/FailureDescriptor // actron.observability/JournalEntry.FailureReported.failure.<get-failure>|<get-failure>(){}[0]
         final val input // actron.observability/JournalEntry.FailureReported.input|{}input[0]
-            final fun <get-input>(): actron.core/InputId? // actron.observability/JournalEntry.FailureReported.input.<get-input>|<get-input>(){}[0]
+            final fun <get-input>(): actron.core/InputAttribution // actron.observability/JournalEntry.FailureReported.input.<get-input>|<get-input>(){}[0]
 
-        final fun component1(): actron.core/InputId? // actron.observability/JournalEntry.FailureReported.component1|component1(){}[0]
+        final fun component1(): actron.core/InputAttribution // actron.observability/JournalEntry.FailureReported.component1|component1(){}[0]
         final fun component2(): actron.observability/FailureDescriptor // actron.observability/JournalEntry.FailureReported.component2|component2(){}[0]
-        final fun copy(actron.core/InputId? = ..., actron.observability/FailureDescriptor = ...): actron.observability/JournalEntry.FailureReported // actron.observability/JournalEntry.FailureReported.copy|copy(actron.core.InputId?;actron.observability.FailureDescriptor){}[0]
+        final fun copy(actron.core/InputAttribution = ..., actron.observability/FailureDescriptor = ...): actron.observability/JournalEntry.FailureReported // actron.observability/JournalEntry.FailureReported.copy|copy(actron.core.InputAttribution;actron.observability.FailureDescriptor){}[0]
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalEntry.FailureReported.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability/JournalEntry.FailureReported.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability/JournalEntry.FailureReported.toString|toString(){}[0]
@@ -558,8 +577,8 @@ sealed interface <#A: out actron.core/State, #B: out actron.core/Action, #C: out
     }
 }
 
-sealed interface <#A: out kotlin/Any?> actron.observability/Payload { // actron.observability/Payload|null[0]
-    final class <#A1: out kotlin/Any?> Retained : actron.observability/Payload<#A1> { // actron.observability/Payload.Retained|null[0]
+sealed interface <#A: out kotlin/Any> actron.observability/Payload { // actron.observability/Payload|null[0]
+    final class <#A1: out kotlin/Any> Retained : actron.observability/Payload<#A1> { // actron.observability/Payload.Retained|null[0]
         constructor <init>(#A1) // actron.observability/Payload.Retained.<init>|<init>(1:0){}[0]
 
         final val value // actron.observability/Payload.Retained.value|{}value[0]
@@ -639,6 +658,81 @@ sealed interface actron.observability.file/JournalFileEvent { // actron.observab
         final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability.file/JournalFileEvent.Record.equals|equals(kotlin.Any?){}[0]
         final fun hashCode(): kotlin/Int // actron.observability.file/JournalFileEvent.Record.hashCode|hashCode(){}[0]
         final fun toString(): kotlin/String // actron.observability.file/JournalFileEvent.Record.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.observability.file/JournalPrefix { // actron.observability.file/JournalPrefix|null[0]
+    abstract fun withHeader(kotlin/Function1<actron.observability.file/SegmentHeader, kotlin/Unit>) // actron.observability.file/JournalPrefix.withHeader|withHeader(kotlin.Function1<actron.observability.file.SegmentHeader,kotlin.Unit>){}[0]
+
+    final object Unreadable : actron.observability.file/JournalPrefix { // actron.observability.file/JournalPrefix.Unreadable|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability.file/JournalPrefix.Unreadable.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability.file/JournalPrefix.Unreadable.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability.file/JournalPrefix.Unreadable.toString|toString(){}[0]
+        final fun withHeader(kotlin/Function1<actron.observability.file/SegmentHeader, kotlin/Unit>) // actron.observability.file/JournalPrefix.Unreadable.withHeader|withHeader(kotlin.Function1<actron.observability.file.SegmentHeader,kotlin.Unit>){}[0]
+    }
+}
+
+sealed interface actron.observability.file/SegmentActivity { // actron.observability.file/SegmentActivity|null[0]
+    final class Writing : actron.observability.file/SegmentActivity { // actron.observability.file/SegmentActivity.Writing|null[0]
+        constructor <init>(kotlin/String) // actron.observability.file/SegmentActivity.Writing.<init>|<init>(kotlin.String){}[0]
+
+        final val name // actron.observability.file/SegmentActivity.Writing.name|{}name[0]
+            final fun <get-name>(): kotlin/String // actron.observability.file/SegmentActivity.Writing.name.<get-name>|<get-name>(){}[0]
+
+        final fun component1(): kotlin/String // actron.observability.file/SegmentActivity.Writing.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): actron.observability.file/SegmentActivity.Writing // actron.observability.file/SegmentActivity.Writing.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability.file/SegmentActivity.Writing.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability.file/SegmentActivity.Writing.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability.file/SegmentActivity.Writing.toString|toString(){}[0]
+    }
+
+    final object AwaitingFirstRecord : actron.observability.file/SegmentActivity { // actron.observability.file/SegmentActivity.AwaitingFirstRecord|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability.file/SegmentActivity.AwaitingFirstRecord.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability.file/SegmentActivity.AwaitingFirstRecord.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability.file/SegmentActivity.AwaitingFirstRecord.toString|toString(){}[0]
+    }
+
+    final object Closed : actron.observability.file/SegmentActivity { // actron.observability.file/SegmentActivity.Closed|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability.file/SegmentActivity.Closed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability.file/SegmentActivity.Closed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability.file/SegmentActivity.Closed.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.observability.file/SegmentEnding { // actron.observability.file/SegmentEnding|null[0]
+    abstract val finished // actron.observability.file/SegmentEnding.finished|{}finished[0]
+        abstract fun <get-finished>(): kotlin/Boolean // actron.observability.file/SegmentEnding.finished.<get-finished>|<get-finished>(){}[0]
+
+    abstract fun countRecords(kotlin/Int): actron.observability.file/SegmentEnding // actron.observability.file/SegmentEnding.countRecords|countRecords(kotlin.Int){}[0]
+    abstract fun withIssue(kotlin/Function1<actron.observability.file/SegmentMark, kotlin/Unit>): kotlin/Boolean // actron.observability.file/SegmentEnding.withIssue|withIssue(kotlin.Function1<actron.observability.file.SegmentMark,kotlin.Unit>){}[0]
+
+    final class Stopped : actron.observability.file/SegmentEnding { // actron.observability.file/SegmentEnding.Stopped|null[0]
+        constructor <init>(actron.observability.file/SegmentMark, kotlin/Boolean = ...) // actron.observability.file/SegmentEnding.Stopped.<init>|<init>(actron.observability.file.SegmentMark;kotlin.Boolean){}[0]
+
+        final val finished // actron.observability.file/SegmentEnding.Stopped.finished|{}finished[0]
+            final fun <get-finished>(): kotlin/Boolean // actron.observability.file/SegmentEnding.Stopped.finished.<get-finished>|<get-finished>(){}[0]
+        final val issue // actron.observability.file/SegmentEnding.Stopped.issue|{}issue[0]
+            final fun <get-issue>(): actron.observability.file/SegmentMark // actron.observability.file/SegmentEnding.Stopped.issue.<get-issue>|<get-issue>(){}[0]
+
+        final fun component1(): actron.observability.file/SegmentMark // actron.observability.file/SegmentEnding.Stopped.component1|component1(){}[0]
+        final fun component2(): kotlin/Boolean // actron.observability.file/SegmentEnding.Stopped.component2|component2(){}[0]
+        final fun copy(actron.observability.file/SegmentMark = ..., kotlin/Boolean = ...): actron.observability.file/SegmentEnding.Stopped // actron.observability.file/SegmentEnding.Stopped.copy|copy(actron.observability.file.SegmentMark;kotlin.Boolean){}[0]
+        final fun countRecords(kotlin/Int): actron.observability.file/SegmentEnding // actron.observability.file/SegmentEnding.Stopped.countRecords|countRecords(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability.file/SegmentEnding.Stopped.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability.file/SegmentEnding.Stopped.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability.file/SegmentEnding.Stopped.toString|toString(){}[0]
+        final fun withIssue(kotlin/Function1<actron.observability.file/SegmentMark, kotlin/Unit>): kotlin/Boolean // actron.observability.file/SegmentEnding.Stopped.withIssue|withIssue(kotlin.Function1<actron.observability.file.SegmentMark,kotlin.Unit>){}[0]
+    }
+
+    final object Finalized : actron.observability.file/SegmentEnding { // actron.observability.file/SegmentEnding.Finalized|null[0]
+        final val finished // actron.observability.file/SegmentEnding.Finalized.finished|{}finished[0]
+            final fun <get-finished>(): kotlin/Boolean // actron.observability.file/SegmentEnding.Finalized.finished.<get-finished>|<get-finished>(){}[0]
+
+        final fun countRecords(kotlin/Int): actron.observability.file/SegmentEnding // actron.observability.file/SegmentEnding.Finalized.countRecords|countRecords(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability.file/SegmentEnding.Finalized.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability.file/SegmentEnding.Finalized.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability.file/SegmentEnding.Finalized.toString|toString(){}[0]
+        final fun withIssue(kotlin/Function1<actron.observability.file/SegmentMark, kotlin/Unit>): kotlin/Boolean // actron.observability.file/SegmentEnding.Finalized.withIssue|withIssue(kotlin.Function1<actron.observability.file.SegmentMark,kotlin.Unit>){}[0]
     }
 }
 
@@ -776,6 +870,198 @@ sealed interface actron.observability.file/SegmentMark { // actron.observability
     }
 }
 
+sealed interface actron.observability/CommandExecution { // actron.observability/CommandExecution|null[0]
+    abstract val description // actron.observability/CommandExecution.description|{}description[0]
+        abstract fun <get-description>(): kotlin/String // actron.observability/CommandExecution.description.<get-description>|<get-description>(){}[0]
+    abstract val journalSuffix // actron.observability/CommandExecution.journalSuffix|{}journalSuffix[0]
+        abstract fun <get-journalSuffix>(): kotlin/String // actron.observability/CommandExecution.journalSuffix.<get-journalSuffix>|<get-journalSuffix>(){}[0]
+
+    final class InLane : actron.observability/CommandExecution { // actron.observability/CommandExecution.InLane|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // actron.observability/CommandExecution.InLane.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final val description // actron.observability/CommandExecution.InLane.description|{}description[0]
+            final fun <get-description>(): kotlin/String // actron.observability/CommandExecution.InLane.description.<get-description>|<get-description>(){}[0]
+        final val journalSuffix // actron.observability/CommandExecution.InLane.journalSuffix|{}journalSuffix[0]
+            final fun <get-journalSuffix>(): kotlin/String // actron.observability/CommandExecution.InLane.journalSuffix.<get-journalSuffix>|<get-journalSuffix>(){}[0]
+        final val lane // actron.observability/CommandExecution.InLane.lane|{}lane[0]
+            final fun <get-lane>(): kotlin/String // actron.observability/CommandExecution.InLane.lane.<get-lane>|<get-lane>(){}[0]
+        final val policy // actron.observability/CommandExecution.InLane.policy|{}policy[0]
+            final fun <get-policy>(): kotlin/String // actron.observability/CommandExecution.InLane.policy.<get-policy>|<get-policy>(){}[0]
+
+        final fun component1(): kotlin/String // actron.observability/CommandExecution.InLane.component1|component1(){}[0]
+        final fun component2(): kotlin/String // actron.observability/CommandExecution.InLane.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ...): actron.observability/CommandExecution.InLane // actron.observability/CommandExecution.InLane.copy|copy(kotlin.String;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/CommandExecution.InLane.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/CommandExecution.InLane.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/CommandExecution.InLane.toString|toString(){}[0]
+    }
+
+    final object Independent : actron.observability/CommandExecution { // actron.observability/CommandExecution.Independent|null[0]
+        final val description // actron.observability/CommandExecution.Independent.description|{}description[0]
+            final fun <get-description>(): kotlin/String // actron.observability/CommandExecution.Independent.description.<get-description>|<get-description>(){}[0]
+        final val journalSuffix // actron.observability/CommandExecution.Independent.journalSuffix|{}journalSuffix[0]
+            final fun <get-journalSuffix>(): kotlin/String // actron.observability/CommandExecution.Independent.journalSuffix.<get-journalSuffix>|<get-journalSuffix>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/CommandExecution.Independent.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/CommandExecution.Independent.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/CommandExecution.Independent.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.observability/DiscardDescriptor { // actron.observability/DiscardDescriptor|null[0]
+    abstract val detailSuffix // actron.observability/DiscardDescriptor.detailSuffix|{}detailSuffix[0]
+        abstract fun <get-detailSuffix>(): kotlin/String // actron.observability/DiscardDescriptor.detailSuffix.<get-detailSuffix>|<get-detailSuffix>(){}[0]
+    abstract val hasFailure // actron.observability/DiscardDescriptor.hasFailure|{}hasFailure[0]
+        abstract fun <get-hasFailure>(): kotlin/Boolean // actron.observability/DiscardDescriptor.hasFailure.<get-hasFailure>|<get-hasFailure>(){}[0]
+    abstract val kind // actron.observability/DiscardDescriptor.kind|{}kind[0]
+        abstract fun <get-kind>(): actron.observability/DiscardKind // actron.observability/DiscardDescriptor.kind.<get-kind>|<get-kind>(){}[0]
+
+    abstract fun withFailure(kotlin/Function1<actron.observability/FailureDescriptor, kotlin/Unit>) // actron.observability/DiscardDescriptor.withFailure|withFailure(kotlin.Function1<actron.observability.FailureDescriptor,kotlin.Unit>){}[0]
+
+    final class Failure : actron.observability/DiscardDescriptor { // actron.observability/DiscardDescriptor.Failure|null[0]
+        constructor <init>(actron.observability/DiscardKind, actron.observability/FailureDescriptor) // actron.observability/DiscardDescriptor.Failure.<init>|<init>(actron.observability.DiscardKind;actron.observability.FailureDescriptor){}[0]
+
+        final val detailSuffix // actron.observability/DiscardDescriptor.Failure.detailSuffix|{}detailSuffix[0]
+            final fun <get-detailSuffix>(): kotlin/String // actron.observability/DiscardDescriptor.Failure.detailSuffix.<get-detailSuffix>|<get-detailSuffix>(){}[0]
+        final val failure // actron.observability/DiscardDescriptor.Failure.failure|{}failure[0]
+            final fun <get-failure>(): actron.observability/FailureDescriptor // actron.observability/DiscardDescriptor.Failure.failure.<get-failure>|<get-failure>(){}[0]
+        final val hasFailure // actron.observability/DiscardDescriptor.Failure.hasFailure|{}hasFailure[0]
+            final fun <get-hasFailure>(): kotlin/Boolean // actron.observability/DiscardDescriptor.Failure.hasFailure.<get-hasFailure>|<get-hasFailure>(){}[0]
+        final val kind // actron.observability/DiscardDescriptor.Failure.kind|{}kind[0]
+            final fun <get-kind>(): actron.observability/DiscardKind // actron.observability/DiscardDescriptor.Failure.kind.<get-kind>|<get-kind>(){}[0]
+
+        final fun component1(): actron.observability/DiscardKind // actron.observability/DiscardDescriptor.Failure.component1|component1(){}[0]
+        final fun component2(): actron.observability/FailureDescriptor // actron.observability/DiscardDescriptor.Failure.component2|component2(){}[0]
+        final fun copy(actron.observability/DiscardKind = ..., actron.observability/FailureDescriptor = ...): actron.observability/DiscardDescriptor.Failure // actron.observability/DiscardDescriptor.Failure.copy|copy(actron.observability.DiscardKind;actron.observability.FailureDescriptor){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/DiscardDescriptor.Failure.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/DiscardDescriptor.Failure.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/DiscardDescriptor.Failure.toString|toString(){}[0]
+        final fun withFailure(kotlin/Function1<actron.observability/FailureDescriptor, kotlin/Unit>) // actron.observability/DiscardDescriptor.Failure.withFailure|withFailure(kotlin.Function1<actron.observability.FailureDescriptor,kotlin.Unit>){}[0]
+    }
+
+    final class Reason : actron.observability/DiscardDescriptor { // actron.observability/DiscardDescriptor.Reason|null[0]
+        constructor <init>(actron.observability/DiscardKind) // actron.observability/DiscardDescriptor.Reason.<init>|<init>(actron.observability.DiscardKind){}[0]
+
+        final val detailSuffix // actron.observability/DiscardDescriptor.Reason.detailSuffix|{}detailSuffix[0]
+            final fun <get-detailSuffix>(): kotlin/String // actron.observability/DiscardDescriptor.Reason.detailSuffix.<get-detailSuffix>|<get-detailSuffix>(){}[0]
+        final val hasFailure // actron.observability/DiscardDescriptor.Reason.hasFailure|{}hasFailure[0]
+            final fun <get-hasFailure>(): kotlin/Boolean // actron.observability/DiscardDescriptor.Reason.hasFailure.<get-hasFailure>|<get-hasFailure>(){}[0]
+        final val kind // actron.observability/DiscardDescriptor.Reason.kind|{}kind[0]
+            final fun <get-kind>(): actron.observability/DiscardKind // actron.observability/DiscardDescriptor.Reason.kind.<get-kind>|<get-kind>(){}[0]
+
+        final fun component1(): actron.observability/DiscardKind // actron.observability/DiscardDescriptor.Reason.component1|component1(){}[0]
+        final fun copy(actron.observability/DiscardKind = ...): actron.observability/DiscardDescriptor.Reason // actron.observability/DiscardDescriptor.Reason.copy|copy(actron.observability.DiscardKind){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/DiscardDescriptor.Reason.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/DiscardDescriptor.Reason.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/DiscardDescriptor.Reason.toString|toString(){}[0]
+        final fun withFailure(kotlin/Function1<actron.observability/FailureDescriptor, kotlin/Unit>) // actron.observability/DiscardDescriptor.Reason.withFailure|withFailure(kotlin.Function1<actron.observability.FailureDescriptor,kotlin.Unit>){}[0]
+    }
+}
+
+sealed interface actron.observability/FailureDetails { // actron.observability/FailureDetails|null[0]
+    abstract val attributes // actron.observability/FailureDetails.attributes|{}attributes[0]
+        abstract fun <get-attributes>(): kotlin.collections/Map<kotlin/String, kotlin/String> // actron.observability/FailureDetails.attributes.<get-attributes>|<get-attributes>(){}[0]
+
+    final class AnonymousMessage : actron.observability/FailureDetails { // actron.observability/FailureDetails.AnonymousMessage|null[0]
+        constructor <init>(kotlin/String) // actron.observability/FailureDetails.AnonymousMessage.<init>|<init>(kotlin.String){}[0]
+
+        final val attributes // actron.observability/FailureDetails.AnonymousMessage.attributes|{}attributes[0]
+            final fun <get-attributes>(): kotlin.collections/Map<kotlin/String, kotlin/String> // actron.observability/FailureDetails.AnonymousMessage.attributes.<get-attributes>|<get-attributes>(){}[0]
+        final val message // actron.observability/FailureDetails.AnonymousMessage.message|{}message[0]
+            final fun <get-message>(): kotlin/String // actron.observability/FailureDetails.AnonymousMessage.message.<get-message>|<get-message>(){}[0]
+
+        final fun component1(): kotlin/String // actron.observability/FailureDetails.AnonymousMessage.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): actron.observability/FailureDetails.AnonymousMessage // actron.observability/FailureDetails.AnonymousMessage.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/FailureDetails.AnonymousMessage.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/FailureDetails.AnonymousMessage.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/FailureDetails.AnonymousMessage.toString|toString(){}[0]
+    }
+
+    final class Detailed : actron.observability/FailureDetails { // actron.observability/FailureDetails.Detailed|null[0]
+        constructor <init>(kotlin/String, kotlin/String) // actron.observability/FailureDetails.Detailed.<init>|<init>(kotlin.String;kotlin.String){}[0]
+
+        final val attributes // actron.observability/FailureDetails.Detailed.attributes|{}attributes[0]
+            final fun <get-attributes>(): kotlin.collections/Map<kotlin/String, kotlin/String> // actron.observability/FailureDetails.Detailed.attributes.<get-attributes>|<get-attributes>(){}[0]
+        final val message // actron.observability/FailureDetails.Detailed.message|{}message[0]
+            final fun <get-message>(): kotlin/String // actron.observability/FailureDetails.Detailed.message.<get-message>|<get-message>(){}[0]
+        final val type // actron.observability/FailureDetails.Detailed.type|{}type[0]
+            final fun <get-type>(): kotlin/String // actron.observability/FailureDetails.Detailed.type.<get-type>|<get-type>(){}[0]
+
+        final fun component1(): kotlin/String // actron.observability/FailureDetails.Detailed.component1|component1(){}[0]
+        final fun component2(): kotlin/String // actron.observability/FailureDetails.Detailed.component2|component2(){}[0]
+        final fun copy(kotlin/String = ..., kotlin/String = ...): actron.observability/FailureDetails.Detailed // actron.observability/FailureDetails.Detailed.copy|copy(kotlin.String;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/FailureDetails.Detailed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/FailureDetails.Detailed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/FailureDetails.Detailed.toString|toString(){}[0]
+    }
+
+    final class MetadataOnly : actron.observability/FailureDetails { // actron.observability/FailureDetails.MetadataOnly|null[0]
+        constructor <init>(kotlin/String) // actron.observability/FailureDetails.MetadataOnly.<init>|<init>(kotlin.String){}[0]
+
+        final val attributes // actron.observability/FailureDetails.MetadataOnly.attributes|{}attributes[0]
+            final fun <get-attributes>(): kotlin.collections/Map<kotlin/String, kotlin/String> // actron.observability/FailureDetails.MetadataOnly.attributes.<get-attributes>|<get-attributes>(){}[0]
+        final val type // actron.observability/FailureDetails.MetadataOnly.type|{}type[0]
+            final fun <get-type>(): kotlin/String // actron.observability/FailureDetails.MetadataOnly.type.<get-type>|<get-type>(){}[0]
+
+        final fun component1(): kotlin/String // actron.observability/FailureDetails.MetadataOnly.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): actron.observability/FailureDetails.MetadataOnly // actron.observability/FailureDetails.MetadataOnly.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/FailureDetails.MetadataOnly.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/FailureDetails.MetadataOnly.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/FailureDetails.MetadataOnly.toString|toString(){}[0]
+    }
+
+    final object Redacted : actron.observability/FailureDetails { // actron.observability/FailureDetails.Redacted|null[0]
+        final val attributes // actron.observability/FailureDetails.Redacted.attributes|{}attributes[0]
+            final fun <get-attributes>(): kotlin.collections/Map<kotlin/String, kotlin/String> // actron.observability/FailureDetails.Redacted.attributes.<get-attributes>|<get-attributes>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/FailureDetails.Redacted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/FailureDetails.Redacted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/FailureDetails.Redacted.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.observability/FailureRelation { // actron.observability/FailureRelation|null[0]
+    abstract val failure // actron.observability/FailureRelation.failure|{}failure[0]
+        abstract fun <get-failure>(): actron.observability/FailureDescriptor // actron.observability/FailureRelation.failure.<get-failure>|<get-failure>(){}[0]
+
+    final class Cause : actron.observability/FailureRelation { // actron.observability/FailureRelation.Cause|null[0]
+        constructor <init>(actron.observability/FailureDescriptor) // actron.observability/FailureRelation.Cause.<init>|<init>(actron.observability.FailureDescriptor){}[0]
+
+        final val failure // actron.observability/FailureRelation.Cause.failure|{}failure[0]
+            final fun <get-failure>(): actron.observability/FailureDescriptor // actron.observability/FailureRelation.Cause.failure.<get-failure>|<get-failure>(){}[0]
+
+        final fun component1(): actron.observability/FailureDescriptor // actron.observability/FailureRelation.Cause.component1|component1(){}[0]
+        final fun copy(actron.observability/FailureDescriptor = ...): actron.observability/FailureRelation.Cause // actron.observability/FailureRelation.Cause.copy|copy(actron.observability.FailureDescriptor){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/FailureRelation.Cause.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/FailureRelation.Cause.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/FailureRelation.Cause.toString|toString(){}[0]
+    }
+
+    final class Suppressed : actron.observability/FailureRelation { // actron.observability/FailureRelation.Suppressed|null[0]
+        constructor <init>(actron.observability/FailureDescriptor) // actron.observability/FailureRelation.Suppressed.<init>|<init>(actron.observability.FailureDescriptor){}[0]
+
+        final val failure // actron.observability/FailureRelation.Suppressed.failure|{}failure[0]
+            final fun <get-failure>(): actron.observability/FailureDescriptor // actron.observability/FailureRelation.Suppressed.failure.<get-failure>|<get-failure>(){}[0]
+
+        final fun component1(): actron.observability/FailureDescriptor // actron.observability/FailureRelation.Suppressed.component1|component1(){}[0]
+        final fun copy(actron.observability/FailureDescriptor = ...): actron.observability/FailureRelation.Suppressed // actron.observability/FailureRelation.Suppressed.copy|copy(actron.observability.FailureDescriptor){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/FailureRelation.Suppressed.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/FailureRelation.Suppressed.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/FailureRelation.Suppressed.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.observability/JournalBoundary { // actron.observability/JournalBoundary|null[0]
+    abstract fun precedes(actron.observability/GroupSeq): kotlin/Boolean // actron.observability/JournalBoundary.precedes|precedes(actron.observability.GroupSeq){}[0]
+
+    final object Beginning : actron.observability/JournalBoundary { // actron.observability/JournalBoundary.Beginning|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalBoundary.Beginning.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/JournalBoundary.Beginning.hashCode|hashCode(){}[0]
+        final fun precedes(actron.observability/GroupSeq): kotlin/Boolean // actron.observability/JournalBoundary.Beginning.precedes|precedes(actron.observability.GroupSeq){}[0]
+        final fun toString(): kotlin/String // actron.observability/JournalBoundary.Beginning.toString|toString(){}[0]
+    }
+}
+
 sealed interface actron.observability/JournalFailure { // actron.observability/JournalFailure|null[0]
     final class PolicyFailed : actron.observability/JournalFailure { // actron.observability/JournalFailure.PolicyFailed|null[0]
         constructor <init>(actron.observability/StoreInstanceId, kotlin/Throwable) // actron.observability/JournalFailure.PolicyFailed.<init>|<init>(actron.observability.StoreInstanceId;kotlin.Throwable){}[0]
@@ -810,8 +1096,103 @@ sealed interface actron.observability/JournalFailure { // actron.observability/J
     }
 }
 
+sealed interface actron.observability/MessageCause { // actron.observability/MessageCause|null[0]
+    abstract val prompted // actron.observability/MessageCause.prompted|{}prompted[0]
+        abstract fun <get-prompted>(): kotlin/Boolean // actron.observability/MessageCause.prompted.<get-prompted>|<get-prompted>(){}[0]
+    abstract val replySuffix // actron.observability/MessageCause.replySuffix|{}replySuffix[0]
+        abstract fun <get-replySuffix>(): kotlin/String // actron.observability/MessageCause.replySuffix.<get-replySuffix>|<get-replySuffix>(){}[0]
+
+    abstract fun withMessage(kotlin/Function1<actron.observability/MessageRef, kotlin/Unit>) // actron.observability/MessageCause.withMessage|withMessage(kotlin.Function1<actron.observability.MessageRef,kotlin.Unit>){}[0]
+
+    final object Unprompted : actron.observability/MessageCause { // actron.observability/MessageCause.Unprompted|null[0]
+        final val prompted // actron.observability/MessageCause.Unprompted.prompted|{}prompted[0]
+            final fun <get-prompted>(): kotlin/Boolean // actron.observability/MessageCause.Unprompted.prompted.<get-prompted>|<get-prompted>(){}[0]
+        final val replySuffix // actron.observability/MessageCause.Unprompted.replySuffix|{}replySuffix[0]
+            final fun <get-replySuffix>(): kotlin/String // actron.observability/MessageCause.Unprompted.replySuffix.<get-replySuffix>|<get-replySuffix>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/MessageCause.Unprompted.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/MessageCause.Unprompted.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/MessageCause.Unprompted.toString|toString(){}[0]
+        final fun withMessage(kotlin/Function1<actron.observability/MessageRef, kotlin/Unit>) // actron.observability/MessageCause.Unprompted.withMessage|withMessage(kotlin.Function1<actron.observability.MessageRef,kotlin.Unit>){}[0]
+    }
+}
+
+sealed interface actron.observability/OutcomeDescriptor { // actron.observability/OutcomeDescriptor|null[0]
+    abstract val commits // actron.observability/OutcomeDescriptor.commits|{}commits[0]
+        abstract fun <get-commits>(): kotlin/Int // actron.observability/OutcomeDescriptor.commits.<get-commits>|<get-commits>(){}[0]
+    abstract val hasFailure // actron.observability/OutcomeDescriptor.hasFailure|{}hasFailure[0]
+        abstract fun <get-hasFailure>(): kotlin/Boolean // actron.observability/OutcomeDescriptor.hasFailure.<get-hasFailure>|<get-hasFailure>(){}[0]
+    abstract val kind // actron.observability/OutcomeDescriptor.kind|{}kind[0]
+        abstract fun <get-kind>(): actron.observability/OutcomeKind // actron.observability/OutcomeDescriptor.kind.<get-kind>|<get-kind>(){}[0]
+
+    abstract fun withFailure(kotlin/Function1<actron.observability/FailureDescriptor, kotlin/Unit>) // actron.observability/OutcomeDescriptor.withFailure|withFailure(kotlin.Function1<actron.observability.FailureDescriptor,kotlin.Unit>){}[0]
+
+    final class Decision : actron.observability/OutcomeDescriptor { // actron.observability/OutcomeDescriptor.Decision|null[0]
+        constructor <init>(actron.observability/OutcomeKind, kotlin/Int) // actron.observability/OutcomeDescriptor.Decision.<init>|<init>(actron.observability.OutcomeKind;kotlin.Int){}[0]
+
+        final val commits // actron.observability/OutcomeDescriptor.Decision.commits|{}commits[0]
+            final fun <get-commits>(): kotlin/Int // actron.observability/OutcomeDescriptor.Decision.commits.<get-commits>|<get-commits>(){}[0]
+        final val hasFailure // actron.observability/OutcomeDescriptor.Decision.hasFailure|{}hasFailure[0]
+            final fun <get-hasFailure>(): kotlin/Boolean // actron.observability/OutcomeDescriptor.Decision.hasFailure.<get-hasFailure>|<get-hasFailure>(){}[0]
+        final val kind // actron.observability/OutcomeDescriptor.Decision.kind|{}kind[0]
+            final fun <get-kind>(): actron.observability/OutcomeKind // actron.observability/OutcomeDescriptor.Decision.kind.<get-kind>|<get-kind>(){}[0]
+
+        final fun component1(): actron.observability/OutcomeKind // actron.observability/OutcomeDescriptor.Decision.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // actron.observability/OutcomeDescriptor.Decision.component2|component2(){}[0]
+        final fun copy(actron.observability/OutcomeKind = ..., kotlin/Int = ...): actron.observability/OutcomeDescriptor.Decision // actron.observability/OutcomeDescriptor.Decision.copy|copy(actron.observability.OutcomeKind;kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/OutcomeDescriptor.Decision.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/OutcomeDescriptor.Decision.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/OutcomeDescriptor.Decision.toString|toString(){}[0]
+        final fun withFailure(kotlin/Function1<actron.observability/FailureDescriptor, kotlin/Unit>) // actron.observability/OutcomeDescriptor.Decision.withFailure|withFailure(kotlin.Function1<actron.observability.FailureDescriptor,kotlin.Unit>){}[0]
+    }
+
+    final class Failure : actron.observability/OutcomeDescriptor { // actron.observability/OutcomeDescriptor.Failure|null[0]
+        constructor <init>(actron.observability/OutcomeKind, kotlin/Int, actron.observability/FailureDescriptor) // actron.observability/OutcomeDescriptor.Failure.<init>|<init>(actron.observability.OutcomeKind;kotlin.Int;actron.observability.FailureDescriptor){}[0]
+
+        final val commits // actron.observability/OutcomeDescriptor.Failure.commits|{}commits[0]
+            final fun <get-commits>(): kotlin/Int // actron.observability/OutcomeDescriptor.Failure.commits.<get-commits>|<get-commits>(){}[0]
+        final val failure // actron.observability/OutcomeDescriptor.Failure.failure|{}failure[0]
+            final fun <get-failure>(): actron.observability/FailureDescriptor // actron.observability/OutcomeDescriptor.Failure.failure.<get-failure>|<get-failure>(){}[0]
+        final val hasFailure // actron.observability/OutcomeDescriptor.Failure.hasFailure|{}hasFailure[0]
+            final fun <get-hasFailure>(): kotlin/Boolean // actron.observability/OutcomeDescriptor.Failure.hasFailure.<get-hasFailure>|<get-hasFailure>(){}[0]
+        final val kind // actron.observability/OutcomeDescriptor.Failure.kind|{}kind[0]
+            final fun <get-kind>(): actron.observability/OutcomeKind // actron.observability/OutcomeDescriptor.Failure.kind.<get-kind>|<get-kind>(){}[0]
+
+        final fun component1(): actron.observability/OutcomeKind // actron.observability/OutcomeDescriptor.Failure.component1|component1(){}[0]
+        final fun component2(): kotlin/Int // actron.observability/OutcomeDescriptor.Failure.component2|component2(){}[0]
+        final fun component3(): actron.observability/FailureDescriptor // actron.observability/OutcomeDescriptor.Failure.component3|component3(){}[0]
+        final fun copy(actron.observability/OutcomeKind = ..., kotlin/Int = ..., actron.observability/FailureDescriptor = ...): actron.observability/OutcomeDescriptor.Failure // actron.observability/OutcomeDescriptor.Failure.copy|copy(actron.observability.OutcomeKind;kotlin.Int;actron.observability.FailureDescriptor){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/OutcomeDescriptor.Failure.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/OutcomeDescriptor.Failure.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/OutcomeDescriptor.Failure.toString|toString(){}[0]
+        final fun withFailure(kotlin/Function1<actron.observability/FailureDescriptor, kotlin/Unit>) // actron.observability/OutcomeDescriptor.Failure.withFailure|withFailure(kotlin.Function1<actron.observability.FailureDescriptor,kotlin.Unit>){}[0]
+    }
+}
+
+sealed interface actron.observability/RecordOrdinal { // actron.observability/RecordOrdinal|null[0]
+    abstract fun appendTo(kotlin.text/StringBuilder) // actron.observability/RecordOrdinal.appendTo|appendTo(kotlin.text.StringBuilder){}[0]
+
+    final object Session : actron.observability/RecordOrdinal { // actron.observability/RecordOrdinal.Session|null[0]
+        final fun appendTo(kotlin.text/StringBuilder) // actron.observability/RecordOrdinal.Session.appendTo|appendTo(kotlin.text.StringBuilder){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/RecordOrdinal.Session.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/RecordOrdinal.Session.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/RecordOrdinal.Session.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.observability/RecordSubject { // actron.observability/RecordSubject|null[0]
+    abstract fun withStore(kotlin/Function1<actron.observability/StoreInstanceId, kotlin/Unit>) // actron.observability/RecordSubject.withStore|withStore(kotlin.Function1<actron.observability.StoreInstanceId,kotlin.Unit>){}[0]
+
+    final object Session : actron.observability/RecordSubject { // actron.observability/RecordSubject.Session|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/RecordSubject.Session.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.observability/RecordSubject.Session.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.observability/RecordSubject.Session.toString|toString(){}[0]
+        final fun withStore(kotlin/Function1<actron.observability/StoreInstanceId, kotlin/Unit>) // actron.observability/RecordSubject.Session.withStore|withStore(kotlin.Function1<actron.observability.StoreInstanceId,kotlin.Unit>){}[0]
+    }
+}
+
 final class <#A: out actron.core/State, #B: out actron.core/Action, #C: out actron.core/Event> actron.observability/JournalRecord { // actron.observability/JournalRecord|null[0]
-    constructor <init>(kotlin/Int, actron.observability/RuntimeSessionId, actron.observability/MachineGroupId, actron.observability/StoreInstanceId?, actron.observability/ExecutionMode, actron.observability/GroupSeq, actron.observability/StoreSeq?, kotlin.time/Duration, actron.observability/JournalEntry<#A, #B, #C>) // actron.observability/JournalRecord.<init>|<init>(kotlin.Int;actron.observability.RuntimeSessionId;actron.observability.MachineGroupId;actron.observability.StoreInstanceId?;actron.observability.ExecutionMode;actron.observability.GroupSeq;actron.observability.StoreSeq?;kotlin.time.Duration;actron.observability.JournalEntry<1:0,1:1,1:2>){}[0]
+    constructor <init>(kotlin/Int, actron.observability/RuntimeSessionId, actron.observability/MachineGroupId, actron.observability/RecordSubject, actron.observability/ExecutionMode, actron.observability/GroupSeq, actron.observability/RecordOrdinal, kotlin.time/Duration, actron.observability/JournalEntry<#A, #B, #C>) // actron.observability/JournalRecord.<init>|<init>(kotlin.Int;actron.observability.RuntimeSessionId;actron.observability.MachineGroupId;actron.observability.RecordSubject;actron.observability.ExecutionMode;actron.observability.GroupSeq;actron.observability.RecordOrdinal;kotlin.time.Duration;actron.observability.JournalEntry<1:0,1:1,1:2>){}[0]
 
     final val elapsed // actron.observability/JournalRecord.elapsed|{}elapsed[0]
         final fun <get-elapsed>(): kotlin.time/Duration // actron.observability/JournalRecord.elapsed.<get-elapsed>|<get-elapsed>(){}[0]
@@ -828,42 +1209,41 @@ final class <#A: out actron.core/State, #B: out actron.core/Action, #C: out actr
     final val session // actron.observability/JournalRecord.session|{}session[0]
         final fun <get-session>(): actron.observability/RuntimeSessionId // actron.observability/JournalRecord.session.<get-session>|<get-session>(){}[0]
     final val store // actron.observability/JournalRecord.store|{}store[0]
-        final fun <get-store>(): actron.observability/StoreInstanceId? // actron.observability/JournalRecord.store.<get-store>|<get-store>(){}[0]
+        final fun <get-store>(): actron.observability/RecordSubject // actron.observability/JournalRecord.store.<get-store>|<get-store>(){}[0]
     final val storeSeq // actron.observability/JournalRecord.storeSeq|{}storeSeq[0]
-        final fun <get-storeSeq>(): actron.observability/StoreSeq? // actron.observability/JournalRecord.storeSeq.<get-storeSeq>|<get-storeSeq>(){}[0]
+        final fun <get-storeSeq>(): actron.observability/RecordOrdinal // actron.observability/JournalRecord.storeSeq.<get-storeSeq>|<get-storeSeq>(){}[0]
 
     final fun component1(): kotlin/Int // actron.observability/JournalRecord.component1|component1(){}[0]
     final fun component2(): actron.observability/RuntimeSessionId // actron.observability/JournalRecord.component2|component2(){}[0]
     final fun component3(): actron.observability/MachineGroupId // actron.observability/JournalRecord.component3|component3(){}[0]
-    final fun component4(): actron.observability/StoreInstanceId? // actron.observability/JournalRecord.component4|component4(){}[0]
+    final fun component4(): actron.observability/RecordSubject // actron.observability/JournalRecord.component4|component4(){}[0]
     final fun component5(): actron.observability/ExecutionMode // actron.observability/JournalRecord.component5|component5(){}[0]
     final fun component6(): actron.observability/GroupSeq // actron.observability/JournalRecord.component6|component6(){}[0]
-    final fun component7(): actron.observability/StoreSeq? // actron.observability/JournalRecord.component7|component7(){}[0]
+    final fun component7(): actron.observability/RecordOrdinal // actron.observability/JournalRecord.component7|component7(){}[0]
     final fun component8(): kotlin.time/Duration // actron.observability/JournalRecord.component8|component8(){}[0]
     final fun component9(): actron.observability/JournalEntry<#A, #B, #C> // actron.observability/JournalRecord.component9|component9(){}[0]
-    final fun copy(kotlin/Int = ..., actron.observability/RuntimeSessionId = ..., actron.observability/MachineGroupId = ..., actron.observability/StoreInstanceId? = ..., actron.observability/ExecutionMode = ..., actron.observability/GroupSeq = ..., actron.observability/StoreSeq? = ..., kotlin.time/Duration = ..., actron.observability/JournalEntry<#A, #B, #C> = ...): actron.observability/JournalRecord<#A, #B, #C> // actron.observability/JournalRecord.copy|copy(kotlin.Int;actron.observability.RuntimeSessionId;actron.observability.MachineGroupId;actron.observability.StoreInstanceId?;actron.observability.ExecutionMode;actron.observability.GroupSeq;actron.observability.StoreSeq?;kotlin.time.Duration;actron.observability.JournalEntry<1:0,1:1,1:2>){}[0]
+    final fun copy(kotlin/Int = ..., actron.observability/RuntimeSessionId = ..., actron.observability/MachineGroupId = ..., actron.observability/RecordSubject = ..., actron.observability/ExecutionMode = ..., actron.observability/GroupSeq = ..., actron.observability/RecordOrdinal = ..., kotlin.time/Duration = ..., actron.observability/JournalEntry<#A, #B, #C> = ...): actron.observability/JournalRecord<#A, #B, #C> // actron.observability/JournalRecord.copy|copy(kotlin.Int;actron.observability.RuntimeSessionId;actron.observability.MachineGroupId;actron.observability.RecordSubject;actron.observability.ExecutionMode;actron.observability.GroupSeq;actron.observability.RecordOrdinal;kotlin.time.Duration;actron.observability.JournalEntry<1:0,1:1,1:2>){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/JournalRecord.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.observability/JournalRecord.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.observability/JournalRecord.toString|toString(){}[0]
 }
 
 final class actron.observability.file/DecodedSegment { // actron.observability.file/DecodedSegment|null[0]
-    constructor <init>(actron.observability.file/SegmentHeader?, kotlin.collections/List<actron.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>>, actron.observability.file/SegmentMark?, kotlin/Boolean) // actron.observability.file/DecodedSegment.<init>|<init>(actron.observability.file.SegmentHeader?;kotlin.collections.List<actron.observability.JournalRecord<kotlin.Nothing,kotlin.Nothing,kotlin.Nothing>>;actron.observability.file.SegmentMark?;kotlin.Boolean){}[0]
+    constructor <init>(actron.observability.file/JournalPrefix, kotlin.collections/List<actron.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>>, actron.observability.file/SegmentEnding) // actron.observability.file/DecodedSegment.<init>|<init>(actron.observability.file.JournalPrefix;kotlin.collections.List<actron.observability.JournalRecord<kotlin.Nothing,kotlin.Nothing,kotlin.Nothing>>;actron.observability.file.SegmentEnding){}[0]
 
+    final val ending // actron.observability.file/DecodedSegment.ending|{}ending[0]
+        final fun <get-ending>(): actron.observability.file/SegmentEnding // actron.observability.file/DecodedSegment.ending.<get-ending>|<get-ending>(){}[0]
     final val finished // actron.observability.file/DecodedSegment.finished|{}finished[0]
         final fun <get-finished>(): kotlin/Boolean // actron.observability.file/DecodedSegment.finished.<get-finished>|<get-finished>(){}[0]
-    final val header // actron.observability.file/DecodedSegment.header|{}header[0]
-        final fun <get-header>(): actron.observability.file/SegmentHeader? // actron.observability.file/DecodedSegment.header.<get-header>|<get-header>(){}[0]
-    final val mark // actron.observability.file/DecodedSegment.mark|{}mark[0]
-        final fun <get-mark>(): actron.observability.file/SegmentMark? // actron.observability.file/DecodedSegment.mark.<get-mark>|<get-mark>(){}[0]
+    final val prefix // actron.observability.file/DecodedSegment.prefix|{}prefix[0]
+        final fun <get-prefix>(): actron.observability.file/JournalPrefix // actron.observability.file/DecodedSegment.prefix.<get-prefix>|<get-prefix>(){}[0]
     final val records // actron.observability.file/DecodedSegment.records|{}records[0]
         final fun <get-records>(): kotlin.collections/List<actron.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> // actron.observability.file/DecodedSegment.records.<get-records>|<get-records>(){}[0]
 
-    final fun component1(): actron.observability.file/SegmentHeader? // actron.observability.file/DecodedSegment.component1|component1(){}[0]
+    final fun component1(): actron.observability.file/JournalPrefix // actron.observability.file/DecodedSegment.component1|component1(){}[0]
     final fun component2(): kotlin.collections/List<actron.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> // actron.observability.file/DecodedSegment.component2|component2(){}[0]
-    final fun component3(): actron.observability.file/SegmentMark? // actron.observability.file/DecodedSegment.component3|component3(){}[0]
-    final fun component4(): kotlin/Boolean // actron.observability.file/DecodedSegment.component4|component4(){}[0]
-    final fun copy(actron.observability.file/SegmentHeader? = ..., kotlin.collections/List<actron.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> = ..., actron.observability.file/SegmentMark? = ..., kotlin/Boolean = ...): actron.observability.file/DecodedSegment // actron.observability.file/DecodedSegment.copy|copy(actron.observability.file.SegmentHeader?;kotlin.collections.List<actron.observability.JournalRecord<kotlin.Nothing,kotlin.Nothing,kotlin.Nothing>>;actron.observability.file.SegmentMark?;kotlin.Boolean){}[0]
+    final fun component3(): actron.observability.file/SegmentEnding // actron.observability.file/DecodedSegment.component3|component3(){}[0]
+    final fun copy(actron.observability.file/JournalPrefix = ..., kotlin.collections/List<actron.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> = ..., actron.observability.file/SegmentEnding = ...): actron.observability.file/DecodedSegment // actron.observability.file/DecodedSegment.copy|copy(actron.observability.file.JournalPrefix;kotlin.collections.List<actron.observability.JournalRecord<kotlin.Nothing,kotlin.Nothing,kotlin.Nothing>>;actron.observability.file.SegmentEnding){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability.file/DecodedSegment.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.observability.file/DecodedSegment.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.observability.file/DecodedSegment.toString|toString(){}[0]
@@ -879,14 +1259,14 @@ final class actron.observability.file/FileSegmentStorage : actron.observability.
 }
 
 final class actron.observability.file/FramesRead { // actron.observability.file/FramesRead|null[0]
-    constructor <init>(kotlin.collections/List<actron.observability.file/Framing.Frame>, actron.observability.file/SegmentMark?, kotlin/Boolean) // actron.observability.file/FramesRead.<init>|<init>(kotlin.collections.List<actron.observability.file.Framing.Frame>;actron.observability.file.SegmentMark?;kotlin.Boolean){}[0]
+    constructor <init>(kotlin.collections/List<actron.observability.file/Framing.Frame>, actron.observability.file/SegmentEnding) // actron.observability.file/FramesRead.<init>|<init>(kotlin.collections.List<actron.observability.file.Framing.Frame>;actron.observability.file.SegmentEnding){}[0]
 
+    final val ending // actron.observability.file/FramesRead.ending|{}ending[0]
+        final fun <get-ending>(): actron.observability.file/SegmentEnding // actron.observability.file/FramesRead.ending.<get-ending>|<get-ending>(){}[0]
     final val finished // actron.observability.file/FramesRead.finished|{}finished[0]
         final fun <get-finished>(): kotlin/Boolean // actron.observability.file/FramesRead.finished.<get-finished>|<get-finished>(){}[0]
     final val frames // actron.observability.file/FramesRead.frames|{}frames[0]
         final fun <get-frames>(): kotlin.collections/List<actron.observability.file/Framing.Frame> // actron.observability.file/FramesRead.frames.<get-frames>|<get-frames>(){}[0]
-    final val mark // actron.observability.file/FramesRead.mark|{}mark[0]
-        final fun <get-mark>(): actron.observability.file/SegmentMark? // actron.observability.file/FramesRead.mark.<get-mark>|<get-mark>(){}[0]
 }
 
 final class actron.observability.file/InMemorySegmentStorage : actron.observability.file/SegmentStorage { // actron.observability.file/InMemorySegmentStorage|null[0]
@@ -942,7 +1322,7 @@ final class actron.observability.file/JournalFileSink : actron.observability/Jou
     constructor <init>(actron.observability.file/SegmentStorage, actron.observability.file/JournalFileConfig = ...) // actron.observability.file/JournalFileSink.<init>|<init>(actron.observability.file.SegmentStorage;actron.observability.file.JournalFileConfig){}[0]
 
     final val activeSegment // actron.observability.file/JournalFileSink.activeSegment|{}activeSegment[0]
-        final fun <get-activeSegment>(): kotlin/String? // actron.observability.file/JournalFileSink.activeSegment.<get-activeSegment>|<get-activeSegment>(){}[0]
+        final fun <get-activeSegment>(): actron.observability.file/SegmentActivity // actron.observability.file/JournalFileSink.activeSegment.<get-activeSegment>|<get-activeSegment>(){}[0]
     final val segments // actron.observability.file/JournalFileSink.segments|{}segments[0]
         final fun <get-segments>(): kotlin.collections/List<kotlin/String> // actron.observability.file/JournalFileSink.segments.<get-segments>|<get-segments>(){}[0]
 
@@ -961,7 +1341,7 @@ final class actron.observability.file/JournalFiles { // actron.observability.fil
     final fun tail(actron.observability/RuntimeSessionId, kotlin/Int): kotlin.collections/List<actron.observability/JournalRecord<kotlin/Nothing, kotlin/Nothing, kotlin/Nothing>> // actron.observability.file/JournalFiles.tail|tail(actron.observability.RuntimeSessionId;kotlin.Int){}[0]
 }
 
-final class actron.observability.file/SegmentHeader { // actron.observability.file/SegmentHeader|null[0]
+final class actron.observability.file/SegmentHeader : actron.observability.file/JournalPrefix { // actron.observability.file/SegmentHeader|null[0]
     constructor <init>(kotlin/Int, kotlin/Int, actron.observability/RuntimeSessionId, actron.observability/MachineGroupId, actron.observability/ExecutionMode, kotlin/Int) // actron.observability.file/SegmentHeader.<init>|<init>(kotlin.Int;kotlin.Int;actron.observability.RuntimeSessionId;actron.observability.MachineGroupId;actron.observability.ExecutionMode;kotlin.Int){}[0]
 
     final val fileFormatVersion // actron.observability.file/SegmentHeader.fileFormatVersion|{}fileFormatVersion[0]
@@ -987,6 +1367,7 @@ final class actron.observability.file/SegmentHeader { // actron.observability.fi
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability.file/SegmentHeader.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.observability.file/SegmentHeader.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.observability.file/SegmentHeader.toString|toString(){}[0]
+    final fun withHeader(kotlin/Function1<actron.observability.file/SegmentHeader, kotlin/Unit>) // actron.observability.file/SegmentHeader.withHeader|withHeader(kotlin.Function1<actron.observability.file.SegmentHeader,kotlin.Unit>){}[0]
 }
 
 final class actron.observability.file/SegmentInfo { // actron.observability.file/SegmentInfo|null[0]
@@ -1025,66 +1406,56 @@ final class actron.observability/ActivationRef { // actron.observability/Activat
 }
 
 final class actron.observability/CommandRef { // actron.observability/CommandRef|null[0]
-    constructor <init>(kotlin/Long, kotlin/Long, kotlin/String?, kotlin/String?, actron.observability/Payload<kotlin/Any?>) // actron.observability/CommandRef.<init>|<init>(kotlin.Long;kotlin.Long;kotlin.String?;kotlin.String?;actron.observability.Payload<kotlin.Any?>){}[0]
+    constructor <init>(kotlin/Long, kotlin/Long, actron.observability/CommandExecution, actron.observability/Payload<kotlin/Any>) // actron.observability/CommandRef.<init>|<init>(kotlin.Long;kotlin.Long;actron.observability.CommandExecution;actron.observability.Payload<kotlin.Any>){}[0]
+    constructor <init>(kotlin/Long, kotlin/Long, kotlin/String, kotlin/String, actron.observability/Payload<kotlin/Any>) // actron.observability/CommandRef.<init>|<init>(kotlin.Long;kotlin.Long;kotlin.String;kotlin.String;actron.observability.Payload<kotlin.Any>){}[0]
 
     final val command // actron.observability/CommandRef.command|{}command[0]
-        final fun <get-command>(): actron.observability/Payload<kotlin/Any?> // actron.observability/CommandRef.command.<get-command>|<get-command>(){}[0]
+        final fun <get-command>(): actron.observability/Payload<kotlin/Any> // actron.observability/CommandRef.command.<get-command>|<get-command>(){}[0]
+    final val execution // actron.observability/CommandRef.execution|{}execution[0]
+        final fun <get-execution>(): actron.observability/CommandExecution // actron.observability/CommandRef.execution.<get-execution>|<get-execution>(){}[0]
     final val id // actron.observability/CommandRef.id|{}id[0]
         final fun <get-id>(): kotlin/Long // actron.observability/CommandRef.id.<get-id>|<get-id>(){}[0]
-    final val lane // actron.observability/CommandRef.lane|{}lane[0]
-        final fun <get-lane>(): kotlin/String? // actron.observability/CommandRef.lane.<get-lane>|<get-lane>(){}[0]
-    final val policy // actron.observability/CommandRef.policy|{}policy[0]
-        final fun <get-policy>(): kotlin/String? // actron.observability/CommandRef.policy.<get-policy>|<get-policy>(){}[0]
     final val scope // actron.observability/CommandRef.scope|{}scope[0]
         final fun <get-scope>(): kotlin/Long // actron.observability/CommandRef.scope.<get-scope>|<get-scope>(){}[0]
 
     final fun component1(): kotlin/Long // actron.observability/CommandRef.component1|component1(){}[0]
     final fun component2(): kotlin/Long // actron.observability/CommandRef.component2|component2(){}[0]
-    final fun component3(): kotlin/String? // actron.observability/CommandRef.component3|component3(){}[0]
-    final fun component4(): kotlin/String? // actron.observability/CommandRef.component4|component4(){}[0]
-    final fun component5(): actron.observability/Payload<kotlin/Any?> // actron.observability/CommandRef.component5|component5(){}[0]
-    final fun copy(kotlin/Long = ..., kotlin/Long = ..., kotlin/String? = ..., kotlin/String? = ..., actron.observability/Payload<kotlin/Any?> = ...): actron.observability/CommandRef // actron.observability/CommandRef.copy|copy(kotlin.Long;kotlin.Long;kotlin.String?;kotlin.String?;actron.observability.Payload<kotlin.Any?>){}[0]
+    final fun component3(): actron.observability/CommandExecution // actron.observability/CommandRef.component3|component3(){}[0]
+    final fun component4(): actron.observability/Payload<kotlin/Any> // actron.observability/CommandRef.component4|component4(){}[0]
+    final fun copy(kotlin/Long = ..., kotlin/Long = ..., actron.observability/CommandExecution = ..., actron.observability/Payload<kotlin/Any> = ...): actron.observability/CommandRef // actron.observability/CommandRef.copy|copy(kotlin.Long;kotlin.Long;actron.observability.CommandExecution;actron.observability.Payload<kotlin.Any>){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/CommandRef.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.observability/CommandRef.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.observability/CommandRef.toString|toString(){}[0]
 }
 
-final class actron.observability/DiscardDescriptor { // actron.observability/DiscardDescriptor|null[0]
-    constructor <init>(actron.observability/DiscardKind, actron.observability/FailureDescriptor? = ...) // actron.observability/DiscardDescriptor.<init>|<init>(actron.observability.DiscardKind;actron.observability.FailureDescriptor?){}[0]
-
-    final val failure // actron.observability/DiscardDescriptor.failure|{}failure[0]
-        final fun <get-failure>(): actron.observability/FailureDescriptor? // actron.observability/DiscardDescriptor.failure.<get-failure>|<get-failure>(){}[0]
-    final val kind // actron.observability/DiscardDescriptor.kind|{}kind[0]
-        final fun <get-kind>(): actron.observability/DiscardKind // actron.observability/DiscardDescriptor.kind.<get-kind>|<get-kind>(){}[0]
-
-    final fun component1(): actron.observability/DiscardKind // actron.observability/DiscardDescriptor.component1|component1(){}[0]
-    final fun component2(): actron.observability/FailureDescriptor? // actron.observability/DiscardDescriptor.component2|component2(){}[0]
-    final fun copy(actron.observability/DiscardKind = ..., actron.observability/FailureDescriptor? = ...): actron.observability/DiscardDescriptor // actron.observability/DiscardDescriptor.copy|copy(actron.observability.DiscardKind;actron.observability.FailureDescriptor?){}[0]
-    final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/DiscardDescriptor.equals|equals(kotlin.Any?){}[0]
-    final fun hashCode(): kotlin/Int // actron.observability/DiscardDescriptor.hashCode|hashCode(){}[0]
-    final fun toString(): kotlin/String // actron.observability/DiscardDescriptor.toString|toString(){}[0]
-}
-
 final class actron.observability/FailureDescriptor { // actron.observability/FailureDescriptor|null[0]
-    constructor <init>(kotlin/String?, kotlin/String? = ..., actron.observability/FailureDescriptor? = ..., kotlin.collections/List<actron.observability/FailureDescriptor> = ...) // actron.observability/FailureDescriptor.<init>|<init>(kotlin.String?;kotlin.String?;actron.observability.FailureDescriptor?;kotlin.collections.List<actron.observability.FailureDescriptor>){}[0]
+    constructor <init>(actron.observability/FailureDetails, kotlin.collections/List<actron.observability/FailureRelation> = ...) // actron.observability/FailureDescriptor.<init>|<init>(actron.observability.FailureDetails;kotlin.collections.List<actron.observability.FailureRelation>){}[0]
+    constructor <init>(kotlin/String) // actron.observability/FailureDescriptor.<init>|<init>(kotlin.String){}[0]
+    constructor <init>(kotlin/String, actron.observability/FailureDescriptor) // actron.observability/FailureDescriptor.<init>|<init>(kotlin.String;actron.observability.FailureDescriptor){}[0]
+    constructor <init>(kotlin/String, kotlin/String) // actron.observability/FailureDescriptor.<init>|<init>(kotlin.String;kotlin.String){}[0]
+    constructor <init>(kotlin/String, kotlin/String, actron.observability/FailureDescriptor, kotlin.collections/List<actron.observability/FailureDescriptor> = ...) // actron.observability/FailureDescriptor.<init>|<init>(kotlin.String;kotlin.String;actron.observability.FailureDescriptor;kotlin.collections.List<actron.observability.FailureDescriptor>){}[0]
 
-    final val cause // actron.observability/FailureDescriptor.cause|{}cause[0]
-        final fun <get-cause>(): actron.observability/FailureDescriptor? // actron.observability/FailureDescriptor.cause.<get-cause>|<get-cause>(){}[0]
-    final val message // actron.observability/FailureDescriptor.message|{}message[0]
-        final fun <get-message>(): kotlin/String? // actron.observability/FailureDescriptor.message.<get-message>|<get-message>(){}[0]
+    final val details // actron.observability/FailureDescriptor.details|{}details[0]
+        final fun <get-details>(): actron.observability/FailureDetails // actron.observability/FailureDescriptor.details.<get-details>|<get-details>(){}[0]
+    final val hasCause // actron.observability/FailureDescriptor.hasCause|{}hasCause[0]
+        final fun <get-hasCause>(): kotlin/Boolean // actron.observability/FailureDescriptor.hasCause.<get-hasCause>|<get-hasCause>(){}[0]
+    final val related // actron.observability/FailureDescriptor.related|{}related[0]
+        final fun <get-related>(): kotlin.collections/List<actron.observability/FailureRelation> // actron.observability/FailureDescriptor.related.<get-related>|<get-related>(){}[0]
     final val suppressed // actron.observability/FailureDescriptor.suppressed|{}suppressed[0]
         final fun <get-suppressed>(): kotlin.collections/List<actron.observability/FailureDescriptor> // actron.observability/FailureDescriptor.suppressed.<get-suppressed>|<get-suppressed>(){}[0]
-    final val type // actron.observability/FailureDescriptor.type|{}type[0]
-        final fun <get-type>(): kotlin/String? // actron.observability/FailureDescriptor.type.<get-type>|<get-type>(){}[0]
+    final val typeLabel // actron.observability/FailureDescriptor.typeLabel|{}typeLabel[0]
+        final fun <get-typeLabel>(): kotlin/String // actron.observability/FailureDescriptor.typeLabel.<get-typeLabel>|<get-typeLabel>(){}[0]
 
-    final fun component1(): kotlin/String? // actron.observability/FailureDescriptor.component1|component1(){}[0]
-    final fun component2(): kotlin/String? // actron.observability/FailureDescriptor.component2|component2(){}[0]
-    final fun component3(): actron.observability/FailureDescriptor? // actron.observability/FailureDescriptor.component3|component3(){}[0]
-    final fun component4(): kotlin.collections/List<actron.observability/FailureDescriptor> // actron.observability/FailureDescriptor.component4|component4(){}[0]
-    final fun copy(kotlin/String? = ..., kotlin/String? = ..., actron.observability/FailureDescriptor? = ..., kotlin.collections/List<actron.observability/FailureDescriptor> = ...): actron.observability/FailureDescriptor // actron.observability/FailureDescriptor.copy|copy(kotlin.String?;kotlin.String?;actron.observability.FailureDescriptor?;kotlin.collections.List<actron.observability.FailureDescriptor>){}[0]
+    final fun component1(): actron.observability/FailureDetails // actron.observability/FailureDescriptor.component1|component1(){}[0]
+    final fun component2(): kotlin.collections/List<actron.observability/FailureRelation> // actron.observability/FailureDescriptor.component2|component2(){}[0]
+    final fun copy(actron.observability/FailureDetails = ..., kotlin.collections/List<actron.observability/FailureRelation> = ...): actron.observability/FailureDescriptor // actron.observability/FailureDescriptor.copy|copy(actron.observability.FailureDetails;kotlin.collections.List<actron.observability.FailureRelation>){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/FailureDescriptor.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.observability/FailureDescriptor.hashCode|hashCode(){}[0]
+    final fun sameType(actron.observability/FailureDescriptor): kotlin/Boolean // actron.observability/FailureDescriptor.sameType|sameType(actron.observability.FailureDescriptor){}[0]
     final fun toString(): kotlin/String // actron.observability/FailureDescriptor.toString|toString(){}[0]
+    final fun withCause(kotlin/Function1<actron.observability/FailureDescriptor, kotlin/Unit>): kotlin/Boolean // actron.observability/FailureDescriptor.withCause|withCause(kotlin.Function1<actron.observability.FailureDescriptor,kotlin.Unit>){}[0]
+    final fun withMessage(kotlin/Function1<kotlin/String, kotlin/Unit>) // actron.observability/FailureDescriptor.withMessage|withMessage(kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
+    final fun withType(kotlin/Function1<kotlin/String, kotlin/Unit>) // actron.observability/FailureDescriptor.withType|withType(kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
 
     final object Companion { // actron.observability/FailureDescriptor.Companion|null[0]
         final val Unavailable // actron.observability/FailureDescriptor.Companion.Unavailable|{}Unavailable[0]
@@ -1144,13 +1515,17 @@ final class actron.observability/JournalStats { // actron.observability/JournalS
     final fun toString(): kotlin/String // actron.observability/JournalStats.toString|toString(){}[0]
 }
 
-final class actron.observability/MessageRef { // actron.observability/MessageRef|null[0]
+final class actron.observability/MessageRef : actron.observability/MessageCause { // actron.observability/MessageRef|null[0]
     constructor <init>(actron.observability/StoreInstanceId, kotlin/Long) // actron.observability/MessageRef.<init>|<init>(actron.observability.StoreInstanceId;kotlin.Long){}[0]
 
     final val effect // actron.observability/MessageRef.effect|{}effect[0]
         final fun <get-effect>(): kotlin/Long // actron.observability/MessageRef.effect.<get-effect>|<get-effect>(){}[0]
     final val from // actron.observability/MessageRef.from|{}from[0]
         final fun <get-from>(): actron.observability/StoreInstanceId // actron.observability/MessageRef.from.<get-from>|<get-from>(){}[0]
+    final val prompted // actron.observability/MessageRef.prompted|{}prompted[0]
+        final fun <get-prompted>(): kotlin/Boolean // actron.observability/MessageRef.prompted.<get-prompted>|<get-prompted>(){}[0]
+    final val replySuffix // actron.observability/MessageRef.replySuffix|{}replySuffix[0]
+        final fun <get-replySuffix>(): kotlin/String // actron.observability/MessageRef.replySuffix.<get-replySuffix>|<get-replySuffix>(){}[0]
 
     final fun component1(): actron.observability/StoreInstanceId // actron.observability/MessageRef.component1|component1(){}[0]
     final fun component2(): kotlin/Long // actron.observability/MessageRef.component2|component2(){}[0]
@@ -1158,30 +1533,14 @@ final class actron.observability/MessageRef { // actron.observability/MessageRef
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/MessageRef.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.observability/MessageRef.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.observability/MessageRef.toString|toString(){}[0]
+    final fun withMessage(kotlin/Function1<actron.observability/MessageRef, kotlin/Unit>) // actron.observability/MessageRef.withMessage|withMessage(kotlin.Function1<actron.observability.MessageRef,kotlin.Unit>){}[0]
 }
 
-final class actron.observability/OutcomeDescriptor { // actron.observability/OutcomeDescriptor|null[0]
-    constructor <init>(actron.observability/OutcomeKind, kotlin/Int = ..., actron.observability/FailureDescriptor? = ...) // actron.observability/OutcomeDescriptor.<init>|<init>(actron.observability.OutcomeKind;kotlin.Int;actron.observability.FailureDescriptor?){}[0]
-
-    final val commits // actron.observability/OutcomeDescriptor.commits|{}commits[0]
-        final fun <get-commits>(): kotlin/Int // actron.observability/OutcomeDescriptor.commits.<get-commits>|<get-commits>(){}[0]
-    final val failure // actron.observability/OutcomeDescriptor.failure|{}failure[0]
-        final fun <get-failure>(): actron.observability/FailureDescriptor? // actron.observability/OutcomeDescriptor.failure.<get-failure>|<get-failure>(){}[0]
-    final val kind // actron.observability/OutcomeDescriptor.kind|{}kind[0]
-        final fun <get-kind>(): actron.observability/OutcomeKind // actron.observability/OutcomeDescriptor.kind.<get-kind>|<get-kind>(){}[0]
-
-    final fun component1(): actron.observability/OutcomeKind // actron.observability/OutcomeDescriptor.component1|component1(){}[0]
-    final fun component2(): kotlin/Int // actron.observability/OutcomeDescriptor.component2|component2(){}[0]
-    final fun component3(): actron.observability/FailureDescriptor? // actron.observability/OutcomeDescriptor.component3|component3(){}[0]
-    final fun copy(actron.observability/OutcomeKind = ..., kotlin/Int = ..., actron.observability/FailureDescriptor? = ...): actron.observability/OutcomeDescriptor // actron.observability/OutcomeDescriptor.copy|copy(actron.observability.OutcomeKind;kotlin.Int;actron.observability.FailureDescriptor?){}[0]
-    final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/OutcomeDescriptor.equals|equals(kotlin.Any?){}[0]
-    final fun hashCode(): kotlin/Int // actron.observability/OutcomeDescriptor.hashCode|hashCode(){}[0]
-    final fun toString(): kotlin/String // actron.observability/OutcomeDescriptor.toString|toString(){}[0]
-}
-
-final class actron.observability/RecordingSession { // actron.observability/RecordingSession|null[0]
+final class actron.observability/RecordingSession : actron.observability/JournalPublisher { // actron.observability/RecordingSession|null[0]
     constructor <init>(kotlinx.coroutines/CoroutineScope, actron.observability/RuntimeSessionId = ..., actron.observability/MachineGroupId = ..., actron.observability/ExecutionMode = ..., actron.observability/JournalConfig = ..., kotlin.collections/List<actron.observability/JournalSink> = ..., kotlin.time/TimeSource = ...) // actron.observability/RecordingSession.<init>|<init>(kotlinx.coroutines.CoroutineScope;actron.observability.RuntimeSessionId;actron.observability.MachineGroupId;actron.observability.ExecutionMode;actron.observability.JournalConfig;kotlin.collections.List<actron.observability.JournalSink>;kotlin.time.TimeSource){}[0]
 
+    final val boundary // actron.observability/RecordingSession.boundary|{}boundary[0]
+        final fun <get-boundary>(): actron.observability/JournalBoundary // actron.observability/RecordingSession.boundary.<get-boundary>|<get-boundary>(){}[0]
     final val group // actron.observability/RecordingSession.group|{}group[0]
         final fun <get-group>(): actron.observability/MachineGroupId // actron.observability/RecordingSession.group.<get-group>|<get-group>(){}[0]
     final val id // actron.observability/RecordingSession.id|{}id[0]
@@ -1192,8 +1551,8 @@ final class actron.observability/RecordingSession { // actron.observability/Reco
         final fun <get-stats>(): actron.observability/JournalStats // actron.observability/RecordingSession.stats.<get-stats>|<get-stats>(){}[0]
 
     final fun <#A1: actron.core/State, #B1: actron.core/Action, #C1: actron.core/Event> probe(actron.observability/StoreInstanceId, actron.observability/PayloadPolicy<#A1, #B1, #C1>): actron.core/StoreProbe<#A1, #B1, #C1> // actron.observability/RecordingSession.probe|probe(actron.observability.StoreInstanceId;actron.observability.PayloadPolicy<0:0,0:1,0:2>){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
-    final fun publish(actron.observability/JournalEntry<*, *, *>): actron.observability/JournalRecord<*, *, *>? // actron.observability/RecordingSession.publish|publish(actron.observability.JournalEntry<*,*,*>){}[0]
-    final fun publish(actron.observability/StoreInstanceId, actron.observability/JournalEntry<*, *, *>): actron.observability/JournalRecord<*, *, *>? // actron.observability/RecordingSession.publish|publish(actron.observability.StoreInstanceId;actron.observability.JournalEntry<*,*,*>){}[0]
+    final fun publish(actron.observability/JournalEntry<*, *, *>) // actron.observability/RecordingSession.publish|publish(actron.observability.JournalEntry<*,*,*>){}[0]
+    final fun publish(actron.observability/StoreInstanceId, actron.observability/JournalEntry<*, *, *>) // actron.observability/RecordingSession.publish|publish(actron.observability.StoreInstanceId;actron.observability.JournalEntry<*,*,*>){}[0]
     final fun records(): kotlin.collections/List<actron.observability/JournalRecord<*, *, *>> // actron.observability/RecordingSession.records|records(){}[0]
     final suspend fun close() // actron.observability/RecordingSession.close|close(){}[0]
 }
@@ -1220,7 +1579,7 @@ final class actron.observability/TimerRef { // actron.observability/TimerRef|nul
     final fun toString(): kotlin/String // actron.observability/TimerRef.toString|toString(){}[0]
 }
 
-final value class actron.observability/GroupSeq { // actron.observability/GroupSeq|null[0]
+final value class actron.observability/GroupSeq : actron.observability/JournalBoundary { // actron.observability/GroupSeq|null[0]
     constructor <init>(kotlin/Long) // actron.observability/GroupSeq.<init>|<init>(kotlin.Long){}[0]
 
     final val value // actron.observability/GroupSeq.value|{}value[0]
@@ -1228,6 +1587,7 @@ final value class actron.observability/GroupSeq { // actron.observability/GroupS
 
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/GroupSeq.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.observability/GroupSeq.hashCode|hashCode(){}[0]
+    final fun precedes(actron.observability/GroupSeq): kotlin/Boolean // actron.observability/GroupSeq.precedes|precedes(actron.observability.GroupSeq){}[0]
     final fun toString(): kotlin/String // actron.observability/GroupSeq.toString|toString(){}[0]
 }
 
@@ -1257,7 +1617,7 @@ final value class actron.observability/RuntimeSessionId { // actron.observabilit
     }
 }
 
-final value class actron.observability/StoreInstanceId { // actron.observability/StoreInstanceId|null[0]
+final value class actron.observability/StoreInstanceId : actron.observability/RecordSubject { // actron.observability/StoreInstanceId|null[0]
     constructor <init>(kotlin/String) // actron.observability/StoreInstanceId.<init>|<init>(kotlin.String){}[0]
 
     final val value // actron.observability/StoreInstanceId.value|{}value[0]
@@ -1266,14 +1626,16 @@ final value class actron.observability/StoreInstanceId { // actron.observability
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/StoreInstanceId.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.observability/StoreInstanceId.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.observability/StoreInstanceId.toString|toString(){}[0]
+    final fun withStore(kotlin/Function1<actron.observability/StoreInstanceId, kotlin/Unit>) // actron.observability/StoreInstanceId.withStore|withStore(kotlin.Function1<actron.observability.StoreInstanceId,kotlin.Unit>){}[0]
 }
 
-final value class actron.observability/StoreSeq { // actron.observability/StoreSeq|null[0]
+final value class actron.observability/StoreSeq : actron.observability/RecordOrdinal { // actron.observability/StoreSeq|null[0]
     constructor <init>(kotlin/Long) // actron.observability/StoreSeq.<init>|<init>(kotlin.Long){}[0]
 
     final val value // actron.observability/StoreSeq.value|{}value[0]
         final fun <get-value>(): kotlin/Long // actron.observability/StoreSeq.value.<get-value>|<get-value>(){}[0]
 
+    final fun appendTo(kotlin.text/StringBuilder) // actron.observability/StoreSeq.appendTo|appendTo(kotlin.text.StringBuilder){}[0]
     final fun equals(kotlin/Any?): kotlin/Boolean // actron.observability/StoreSeq.equals|equals(kotlin.Any?){}[0]
     final fun hashCode(): kotlin/Int // actron.observability/StoreSeq.hashCode|hashCode(){}[0]
     final fun toString(): kotlin/String // actron.observability/StoreSeq.toString|toString(){}[0]
@@ -1313,7 +1675,7 @@ final object actron.observability.file/JournalFileFormat { // actron.observabili
     final fun decodeSegment(kotlin/String, kotlin/ByteArray): actron.observability.file/DecodedSegment // actron.observability.file/JournalFileFormat.decodeSegment|decodeSegment(kotlin.String;kotlin.ByteArray){}[0]
     final fun frame(actron.observability/JournalRecord<*, *, *>): kotlin/ByteArray // actron.observability.file/JournalFileFormat.frame|frame(actron.observability.JournalRecord<*,*,*>){}[0]
     final fun header(actron.observability/RuntimeSessionId, actron.observability/MachineGroupId, actron.observability/ExecutionMode, kotlin/Int): kotlin/ByteArray // actron.observability.file/JournalFileFormat.header|header(actron.observability.RuntimeSessionId;actron.observability.MachineGroupId;actron.observability.ExecutionMode;kotlin.Int){}[0]
-    final fun parseSegmentName(kotlin/String): kotlin/Pair<actron.observability/RuntimeSessionId, kotlin/Int>? // actron.observability.file/JournalFileFormat.parseSegmentName|parseSegmentName(kotlin.String){}[0]
+    final fun parseSegmentName(kotlin/String, kotlin/Function2<actron.observability/RuntimeSessionId, kotlin/Int, kotlin/Unit>): kotlin/Boolean // actron.observability.file/JournalFileFormat.parseSegmentName|parseSegmentName(kotlin.String;kotlin.Function2<actron.observability.RuntimeSessionId,kotlin.Int,kotlin.Unit>){}[0]
     final fun segmentName(actron.observability/RuntimeSessionId, kotlin/Int): kotlin/String // actron.observability.file/JournalFileFormat.segmentName|segmentName(actron.observability.RuntimeSessionId;kotlin.Int){}[0]
 }
 
@@ -1329,6 +1691,11 @@ final const val actron.observability.file/JOURNAL_FILE_FORMAT_VERSION // actron.
 final const val actron.observability/JOURNAL_FORMAT_VERSION // actron.observability/JOURNAL_FORMAT_VERSION|{}JOURNAL_FORMAT_VERSION[0]
     final fun <get-JOURNAL_FORMAT_VERSION>(): kotlin/Int // actron.observability/JOURNAL_FORMAT_VERSION.<get-JOURNAL_FORMAT_VERSION>|<get-JOURNAL_FORMAT_VERSION>(){}[0]
 
+final fun (actron.observability.file/SegmentEnding).actron.observability.file/beforeHeader(kotlin/String, kotlin/Int): actron.observability.file/SegmentMark // actron.observability.file/beforeHeader|beforeHeader@actron.observability.file.SegmentEnding(kotlin.String;kotlin.Int){}[0]
 final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> (actron.core/StoreBuilder<#A, #B, #C>).actron.observability/recordTo(actron.observability/RecordingSession, actron.observability/StoreInstanceId, actron.observability/PayloadPolicy<#A, #B, #C> = ...) // actron.observability/recordTo|recordTo@actron.core.StoreBuilder<0:0,0:1,0:2>(actron.observability.RecordingSession;actron.observability.StoreInstanceId;actron.observability.PayloadPolicy<0:0,0:1,0:2>){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
 final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> (actron.core/StorePatchBuilder<#A, #B, #C>).actron.observability/recordTo(actron.observability/RecordingSession, actron.observability/StoreInstanceId, actron.observability/PayloadPolicy<#A, #B, #C> = ...) // actron.observability/recordTo|recordTo@actron.core.StorePatchBuilder<0:0,0:1,0:2>(actron.observability.RecordingSession;actron.observability.StoreInstanceId;actron.observability.PayloadPolicy<0:0,0:1,0:2>){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
 final fun <#A: actron.core/State, #B: actron.core/Action, #C: actron.core/Event> actron.observability/PayloadPolicy(kotlin/Function1<#A, actron.observability/Payload<#A>> = ..., kotlin/Function1<#B, actron.observability/Payload<#B>> = ..., kotlin/Function1<#C, actron.observability/Payload<#C>> = ..., kotlin/Function1<kotlin/Throwable, actron.observability/FailureDescriptor> = ...): actron.observability/PayloadPolicy<#A, #B, #C> // actron.observability/PayloadPolicy|PayloadPolicy(kotlin.Function1<0:0,actron.observability.Payload<0:0>>;kotlin.Function1<0:1,actron.observability.Payload<0:1>>;kotlin.Function1<0:2,actron.observability.Payload<0:2>>;kotlin.Function1<kotlin.Throwable,actron.observability.FailureDescriptor>){0§<actron.core.State>;1§<actron.core.Action>;2§<actron.core.Event>}[0]
+final fun actron.observability/DiscardDescriptor(actron.observability/DiscardKind): actron.observability/DiscardDescriptor // actron.observability/DiscardDescriptor|DiscardDescriptor(actron.observability.DiscardKind){}[0]
+final fun actron.observability/DiscardDescriptor(actron.observability/DiscardKind, actron.observability/FailureDescriptor): actron.observability/DiscardDescriptor // actron.observability/DiscardDescriptor|DiscardDescriptor(actron.observability.DiscardKind;actron.observability.FailureDescriptor){}[0]
+final fun actron.observability/OutcomeDescriptor(actron.observability/OutcomeKind, kotlin/Int = ...): actron.observability/OutcomeDescriptor // actron.observability/OutcomeDescriptor|OutcomeDescriptor(actron.observability.OutcomeKind;kotlin.Int){}[0]
+final fun actron.observability/OutcomeDescriptor(actron.observability/OutcomeKind, kotlin/Int = ..., actron.observability/FailureDescriptor): actron.observability/OutcomeDescriptor // actron.observability/OutcomeDescriptor|OutcomeDescriptor(actron.observability.OutcomeKind;kotlin.Int;actron.observability.FailureDescriptor){}[0]

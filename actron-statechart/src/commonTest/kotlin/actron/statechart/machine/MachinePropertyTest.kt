@@ -52,7 +52,7 @@ class MachinePropertyTest {
         return try {
             Machine(DefinitionId("random-$seed"), DefinitionVersion("1"), chart) {
                 table.implementations().forEach { (label, guard) -> guard(label, guard) }
-                chart.transitions.mapNotNull { it.effect }.distinct().forEach { label -> effect(label) { context, _ -> context.copy(steps = context.steps + 1) } }
+                chart.transitions.mapNotNull { (it.effect as? actron.statechart.EffectKey)?.name }.distinct().forEach { label -> effect(label) { context, _ -> context.copy(steps = context.steps + 1) } }
                 withRules.forEach { id ->
                     onEnter(id) {
                         command("load $id", LaneId("lane-${id.value.hashCode() and 1}"), ConcurrencyPolicy.Latest)
@@ -112,7 +112,7 @@ class MachinePropertyTest {
                 next.timers.values.all { it.activation in live && chart.transitions[it.transition.index].source in next.configuration.active },
                 "seed $seed step $step: timers belong to live activations of active sources",
             )
-            assertTrue(decision.timersScheduled.all { it.deadline == now + chart.transitions[it.transition.index].after!! }, "seed $seed step $step")
+            assertTrue(decision.timersScheduled.all { it.deadline == now + (chart.transitions[it.transition.index].trigger as actron.statechart.Trigger.After).delay }, "seed $seed step $step")
             assertEquals(decision.exited.map { it.id }, decision.cancelledScopes, "seed $seed step $step")
             val exitedIds = decision.exited.map { it.id }.toSet()
             assertTrue(exitedIds.none { it in live }, "seed $seed step $step: an exited activation is gone")

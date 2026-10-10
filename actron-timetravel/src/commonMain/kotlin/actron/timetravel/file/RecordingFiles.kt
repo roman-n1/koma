@@ -33,18 +33,25 @@ sealed interface RecordingFileMark {
  * from its first segment's checkpoint, and the marks of what was missing or damaged before or
  * inside the files. A hole is never crossed (handoff §7.1): the range begins after the last one.
  *
- * @property recording The replayable range, or `null` when no segment could be read
+ * A [RecordingFileContents.Readable] has an authentic replayable range; [RecordingFileContents.Unreadable] retains diagnostics
  * @property firstStep The index in the whole run of the range's first step
  * @property segments The segments the range was read from
  */
-data class RecordingFileContents<C, A : Action, CMD, E : Event>(
-    val recording: Recording<C, A, CMD, E>?,
-    val firstStep: Int?,
-    val segments: List<String>,
-    val marks: List<RecordingFileMark>,
-) {
-    /** Whether the whole run from its first segment present was read, nothing missing or damaged. */
+sealed class RecordingFileContents<C : Any, A : Action, CMD : Any, E : Event> {
+    abstract val segments: List<String>
+    abstract val marks: List<RecordingFileMark>
+    /** Whether every present segment was read without a hole or damage. */
     val isComplete: Boolean get() = marks.none { it !is RecordingFileMark.Damaged || it.mark !is SegmentMark.Unfinished }
+
+    data class Unreadable<C : Any, A : Action, CMD : Any, E : Event>(override val marks: List<RecordingFileMark>) : RecordingFileContents<C, A, CMD, E>() {
+        override val segments: List<String> get() = emptyList()
+    }
+    data class Readable<C : Any, A : Action, CMD : Any, E : Event>(
+        val recording: Recording<C, A, CMD, E>,
+        val firstStep: Int,
+        override val segments: List<String>,
+        override val marks: List<RecordingFileMark>,
+    ) : RecordingFileContents<C, A, CMD, E>()
 }
 
 /**
@@ -54,7 +61,7 @@ data class RecordingFileContents<C, A : Action, CMD, E : Event>(
  */
 class RecordingFiles(private val storage: SegmentStorage) {
     /** The Stores that have segments. */
-    fun stores(): List<StoreInstanceId> = storage.list().mapNotNull { RecordingFileFormat.parseSegmentName(it.name)?.first }.distinct()
+    fun stores(): List<StoreInstanceId> = buildList { for (info in storage.list()) RecordingFileFormat.parseSegmentName(info.name) { id, _ -> add(id) } }.distinct()
 
     /**
      * The last continuous range of [store]'s run, decoded with [codec]. Segments are read in
@@ -62,58 +69,58 @@ class RecordingFiles(private val storage: SegmentStorage) {
      * continue the previous segment, or damage inside a segment ends the range, and the next
      * readable segment begins a new one from its own checkpoint.
      */
-    fun <C, A : Action, CMD, E : Event> read(store: StoreInstanceId, codec: RecordingCodec<C, A, CMD, E>): RecordingFileContents<C, A, CMD, E> {
+    fun <C : Any, A : Action, CMD : Any, E : Event> read(store: StoreInstanceId, codec: RecordingCodec<C, A, CMD, E>): RecordingFileContents<C, A, CMD, E> {
         val marks = mutableListOf<RecordingFileMark>()
-        val segments = storage.list().mapNotNull { info -> RecordingFileFormat.parseSegmentName(info.name)?.takeIf { it.first == store }?.let { it.second to info.name } }.sortedBy { it.first }
-        // `run` is the range the next segment may continue; `latest` the last range read, which
-        // is what remains when damage ends a range at the last segment.
-        var run: Run<C, A, CMD, E>? = null
-        var latest: Run<C, A, CMD, E>? = null
+        val segments = RecordingFileFormat.namedSegments(storage, store).sortedBy { it.first }
+        // Keep the genuine sequence of continuous ranges; damage prevents extending its last run.
+        val runs = mutableListOf<Run<C, A, CMD, E>>()
+        var canContinue = false
         // A Store's segments begin at index 0: what is absent before the first present one rotated away.
         var expectedIndex = 0
         for ((index, name) in segments) {
             if (index > expectedIndex) {
                 marks += RecordingFileMark.MissingSegments(store, expectedIndex, index - 1)
-                run = null
+                canContinue = false
             }
             expectedIndex = index + 1
             val decoded = RecordingFileFormat.decodeSegment(name, storage.read(name), codec)
-            val header = decoded.header
-            val start = decoded.start
-            if (header == null || start == null) {
-                decoded.mark?.let { marks += RecordingFileMark.Damaged(it) }
-                run = null
+            if (decoded !is DecodedRecordingSegment.Readable) {
+                decoded.ending.withIssue { marks += RecordingFileMark.Damaged(it) }
+                canContinue = false
                 continue
             }
-            val current = run
-            if (current != null) {
+            val header = decoded.header
+            val start = decoded.start
+            if (canContinue) {
+                val current = runs.last()
                 if (header.firstStep != current.nextStep) {
                     marks += RecordingFileMark.StepsMissing(store, current.nextStep, header.firstStep)
-                    run = null
+                    canContinue = false
                 } else if (start.snapshot != current.carried.snapshot) {
                     marks += RecordingFileMark.StartMismatch(store, name, "begins at revision ${start.snapshot.revision}, the previous segment led to ${current.carried.snapshot.revision}")
-                    run = null
+                    canContinue = false
                 }
             }
-            val range = run ?: Run<C, A, CMD, E>(header.firstStep, start, header.definition, header.version, mutableListOf<RecordedStep<C, A, CMD, E>>(), start, mutableListOf<String>()).also {
-                run = it
-                latest = it
+            if (!canContinue) {
+                runs += Run(header.firstStep, start, header.definition, header.version, mutableListOf(), start, mutableListOf())
+                canContinue = true
             }
+            val range = runs.last()
             for (step in decoded.steps) {
                 range.steps += step
                 range.carried = range.carried.carriedPast(step)
             }
             range.nextStep = header.firstStep + decoded.steps.size
             range.segments += name
-            val mark = decoded.mark
-            if (mark != null) {
+            decoded.ending.withIssue { mark ->
                 marks += RecordingFileMark.Damaged(mark)
                 // Steps after the damage are gone; the next segment cannot continue this range.
-                if (mark !is SegmentMark.Unfinished) run = null
+                if (mark !is SegmentMark.Unfinished) canContinue = false
             }
         }
-        val last = latest ?: return RecordingFileContents(null, null, emptyList(), marks)
-        return RecordingFileContents(Recording(last.definition, last.version, last.start, last.steps.toList()), last.firstStep, last.segments.toList(), marks)
+        if (runs.isEmpty()) return RecordingFileContents.Unreadable(marks)
+        val last = runs.last()
+        return RecordingFileContents.Readable(Recording(last.definition, last.version, last.start, last.steps.toList()), last.firstStep, last.segments.toList(), marks)
     }
 
     /**
@@ -123,9 +130,11 @@ class RecordingFiles(private val storage: SegmentStorage) {
      * before it, as after a ring's rotation. Returns the names deleted, oldest first.
      */
     fun prune(maxTotalBytes: Long): List<String> {
-        val segments = storage.list().mapNotNull { info ->
-            val index = RecordingFileFormat.parseSegmentName(info.name)?.second ?: GroupRecordingFileFormat.parseSegmentName(info.name)?.second ?: return@mapNotNull null
-            Triple(info, info.modified, index)
+        val segments = buildList {
+            for (info in storage.list()) {
+                val recording = RecordingFileFormat.parseSegmentName(info.name) { _, index -> add(Triple(info, info.modified, index)) }
+                if (!recording) GroupRecordingFileFormat.parseSegmentName(info.name) { _, index -> add(Triple(info, info.modified, index)) }
+            }
         }.sortedWith(compareBy({ it.second }, { it.third }, { it.first.name }))
         var total = segments.sumOf { it.first.size }
         val deleted = mutableListOf<String>()
@@ -138,7 +147,7 @@ class RecordingFiles(private val storage: SegmentStorage) {
         return deleted
     }
 
-    private class Run<C, A : Action, CMD, E : Event>(
+    private class Run<C : Any, A : Action, CMD : Any, E : Event>(
         val firstStep: Int,
         val start: ExecutorCheckpoint<C, CMD>,
         val definition: actron.statechart.machine.DefinitionId,

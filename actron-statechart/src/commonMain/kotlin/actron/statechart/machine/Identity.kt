@@ -80,12 +80,17 @@ value class TransitionId(val index: Int) {
  * Lanes are local to one Store instance.
  */
 @JvmInline
-value class LaneId(val value: String) {
+value class LaneId(val value: String) : CommandLane {
     init {
         require(value.isNotBlank()) { "[Actron] LaneId must not be blank" }
     }
 
     override fun toString(): String = value
+}
+
+/** Commands run independently or participate in a named concurrency lane. */
+sealed interface CommandLane {
+    data object Independent : CommandLane
 }
 
 /**

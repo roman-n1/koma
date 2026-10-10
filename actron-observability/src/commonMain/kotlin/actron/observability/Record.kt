@@ -2,6 +2,8 @@
 
 package actron.observability
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.InputId
@@ -30,11 +32,11 @@ const val JOURNAL_FORMAT_VERSION: Int = 7
  * @property formatVersion [JOURNAL_FORMAT_VERSION] at the time of recording
  * @property session The run this record belongs to
  * @property group The group whose [groupSeq] orders this record
- * @property store The Store this record is about; `null` for a record of the session itself
+ * @property store The subject: a [StoreInstanceId] or [RecordSubject.Session]
  * ([JournalEntry.JournalGap], [JournalEntry.RecordingStopped])
  * @property mode Whether the Store ran live or in a replay
  * @property groupSeq Dense position in the group; the order of records
- * @property storeSeq Dense position among the records of [store]; `null` when [store] is
+ * @property storeSeq Dense Store position or [RecordOrdinal.Session] for a session record
  * @property elapsed Monotonic time since the session started, read under the same lock that
  * assigned [groupSeq], so it never decreases along the sequence. Diagnostic only: the order is
  * [groupSeq], not time
@@ -43,13 +45,17 @@ data class JournalRecord<out S : State, out A : Action, out E : Event>(
     val formatVersion: Int,
     val session: RuntimeSessionId,
     val group: MachineGroupId,
-    val store: StoreInstanceId?,
+    val store: RecordSubject,
     val mode: ExecutionMode,
     val groupSeq: GroupSeq,
-    val storeSeq: StoreSeq?,
+    val storeSeq: RecordOrdinal,
     val elapsed: Duration,
     val entry: JournalEntry<S, A, E>,
-)
+) {
+    init {
+        require((store is StoreInstanceId) == (storeSeq is StoreSeq)) { "[Actron] Store records need a Store ordinal; session records use group order" }
+    }
+}
 
 /**
  * What a record says. The variants mirror the processing boundaries a `StoreProbe` sees, with
@@ -86,13 +92,13 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
     /**
      * An event was emitted by the processing of [input], or by a coroutine it launched.
      */
-    data class EventEmitted<out E : Event>(val input: InputId?, val event: Payload<E>) : JournalEntry<Nothing, Nothing, E>
+    data class EventEmitted<out E : Event>(val input: InputAttribution, val event: Payload<E>) : JournalEntry<Nothing, Nothing, E>
 
     /**
      * A failure reached the Store's exception handler while processing [input], or from a
-     * coroutine it launched; `null` when the Store could not tell.
+     * coroutine it launched; [InputAttribution.Unattributed] when the Store could not tell.
      */
-    data class FailureReported(val input: InputId?, val failure: FailureDescriptor) : JournalEntry<Nothing, Nothing, Nothing>
+    data class FailureReported(val input: InputAttribution, val failure: FailureDescriptor) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * Processing of [input] ended with [outcome] after [duration], measured from its
@@ -119,7 +125,7 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
      * are the chart's declared ids.
      */
     data class DecisionCommitted(
-        val input: InputId?,
+        val input: InputAttribution,
         val revision: Long,
         val active: List<String>,
         val transitions: List<Int>,
@@ -136,7 +142,7 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
      * A replay-ready machine ignored [input] for [reason] (the machine's `IgnoreReason` name):
      * nothing was committed.
      */
-    data class DecisionIgnored(val input: InputId?, val reason: String) : JournalEntry<Nothing, Nothing, Nothing>
+    data class DecisionIgnored(val input: InputAttribution, val reason: String) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * A bridge routed an effect of this Store to [to] as the message [message]; [delivered] is
@@ -145,13 +151,13 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
      * was deciding when it emitted the effect, when it was one: the request a reply decided in
      * the same step replies to.
      */
-    data class BridgeSent(val input: InputId?, val message: MessageRef, val to: StoreInstanceId, val delivered: Boolean, val cause: MessageRef? = null) : JournalEntry<Nothing, Nothing, Nothing>
+    data class BridgeSent(val input: InputAttribution, val message: MessageRef, val to: StoreInstanceId, val delivered: Boolean, val cause: MessageCause = MessageCause.Unprompted) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * This Store decided the bridge message [message] while processing [input]: the
      * `BridgeReceived` input the message became was handled, ignored or failed.
      */
-    data class BridgeReceived(val input: InputId?, val message: MessageRef) : JournalEntry<Nothing, Nothing, Nothing>
+    data class BridgeReceived(val input: InputAttribution, val message: MessageRef) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * The bridge message [message], delivered to [to] and not yet decided, never will be: the
@@ -164,7 +170,7 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
      * The effect [effect] of a decision made while processing [input] entered the Store's
      * mailbox under [policy] (the policy's name); [event] is what the describer kept of it.
      */
-    data class EffectQueued<out E : Event>(val input: InputId?, val effect: Long, val policy: String, val event: Payload<E>) : JournalEntry<Nothing, Nothing, E>
+    data class EffectQueued<out E : Event>(val input: InputAttribution, val effect: Long, val policy: String, val event: Payload<E>) : JournalEntry<Nothing, Nothing, E>
 
     /** A subscriber took the effect [effect] from the mailbox, for the [attempt]th time. */
     data class EffectHandlingStarted(val effect: Long, val attempt: Int) : JournalEntry<Nothing, Nothing, Nothing>
@@ -178,7 +184,7 @@ sealed interface JournalEntry<out S : State, out A : Action, out E : Event> {
     /**
      * This Store decided an input the external source [source] fed while processing [input].
      */
-    data class ExternalReceived(val input: InputId?, val source: String) : JournalEntry<Nothing, Nothing, Nothing>
+    data class ExternalReceived(val input: InputAttribution, val source: String) : JournalEntry<Nothing, Nothing, Nothing>
 
     /**
      * A consistent cut of the group was taken: [members] were frozen and idle, [sources] were
@@ -218,10 +224,10 @@ sealed interface InputDescriptor<out A : Action> {
     data class Dispatch<out A : Action>(val action: Payload<A>) : InputDescriptor<A>
 
     /** A `transaction {}` from a coroutine launched while processing [origin]. */
-    data class Transaction(val origin: InputId?) : InputDescriptor<Nothing>
+    data class Transaction(val origin: InputAttribution) : InputDescriptor<Nothing>
 
     /** The `recover {}` pass for a launched coroutine of [origin] that failed with [failure]. */
-    data class Recovery(val failure: FailureDescriptor, val origin: InputId?) : InputDescriptor<Nothing>
+    data class Recovery(val failure: FailureDescriptor, val origin: InputAttribution) : InputDescriptor<Nothing>
 }
 
 /**
@@ -242,7 +248,26 @@ enum class DiscardKind {
  * A discard reason and, for [DiscardKind.Rejected] and [DiscardKind.StartupFailed], the failure
  * behind it as the policy described it.
  */
-data class DiscardDescriptor(val kind: DiscardKind, val failure: FailureDescriptor? = null)
+sealed interface DiscardDescriptor {
+    val kind: DiscardKind
+    val hasFailure: Boolean
+    val detailSuffix: String
+    fun withFailure(accept: (FailureDescriptor) -> Unit)
+
+    data class Reason(override val kind: DiscardKind) : DiscardDescriptor {
+        override val hasFailure: Boolean = false
+        override val detailSuffix: String = ""
+        override fun withFailure(accept: (FailureDescriptor) -> Unit) = Unit
+    }
+    data class Failure(override val kind: DiscardKind, val failure: FailureDescriptor) : DiscardDescriptor {
+        override val hasFailure: Boolean = true
+        override val detailSuffix: String get() = " " + JournalFormat.failure(failure)
+        override fun withFailure(accept: (FailureDescriptor) -> Unit) = accept(failure)
+    }
+}
+
+fun DiscardDescriptor(kind: DiscardKind): DiscardDescriptor = DiscardDescriptor.Reason(kind)
+fun DiscardDescriptor(kind: DiscardKind, failure: FailureDescriptor): DiscardDescriptor = DiscardDescriptor.Failure(kind, failure)
 
 /**
  * How a processing ended; the names are the wire vocabulary.
@@ -260,7 +285,24 @@ enum class OutcomeKind {
  * An outcome with the number of snapshots it committed and, for [OutcomeKind.Recovered] and
  * [OutcomeKind.Failed], the failure as the policy described it.
  */
-data class OutcomeDescriptor(val kind: OutcomeKind, val commits: Int = 0, val failure: FailureDescriptor? = null)
+sealed interface OutcomeDescriptor {
+    val kind: OutcomeKind
+    val commits: Int
+    val hasFailure: Boolean
+    fun withFailure(accept: (FailureDescriptor) -> Unit)
+
+    data class Decision(override val kind: OutcomeKind, override val commits: Int) : OutcomeDescriptor {
+        override val hasFailure: Boolean = false
+        override fun withFailure(accept: (FailureDescriptor) -> Unit) = Unit
+    }
+    data class Failure(override val kind: OutcomeKind, override val commits: Int, val failure: FailureDescriptor) : OutcomeDescriptor {
+        override val hasFailure: Boolean = true
+        override fun withFailure(accept: (FailureDescriptor) -> Unit) = accept(failure)
+    }
+}
+
+fun OutcomeDescriptor(kind: OutcomeKind, commits: Int = 0): OutcomeDescriptor = OutcomeDescriptor.Decision(kind, commits)
+fun OutcomeDescriptor(kind: OutcomeKind, commits: Int = 0, failure: FailureDescriptor): OutcomeDescriptor = OutcomeDescriptor.Failure(kind, commits, failure)
 
 /**
  * A node with an activation id, as a decision names them.
@@ -271,7 +313,26 @@ data class ActivationRef(val node: String, val activation: Long)
  * A command a decision registered: its id, the activation it belongs to, its lane and policy
  * names, and what the policy kept of the command itself.
  */
-data class CommandRef(val id: Long, val scope: Long, val lane: String?, val policy: String?, val command: Payload<Any?>)
+data class CommandRef(val id: Long, val scope: Long, val execution: CommandExecution, val command: Payload<Any>) {
+    constructor(id: Long, scope: Long, lane: String, policy: String, command: Payload<Any>) :
+        this(id, scope, CommandExecution.InLane(lane, policy), command)
+}
+
+/** How a recorded command participates in concurrency scheduling. */
+sealed interface CommandExecution {
+    val journalSuffix: String
+    val description: String
+
+    data object Independent : CommandExecution {
+        override val journalSuffix: String = ""
+        override val description: String = ""
+    }
+
+    data class InLane(val lane: String, val policy: String) : CommandExecution {
+        override val journalSuffix: String get() = " $lane/$policy"
+        override val description: String get() = " in $lane ($policy)"
+    }
+}
 
 /**
  * A timer a decision scheduled: its id, the transition it fires (by position in the chart), the
@@ -283,6 +344,22 @@ data class TimerRef(val id: Long, val transition: Int, val activation: Long, val
  * A bridge message as the journal names it: the Store that sent it and the id of the effect it
  * was routed from, so the same effect gives the same message in a replay.
  */
-data class MessageRef(val from: StoreInstanceId, val effect: Long) {
+/** Whether a bridge message was decided while receiving another bridge message. */
+sealed interface MessageCause {
+    val prompted: Boolean
+    val replySuffix: String
+    fun withMessage(accept: (MessageRef) -> Unit)
+
+    data object Unprompted : MessageCause {
+        override val prompted: Boolean = false
+        override val replySuffix: String = ""
+        override fun withMessage(accept: (MessageRef) -> Unit) = Unit
+    }
+}
+
+data class MessageRef(val from: StoreInstanceId, val effect: Long) : MessageCause {
+    override val prompted: Boolean = true
+    override val replySuffix: String get() = " reply-to=$this"
+    override fun withMessage(accept: (MessageRef) -> Unit) = accept(this)
     override fun toString(): String = "${from.value}/e$effect"
 }

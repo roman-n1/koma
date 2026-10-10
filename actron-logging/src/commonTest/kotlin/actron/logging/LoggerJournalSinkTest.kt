@@ -39,7 +39,7 @@ class LoggerJournalSinkTest {
     private class TestLogger : Logger {
         val lines = mutableListOf<Line>()
 
-        override fun log(severity: Logger.Severity, tag: String, throwable: Throwable?, message: () -> String) {
+        override fun log(severity: Logger.Severity, tag: String, message: () -> String) {
             lines += Line(severity, tag, message())
         }
     }

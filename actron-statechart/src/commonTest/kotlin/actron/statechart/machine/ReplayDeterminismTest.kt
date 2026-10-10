@@ -2,6 +2,8 @@
 
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
@@ -73,8 +75,8 @@ class ReplayDeterminismTest {
         listOf(
             Transition(idle, loading, ActionMatcher.of<Act.Load>("Load")),
             Transition(loading, loading, ActionMatcher.of<Act.Load>("Load")),
-            Transition(loading, idle, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
-            Transition(loading, idle, Trigger.After(3.milliseconds), effect = "timeout"),
+            Transition(loading, idle, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("store")),
+            Transition(loading, idle, Trigger.After(3.milliseconds), effect = actron.statechart.EffectKey("timeout")),
         ),
     )
 
@@ -99,11 +101,11 @@ class ReplayDeterminismTest {
             results.result(Act.Loaded(command.command.n))
         }
         val recorder = object : DecisionObserver<Ctx, Act, Fetch, Nothing> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<Act>, decision: Decision<Ctx, Fetch, Nothing>) {
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<Act>, decision: Decision<Ctx, Fetch, Nothing>) {
                 recorded.trySend(Recorded(machineInput, decision.snapshot))
             }
 
-            override fun onIgnored(input: InputId?, machineInput: MachineInput<Act>, reason: IgnoreReason) {
+            override fun onIgnored(input: InputAttribution, machineInput: MachineInput<Act>, reason: IgnoreReason) {
                 recorded.trySend(Recorded(machineInput, null))
             }
         }

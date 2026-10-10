@@ -3,11 +3,16 @@ package actron.statechart.machine
 import actron.core.Action
 import actron.core.Event
 import actron.observability.FailureDescriptor
+import actron.statechart.GuardCheck
 import actron.statechart.ActionMatcher
 import actron.statechart.StateId
 
-/** An active transition, or an action handler when [transition] is null. */
-data class ActionDeclaration(val node: StateId, val transition: TransitionId? = null)
+/** The declared behaviour activated by an action matcher. */
+sealed interface ActionDeclaration {
+    val node: StateId
+    data class Handler(override val node: StateId) : ActionDeclaration
+    data class Transition(override val node: StateId, val transition: TransitionId) : ActionDeclaration
+}
 
 /** A declared matcher, not a fabricated action payload. Matching subtypes may have different eligibility. */
 data class DeclaredAction(val matcher: ActionMatcher, val declarations: List<ActionDeclaration>)
@@ -17,30 +22,46 @@ enum class ActionAvailability { Executable, Blocked, Undeclared, NotStarted, Gua
 /** Why a supplied action did not select executable behaviour, or failed its complete decision. */
 enum class ActionRejectionReason { NotStarted, NoMatchingAction, GuardRejected, GuardFailed, DecisionFailed, IgnoredInput }
 
-/** A false guard with optional application-authored diagnostic metadata. */
-data class GuardRejection(val transition: TransitionId, val label: String, val reason: String?)
+/** A false guard with application-authored diagnostic text; empty text adds no explanation. */
+data class GuardRejection(val transition: TransitionId, val label: String, val reason: String = "")
 
-/** Metadata-only explanation; no action/context payloads or exception messages are included in [describe]. */
-data class RejectionExplanation(
-    val reason: ActionRejectionReason,
-    val selection: DecisionExplanation,
-    val guards: List<GuardRejection> = emptyList(),
-    val failure: FailureDescriptor? = null,
-) {
+/** A rejected input or an evaluation that failed. Descriptions contain metadata only. */
+sealed interface RejectionExplanation {
+    val reason: ActionRejectionReason
+    val selection: DecisionExplanation
+    val guards: List<GuardRejection>
+    fun failureLine(): String
+
+    data class Denied(
+        override val reason: ActionRejectionReason,
+        override val selection: DecisionExplanation,
+        override val guards: List<GuardRejection> = emptyList(),
+    ) : RejectionExplanation {
+        override fun failureLine(): String = ""
+    }
+    data class Failed(
+        override val reason: ActionRejectionReason,
+        override val selection: DecisionExplanation,
+        override val guards: List<GuardRejection>,
+        val failure: FailureDescriptor,
+    ) : RejectionExplanation {
+        override fun failureLine(): String = "\nFailure: ${failure.typeLabel}"
+    }
+
     fun describe(): String = buildString {
         append("Reason: ").append(reason)
         append('\n').append(selection.describe())
-        for (guard in guards) guard.reason?.let { append("\n  ").append(guard.label).append(": ").append(it) }
-        failure?.let { append("\nFailure: ").append(it.type) }
+        for (guard in guards) if (guard.reason.isNotEmpty()) append("\n  ").append(guard.label).append(": ").append(guard.reason)
+        append(failureLine())
     }
 }
 
-/** Eligibility for one actual typed payload. It is not a promise that hooks or the macrostep will succeed. */
+/** Eligibility for a typed payload. Hooks and the complete macrostep may still fail. */
 data class AvailableAction<A : Action>(
     val action: A,
     val availability: ActionAvailability,
     val selection: DecisionExplanation,
-    val rejection: RejectionExplanation? = null,
+    val explanation: ActionExplanation,
 )
 
 /** Declared matchers and eligibility of the finite action instances supplied by the application. */
@@ -52,52 +73,62 @@ data class AvailableActions<A : Action>(val declared: List<DeclaredAction>, val 
     val undeclared: List<AvailableAction<A>> get() = actions.filter { it.availability == ActionAvailability.Undeclared }
 }
 
-internal data class ActionSelection(val explanation: DecisionExplanation, val notStarted: Boolean = false, val failure: FailureDescriptor? = null)
+internal sealed interface ActionSelection {
+    val explanation: DecisionExplanation
+    data class Evaluated(override val explanation: DecisionExplanation) : ActionSelection
+    data class NotStarted(override val explanation: DecisionExplanation) : ActionSelection
+    data class Failed(override val explanation: DecisionExplanation, val failure: FailureDescriptor) : ActionSelection
+}
 
-private fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.rejection(
-    reason: ActionRejectionReason, selection: DecisionExplanation, failure: FailureDescriptor? = null,
-): RejectionExplanation = RejectionExplanation(reason, selection, selection.guards.mapNotNull {
-    if (it.result == false) GuardRejection(it.transition, it.label, guardRejectionReason(it.label)) else null
-}, failure)
+private fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.rejectedGuards(selection: DecisionExplanation): List<GuardRejection> =
+    selection.guards.filter { it.result == GuardCheck.Rejected }.map {
+        GuardRejection(it.transition, it.label, guardRejectionReason(it.label))
+    }
+
+private fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.rejection(
+    reason: ActionRejectionReason, selection: DecisionExplanation,
+): ActionExplanation.Rejected = ActionExplanation.Rejected(RejectionExplanation.Denied(reason, selection, rejectedGuards(selection)))
+
+private fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.rejection(
+    reason: ActionRejectionReason, selection: DecisionExplanation, failure: FailureDescriptor,
+): ActionExplanation.Rejected = ActionExplanation.Rejected(RejectionExplanation.Failed(reason, selection, rejectedGuards(selection), failure))
 
 /**
- * Evaluates transition selection once per supplied action, using the same priority/conflict rules as
- * dispatch. Does not run effects, entry/exit rules, action handlers, automatic steps, invariants or IO.
- * Supply actual payloads: a matcher cannot construct them or decide a payload-dependent guard.
- * Guards must be pure. Query again on a new snapshot; dispatch always rechecks eligibility.
+ * Evaluates selection once per supplied action. Does not run effects, hooks, action handlers,
+ * automatic steps, invariants or IO. Guards must be pure; dispatch rechecks eligibility.
  */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.availableActions(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.availableActions(
     snapshot: MachineSnapshot<C>, actions: Iterable<A>,
 ): AvailableActions<A> = AvailableActions(declaredActions(snapshot), actions.map { action ->
     val selected = selectAction(snapshot, action)
-    val explanation = selected.explanation
+    val selection = selected.explanation
     val status = when {
-        selected.notStarted -> ActionAvailability.NotStarted
-        selected.failure != null -> ActionAvailability.GuardFailed
-        explanation.handledBy != null || explanation.candidates.any { it.disposition == CandidateDisposition.Selected } -> ActionAvailability.Executable
-        explanation.candidates.isEmpty() -> ActionAvailability.Undeclared
+        selected is ActionSelection.NotStarted -> ActionAvailability.NotStarted
+        selected is ActionSelection.Failed -> ActionAvailability.GuardFailed
+        selection.handledBy.handled || selection.candidates.any { it.disposition == CandidateDisposition.Selected } -> ActionAvailability.Executable
+        selection.candidates.isEmpty() -> ActionAvailability.Undeclared
         else -> ActionAvailability.Blocked
     }
     val why = when (status) {
-        ActionAvailability.Executable -> null
-        ActionAvailability.NotStarted -> rejection(ActionRejectionReason.NotStarted, explanation)
-        ActionAvailability.Undeclared -> rejection(ActionRejectionReason.NoMatchingAction, explanation)
-        ActionAvailability.GuardFailed -> rejection(ActionRejectionReason.GuardFailed, explanation, selected.failure)
-        ActionAvailability.Blocked -> rejection(ActionRejectionReason.GuardRejected, explanation)
+        ActionAvailability.Executable -> ActionExplanation.Allowed(selection)
+        ActionAvailability.NotStarted -> rejection(ActionRejectionReason.NotStarted, selection)
+        ActionAvailability.Undeclared -> rejection(ActionRejectionReason.NoMatchingAction, selection)
+        ActionAvailability.GuardFailed -> rejection(ActionRejectionReason.GuardFailed, selection, (selected as ActionSelection.Failed).failure)
+        ActionAvailability.Blocked -> rejection(ActionRejectionReason.GuardRejected, selection)
     }
-    AvailableAction(action, status, explanation, why)
+    AvailableAction(action, status, selection, why)
 })
 
-/** Converts an already observed decision into a rejection explanation; evaluates nothing again. */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.explainWhyRejected(
+/** Explains an observed decision; evaluates nothing again. Handled decisions report Allowed. */
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.explainWhyRejected(
     explained: ExplainedDecision<C, CMD, E>,
-): RejectionExplanation? {
+): ActionExplanation {
     require(explained.decision.snapshot.definition == id && explained.decision.snapshot.version == version) { "[Actron] Decision belongs to another machine or version" }
     val selection = explained.explanation
     return when (val outcome = explained.decision.outcome) {
-        DecisionOutcome.Handled -> null
+        DecisionOutcome.Handled -> ActionExplanation.Allowed(selection)
         is DecisionOutcome.Failed -> rejection(
-            if (selection.guards.any { it.failure != null }) ActionRejectionReason.GuardFailed else ActionRejectionReason.DecisionFailed,
+            if (selection.guards.any { it.result is GuardCheck.Failed }) ActionRejectionReason.GuardFailed else ActionRejectionReason.DecisionFailed,
             selection, outcome.failure,
         )
         is DecisionOutcome.Ignored -> rejection(when {
@@ -109,7 +140,7 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.explainWhyRejected(
     }
 }
 
-/** Simulates one complete pure dispatch decision without executing its intents, then explains rejection. */
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.explainWhyRejected(
+/** Simulates one pure dispatch decision without executing its intents, then explains its outcome. */
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.explainWhyRejected(
     snapshot: MachineSnapshot<C>, action: A, now: MachineTime,
-): RejectionExplanation? = explainWhyRejected(decideExplained(snapshot, MachineInput.Dispatch(action, now)))
+): ActionExplanation = explainWhyRejected(decideExplained(snapshot, MachineInput.Dispatch(action, now)))

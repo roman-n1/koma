@@ -48,8 +48,8 @@ class StoreHandlersPropertyTest {
 
             assertEquals(of("enter").mapIndexed { i, r -> StateHandlerDescription(i, r.stateType) }, handlers.enter, context)
             assertEquals(of("exit").mapIndexed { i, r -> StateHandlerDescription(i, r.stateType) }, handlers.exit, context)
-            assertEquals(of("action").mapIndexed { i, r -> ActionHandlerDescription(i, r.stateType, r.inputType) }, handlers.action, context)
-            assertEquals(of("recover").mapIndexed { i, r -> RecoverHandlerDescription(i, r.stateType, r.inputType) }, handlers.recover, context)
+            assertEquals(of("action").mapIndexed { i, r -> ActionHandlerDescription(i, r.stateType, requireNotNull(r.inputType)) }, handlers.action, context)
+            assertEquals(of("recover").mapIndexed { i, r -> RecoverHandlerDescription(i, r.stateType, requireNotNull(r.inputType)) }, handlers.recover, context)
             assertEquals(render(regs), handlers.toString(), context)
         }
     }
@@ -145,12 +145,13 @@ class StoreHandlersPropertyTest {
     }
 
     @Test
-    fun unknownTypesRenderAsQuestionMarks() {
+    fun unnamedTypesRenderAsQuestionMarks() {
+        val unnamed = object {}::class
         val handlers = StoreHandlers(
-            enter = listOf(StateHandlerDescription(0, null)),
-            action = listOf(ActionHandlerDescription(0, KtState.B::class, null)),
+            enter = listOf(StateHandlerDescription(0, unnamed)),
+            action = listOf(ActionHandlerDescription(0, KtState.B::class, unnamed)),
             exit = emptyList(),
-            recover = listOf(RecoverHandlerDescription(0, null, null), RecoverHandlerDescription(1, KtState::class, KtBoom::class)),
+            recover = listOf(RecoverHandlerDescription(0, unnamed, unnamed), RecoverHandlerDescription(1, KtState::class, KtBoom::class)),
         )
         assertEquals(
             "enter:\n  #0 state<?>\naction:\n  #0 state<B> / action<?>\nexit: none\nrecover:\n  #0 state<?> / recover<?>\n  #1 state<KtState> / recover<KtBoom>",

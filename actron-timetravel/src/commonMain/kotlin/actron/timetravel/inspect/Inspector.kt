@@ -1,5 +1,7 @@
 package actron.timetravel.inspect
 
+import actron.core.InputAttribution
+
 import actron.core.ExperimentalActronApi
 import actron.core.InputId
 import actron.observability.Capability
@@ -15,6 +17,7 @@ import actron.observability.OutcomeKind
 import actron.observability.Payload
 import actron.observability.RecordingSession
 import actron.observability.RuntimeSessionId
+import actron.observability.RecordSubject
 import actron.observability.StoreInstanceId
 import actron.observability.file.JournalFileEvent
 import actron.observability.file.JournalFiles
@@ -44,19 +47,21 @@ import kotlin.time.Duration
 class Inspector(
     val events: List<JournalFileEvent>,
     recordings: Map<StoreInstanceId, Recording<*, *, *, *>> = emptyMap(),
-    val stats: JournalStats? = null,
+    private val statistics: InspectorStatistics = InspectorStatistics.FileHistory,
 ) {
     /** The journal's records, in order. */
-    val records: List<JournalRecord<*, *, *>> = events.mapNotNull { (it as? JournalFileEvent.Record)?.record }
+    val records: List<JournalRecord<*, *, *>> = events.filterIsInstance<JournalFileEvent.Record>().map { it.record }
 
-    /** The session the records belong to; `null` for an empty journal. */
-    val session: RuntimeSessionId? = records.firstOrNull()?.session
+    constructor(events: List<JournalFileEvent>, recordings: Map<StoreInstanceId, Recording<*, *, *, *>>, stats: JournalStats) :
+        this(events, recordings, InspectorStatistics.Live(stats))
 
-    /** The group; `null` for an empty journal. */
-    val group: MachineGroupId? = records.firstOrNull()?.group
-
-    /** Live or replay; `null` for an empty journal. */
-    val mode: ExecutionMode? = records.firstOrNull()?.mode
+    /** Identifies the observed run only when at least one journal record establishes it. */
+    fun withRun(accept: (RuntimeSessionId, MachineGroupId, ExecutionMode) -> Unit): Boolean {
+        if (records.isEmpty()) return false
+        val first = records.first()
+        accept(first.session, first.group, first.mode)
+        return true
+    }
 
     /** Everything that happened, in the group's order. */
     val timeline: List<TimelineItem>
@@ -75,11 +80,11 @@ class Inspector(
         val enriched = mutableMapOf<StoreInstanceId, RecordingStatus>()
         var timeline = built.items
         for (store in storeIds) {
-            val recording = recordings[store]
-            if (recording == null) {
+            if (store !in recordings) {
                 enriched[store] = RecordingStatus.Unrecorded
                 continue
             }
+            val recording = recordings.getValue(store)
             when (val result = enrich(timeline, store, recording)) {
                 is Enrichment.Done -> {
                     timeline = result.timeline
@@ -96,7 +101,7 @@ class Inspector(
     }
 
     /** The timeline of one Store, with the session's own items (gaps, the stop, damage) between. */
-    fun timelineOf(store: StoreInstanceId): List<TimelineItem> = timeline.filter { it.store == store || it.store == null }
+    fun timelineOf(store: StoreInstanceId): List<TimelineItem> = timeline.filter { it.subject == store || it.subject == RecordSubject.Session }
 
     /**
      * Whether [store]'s history can be replayed by a `ReplaySession`, and if not, why: replay
@@ -107,7 +112,7 @@ class Inspector(
         val view = stores.firstOrNull { it.id == store } ?: return Availability.Unavailable(listOf("the journal has no records of $store"))
         val reasons = mutableListOf<String>()
         when (val status = view.recording) {
-            RecordingStatus.Unrecorded -> reasons += "no recording is attached for $store; the journal's capability is ${view.capability ?: "unknown"}, which can be shown, not replayed"
+            RecordingStatus.Unrecorded -> reasons += "no recording is attached for $store; the journal's capability is ${view.capabilityLabel("unknown")}, which can be shown, not replayed"
             is RecordingStatus.Mismatch -> reasons += "the recording attached for $store does not match the journal: ${status.reason}"
             is RecordingStatus.Attached -> Unit
         }
@@ -115,12 +120,12 @@ class Inspector(
     }
 
     private fun storeView(store: StoreInstanceId, built: Built, timeline: List<TimelineItem>): StoreView {
-        val items = timeline.filter { it.store == store }
+        val items = timeline.filter { it.subject == store }
         val processings = items.filterIsInstance<TimelineItem.Processing>()
         val status = recordingStatus.getValue(store)
         val reasons = mutableListOf<Incompleteness>()
-        val registered = items.filterIsInstance<TimelineItem.Registered>().firstOrNull()
-        if (registered == null) reasons += Incompleteness.NotRegistered(store)
+        val registrations = items.filterIsInstance<TimelineItem.Registered>()
+        if (registrations.isEmpty()) reasons += Incompleteness.NotRegistered(store)
         if (status !is RecordingStatus.Attached) {
             val payloads = built.payloads(store)
             if (payloads.omitted > 0) reasons += Incompleteness.PayloadsOmitted(store, payloads.omitted)
@@ -135,10 +140,10 @@ class Inspector(
         if (status is RecordingStatus.Mismatch) reasons += Incompleteness.RecordingMismatch(store, status.reason)
         return StoreView(
             id = store,
-            capability = registered?.capability,
+            registrations = registrations,
             records = built.recordCounts[store] ?: 0,
             processings = processings.size,
-            revision = processings.mapNotNull { it.revision }.maxOrNull(),
+            revisions = buildList { for (processing in processings) processing.withRevision { add(it) } },
             closed = items.any { it is TimelineItem.Closed },
             recording = status,
             completeness = Completeness(reasons),
@@ -148,15 +153,15 @@ class Inspector(
     private fun groupReasons(built: Built): List<Incompleteness> = buildList {
         val gaps = timeline.filterIsInstance<TimelineItem.Gap>()
         if (gaps.isNotEmpty()) add(Incompleteness.RecordsDropped(gaps.size, gaps.sumOf { it.dropped }))
-        stats?.let { if (it.evicted > 0) add(Incompleteness.RecordsEvicted(it.evicted)) }
-        stats?.let { if (it.publishedAfterStop > 0) add(Incompleteness.RecordsAfterStop(it.publishedAfterStop)) }
+        statistics.withLive { if (it.evicted > 0) add(Incompleteness.RecordsEvicted(it.evicted)) }
+        statistics.withLive { if (it.publishedAfterStop > 0) add(Incompleteness.RecordsAfterStop(it.publishedAfterStop)) }
         for (mark in timeline.filterIsInstance<TimelineItem.Damage>()) if (mark.mark !is SegmentMark.Unfinished) add(Incompleteness.Damaged(mark.mark))
         if (timeline.any { it is TimelineItem.Stopped }) {
-            val open = built.storeIds.filter { store -> timeline.none { it is TimelineItem.Closed && it.store == store } }
+            val open = built.storeIds.filter { store -> timeline.none { it is TimelineItem.Closed && it.subject == store } }
             if (open.isNotEmpty()) add(Incompleteness.StoppedWhileOpen(open))
         }
-        val unattributed = timeline.count { it is TimelineItem.Unattributed && it.store == null }
-        if (unattributed > 0) add(Incompleteness.Unattributed(null, unattributed))
+        val unattributed = timeline.count { it is TimelineItem.Unattributed && it.subject == RecordSubject.Session }
+        if (unattributed > 0) add(Incompleteness.Unattributed(RecordSubject.Session, unattributed))
     }
 
     // --- enrichment from a recording ---
@@ -171,7 +176,7 @@ class Inspector(
         val decisions = timeline.withIndex().filter { (_, item) -> item is TimelineItem.Processing && item.store == store && item.isDecision }
         // A recording that begins at a checkpoint covers the decisions after the one that committed its first revision.
         val startRevision = recording.initial.revision
-        val from = if (startRevision == 0L) 0 else decisions.indexOfFirst { (_, item) -> (item as TimelineItem.Processing).revision == startRevision }.let {
+        val from = if (startRevision == 0L) 0 else decisions.indexOfFirst { (_, item) -> (item as TimelineItem.Processing).hasRevision(startRevision) }.let {
             if (it < 0) return Enrichment.Mismatch("the recording begins at revision $startRevision, which the journal does not show for $store")
             it + 1
         }
@@ -182,23 +187,30 @@ class Inspector(
             val (recorded, indexed) = pair
             val index = indexed.index
             val item = indexed.value as TimelineItem.Processing
-            val problem: String? = when (recorded) {
-                is RecordedStep.Committed<*, *, *, *> -> {
+            when (recorded) {
+                is RecordedStep.Committed -> {
                     val revision = recorded.decision.snapshot.revision
-                    if (item.revision != revision) "step $step: recorded revision $revision, the journal has ${item.revision ?: "no commit"} for input ${item.input}" else null
+                    if (!item.hasRevision(revision)) return Enrichment.Mismatch("step $step: recorded revision $revision, the journal has ${item.revisionLabel("no commit")} for input ${item.input}")
                 }
-                is RecordedStep.Ignored<*, *, *, *> ->
-                    if (item.ignored != null && item.ignored != recorded.reason.name) "step $step: recorded as ignored (${recorded.reason}), the journal says ${item.ignored}"
-                    else if (item.ignored == null && item.commits.isNotEmpty()) "step $step: recorded as ignored, the journal has a commit for input ${item.input}"
-                    else null
-                is RecordedStep.Failed<*, *, *, *> ->
-                    if (item.outcome != null && item.outcome.kind != OutcomeKind.Failed && item.outcome.kind != OutcomeKind.Recovered) "step $step: recorded as failed, the journal says ${item.outcome.kind} for input ${item.input}" else null
-                else -> null
+                is RecordedStep.Ignored -> {
+                    var reason = ""
+                    val ignored = item.withIgnored { reason = it }
+                    if (ignored && reason != recorded.reason.name) return Enrichment.Mismatch("step $step: recorded as ignored (${recorded.reason}), the journal says $reason")
+                    if (!ignored && item.commits.isNotEmpty()) return Enrichment.Mismatch("step $step: recorded as ignored, the journal has a commit for input ${item.input}")
+                }
+                is RecordedStep.Failed -> {
+                    var agrees = true
+                    var actual = ""
+                    item.progress.withEnd { outcome, _ ->
+                        actual = outcome.kind.toString()
+                        agrees = outcome.kind == OutcomeKind.Failed || outcome.kind == OutcomeKind.Recovered
+                    }
+                    if (!agrees) return Enrichment.Mismatch("step $step: recorded as failed, the journal says $actual for input ${item.input}")
+                }
             }
-            if (problem != null) return Enrichment.Mismatch(problem)
             val before = recording.snapshotAt(step)
             val after = recording.snapshotAt(step + 1)
-            enriched[index] = item.copy(recorded = recorded, before = before, after = after, diff = SnapshotDiff.between(before, after))
+            enriched[index] = item.copy(attachment = ProcessingAttachment.Recorded(recorded, before, after))
         }
         return Enrichment.Done(enriched)
     }
@@ -211,26 +223,16 @@ class Inspector(
         fun payloads(store: StoreInstanceId): PayloadCounts = payloadCounts[store] ?: PayloadCounts()
     }
 
-    private class ProcessingBuilder(val groupSeq: GroupSeq, val elapsed: Duration, val store: StoreInstanceId, val input: InputId, val kind: InputDescriptor<*>?, val ordinal: Long) {
-        var outcome: OutcomeDescriptor? = null
-        var duration: Duration? = null
+    private class ProcessingBuilder(val groupSeq: GroupSeq, val elapsed: Duration, val store: StoreInstanceId, val input: InputId, val acceptance: InputTrace, val ordinal: Long) {
+        var progress: ProcessingProgress = ProcessingProgress.Unfinished
         val commits = mutableListOf<TimelineItem.Commit>()
         val events = mutableListOf<Payload<*>>()
         val failures = mutableListOf<actron.observability.FailureDescriptor>()
-        var decision: JournalEntry.DecisionCommitted? = null
-        var ignored: String? = null
-        var message: actron.observability.MessageRef? = null
-        var source: String? = null
-
+        val decisions = mutableListOf<DecisionEvidence>()
+        val provenance = mutableListOf<InputProvenance>()
         fun build(): TimelineItem.Processing = TimelineItem.Processing(
-            groupSeq, elapsed, store, input, kind,
-            cause = when (kind) {
-                is InputDescriptor.Transaction -> kind.origin
-                is InputDescriptor.Recovery -> kind.origin
-                else -> null
-            },
-            ordinal = ordinal, outcome = outcome, duration = duration, commits = commits.toList(), events = events.toList(), failures = failures.toList(),
-            decision = decision, ignored = ignored, recorded = null, before = null, after = null, diff = null, message = message, source = source,
+            groupSeq, elapsed, store, input, acceptance, acceptance.cause, ordinal, progress,
+            commits.toList(), events.toList(), failures.toList(), decisions.toList(), ProcessingAttachment.JournalOnly, provenance.toList(),
         )
     }
 
@@ -255,17 +257,22 @@ class Inspector(
                     is JournalFileEvent.Record -> record(event.record)
                 }
             }
-            val items = slots.mapNotNull { slot ->
-                when (slot) {
-                    is TimelineItem -> slot
-                    is ProcessingBuilder -> slot.build()
-                    is Accepted -> if (slot.consumed) null else null
-                    else -> null
+            val items = buildList {
+                for (slot in slots) when (slot) {
+                    is TimelineItem -> add(slot)
+                    is ProcessingBuilder -> add(slot.build())
                 }
             }
             // Acceptances nobody consumed are inputs without an end, at the position they were accepted.
             val pending = accepted.filterValues { !it.consumed }.map { (key, acceptance) -> TimelineItem.Pending(acceptance.groupSeq, acceptance.elapsed, key.first, key.second, acceptance.kind) }
-            val ordered = (items + pending).sortedWith(compareBy<TimelineItem, Long?>(nullsLast()) { it.groupSeq?.value })
+            val ordered = (items + pending).sortedWith { a: TimelineItem, b: TimelineItem ->
+                when {
+                    a is TimelineItem.JournalItem && b is TimelineItem.JournalItem -> a.groupSeq.value.compareTo(b.groupSeq.value)
+                    a is TimelineItem.JournalItem -> -1
+                    b is TimelineItem.JournalItem -> 1
+                    else -> 0
+                }
+            }
             return Built(stableDamage(items, pending, ordered), storeIds.toList(), recordCounts.toMap(), payloadCounts.toMap())
         }
 
@@ -276,8 +283,9 @@ class Inspector(
             val result = mutableListOf<TimelineItem>()
             val pendingBySeq = pending.sortedBy { it.groupSeq.value }.toMutableList()
             for (item in items) {
-                val seq = item.groupSeq?.value
-                if (seq != null) while (pendingBySeq.isNotEmpty() && pendingBySeq.first().groupSeq.value < seq) result += pendingBySeq.removeFirst()
+                item.withPosition { seq, _ ->
+                    while (pendingBySeq.isNotEmpty() && pendingBySeq.first().groupSeq.value < seq.value) result += pendingBySeq.removeFirst()
+                }
                 result += item
             }
             result += pendingBySeq
@@ -285,86 +293,102 @@ class Inspector(
         }
 
         private fun record(record: JournalRecord<*, *, *>) {
-            val store = record.store
-            if (store != null) {
-                if (store !in storeIds) storeIds += store
-                recordCounts[store] = (recordCounts[store] ?: 0) + 1
+            val subject = record.store
+            if (subject is StoreInstanceId) {
+                if (subject !in storeIds) storeIds += subject
+                recordCounts[subject] = (recordCounts[subject] ?: 0) + 1
+            }
+            fun member(): StoreInstanceId {
+                check(subject is StoreInstanceId)
+                return subject
             }
             val seq = record.groupSeq
             val elapsed = record.elapsed
             when (val entry = record.entry) {
-                is JournalEntry.StoreRegistered -> slots += TimelineItem.Registered(seq, elapsed, checkNotNull(store), entry.capability)
+                is JournalEntry.StoreRegistered -> slots += TimelineItem.Registered(seq, elapsed, member(), entry.capability)
                 is JournalEntry.InputAccepted<*> -> {
-                    count(store, entry.kind)
+                    count(subject, entry.kind)
                     val acceptance = Accepted(seq, elapsed, entry.kind)
-                    accepted[checkNotNull(store) to entry.input] = acceptance
+                    accepted[member() to entry.input] = acceptance
                 }
                 is JournalEntry.InputDiscarded -> {
-                    val acceptance = accepted[checkNotNull(store) to entry.input]?.also { it.consumed = true }
-                    slots += TimelineItem.Discarded(seq, elapsed, store, entry.input, acceptance?.kind, entry.reason)
+                    val store = member()
+                    val acceptance = consume(store to entry.input)
+                    slots += TimelineItem.Discarded(seq, elapsed, store, entry.input, acceptance, entry.reason)
                 }
                 is JournalEntry.ProcessingStarted -> {
-                    val acceptance = accepted[checkNotNull(store) to entry.input]?.also { it.consumed = true }
-                    val processing = ProcessingBuilder(seq, elapsed, store, entry.input, acceptance?.kind, entry.ordinal)
+                    val store = member()
+                    val acceptance = consume(store to entry.input)
+                    val processing = ProcessingBuilder(seq, elapsed, store, entry.input, acceptance, entry.ordinal)
                     processings[store to entry.input] = processing
                     slots += processing
                 }
                 is JournalEntry.StateCommitted<*> -> {
-                    count(store, entry.previous)
-                    count(store, entry.state)
-                    attach(store, entry.input, record) { commits += TimelineItem.Commit(entry.revision, entry.previous, entry.state) }
+                    count(subject, entry.previous)
+                    count(subject, entry.state)
+                    attach(subject, entry.input, record) { commits += TimelineItem.Commit(entry.revision, entry.previous, entry.state) }
                 }
                 is JournalEntry.EventEmitted<*> -> {
-                    count(store, entry.event)
-                    attach(store, entry.input, record) { events += entry.event }
+                    count(subject, entry.event)
+                    attach(subject, entry.input, record) { events += entry.event }
                 }
-                is JournalEntry.FailureReported -> attach(store, entry.input, record) { failures += entry.failure }
-                is JournalEntry.ProcessingFinished -> attach(store, entry.input, record) {
-                    outcome = entry.outcome
-                    duration = entry.duration
+                is JournalEntry.FailureReported -> attach(subject, entry.input, record) { failures += entry.failure }
+                is JournalEntry.ProcessingFinished -> attach(subject, entry.input, record) {
+                    progress = ProcessingProgress.Finished(entry.outcome, entry.duration)
                 }
-                JournalEntry.StoreClosed -> slots += TimelineItem.Closed(seq, elapsed, checkNotNull(store))
+                JournalEntry.StoreClosed -> slots += TimelineItem.Closed(seq, elapsed, member())
                 is JournalEntry.InputRejected<*> -> {
-                    count(store, entry.action)
-                    slots += TimelineItem.Rejected(seq, elapsed, checkNotNull(store), entry.action, entry.reason)
+                    count(subject, entry.action)
+                    slots += TimelineItem.Rejected(seq, elapsed, member(), entry.action, entry.reason)
                 }
                 is JournalEntry.DecisionCommitted -> {
-                    for (command in entry.commands) count(store, command.command)
-                    attach(store, entry.input, record) { decision = entry }
+                    for (command in entry.commands) count(subject, command.command)
+                    attach(subject, entry.input, record) { decisions += DecisionEvidence.Committed(entry) }
                 }
-                is JournalEntry.DecisionIgnored -> attach(store, entry.input, record) { ignored = entry.reason }
-                is JournalEntry.BridgeSent -> slots += TimelineItem.Sent(seq, elapsed, checkNotNull(store), entry.input, entry.message, entry.to, entry.delivered, entry.cause)
-                is JournalEntry.BridgeReceived -> attach(store, entry.input, record) { message = entry.message }
-                is JournalEntry.BridgeDropped -> slots += TimelineItem.Dropped(seq, elapsed, checkNotNull(store), entry.message, entry.reason)
+                is JournalEntry.DecisionIgnored -> attach(subject, entry.input, record) { decisions += DecisionEvidence.Ignored(entry.reason) }
+                is JournalEntry.BridgeSent -> slots += TimelineItem.Sent(seq, elapsed, member(), entry.input, entry.message, entry.to, entry.delivered, entry.cause)
+                is JournalEntry.BridgeReceived -> attach(subject, entry.input, record) { provenance += InputProvenance.Bridge(entry.message) }
+                is JournalEntry.BridgeDropped -> slots += TimelineItem.Dropped(seq, elapsed, member(), entry.message, entry.reason)
                 is JournalEntry.EffectQueued<*> -> {
-                    count(store, entry.event)
-                    slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
+                    count(subject, entry.event)
+                    slots += TimelineItem.Effect(seq, elapsed, member(), entry.effect, entry)
                 }
-                is JournalEntry.EffectHandlingStarted -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
-                is JournalEntry.EffectAcknowledged -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
-                is JournalEntry.EffectDiscarded -> slots += TimelineItem.Effect(seq, elapsed, checkNotNull(store), entry.effect, entry)
-                is JournalEntry.ExternalReceived -> attach(store, entry.input, record) { source = entry.source }
+                is JournalEntry.EffectHandlingStarted -> slots += TimelineItem.Effect(seq, elapsed, member(), entry.effect, entry)
+                is JournalEntry.EffectAcknowledged -> slots += TimelineItem.Effect(seq, elapsed, member(), entry.effect, entry)
+                is JournalEntry.EffectDiscarded -> slots += TimelineItem.Effect(seq, elapsed, member(), entry.effect, entry)
+                is JournalEntry.ExternalReceived -> attach(subject, entry.input, record) { provenance += InputProvenance.External(entry.source) }
                 is JournalEntry.CheckpointCreated -> slots += TimelineItem.Checkpoint(seq, elapsed, entry.members, entry.sources, entry.inFlight)
-                is JournalEntry.CommandsAbandoned -> slots += TimelineItem.Abandoned(seq, elapsed, checkNotNull(store), entry.reason, entry.queued, entry.running)
+                is JournalEntry.CommandsAbandoned -> slots += TimelineItem.Abandoned(seq, elapsed, member(), entry.reason, entry.queued, entry.running)
                 is JournalEntry.JournalGap -> slots += TimelineItem.Gap(seq, elapsed, entry.dropped)
                 JournalEntry.RecordingStopped -> slots += TimelineItem.Stopped(seq, elapsed)
             }
         }
 
-        private inline fun attach(store: StoreInstanceId?, input: InputId?, record: JournalRecord<*, *, *>, update: ProcessingBuilder.() -> Unit) {
-            val processing = if (store != null && input != null) processings[store to input] else null
-            if (processing != null) processing.update() else slots += TimelineItem.Unattributed(record.groupSeq, record.elapsed, store, record.entry)
+        private fun consume(key: Pair<StoreInstanceId, InputId>): InputTrace {
+            if (key !in accepted) return InputTrace.UnrecordedAcceptance
+            val acceptance = accepted.getValue(key)
+            acceptance.consumed = true
+            return InputTrace.Accepted(acceptance.groupSeq, acceptance.elapsed, acceptance.kind)
         }
 
-        private fun count(store: StoreInstanceId?, kind: InputDescriptor<*>) {
+        private inline fun attach(subject: RecordSubject, input: InputAttribution, record: JournalRecord<*, *, *>, update: ProcessingBuilder.() -> Unit) {
+            if (subject is StoreInstanceId && input is InputId) {
+                val key = subject to input
+                if (key in processings) { processings.getValue(key).update(); return }
+            }
+            slots += TimelineItem.Unattributed(record.groupSeq, record.elapsed, subject, record.entry)
+        }
+
+        private fun count(subject: RecordSubject, kind: InputDescriptor<*>) {
             when (kind) {
-                is InputDescriptor.Dispatch -> count(store, kind.action)
+                is InputDescriptor.Dispatch -> count(subject, kind.action)
                 else -> Unit
             }
         }
 
-        private fun count(store: StoreInstanceId?, payload: Payload<*>) {
-            val counts = payloadCounts.getOrPut(store ?: return) { PayloadCounts() }
+        private fun count(subject: RecordSubject, payload: Payload<*>) {
+            if (subject !is StoreInstanceId) return
+            val counts = payloadCounts.getOrPut(subject) { PayloadCounts() }
             when (payload) {
                 Payload.Omitted -> counts.omitted++
                 Payload.Unavailable -> counts.unavailable++
@@ -375,15 +399,41 @@ class Inspector(
 
     companion object {
         /** An inspector of [records] as they are, with no marks. */
-        fun of(records: List<JournalRecord<*, *, *>>, recordings: Map<StoreInstanceId, Recording<*, *, *, *>> = emptyMap(), stats: JournalStats? = null): Inspector =
-            Inspector(records.map { JournalFileEvent.Record(it as JournalRecord<Nothing, Nothing, Nothing>) }, recordings, stats)
+        fun of(records: List<JournalRecord<*, *, *>>, recordings: Map<StoreInstanceId, Recording<*, *, *, *>> = emptyMap(), statistics: InspectorStatistics = InspectorStatistics.FileHistory): Inspector =
+            Inspector(records.map { JournalFileEvent.Record(it as JournalRecord<Nothing, Nothing, Nothing>) }, recordings, statistics)
 
         /** An inspector of a live session's retained records, with its counters. */
         fun of(session: RecordingSession, recordings: Map<StoreInstanceId, Recording<*, *, *, *>> = emptyMap()): Inspector =
-            of(session.records(), recordings, session.stats)
+            of(session.records(), recordings, InspectorStatistics.Live(session.stats))
 
         /** An inspector of a session read from its files, with the marks of what could not be read. */
         fun of(files: JournalFiles, session: RuntimeSessionId, recordings: Map<StoreInstanceId, Recording<*, *, *, *>> = emptyMap()): Inspector =
             Inspector(files.read(session).events, recordings)
     }
+}
+
+@ExperimentalActronApi
+sealed interface InspectorStatistics {
+    fun withLive(accept: (JournalStats) -> Unit)
+    data object FileHistory : InspectorStatistics { override fun withLive(accept: (JournalStats) -> Unit) {} }
+    data class Live(val stats: JournalStats) : InspectorStatistics { override fun withLive(accept: (JournalStats) -> Unit) { accept(stats) } }
+}
+
+@OptIn(ExperimentalActronApi::class)
+internal fun TimelineItem.Processing.hasRevision(revision: Long): Boolean {
+    var matches = false
+    withRevision { matches = it == revision }
+    return matches
+}
+@OptIn(ExperimentalActronApi::class)
+internal fun TimelineItem.Processing.revisionLabel(fallback: String): String {
+    var text = fallback
+    withRevision { text = it.toString() }
+    return text
+}
+@OptIn(ExperimentalActronApi::class)
+internal fun StoreView.capabilityLabel(fallback: String): String {
+    var text = fallback
+    withCapability { text = it.toString() }
+    return text
 }

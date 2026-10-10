@@ -13,8 +13,12 @@ val store = MachineStore(machine, context, handler, appScope, observers = listOf
 
 For a durable workflow, call recordPersisted only after a successful storage commit and supply
 the application's input id and any real outbox command provenance. It records committed metadata
-with selection=null, without re-evaluating guards. Full replay/audit data uses application codecs
+as a `TraceAssessment.Receipt`, without re-evaluating guards. Full replay/audit data uses application codecs
 and the optional Time Travel module.
 
 SDK bridges are separate optional artifacts. See the
 [contract/design guide](../doc/internal/design/2026-10-06-competitive-roadmap.md).
+
+Causal lineage and input provenance use meaningful non-null domain alternatives. Diagnostics
+retain only redacted fault metadata, including the old exporter attribute names.
+See the [null-free API policy](../doc/guides/absence-policy.md).

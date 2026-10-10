@@ -24,7 +24,7 @@ import actron.statechart.activeLeaves
  * @property timers The timers scheduled and not yet fired or cancelled
  * @property counters The last ids issued, so the next ids are a function of the snapshot
  */
-data class MachineSnapshot<C>(
+data class MachineSnapshot<C : Any>(
     val definition: DefinitionId,
     val version: DefinitionVersion,
     val revision: Long,
@@ -56,7 +56,7 @@ data class MachineSnapshot<C>(
  * lane it runs in. The command itself and its policy live in the [Decision] that registered it
  * and in the executor.
  */
-data class CommandRecord(val scope: ActivationId, val lane: LaneId?)
+data class CommandRecord(val scope: ActivationId, val lane: CommandLane = CommandLane.Independent)
 
 /**
  * A scheduled timer: the transition it fires, the activation of the source it was scheduled for,

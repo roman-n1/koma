@@ -119,9 +119,17 @@ suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.pendingWork(): Sto
  * @throws AssertionError with what is pending and what was not received
  * @throws IllegalStateException if the Store is not backed by Actron's internal implementation
  */
-suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.assertNoPendingWork(recorder: StoreRecorder<S, A, E>? = null) {
+suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.assertNoPendingWork() {
+    assertNoPendingWork(emptyList())
+}
+
+/** Checks pending work and the recorder's unconsumed events. */
+suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.assertNoPendingWork(recorder: StoreRecorder<S, A, E>) {
+    assertNoPendingWork(recorder.unconsumedEvents)
+}
+
+private suspend fun <S : State, A : Action, E : Event> Store<S, A, E>.assertNoPendingWork(unreceived: List<E>) {
     val pending = pendingWork()
-    val unreceived = recorder?.unconsumedEvents.orEmpty()
     if (pending.isIdle && unreceived.isEmpty()) return
     throw AssertionError(
         "[Actron] The Store has pending work: ${pending.inputs} input(s) pending, ${pending.launches} launch(es) running" +

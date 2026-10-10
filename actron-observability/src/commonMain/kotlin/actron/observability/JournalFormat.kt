@@ -13,9 +13,9 @@ object JournalFormat {
      */
     fun line(record: JournalRecord<*, *, *>): String = buildString {
         append('[').append(record.session.value).append(' ').append(record.group.value)
-        record.store?.let { append(' ').append(it.value) }
+        record.store.withStore { append(' ').append(it.value) }
         append(' ').append(record.groupSeq)
-        record.storeSeq?.let { append('/').append(it.value) }
+        record.storeSeq.appendTo(this)
         if (record.mode != ExecutionMode.Live) append(' ').append(record.mode)
         append(" +").append(record.elapsed).append("] ")
         append(entry(record.entry))
@@ -27,7 +27,7 @@ object JournalFormat {
     fun entry(entry: JournalEntry<*, *, *>): String = when (entry) {
         is JournalEntry.StoreRegistered -> "StoreRegistered ${entry.capability}"
         is JournalEntry.InputAccepted -> "InputAccepted ${entry.input} ${input(entry.kind)}"
-        is JournalEntry.InputDiscarded -> "InputDiscarded ${entry.input} ${entry.reason.kind}${entry.reason.failure?.let { " " + failure(it) } ?: ""}"
+        is JournalEntry.InputDiscarded -> "InputDiscarded ${entry.input} ${entry.reason.kind}${entry.reason.detailSuffix}"
         is JournalEntry.ProcessingStarted -> "ProcessingStarted ${entry.input} ordinal=${entry.ordinal}"
         is JournalEntry.StateCommitted -> "StateCommitted ${entry.input} revision=${entry.revision} ${payload(entry.state)} <- ${payload(entry.previous)}"
         is JournalEntry.EventEmitted -> "EventEmitted ${entry.input ?: "?"} ${payload(entry.event)}"
@@ -41,14 +41,14 @@ object JournalFormat {
             if (entry.transitions.isNotEmpty()) append(" transitions=").append(entry.transitions.joinToString(",", "[", "]") { "T$it" })
             if (entry.exited.isNotEmpty()) append(" exited=").append(entry.exited.joinToString(",", "[", "]") { "${it.node}/a${it.activation}" })
             if (entry.entered.isNotEmpty()) append(" entered=").append(entry.entered.joinToString(",", "[", "]") { "${it.node}/a${it.activation}" })
-            if (entry.commands.isNotEmpty()) append(" commands=").append(entry.commands.joinToString(",", "[", "]") { "c${it.id}@a${it.scope}${it.lane?.let { l -> " $l/${it.policy}" } ?: ""} ${payload(it.command)}" })
+            if (entry.commands.isNotEmpty()) append(" commands=").append(entry.commands.joinToString(",", "[", "]") { "c${it.id}@a${it.scope}${it.execution.journalSuffix} ${payload(it.command)}" })
             if (entry.cancelledScopes.isNotEmpty()) append(" cancelled=").append(entry.cancelledScopes.joinToString(",", "[", "]") { "a$it" })
             if (entry.timersScheduled.isNotEmpty()) append(" timers=").append(entry.timersScheduled.joinToString(",", "[", "]") { "t${it.id}:T${it.transition}@a${it.activation}+${it.deadline}" })
             if (entry.timersCancelled.isNotEmpty()) append(" timersCancelled=").append(entry.timersCancelled.joinToString(",", "[", "]") { "t$it" })
             if (entry.effects > 0) append(" effects=").append(entry.effects)
         }
         is JournalEntry.DecisionIgnored -> "DecisionIgnored ${entry.input ?: "?"} ${entry.reason}"
-        is JournalEntry.BridgeSent -> "BridgeSent ${entry.input ?: "?"} ${entry.message} -> ${entry.to}${if (entry.delivered) "" else " undelivered"}${entry.cause?.let { " reply-to=$it" } ?: ""}"
+        is JournalEntry.BridgeSent -> "BridgeSent ${entry.input ?: "?"} ${entry.message} -> ${entry.to}${if (entry.delivered) "" else " undelivered"}${entry.cause.replySuffix}"
         is JournalEntry.BridgeReceived -> "BridgeReceived ${entry.input ?: "?"} ${entry.message}"
         is JournalEntry.BridgeDropped -> "BridgeDropped ${entry.message} -> ${entry.to} ${entry.reason}"
         is JournalEntry.EffectQueued -> "EffectQueued ${entry.input ?: "?"} e${entry.effect} ${entry.policy} ${payload(entry.event)}"
@@ -78,9 +78,11 @@ object JournalFormat {
      * A failure: `Type: message <- Cause` with `+n suppressed` when there are any.
      */
     fun failure(failure: FailureDescriptor): String = buildString {
-        append(failure.type ?: "failure")
-        failure.message?.let { append(": ").append(it) }
-        failure.cause?.let { append(" <- ").append(failure(it)) }
+        var label = "failure"
+        failure.withType { label = it }
+        append(label)
+        failure.withMessage { append(": ").append(it) }
+        failure.withCause { append(" <- ").append(failure(it)) }
         if (failure.suppressed.isNotEmpty()) append(" +").append(failure.suppressed.size).append(" suppressed")
     }
 
@@ -94,6 +96,6 @@ object JournalFormat {
     private fun outcome(outcome: OutcomeDescriptor): String = buildString {
         append(outcome.kind)
         if (outcome.commits > 0) append(" commits=").append(outcome.commits)
-        outcome.failure?.let { append(' ').append(failure(it)) }
+        outcome.withFailure { append(' ').append(failure(it)) }
     }
 }

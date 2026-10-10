@@ -221,7 +221,7 @@ class SocketSourceIntegrationTest {
                     second.send(2, 3, 4) // The server repeats its last unacknowledged frame.
                     assertEquals(3, f.source.admitted.receive())
                     assertEquals(4, f.source.admitted.receive())
-                    f.assertCut(checkNotNull(f.group.checkpoint(5.seconds)), last = 4, generation = 2)
+                    f.assertCut(kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(f.group.checkpoint(5.seconds)).checkpoint, last = 4, generation = 2)
                 }
             } finally { f.close() }
         }
@@ -248,10 +248,10 @@ class SocketSourceIntegrationTest {
                     assertEquals(3, f.source.read.receive(), "the real socket read completed while feeding was paused")
                     assertTrue(f.source.admitted.tryReceive().isFailure)
                     release.complete(Unit)
-                    f.assertCut(checkNotNull(cut.await()), last = 2, generation = 1)
+                    f.assertCut(kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(cut.await()).checkpoint, last = 2, generation = 1)
                     assertEquals(3, f.source.admitted.receive())
                     assertEquals(4, f.source.admitted.receive())
-                    f.assertCut(checkNotNull(f.group.checkpoint(5.seconds)), last = 4, generation = 1)
+                    f.assertCut(kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(f.group.checkpoint(5.seconds)).checkpoint, last = 4, generation = 1)
                 }
             } finally { f.close() }
         }
@@ -283,10 +283,10 @@ class SocketSourceIntegrationTest {
                     val cut = async(Dispatchers.Default) { f.group.checkpoint(5.seconds) }
                     f.source.pauseEntered.receive() // Retry waiting did not retain the feed lock.
                     release.complete(Unit)
-                    f.assertCut(checkNotNull(cut.await()), last = 2, generation = 1)
+                    f.assertCut(kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(cut.await()).checkpoint, last = 2, generation = 1)
                     f.source.retry.send(Unit)
                     assertEquals(3, f.source.admitted.receive())
-                    f.assertCut(checkNotNull(f.group.checkpoint(5.seconds)), last = 3, generation = 1)
+                    f.assertCut(kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(f.group.checkpoint(5.seconds)).checkpoint, last = 3, generation = 1)
                 }
             } finally {
                 release.complete(Unit)

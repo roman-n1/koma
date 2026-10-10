@@ -101,7 +101,7 @@ class StateChartHistoryPropertyTest {
             if (histories.isNotEmpty()) withHistory++
             if (histories.any { h -> h.deep && chart.states.any { chart.ancestorsOf(it.id).indexOf(h.parent) >= 1 } }) deepWithGrandchildren++
             if (histories.any { !it.deep }) shallow++
-            if (histories.any { it.default != null }) defaults++
+            if (histories.any { it.default is StateId }) defaults++
             assertTrue(chart.reachableStates().none { chart.node(it) is HistoryState }, "seed $seed")
         }
         assertTrue(withHistory >= 180, "only $withHistory charts with history")
@@ -163,7 +163,7 @@ class StateChartHistoryPropertyTest {
                         if (target.deep && chart.ancestorsOf(remembered).indexOf(target.parent) >= 1) restoredDeep++
                     } else {
                         restoredDefault++
-                        val fallback = target.default ?: (chart.node(target.parent) as CompoundState).initial
+                        val fallback = (target.default as? StateId) ?: (chart.node(target.parent) as CompoundState).initial
                         assertTrue(fallback in after, "seed $seed: first entry of ${target.id} should enter $fallback")
                     }
                 }
@@ -217,26 +217,26 @@ class StateChartHistoryPropertyTest {
         val nodes = first.values.toList()
         fun ancestors(id: StateId): List<StateId> {
             val chain = mutableListOf<StateId>()
-            var p = first[id]?.parent
+            var p = first[id]?.parent as? StateId
             while (p != null && p in first && p !in chain && p != id) {
                 chain += p
-                p = first.getValue(p).parent
+                p = first.getValue(p).parent as? StateId
             }
             return chain
         }
         val issues = mutableListOf<ValidationIssue>()
         for (node in nodes) {
-            val parent = node.parent ?: continue
+            val parent = node.parent as? StateId ?: continue
             if (first[parent] is HistoryState) issues += ValidationIssue.HistoryParent(node.id, parent)
         }
-        if (first[chart.initial] is HistoryState) issues += ValidationIssue.HistoryAsInitial(null, chart.initial)
+        if (first[chart.initial] is HistoryState) issues += ValidationIssue.HistoryAsInitial(StateParent.Root, chart.initial)
         for (node in nodes) {
             if (node is CompoundState && first[node.initial] is HistoryState && first[node.initial]?.parent == node.id) {
                 issues += ValidationIssue.HistoryAsInitial(node.id, node.initial)
             }
         }
         for (node in nodes) {
-            if (node !is HistoryState || node.default == null || first[node.parent] !is CompoundState) continue
+            if (node !is HistoryState || node.default !is StateId || first[node.parent] !is CompoundState) continue
             val default = first[node.default]
             val ok = when {
                 default == null || default is HistoryState -> false
@@ -367,12 +367,12 @@ class StateChartHistoryPropertyTest {
         assertEquals(historyRefs.distinct(), historyRefs, "seed $seed")
         assertTrue(historyRefs.none { it in refOf.values }, "seed $seed")
         for (history in histories) {
-            val default = history.default ?: continue
+            val default = history.default as? StateId ?: continue
             val group = drawn.filter { it.first == ref(history.parent) && it.second == history.deep }.map { it.third }
             assertTrue(lines.any { line -> group.any { line.trim() == "$it --> ${ref(default)}" } }, "seed $seed: no default edge for ${history.id}")
         }
         val edges = lines.count { " --> " in it && !it.trim().startsWith("[*]") }
-        assertEquals(chart.transitions.size + histories.count { it.default != null }, edges, "seed $seed")
+        assertEquals(chart.transitions.size + histories.count { it.default is StateId }, edges, "seed $seed")
     }
 
     // endregion
@@ -437,7 +437,7 @@ class StateChartHistoryPropertyTest {
         for ((from, to, action) in changes) {
             val configuration = HistoryConfiguration(reference.tree.configurationOf(from), history)
             if (from == to) {
-                val first = reference.tree.priority(from).firstOrNull { HierarchyReference.matches(it.on, action) }
+                val first = reference.tree.priority(from).firstOrNull { HierarchyReference.matches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action) }
                 if (first != null && reference.leaf(reference.fire(configuration, first).after) == from && first !in covered) covered += first
                 // The runtime records history on a self-loop it takes (the first matching transition
                 // whose guard holds); the plugin keeps that as a possibility, so the report follows it.
@@ -446,7 +446,7 @@ class StateChartHistoryPropertyTest {
                 continue
             }
             val candidates = reference.tree.priority(from).filter { to in couldEnter(reference, from, it, history) }
-            val taken = candidates.firstOrNull { HierarchyReference.matches(it.on, action) }
+            val taken = candidates.firstOrNull { HierarchyReference.matches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action) }
             history = if (taken != null) {
                 reference.fire(configuration, taken).after.history
             } else {

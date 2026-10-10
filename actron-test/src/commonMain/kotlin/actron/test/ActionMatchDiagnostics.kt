@@ -11,17 +11,17 @@ import kotlin.reflect.KClass
  * A registered `action {}` handler, described by the types it was declared for.
  *
  * @property index Position of the handler in first-match order
- * @property stateType The state type given to `state<S2> {}`, or `null` if unknown
- * @property actionType The action type given to `action<A2> {}`, or `null` if unknown
+ * @property stateType The state type given to `state<S2> {}`
+ * @property actionType The action type given to `action<A2> {}`
  */
 data class ActionHandlerDescription(
     val index: Int,
-    val stateType: KClass<*>?,
-    val actionType: KClass<*>?,
+    val stateType: KClass<*>,
+    val actionType: KClass<*>,
 ) {
     override fun toString(): String {
-        val stateName = stateType?.simpleName ?: "?"
-        val actionName = actionType?.simpleName ?: "?"
+        val stateName = stateType.simpleName ?: "?"
+        val actionName = actionType.simpleName ?: "?"
         return "#$index state<$stateName> / action<$actionName>"
     }
 }
@@ -50,9 +50,11 @@ class ActionMatchDiagnostics<S : State, A : Action> internal constructor(
     val matchedHandlerCount: Int get() = matchedHandlerIndices.size
 
     /**
-     * Index of the handler the Store would run, or `null` if the action is unhandled.
+     * Visits the first matching handler; unhandled actions perform no callback.
      */
-    val selectedHandlerIndex: Int? get() = matchedHandlerIndices.firstOrNull()
+    fun withSelectedHandler(block: (ActionHandlerDescription) -> Unit) {
+        if (matchedHandlerIndices.isNotEmpty()) block(handlers[matchedHandlerIndices.first()])
+    }
 
     /**
      * Handlers that match, in first-match order. The first one is the handler the Store would run.

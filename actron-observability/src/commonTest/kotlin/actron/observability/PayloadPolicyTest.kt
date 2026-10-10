@@ -103,3 +103,12 @@ class PayloadPolicyTest {
         assertEquals("?", JournalFormat.payload(Payload.Unavailable))
     }
 }
+
+// Test projections preserve the previous privacy, cycle and depth assertions verbatim.
+private val FailureDescriptor.type: String? get() = details.attributes["type"]
+private val FailureDescriptor.message: String? get() = details.attributes["message"]
+private val FailureDescriptor.cause: FailureDescriptor? get() {
+    var observed: FailureDescriptor? = null
+    withCause { check(observed == null); observed = it }
+    return observed
+}

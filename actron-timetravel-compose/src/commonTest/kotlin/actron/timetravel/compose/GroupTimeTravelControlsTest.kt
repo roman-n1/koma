@@ -36,7 +36,7 @@ class GroupTimeTravelControlsTest {
         assertSame(branch, controls.branch, "starting again must not silently erase an active experiment")
         assertEquals(checkpoints, replay.members.associateWith { replay.checkpoint(it) })
         assertEquals(4, replay.position)
-        assertEquals(emptyList(), replay.verification)
+        assertEquals(emptyList(), replay.observedVerification)
         assertSame(recording, replay.session.recording)
 
         controls.returnToReplay()

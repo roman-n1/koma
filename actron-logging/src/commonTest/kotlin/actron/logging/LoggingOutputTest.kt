@@ -33,7 +33,7 @@ class LoggingOutputTest {
     @Test
     fun simpleLogging_logsActionEventAndStateWithTheConfiguredTagAndSeverity() = runTest(testDispatcher) {
         val entries = mutableListOf<Entry>()
-        val logger = Logger { severity, tag, _, message -> entries += Entry(severity, tag, message()) }
+        val logger = Logger { severity, tag, message -> entries += Entry(severity, tag, message()) }
         val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(0)) {
             coroutineContext(Dispatchers.Unconfined)
             plugin(simpleLogging(tag = "Chat", severity = Logger.Severity.Info, logger = logger))
@@ -63,7 +63,7 @@ class LoggingOutputTest {
         val entries = mutableListOf<String>()
         val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(0)) {
             coroutineContext(Dispatchers.Unconfined)
-            plugin(simpleLogging(logger = { _, _, _, message -> entries += message() }))
+            plugin(simpleLogging(logger = { _, _, message -> entries += message() }))
             state<CounterState> {
                 action<CounterAction.Increment> { nextState { state } }
             }
@@ -78,7 +78,7 @@ class LoggingOutputTest {
     @Test
     fun simpleLogging_keepsProcessingOrderOnAMultiThreadedDispatcher() = runTest {
         val entries = mutableListOf<String>()
-        val logger = Logger { _, _, _, message -> entries += message() }
+        val logger = Logger { _, _, message -> entries += message() }
         val store: Store<CounterState, CounterAction, CounterEvent> = Store(CounterState(0)) {
             coroutineContext(Dispatchers.Default)
             plugin(simpleLogging(logger = logger))
@@ -119,7 +119,7 @@ class LoggingOutputTest {
     fun simpleLogging_throwingLogger_doesNotAbortActionsOrTransitions() = runTest(testDispatcher) {
         val handled = mutableListOf<Throwable>()
         var readyEntered = 0
-        val logger = Logger { _, _, _, message -> throw IllegalStateException("logger failed on: ${message()}") }
+        val logger = Logger { _, _, message -> throw IllegalStateException("logger failed on: ${message()}") }
         val store: Store<FlowState, FlowAction, Nothing> = Store(FlowState.Loading) {
             coroutineContext(Dispatchers.Unconfined)
             exceptionHandler(actron.core.ExceptionHandler { handled += it })

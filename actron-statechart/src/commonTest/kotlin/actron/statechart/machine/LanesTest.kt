@@ -18,7 +18,7 @@ class LanesTest {
     private val scope = ActivationId(1)
 
     private fun registration(id: Long, policy: ConcurrencyPolicy? = null, lane: LaneId? = policy?.let { net }, scope: ActivationId = this.scope) =
-        CommandRegistration(CommandId(id), "cmd$id", scope, lane, policy)
+        CommandRegistration(CommandId(id), "cmd$id", scope, lane ?: CommandLane.Independent, policy ?: ConcurrencyPolicy.Independent)
 
     @Test
     fun aCommandWithoutALane_startsAtOnce() {
@@ -34,7 +34,7 @@ class LanesTest {
         val first = Lanes<String>().admit(registration(1, ConcurrencyPolicy.Latest)).lanes
         // A queued command in the lane (mixed policies are allowed, if odd): superseded as well.
         val withQueued = first.admit(registration(2, ConcurrencyPolicy.Sequential)).lanes
-        assertEquals(listOf(registration(2)), withQueued.queued[net]?.map { it.copy(lane = null, policy = null) })
+        assertEquals(listOf(registration(2)), withQueued.queued[net]?.map { it.copy(lane = CommandLane.Independent, policy = ConcurrencyPolicy.Independent) })
 
         val change = withQueued.admit(registration(3, ConcurrencyPolicy.Latest))
 

@@ -291,8 +291,9 @@ fork-only API break: Store factories use overloads, execution overrides use non-
 `StateSaver.restore` receives a fallback, launch lanes select a key explicitly, and Store patches
 contain configuration commands. Core saver/lifecycle/patch/launch tests, Compose retained-state
 tests and persistent-restore tests cover the changes. Consumers must recompile; historical
-inline-constructor compatibility claims below describe the earlier API. The null/optional CI
-guard prevents new debt while the remaining internal and public contracts are migrated.
+inline-constructor compatibility claims below describe the earlier API. The migration is complete: the baseline is empty and a strict marker protects zero debt.
+Kotlin PSI plus a compiler IR plugin reject explicit and inferred nullable types across every
+library Main target; old recording readers and frozen format versions are preserved.
 
 | # | Change | Where | Since | Regression tests | Upstream status | Removable when |
 |---|---|---|---|---|---|---|
@@ -315,6 +316,8 @@ guard prevents new debt while the remaining internal and public contracts are mi
 | c5 | Documented guarantee: actions are processed in dispatch order | `Store.dispatch` KDoc | round 2 | a3 | with a3 | merged |
 | c7 | `subscribe {}` on `EnterScope` and `ActionScope` (a launch `awaitIdle` leaves out); `StorePendingWork` (public data); actron-test `awaitIdle()`, `pendingWork()` | `StoreScope.kt`, `StoreInternalApi.kt`, `actron-test/StoreExtensions.kt` | 2026-10-01 | `StoreAwaitIdleTest`, `StoreAwaitIdleExtensionTest`, `StateChartAwaitIdleTest` | with b7 | merged |
 | c6 | `api/` dumps and `apiCheck` in CI; `checkDebugGraph`; CI for every pull request; `iosArm64` compiled in the macOS job; every test task logs failed assertions | root `build.gradle.kts`, `.github/workflows/gradle.yml` | fork build | — | fork-only by design | never |
+| c8 | Null-free public/core contracts and internal runtime lifecycle: fallback savers, non-null contexts, typed attribution, binding/launch/work phases, configuration commands, no nullable handler selections | `actron-core` factories, `StateSaver`, `StorePatch`, `StoreProbe`, `StoreBuilder`, `StoreImpl`; absence-policy guide | 2026-10-11 | Core saver/lifecycle/patch/launch/probe suites; strict compiler fixtures and full KMP Main compilation | fork-only breaking API; consumers recompile | upstream adopts the same null-free contracts |
+| c9 | Strict zero nullable/optional policy: empty baseline, immutable-against-base strict milestone, PSI and resolved/inferred IR type checks on all library Main targets | Root Gradle, `verification/nullability-guard`, `.actron/nullability`, required JVM CI policy step | 2026-10-11 | PSI self-tests, real compiler acceptance/rejection tests, every platform Main compile | fork-only by design | never |
 
 #### (d) Companion modules upstream owns
 
@@ -330,6 +333,7 @@ guard prevents new debt while the remaining internal and public contracts are mi
 | d5 | `actron-message`: the subscription is registered before `onStart` returns; a throwing receive block is reported and the subscription continues; `extraBufferCapacity = 64` and the hub exposed as a `SharedFlow` | `Plugin.kt`, `Message.kt` | c9a11d0, 4e92b04, cb525ea | `MessageDeliveryTest` | prepared: `upstream-pr/message-subscription-before-start` @ 26a5685 (C2); the buffer size is mentioned, not proposed | merged (the buffer stays fork-only) |
 | d6 | Build: `api` instead of `implementation` for `actron-core` in the companion modules; Mocha timeouts for JS and Wasm on Node; the publish convention for `io.github.roman-n1`; explicit JVM 11 bytecode baseline; isolated Maven consumer verification repository | `*/build.gradle.kts`, `build-logic` | fork build | `verification/published-consumer`: POM/metadata/payload checks, external JVM smoke and platform compile matrix | `api` prepared: `upstream-pr/companion-api-deps` @ e8d889c (C4); the rest fork-only | C4 merged; the rest never |
 | d8 | Actron uses distinct packages, artifacts and core klib identity; consumers must recompile after the rename | `actron-core/build.gradle.kts`, migration guide | 2026-10-10 | Migration isolation fixture runs frozen upstream Koma beside Actron on JVM/JS/Wasm/iOS | breaking rename; no runtime substitution | fork-only |
+| d10 | Non-null companion runtime/test APIs: retained state and recorder binding phases, non-null logging contexts, observation callbacks and overloads for pending-work checks | `actron-compose`, `actron-logging`, `actron-test` | 2026-10-11 | Existing Compose retained-state, recorder/handler, logging suites; strict source/compiler guard | fork-only breaking API | upstream adopts the same contracts |
 
 ### Synchronization with upstream
 

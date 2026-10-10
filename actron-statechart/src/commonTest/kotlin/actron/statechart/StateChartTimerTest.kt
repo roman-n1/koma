@@ -89,7 +89,7 @@ class StateChartTimerTest {
     private inline fun <reified A : MessengerAction> on(name: String) = ActionMatcher.of<A>(name)
 
     private val connect = Transition(offline, online, on<MessengerAction.Connect>("Connect"))
-    private val heartbeat = Transition(connected, connected, Trigger.After(30.seconds), effect = "sendPing")
+    private val heartbeat = Transition(connected, connected, Trigger.After(30.seconds), effect = actron.statechart.EffectKey("sendPing"))
     private val drop = Transition(connected, reconnecting, on<MessengerAction.Drop>("Drop"))
     private val restore = Transition(reconnecting, connected, on<MessengerAction.Restore>("Restore"))
     private val retry = Transition(reconnecting, connected, on<MessengerAction.Retry>("Retry"))
@@ -97,7 +97,7 @@ class StateChartTimerTest {
     private val keepTyping = Transition(typing, typing, on<MessengerAction.KeyPress>("KeyPress"))
     private val typingTimeout = Transition(typing, idle, Trigger.After(3.seconds))
     private val send = Transition(typing, idle, on<MessengerAction.Send>("Send"))
-    private val giveUp = Transition(reconnecting, offline, Trigger.After(5.seconds), guard = "outOfRetries")
+    private val giveUp = Transition(reconnecting, offline, Trigger.After(5.seconds), guard = actron.statechart.GuardKey("outOfRetries"))
     private val sessionTimeout = Transition(online, offline, Trigger.After(30.minutes))
     private val logout = Transition(online, offline, on<MessengerAction.Logout>("Logout"))
 
@@ -230,7 +230,7 @@ class StateChartTimerTest {
         assertEquals(listOf(connected), result.entered)
         assertEquals(listOf(heartbeat), result.timersToCancel)
         assertEquals(listOf(heartbeat), result.timersToStart)
-        assertEquals("sendPing", result.transition.effect)
+        assertEquals("sendPing", (result.transition.effect as? actron.statechart.EffectKey)?.name)
     }
 
     @Test
@@ -260,14 +260,14 @@ class StateChartTimerTest {
 
     @Test
     fun transitionKeepsItsActionShapeAndTellsTimersApart() {
-        assertEquals(Transition(offline, online, Trigger.OnAction(connect.on!!)), connect)
-        assertEquals(on<MessengerAction.Connect>("Connect"), connect.on)
-        assertNull(connect.after)
+        assertEquals(Transition(offline, online, Trigger.OnAction((connect.trigger as? actron.statechart.Trigger.OnAction)?.matcher!!)), connect)
+        assertEquals(on<MessengerAction.Connect>("Connect"), (connect.trigger as? actron.statechart.Trigger.OnAction)?.matcher)
+        assertNull((connect.trigger as? Trigger.After)?.delay)
         assertEquals(false, connect.isTimer)
-        assertNull(giveUp.on)
-        assertEquals(5.seconds, giveUp.after)
+        assertNull((giveUp.trigger as? actron.statechart.Trigger.OnAction)?.matcher)
+        assertEquals(5.seconds, (giveUp.trigger as Trigger.After).delay)
         assertEquals(true, giveUp.isTimer)
-        assertEquals(Transition(offline, online, connect.on!!, "g", "e"), Transition(offline, online, Trigger.OnAction(connect.on!!), "g", "e"))
+        assertEquals(Transition(offline, online, (connect.trigger as? actron.statechart.Trigger.OnAction)?.matcher!!, actron.statechart.GuardKey("g"), actron.statechart.EffectKey("e")), Transition(offline, online, Trigger.OnAction((connect.trigger as? actron.statechart.Trigger.OnAction)?.matcher!!), actron.statechart.GuardKey("g"), actron.statechart.EffectKey("e")))
         // The flat shortcut result starts and cancels nothing.
         assertEquals(StepResult.Transitioned(listOf(connect), listOf(offline), listOf(online), StateConfiguration(setOf(online))), StepResult.Transitioned(connect))
     }
@@ -341,7 +341,7 @@ class StateChartTimerTest {
             """.trimIndent(),
             chart.toMermaid(),
         )
-        val odd = StateChartDefinition(offline, listOf(AtomicState(offline)), listOf(Transition(offline, offline, Trigger.After(1500.milliseconds + 1.minutes), "g", "e")))
+        val odd = StateChartDefinition(offline, listOf(AtomicState(offline)), listOf(Transition(offline, offline, Trigger.After(1500.milliseconds + 1.minutes), actron.statechart.GuardKey("g"), actron.statechart.EffectKey("e"))))
         assertEquals("    Offline --> Offline : after 1m 1.5s [g] / e", odd.toMermaid().lines().last())
     }
 
@@ -362,8 +362,8 @@ class StateChartTimerTest {
         val app = StateChartDefinition(splash, listOf(AtomicState(splash), AtomicState(home), AtomicState(details)), listOf(showHome, open))
         val toDetails = app.shortestPathTo(details)!!
         assertEquals(StateChartPath(splash, listOf(showHome, open)), toDetails)
-        assertEquals(listOf(Trigger.After(2.seconds), Trigger.OnAction(open.on!!)), toDetails.triggers)
-        assertEquals(listOf(open.on), toDetails.actions)
+        assertEquals(listOf(Trigger.After(2.seconds), Trigger.OnAction((open.trigger as? actron.statechart.Trigger.OnAction)?.matcher!!)), toDetails.triggers)
+        assertEquals(listOf((open.trigger as? actron.statechart.Trigger.OnAction)?.matcher), toDetails.actions)
         assertEquals(listOf(toDetails), app.transitionCoveragePaths())
         // Replayed on the runtime: fire for the timer step, step for the action step.
         val appRuntime = StateChartRuntime(app, { _: MessengerState -> splash })

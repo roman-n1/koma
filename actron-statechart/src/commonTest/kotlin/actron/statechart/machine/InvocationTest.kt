@@ -7,6 +7,8 @@ import kotlin.test.*
 import kotlin.time.Duration.Companion.seconds
 
 class InvocationTest {
+    private val InvocationSnapshot<Int, Int>.activeChild: ChildInvocation.Active<Int> get() = assertIs<ChildInvocation.Active<Int>>(child)
+
     private data object Open : Action
     private data object Close : Action
     private data object Finish : Action
@@ -28,28 +30,28 @@ class InvocationTest {
         onEnter(working) { command("fetch") }
         onEnter(done) { event(Finished) }
     }
-    private fun invocation(childMachine: Machine<Int, Action, String, Event> = child) = InvokedMachine(parent, active, childMachine, { it.context }, toParent = { if (it == Finished) Close else null })
+    private fun invocation(childMachine: Machine<Int, Action, String, Event> = child) = InvokedMachine(parent, active, childMachine, { it.context }, toParent = { event, send -> if (event == Finished) send(Close) })
     private fun started(composition: InvokedMachine<Int, Action, String, Event, Int, Action, String, Event>) =
         composition.decide(composition.initialSnapshot(0), InvocationInput.Parent(MachineInput.Start(MachineTime.Zero))).snapshot
 
     @Test fun childLifetimesAndLateInputsAreQualifiedByParentActivation() {
         val composition = invocation()
         val opened = composition.decide(started(composition), InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
-        assertNotNull(opened.snapshot.child)
+        assertIs<ChildInvocation.Active<Int>>(opened.snapshot.child)
         assertEquals(1, opened.childCommands.size)
-        val oldOwner = opened.snapshot.owner!!
+        val oldOwner = opened.snapshot.activeChild.owner
         val reopened = composition.decide(opened.snapshot, InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
-        assertNotEquals(oldOwner, reopened.snapshot.owner)
+        assertNotEquals(oldOwner, reopened.snapshot.activeChild.owner)
         assertEquals(oldOwner, reopened.childCancellations.single().owner)
         assertEquals(1, reopened.childCommands.size)
         val stale = composition.decide(reopened.snapshot, InvocationInput.Child(oldOwner, MachineInput.Dispatch(Finish, MachineTime.Zero)))
         assertEquals(reopened.snapshot, stale.snapshot)
         assertTrue(stale.outcome is DecisionOutcome.Ignored)
-        val finished = composition.decide(reopened.snapshot, InvocationInput.Child(reopened.snapshot.owner!!, MachineInput.Dispatch(Finish, MachineTime.Zero)))
+        val finished = composition.decide(reopened.snapshot, InvocationInput.Child(reopened.snapshot.activeChild.owner, MachineInput.Dispatch(Finish, MachineTime.Zero)))
         assertTrue(finished.snapshot.parent.isActive(idle))
-        assertNull(finished.snapshot.child)
+        assertEquals(ChildInvocation.Dormant, finished.snapshot.child)
         assertTrue(finished.childCommands.isEmpty())
-        assertEquals(reopened.snapshot.owner, finished.childCancellations.single().owner)
+        assertEquals(reopened.snapshot.activeChild.owner, finished.childCancellations.single().owner)
     }
 
     @Test fun failedChildStartRollsBackParentAndAllIntents() {
@@ -74,12 +76,12 @@ class InvocationTest {
             child.chart.copy(transitions = child.chart.transitions + Transition(working, done, Trigger.After(5.seconds)))) {
             onEnter(working) { command("child-fetch"); event(Finished) }
         }
-        val composition = InvokedMachine(owningParent, active, immediateChild, { it.context }, toParent = { Close })
+        val composition = InvokedMachine(owningParent, active, immediateChild, { it.context }, toParent = { _, send -> send(Close) })
         val base = started(composition)
         val result = composition.decide(base, InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
         assertTrue(result.outcome is DecisionOutcome.Handled)
         assertTrue(result.snapshot.parent.isActive(idle))
-        assertNull(result.snapshot.child)
+        assertEquals(ChildInvocation.Dormant, result.snapshot.child)
         assertTrue(result.parentCommands.isEmpty())
         assertTrue(result.parentTimers.isEmpty())
         assertTrue(result.childCommands.isEmpty())
@@ -91,12 +93,12 @@ class InvocationTest {
         val emitting = Machine<Int, Action, String, Event>(child.id, child.version, child.chart) {
             onEnter(working) { event(Finished); event(Again) }
         }
-        val composition = InvokedMachine(parent, active, emitting, { it.context }, toParent = {
-            when (it) { Finished -> Close; Again -> Open; else -> null }
+        val composition = InvokedMachine(parent, active, emitting, { it.context }, toParent = { event, send ->
+            when (event) { Finished -> send(Close); Again -> send(Open); else -> Unit }
         })
         val result = composition.decide(started(composition), InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
         assertTrue(result.snapshot.parent.isActive(idle))
-        assertNull(result.snapshot.child)
+        assertEquals(ChildInvocation.Dormant, result.snapshot.child)
         assertEquals(1, result.childDecisions.size)
     }
 
@@ -109,7 +111,7 @@ class InvocationTest {
             onAction(working, ActionMatcher.of<Ping>("ping")) { context++; command("child-work"); event(Again) }
         }
         val composition = InvokedMachine(bouncingParent, active, bouncingChild, { it.context },
-            toParent = { Ping }, toChild = { Ping }, maxDeliveries = 4)
+            toParent = { _, send -> send(Ping) }, toChild = { _, send -> send(Ping) }, maxDeliveries = 4)
         val base = started(composition)
         val result = composition.decide(base, InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
         assertSame(base, result.snapshot)
@@ -126,7 +128,7 @@ class InvocationTest {
             onEnter(working) { command("child-work"); event(Finished) }
         }
         val failure = IllegalStateException("mapping failed")
-        val composition = InvokedMachine(parent, active, emitting, { it.context }, toParent = { throw failure })
+        val composition = InvokedMachine(parent, active, emitting, { it.context }, toParent = { _, _ -> throw failure })
         val base = started(composition)
         val result = composition.decide(base, InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero)))
         assertSame(base, result.snapshot)
@@ -137,9 +139,9 @@ class InvocationTest {
     @Test fun restoredChildMustHaveBeenStartedByItsOwner() {
         val composition = invocation()
         val opened = composition.decide(started(composition), InvocationInput.Parent(MachineInput.Dispatch(Open, MachineTime.Zero))).snapshot
-        val malformed = opened.copy(child = child.initialSnapshot(0))
+        val malformed = opened.copy(child = ChildInvocation.Active(opened.activeChild.owner, child.initialSnapshot(0)))
         assertFailsWith<IllegalArgumentException> {
-            composition.decide(malformed, InvocationInput.Child(opened.owner!!, MachineInput.Dispatch(Finish, MachineTime.Zero)))
+            composition.decide(malformed, InvocationInput.Child(opened.activeChild.owner, MachineInput.Dispatch(Finish, MachineTime.Zero)))
         }
     }
 }

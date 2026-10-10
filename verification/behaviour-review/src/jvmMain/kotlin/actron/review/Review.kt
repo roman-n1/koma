@@ -12,7 +12,7 @@ private data object Retry : Action
 private fun machine(version: String, extraRetry: Boolean): Machine<Unit, Action, Nothing, Event> {
     val idle = StateId("idle"); val sent = StateId("sent")
     return Machine(DefinitionId("messenger-send-review"), DefinitionVersion(version), StateChartDefinition(idle,
-        listOf(AtomicState(idle), AtomicState(sent)), listOf(Transition(idle, sent, ActionMatcher.of<Send>("send"), guard = "online")) +
+        listOf(AtomicState(idle), AtomicState(sent)), listOf(Transition(idle, sent, ActionMatcher.of<Send>("send"), guard = actron.statechart.GuardKey("online"))) +
             if (extraRetry) listOf(Transition(sent, idle, ActionMatcher.of<Retry>("retry"))) else emptyList())) {
         guard("online", "An online connection is required") { _, action -> (action as Send).online }
     }
@@ -38,7 +38,7 @@ fun main(args: Array<String>) {
         "state:idle" to ModelSource(sourcePath, 13), "state:sent" to ModelSource(sourcePath, 13),
         "transition:0" to ModelSource(sourcePath, 15), "transition:1" to ModelSource(sourcePath, 16)),
         active = frame.decision.snapshot.configuration.active, selectedTransitions = frame.decision.transitions.toSet())
-    val artifacts = behaviouralReviewArtifacts(baseline, after)
+    val artifacts = if (baseline == null) behaviouralReviewArtifacts(after) else behaviouralReviewArtifacts(baseline, after)
     artifacts.forEach { (name, text) -> File(output, name).writeText(text) }
     check(!artifacts.getValue("behaviour.diff").contains("VERSION BUMP REQUIRED")) { "Version unchanged after structural behaviour change" }
     check(!artifacts.getValue("coverage.diff").contains("REGRESSED")) { "Behavioural coverage regressed" }

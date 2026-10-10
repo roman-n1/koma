@@ -75,7 +75,7 @@ class GroupReplaySessionTest {
         assertEquals(2, recording.routes.size)
         var matched = 0
         while (true) {
-            val step = session.stepForward() ?: break
+            val step = session.observedStepForward() ?: break
             assertIs<GroupReplayStep.Matched>(step)
             matched++
         }
@@ -88,7 +88,7 @@ class GroupReplaySessionTest {
         assertTrue(send in 0 until receive, "send at $send, receive at $receive")
         session.seek(receive)
         assertTrue((session.snapshotOf(rootId).context as RootCtx).names.isEmpty(), "before the receive the root has nothing")
-        assertIs<GroupReplayStep.Matched>(session.stepForward())
+        assertIs<GroupReplayStep.Matched>(session.observedStepForward())
         assertEquals(listOf("tom"), (session.snapshotOf(rootId).context as RootCtx).names)
         assertTrue(session.stepBackward())
         assertEquals(receive, session.position)
@@ -152,7 +152,7 @@ class GroupReplaySessionTest {
         val before = session.members.mapValues { it.value.snapshot }
         val positions = session.members.mapValues { it.value.position }
 
-        val step = assertIs<GroupReplayStep.Diverged>(session.stepForward())
+        val step = assertIs<GroupReplayStep.Diverged>(session.observedStepForward())
 
         assertEquals(mismatch, step.mismatch)
         assertEquals(mismatch.position, session.position)
@@ -217,7 +217,7 @@ class GroupReplaySessionTest {
         live.pickerStore.dispatch(PickerAct.Pick("ann"))
         val pending = async { live.group.checkpoint() }
         runCurrent()
-        val cut = checkNotNull(pending.await())
+        val cut = kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(pending.await()).checkpoint
         assertTrue(cut.inFlight.isNotEmpty(), "a message was on the way at the cut: ${cut.held}")
         runCurrent()
         live.pickerStore.dispatch(PickerAct.Pick("bob"))
@@ -240,7 +240,7 @@ class GroupReplaySessionTest {
         live.close()
     }
 
-    private fun <C, A : actron.core.Action, CMD, E : actron.core.Event> Recording<C, A, CMD, E>.appending(input: MachineInput<A>): Recording<C, A, CMD, E> {
+    private fun <C : Any, A : actron.core.Action, CMD : Any, E : actron.core.Event> Recording<C, A, CMD, E>.appending(input: MachineInput<A>): Recording<C, A, CMD, E> {
         val machine = machines.getValue(if (definition == GroupFixture.rootMachine.id) rootId else pickerId) as actron.statechart.machine.Machine<C, A, CMD, E>
         val decision = machine.decide(snapshotAt(length), input)
         return Recording(definition, version, start, steps + RecordedStep.Committed(input, decision))

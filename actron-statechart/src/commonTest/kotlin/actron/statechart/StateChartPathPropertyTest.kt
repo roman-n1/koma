@@ -83,7 +83,7 @@ class StateChartPathPropertyTest {
                 assertEquals(chart.initial, path.start, "seed $seed")
                 assertEquals(id, path.end, "seed $seed")
                 assertTrue(chart.transitions.containsAll(path.transitions), "seed $seed")
-                assertEquals(path.transitions.map { it.on }, path.actions, "seed $seed")
+                assertEquals(path.transitions.map { (it.trigger as? actron.statechart.Trigger.OnAction)?.matcher }, path.actions, "seed $seed")
             }
         }
         assertEquals(chart.reachableStates(), distances.keys, "seed $seed")
@@ -199,7 +199,7 @@ class StateChartPathPropertyTest {
             if (connected) {
                 val path = StateChartPath(start, sequence)
                 assertEquals(sequence.lastOrNull()?.target ?: start, path.end, "seed $seed")
-                assertEquals(sequence.map { it.on }, path.actions, "seed $seed")
+                assertEquals(sequence.map { (it.trigger as? actron.statechart.Trigger.OnAction)?.matcher }, path.actions, "seed $seed")
             } else {
                 val error = assertFailsWith<IllegalArgumentException>("seed $seed") { StateChartPath(start, sequence) }
                 assertTrue(error.message!!.startsWith("[Actron] Path is not connected"), "seed $seed")

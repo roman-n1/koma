@@ -110,9 +110,9 @@ val store = MachineStore(listMachine, ListContext(), handler, scope = appScope, 
 val recording = recorder.recording()
 
 val session = ReplaySession(listMachine, recording)
-session.verify()                         // null, or the first ReplayMismatch
+session.verify { mismatch -> println(mismatch.describe()) } // true if a mismatch was reported
 session.seek(12)                         // the snapshot after twelve steps
-session.stepForward()                    // Matched(decision) or Diverged(mismatch)
+session.stepForward()                    // Matched, Diverged or Finished at the final checkpoint
 
 val branch = session.branch()            // what if, from here?
 branch.dispatch(ListAction.Load("dogs"))
@@ -144,8 +144,8 @@ inspector.stores                          // StoreView: capability, counts, reco
 inspector.completeness.isComplete         // false when anything is missing; the reasons say what
 inspector.timeline                        // TimelineItem: Processing, Discarded, Pending, Rejected, Closed, Gap, Stopped, Damage, ...
 val position = inspector.timeline.filterIsInstance<TimelineItem.Processing>()[12]
-position.before; position.after; position.diff   // from the recording, when attached and matching
-position.commits; position.decision              // what the journal kept
+position.attachment.withRecording { println(it.before); println(it.after); println(it.diff) }
+position.commits; position.withDecision { println(it) } // what the journal kept
 inspector.replayability(StoreInstanceId("list-7")) // Available, or Unavailable with the reasons
 
 InspectorText.overview(inspector)         // session, completeness, one line per Store with its reasons
@@ -182,8 +182,11 @@ val recording = recorder.recording()
 val session = GroupReplaySession(mapOf(pickerId to pickerMachine, rootId to rootMachine), recording)
 session.verify()                          // [] or the GroupMismatches, in order of position
 session.seek(12); session.snapshotOf(rootId)
-val cut = group.checkpoint()              // a consistent cut of the live group, or null on timeout
-GroupReplaySession(machines, recording.since(cut!!))
+when (val cut = group.checkpoint()) {
+    is GroupCut.Ready -> GroupReplaySession(machines, recording.since(cut.checkpoint))
+    is GroupCut.TimedOut -> println("Timed out at ${cut.stage}")
+    is GroupCut.MemberUnavailable -> println("Unavailable member ${cut.member}")
+}
 
 val branch = session.branch(routes)       // every member from here, with a local bridge
 branch.dispatch(pickerId, Pick("zed"))    // the pick, the root's apply, the acknowledgement back
@@ -199,12 +202,13 @@ val store = MachineStore(listMachine, ListContext(), handler, appScope, observer
 sink.close()
 
 val contents = RecordingFiles(storage).read(storeId, codec)   // the last continuous range, from a checkpoint
-contents.recording?.let { ReplaySession(listMachine, it).verify() }
+if (contents is RecordingFileContents.Readable) ReplaySession(listMachine, contents.recording).verify { println(it.describe()) }
 contents.marks                                              // MissingSegments, StepsMissing, StartMismatch, Damaged
 
 val groupSink = GroupRecordingFileSink(group, MachineGroupId("chat"), storage, appScope)
 val picker = MachineStore(pickerMachine, PickerCtx(), handler, appScope, observers = listOf(group.member(pickerId), groupSink.member(pickerId, pickerMachine, PickerCtx(), pickerCodec)))
-GroupRecordingFiles(storage).read(MachineGroupId("chat"), codecs).recording?.let { GroupReplaySession(machines, it).verify() }
+val groupContents = GroupRecordingFiles(storage).read(MachineGroupId("chat"), codecs)
+if (groupContents is GroupRecordingFileContents.Readable) GroupReplaySession(machines, groupContents.recording).verify()
 ```
 
 ## Serializing a recording
@@ -249,3 +253,7 @@ inside a frame, and during rotation, then checks the files and replay in a fresh
 ENOSPC for journal, member and group writers. It never fills a developer's filesystem. These
 tests validate JVM process death and disk full; iOS interruption and power loss remain separate
 platform validation work.
+
+All library-owned domain contracts are non-null and enforced by source/compiler checks.
+See the [null-free migration guide](../doc/guides/absence-policy.md) for callbacks, lifecycle
+results and UI state replacements. Old recording readers and format versions are preserved.

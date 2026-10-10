@@ -86,7 +86,7 @@ class GroupCheckpointStormTest {
                 launch {
                     repeat(30) {
                         val cut = group.checkpoint(5.seconds)
-                        if (cut == null) failedCuts++ else cuts += cut
+                        if (cut is actron.statechart.machine.GroupCut.Ready) cuts += cut.checkpoint else failedCuts++
                         delay(Random.nextLong(0, 3).milliseconds)
                     }
                 }

@@ -2,6 +2,8 @@
 
 package actron.timetravel.file
 
+import actron.timetravel.verify
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
@@ -103,10 +105,10 @@ class RecordingFileSinkTest {
         root,
         listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root), AtomicState(content, parent = root)),
         listOf(
-            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
-            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = "remember"),
-            Transition(loading, idle, Trigger.After(10.seconds), effect = "timeout"),
+            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, content, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("store")),
+            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("remember")),
+            Transition(loading, idle, Trigger.After(10.seconds), effect = actron.statechart.EffectKey("timeout")),
             Transition(content, loading, ActionMatcher.of<Act.Refresh>("Refresh")),
         ),
     )

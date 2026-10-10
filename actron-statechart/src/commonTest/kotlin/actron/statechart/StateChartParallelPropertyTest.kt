@@ -80,7 +80,7 @@ class StateChartParallelPropertyTest {
         for (id in active) {
             val node = chart.node(id)
             assertTrue(node != null && node !is HistoryState, "seed $seed: $id active")
-            node.parent?.let { assertTrue(it in active, "seed $seed: $id active without its parent $it") }
+            (node.parent as? StateId)?.let { assertTrue(it in active, "seed $seed: $id active without its parent $it") }
             val activeChildren = chart.childrenOf(id).filter { it.id in active }
             when (node) {
                 is CompoundState -> assertEquals(1, activeChildren.size, "seed $seed: $id has active children $activeChildren")
@@ -147,7 +147,7 @@ class StateChartParallelPropertyTest {
                 if (result !is StepResult.Transitioned) return@repeat
                 steps++
                 if (result.transitions.size > 1) together++
-                val picks = leaves.mapNotNull { leaf -> chart.candidatesFor(leaf).firstOrNull { t -> t.on?.matches(action) == true && t.guard.let { it == null || table.holds(it, action) } } }.distinct()
+                val picks = leaves.mapNotNull { leaf -> chart.candidatesFor(leaf).firstOrNull { t -> (t.trigger as? actron.statechart.Trigger.OnAction)?.matcher?.matches(action) == true && (t.guard as? actron.statechart.GuardKey)?.name.let { it == null || table.holds(it, action) } } }.distinct()
                 if (picks.size > result.transitions.size) conflicts++
                 if (result.transitions.any { t -> (chart.node(t.target) as? HistoryState)?.let { chart.node(it.parent) is ParallelState } == true }) restores++
                 // Taken transitions never conflict: their exit sets are disjoint.
@@ -217,7 +217,7 @@ class StateChartParallelPropertyTest {
             tooFew += expected.size
             // A shallow history of a parallel state needs a region as default.
             for (h in first.values.filterIsInstance<HistoryState>()) {
-                val default = h.default ?: continue
+                val default = h.default as? StateId ?: continue
                 if (first[h.parent] !is ParallelState || h.deep) continue
                 val ok = first[default].let { it != null && it !is HistoryState && it.parent == h.parent }
                 assertEquals(!ok, ValidationIssue.InvalidHistoryDefault(h.id, default) in issues, "seed $seed: ${h.id}")
@@ -295,11 +295,11 @@ class StateChartParallelPropertyTest {
         assertEquals(path.startLeaves.first(), path.start, "seed $seed")
         var trigger: Transition? = null
         val fire = ActionMatcher("Fire", Fire::class)
-        val relabelled = chart.copy(transitions = chart.transitions.mapIndexed { i, t -> Transition(t.source, t.target, fire, "t$i") })
+        val relabelled = chart.copy(transitions = chart.transitions.mapIndexed { i, t -> Transition(t.source, t.target, fire, actron.statechart.GuardKey("t$i")) })
         val guards = chart.transitions.withIndex().associate { (i, original) ->
             "t$i" to { _: RandomState, _: Action ->
                 val t = trigger!!
-                original == t || (original.on == t.on && reference.exitSet(configuration.active, original).none { it in reference.exitSet(configuration.active, t) })
+                original == t || ((original.trigger as? actron.statechart.Trigger.OnAction)?.matcher == (t.trigger as? actron.statechart.Trigger.OnAction)?.matcher && reference.exitSet(configuration.active, original).none { it in reference.exitSet(configuration.active, t) })
             }
         }
         val runtime = StateChartRuntime(relabelled, { s: RandomState -> s.id }, guards)
@@ -377,7 +377,7 @@ class StateChartParallelPropertyTest {
         }
         // No transition is written inside a parallel block, and none is lost.
         val edges = lines.count { " --> " in it && !it.trim().startsWith("[*]") }
-        assertEquals(chart.transitions.size + chart.states.count { it is HistoryState && it.default != null }, edges, "seed $seed")
+        assertEquals(chart.transitions.size + chart.states.count { it is HistoryState && it.default is StateId }, edges, "seed $seed")
         stack.clear()
         for (line in lines.drop(1)) {
             blockLine.matchEntire(line)?.let { stack.addLast(it.groupValues[2]) }
@@ -497,7 +497,7 @@ class StateChartParallelPropertyTest {
                     // Leaf changes are credited to transitions the runtime took; self-loops are credited
                     // by action with guards ignored (see StateChartConformance), so only by matcher.
                     for (t in conformance.coveredTransitions) {
-                        assertTrue(t in taken || actions.any { t.on?.matches(it) == true }, "seed $seed: covered $t")
+                        assertTrue(t in taken || actions.any { (t.trigger as? actron.statechart.Trigger.OnAction)?.matcher?.matches(it) == true }, "seed $seed: covered $t")
                     }
                     covered += conformance.coveredTransitions.count { it in taken }
                     assertEquals(configuration.active, chart.configurationOf(store.currentState.leaves).active, "seed $seed")

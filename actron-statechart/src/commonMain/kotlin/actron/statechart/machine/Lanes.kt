@@ -18,7 +18,7 @@ import actron.core.ExperimentalActronApi
  * @property queued The commands waiting in their lanes, in registration order; a lane with
  * nothing waiting is absent
  */
-data class Lanes<CMD>(
+data class Lanes<CMD : Any>(
     val running: Map<CommandId, CommandRegistration<CMD>> = emptyMap(),
     val queued: Map<LaneId, List<CommandRegistration<CMD>>> = emptyMap(),
 ) {
@@ -36,7 +36,8 @@ data class Lanes<CMD>(
      * queued commands are abandoned as [AbandonReason.Superseded] and the new one starts.
      */
     fun admit(registration: CommandRegistration<CMD>): LaneChange<CMD> {
-        val lane = registration.lane ?: return start(registration)
+        val lane = registration.lane
+        if (lane !is LaneId) return start(registration)
         return when (val policy = registration.policy) {
             ConcurrencyPolicy.Latest -> {
                 val superseded = runningIn(lane) + (queued[lane] ?: emptyList())
@@ -48,7 +49,7 @@ data class Lanes<CMD>(
             ConcurrencyPolicy.DropIfRunning ->
                 if (runningIn(lane).isEmpty()) start(registration) else LaneChange(this, abandoned = listOf(LaneChange.Abandoned(registration, AbandonReason.Dropped)))
             is ConcurrencyPolicy.Parallel -> if (runningIn(lane).size < policy.limit) start(registration) else enqueue(registration, lane)
-            null -> start(registration)
+            ConcurrencyPolicy.Independent -> start(registration)
         }
     }
 
@@ -60,7 +61,8 @@ data class Lanes<CMD>(
     fun finished(id: CommandId): LaneChange<CMD> {
         val registration = running[id] ?: return LaneChange(this)
         var next = copy(running = running - id)
-        val lane = registration.lane ?: return LaneChange(next)
+        val lane = registration.lane
+        if (lane !is LaneId) return LaneChange(next)
         val started = mutableListOf<CommandRegistration<CMD>>()
         while (true) {
             val waiting = next.queued[lane] ?: break
@@ -115,12 +117,12 @@ data class Lanes<CMD>(
  * @property abandoned The commands the executor gives up on, to cancel if they run and to
  * report to the machine as [MachineInput.CommandAbandoned]; they are out of the lanes
  */
-data class LaneChange<CMD>(
+data class LaneChange<CMD : Any>(
     val lanes: Lanes<CMD>,
     val started: List<CommandRegistration<CMD>> = emptyList(),
     val cancelled: List<CommandId> = emptyList(),
     val abandoned: List<Abandoned<CMD>> = emptyList(),
 ) {
     /** A command the executor gave up on, and why. */
-    data class Abandoned<CMD>(val registration: CommandRegistration<CMD>, val reason: AbandonReason)
+    data class Abandoned<CMD : Any>(val registration: CommandRegistration<CMD>, val reason: AbandonReason)
 }

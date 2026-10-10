@@ -35,15 +35,15 @@ fun StateChartDefinition.requirements(target: CoverageTarget): CoverageRequireme
     return when (target) {
         CoverageTarget.AllStates -> CoverageRequirements(states = states.filter { it !is HistoryState }.mapTo(linkedSetOf()) { it.id })
         CoverageTarget.AllTransitions -> CoverageRequirements(transitions = transitions.indices.mapTo(linkedSetOf(), ::TransitionId))
-        CoverageTarget.AllGuardOutcomes -> CoverageRequirements(guards = transitions.withIndex().filter { it.value.guard != null }.flatMap {
+        CoverageTarget.AllGuardOutcomes -> CoverageRequirements(guards = transitions.withIndex().filter { it.value.guard != actron.statechart.GuardCondition.Unconditional }.flatMap {
             listOf(GuardOutcome(TransitionId(it.index), true), GuardOutcome(TransitionId(it.index), false)) }.toSet())
         CoverageTarget.AllTimerPaths -> CoverageRequirements(transitions = transitions.withIndex().filter { it.value.isTimer }.mapTo(linkedSetOf()) { TransitionId(it.index) })
-        CoverageTarget.AllHistoryPaths -> CoverageRequirements(transitions = transitions.withIndex().filter { node(it.value.target) is HistoryState }.mapTo(linkedSetOf()) { TransitionId(it.index) })
+        CoverageTarget.AllHistoryPaths -> CoverageRequirements(transitions = transitions.withIndex().filter { nodeSatisfies(it.value.target) { node -> node is HistoryState } }.mapTo(linkedSetOf()) { TransitionId(it.index) })
         is CoverageTarget.TargetStates -> CoverageRequirements(states = checked(target.states))
         is CoverageTarget.Custom -> target.requirements.also { requirements ->
             checked(requirements.states)
             require(requirements.transitions.all { it.index in transitions.indices } && requirements.guards.all {
-                transitions.getOrNull(it.transition.index)?.guard != null
+                it.transition.index in transitions.indices && transitions[it.transition.index].guard != actron.statechart.GuardCondition.Unconditional
             }) { "[Actron] Custom coverage references undeclared transitions/guard branches" }
         }
         is CoverageTarget.AllErrorPaths -> {
@@ -70,4 +70,4 @@ fun MachineCoverage.errorTransitions(chart: StateChartDefinition, errorStates: S
 
 /** Per-transition guard branches, with labels retained for readable CI reports. */
 fun MachineCoverage.describeGuards(chart: StateChartDefinition): String = guards.expected.sortedWith(compareBy({ it.transition.index }, { it.result }))
-    .joinToString("\n") { "${it.transition} ${chart.transitions.getOrNull(it.transition.index)?.guard ?: "?"} ${it.result}: ${if (it in guards.covered) "COVERED" else "NOT COVERED"}" }
+    .joinToString("\n") { "${it.transition} ${chart.transitions.getOrNull(it.transition.index)?.guard?.displayLabel ?: "?"} ${it.result}: ${if (it in guards.covered) "COVERED" else "NOT COVERED"}" }

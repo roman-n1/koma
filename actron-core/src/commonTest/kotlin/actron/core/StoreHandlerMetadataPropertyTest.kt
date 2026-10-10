@@ -48,9 +48,9 @@ class StoreHandlerMetadataPropertyTest {
                 assertEquals(expected.map { it?.stateType }, actual.map { it.stateType }, context)
                 assertEquals(expected.map { it?.inputType }, actual.map { it.inputType }, context)
                 if (kind == HandlerKind.ENTER || kind == HandlerKind.EXIT) {
-                    assertTrue(actual.all { it.inputType == null }, context)
+                    assertTrue(actual.all { it.inputType == Unit::class }, context)
                 }
-                nulls += actual.count { it.stateType == null }
+                nulls += actual.count { it.stateType == RtState::class }
             }
         }
         assertTrue(nulls > 50, "legacy handlers should appear, saw $nulls")

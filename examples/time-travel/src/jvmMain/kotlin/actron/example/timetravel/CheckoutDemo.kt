@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import actron.core.Action
 import actron.core.Event
 import actron.core.InputId
+import actron.core.InputAttribution
 import actron.observability.MachineGroupId
 import actron.observability.JournalSink
 import actron.observability.RecordingSession
@@ -103,7 +104,7 @@ object CheckoutDemo {
             AtomicState(ready, root), AtomicState(timedOut, root),
         ), listOf(
             Transition(idle, loading, ActionMatcher.of<CartAction.Start>("Start")),
-            Transition(loading, ready, ActionMatcher.of<CartAction.Priced>("Priced"), effect = "calculate"),
+            Transition(loading, ready, ActionMatcher.of<CartAction.Priced>("Priced"), effect = actron.statechart.EffectKey("calculate")),
             Transition(loading, timedOut, Trigger.After(5.seconds)),
         )),
     ) {
@@ -120,7 +121,7 @@ object CheckoutDemo {
         val showing = StateId("Showing")
         return Machine(DefinitionId("demo-summary"), DefinitionVersion("1"), StateChartDefinition(
             root, listOf(CompoundState(root, initial = showing), AtomicState(showing, root)),
-            listOf(Transition(showing, showing, ActionMatcher.of<UpdateTotal>("UpdateTotal"), effect = "show")),
+            listOf(Transition(showing, showing, ActionMatcher.of<UpdateTotal>("UpdateTotal"), effect = actron.statechart.EffectKey("show"))),
         )) { effect("show") { _, action -> SummaryContext((action as UpdateTotal).total) } }
     }
 
@@ -128,8 +129,8 @@ object CheckoutDemo {
     private val summaryCodec = RecordingCodec(SummaryContext.serializer(), UpdateTotal.serializer(), NoCommand.serializer(), NoEvent.serializer())
     private val codecs = mapOf(cartId to cartCodec, summaryId to summaryCodec)
 
-    val routes: List<GroupBranch.Route> = listOf(GroupBranch.Route(cartId, summaryId) { event ->
-        (event as? TotalChanged)?.let { UpdateTotal(it.total) }
+    val routes: List<GroupBranch.Route> = listOf(GroupBranch.Route(cartId, summaryId) { event, carry ->
+        if (event is TotalChanged) carry(UpdateTotal(event.total))
     })
     val answers = listOf(BranchInput.Answer(cartId, "Price 100", CartAction.Priced(100)), BranchInput.Answer(cartId, "Price 60", CartAction.Priced(60)))
 
@@ -180,12 +181,12 @@ object CheckoutDemo {
             recordTo(session, cartId)
         }
         val summaryObserver = object : DecisionObserver<SummaryContext, UpdateTotal, NoCommand, NoEvent> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<UpdateTotal>, decision: Decision<SummaryContext, NoCommand, NoEvent>) {
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<UpdateTotal>, decision: Decision<SummaryContext, NoCommand, NoEvent>) {
                 if (decision.snapshot.context.total == 100) beforeSummaryRecorded?.invoke()
             }
         }
         val summaryStartupObserver = object : DecisionObserver<SummaryContext, UpdateTotal, NoCommand, NoEvent> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<UpdateTotal>, decision: Decision<SummaryContext, NoCommand, NoEvent>) {
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<UpdateTotal>, decision: Decision<SummaryContext, NoCommand, NoEvent>) {
                 if (machineInput is MachineInput.Start) beforeSummaryStartupRecorded?.invoke()
             }
         }
@@ -195,7 +196,7 @@ object CheckoutDemo {
             recordTo(session, summaryId)
         }
         try {
-            group.route<TotalChanged, UpdateTotal>(cartId, summaryId) { UpdateTotal(it.total) }
+            group.route<TotalChanged, UpdateTotal>(cartId, summaryId) { event, carry -> carry(UpdateTotal(event.total)) }
             cartMember.attach(cartStore)
             summaryMember.attach(summaryStore)
             withTimeout(10.seconds) {
@@ -206,12 +207,12 @@ object CheckoutDemo {
                 // Active snapshots publish before startup observers. Drain startup before
                 // issuing inputs, so a branch at the first price mismatch has both members
                 // started in its true recorded prefix, not just in the live StateFlows.
-                checkNotNull(group.checkpoint(5.seconds)) { "Checkout startup did not reach a consistent recording boundary" }
+                check(group.checkpoint(5.seconds) is actron.statechart.machine.GroupCut.Ready) { "Checkout startup did not reach a consistent recording boundary" }
                 cartStore.dispatch(CartAction.Start)
                 summaryStore.state.first { it.context.total == 100 }
                 // StateFlow publishes before the committed plugins/observers finish. A group
                 // cut drains both members and their executors before cancellation can stop them.
-                checkNotNull(group.checkpoint(5.seconds)) { "Checkout did not reach a consistent recording boundary" }
+                check(group.checkpoint(5.seconds) is actron.statechart.machine.GroupCut.Ready) { "Checkout did not reach a consistent recording boundary" }
             }
         } finally {
             // Join Store shutdown before draining file writers: no late observer can append
@@ -239,7 +240,8 @@ object CheckoutDemo {
         val storage = FileSegmentStorage(directory.toString())
         val read = GroupRecordingFiles(storage).read(groupId, codecs)
         require(read.marks.isEmpty()) { "The example requires a complete recording: ${read.marks}" }
-        val recording = requireNotNull(read.recording) { "No checkout recording found in $directory" }
+        require(read is actron.timetravel.file.GroupRecordingFileContents.Readable) { "No checkout recording found in $directory" }
+        val recording = read.recording
         val journal = JournalFiles(storage).read(sessionId)
         require(journal.isComplete && journal.records.isNotEmpty()) { "Missing or incomplete diagnostic journal: ${journal.marks}" }
         return Loaded(directory, recording, journal)

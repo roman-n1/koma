@@ -6,7 +6,7 @@ import actron.core.ExperimentalActronApi
 import actron.statechart.machine.*
 
 /** Minimum scenario count in the bounded discovered pool for explicit states/branches/paths. */
-data class TargetedTestPlan<C, A : Action>(
+data class TargetedTestPlan<C : Any, A : Action>(
     val plan: MachineTestPlan<C, A>, val requirements: CoverageRequirements, val missing: CoverageRequirements,
 ) {
     fun assertReady(requireOptimal: Boolean = false) {
@@ -15,7 +15,7 @@ data class TargetedTestPlan<C, A : Action>(
     }
 }
 
-data class TargetedTestPlanResult<C, A : Action>(val plan: TargetedTestPlan<C, A>, val result: TestPlanResult<C, A>) {
+data class TargetedTestPlanResult<C : Any, A : Action>(val plan: TargetedTestPlan<C, A>, val result: TestPlanResult<C, A>) {
     fun assertSuccess() {
         plan.assertReady()
         result.assertSuccess()
@@ -27,7 +27,7 @@ data class TargetedTestPlanResult<C, A : Action>(val plan: TargetedTestPlan<C, A
 private fun CoverageRequirements.items(): Set<String> = states.map { "state:${it.value}" }.toSet() +
     transitions.map { "transition:${it.index}" } + guards.map { "guard:${it.transition.index}:${it.result}" }
 
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.generateTestPlan(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.generateTestPlan(
     initial: MachineSnapshot<C>, generator: MachineInputGenerator<C, A>, target: CoverageTarget,
     maxDepth: Int = 10, maxDecisions: Int = 10_000, maxFailures: Int = 1, maxSelectionAttempts: Int = 10_000,
     now: MachineTime = MachineTime.Zero,
@@ -51,21 +51,21 @@ fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.generateTestPlan(
         report.failures, report.truncated, selection.optimal, selection.attempts), requirements, missing)
 }
 
-fun <C, A : Action, CMD, E : Event> Machine<C, A, CMD, E>.runPlan(
+fun <C : Any, A : Action, CMD : Any, E : Event> Machine<C, A, CMD, E>.runPlan(
     initial: MachineSnapshot<C>, plan: TargetedTestPlan<C, A>,
 ): TargetedTestPlanResult<C, A> = TargetedTestPlanResult(plan, runPlan(initial, plan.plan))
 
 @ExperimentalActronApi
-fun <C, A : Action, CMD, E : Event> MachineTestDriver<C, A, CMD, E>.explore(
+fun <C : Any, A : Action, CMD : Any, E : Event> MachineTestDriver<C, A, CMD, E>.explore(
     generator: MachineInputGenerator<C, A>, strategy: ExplorationStrategy = ExplorationStrategy.BreadthFirst,
     maxDepth: Int = 10, maxDecisions: Int = 10_000,
 ): ExplorationReport<C, A> = machine.explore(initialSnapshot, generator, strategy, maxDepth, maxDecisions)
 
 @ExperimentalActronApi
-fun <C, A : Action, CMD, E : Event> MachineTestDriver<C, A, CMD, E>.generateTestPlan(
+fun <C : Any, A : Action, CMD : Any, E : Event> MachineTestDriver<C, A, CMD, E>.generateTestPlan(
     generator: MachineInputGenerator<C, A>, target: CoverageTarget, maxDepth: Int = 10, maxDecisions: Int = 10_000,
 ): TargetedTestPlan<C, A> = machine.generateTestPlan(initialSnapshot, generator, target, maxDepth, maxDecisions)
 
 @ExperimentalActronApi
-fun <C, A : Action, CMD, E : Event> MachineTestDriver<C, A, CMD, E>.verifyPlan(plan: TargetedTestPlan<C, A>): TargetedTestPlanResult<C, A> =
+fun <C : Any, A : Action, CMD : Any, E : Event> MachineTestDriver<C, A, CMD, E>.verifyPlan(plan: TargetedTestPlan<C, A>): TargetedTestPlanResult<C, A> =
     machine.runPlan(initialSnapshot, plan)

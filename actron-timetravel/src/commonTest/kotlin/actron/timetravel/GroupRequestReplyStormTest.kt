@@ -90,7 +90,7 @@ class GroupRequestReplyStormTest {
                 launch {
                     repeat(30) {
                         val cut = group.checkpoint(5.seconds)
-                        if (cut == null) failedCuts++ else cuts += cut
+                        if (cut is actron.statechart.machine.GroupCut.Ready) cuts += cut.checkpoint else failedCuts++
                         delay(Random.nextLong(0, 3).milliseconds)
                     }
                 }
@@ -115,8 +115,8 @@ class GroupRequestReplyStormTest {
         val replies = sent.filter { it.to == pickerId }
         assertEquals(senders * perSender, requests.size)
         assertEquals(senders * perSender, replies.size)
-        assertTrue(requests.all { it.cause == null }, "a request replies to nothing")
-        assertTrue(replies.all { it.cause?.from == pickerId }, "every reply names the pick it was decided from")
-        assertEquals(requests.map { it.message }.toSet(), replies.mapNotNull { it.cause }.toSet(), "every pick was replied to, once")
+        assertTrue(requests.all { it.cause == actron.observability.MessageCause.Unprompted }, "a request replies to nothing")
+        assertTrue(replies.all { (it.cause as? actron.observability.MessageRef)?.from == pickerId }, "every reply names the pick it was decided from")
+        assertEquals(requests.map { it.message }.toSet(), replies.mapNotNull { it.cause as? actron.observability.MessageRef }.toSet(), "every pick was replied to, once")
     }
 }

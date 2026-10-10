@@ -19,9 +19,9 @@ sealed interface JournalFileEvent {
  * marks between them where segments or frames were missing or damaged.
  */
 data class JournalFileContents(val events: List<JournalFileEvent>) {
-    val records: List<JournalRecord<Nothing, Nothing, Nothing>> get() = events.mapNotNull { (it as? JournalFileEvent.Record)?.record }
+    val records: List<JournalRecord<Nothing, Nothing, Nothing>> get() = events.filterIsInstance<JournalFileEvent.Record>().map { it.record }
 
-    val marks: List<SegmentMark> get() = events.mapNotNull { (it as? JournalFileEvent.Mark)?.mark }
+    val marks: List<SegmentMark> get() = events.filterIsInstance<JournalFileEvent.Mark>().map { it.mark }
 
     /** Whether every record of the session's segments was read with nothing missing or damaged. */
     val isComplete: Boolean get() = marks.none { it !is SegmentMark.Unfinished }
@@ -48,22 +48,24 @@ class JournalFiles(private val storage: SegmentStorage) {
         val segments = segments().filter { it.session == session }.sortedBy { it.index }
         // A session's segments begin at index 0: what is absent before the first present one was rotated away.
         var expectedIndex = 0
-        var previousSeq: Long? = null
+        var checkSequence: (JournalRecord<Nothing, Nothing, Nothing>) -> Unit = {}
         for (segment in segments) {
             if (segment.index > expectedIndex) events += JournalFileEvent.Mark(SegmentMark.MissingSegments(session, expectedIndex, segment.index - 1))
             expectedIndex = segment.index + 1
             val decoded = JournalFileFormat.decodeSegment(segment.name, storage.read(segment.name))
             for (record in decoded.records) {
-                val seq = record.groupSeq.value
-                val previous = previousSeq
-                if (previous != null && seq != previous + 1) {
-                    val explained = record.entry is JournalEntry.JournalGap && (record.entry as JournalEntry.JournalGap).dropped == seq - previous - 1
-                    if (!explained) events += JournalFileEvent.Mark(SegmentMark.SequenceHole(session, previous, seq))
+                checkSequence(record)
+                val previous = record.groupSeq.value
+                checkSequence = { next ->
+                    val seq = next.groupSeq.value
+                    if (seq != previous + 1) {
+                        val explained = next.entry is JournalEntry.JournalGap && (next.entry as JournalEntry.JournalGap).dropped == seq - previous - 1
+                        if (!explained) events += JournalFileEvent.Mark(SegmentMark.SequenceHole(session, previous, seq))
+                    }
                 }
-                previousSeq = seq
                 events += JournalFileEvent.Record(record)
             }
-            decoded.mark?.let { events += JournalFileEvent.Mark(it) }
+            decoded.ending.withIssue { events += JournalFileEvent.Mark(it) }
         }
         return JournalFileContents(events)
     }
@@ -100,7 +102,9 @@ class JournalFiles(private val storage: SegmentStorage) {
 
     private class Segment(val name: String, val session: RuntimeSessionId, val index: Int, val size: Long, val modified: Long)
 
-    private fun segments(): List<Segment> = storage.list().mapNotNull { info ->
-        JournalFileFormat.parseSegmentName(info.name)?.let { (session, index) -> Segment(info.name, session, index, info.size, info.modified) }
+    private fun segments(): List<Segment> = buildList {
+        for (info in storage.list()) JournalFileFormat.parseSegmentName(info.name) { session, index ->
+            add(Segment(info.name, session, index, info.size, info.modified))
+        }
     }
 }

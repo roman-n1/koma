@@ -86,15 +86,244 @@ sealed interface actron.timetravel.compose/BranchInput { // actron.timetravel.co
     }
 }
 
-final class <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actron.core/Event> actron.timetravel.compose/ReplayControls { // actron.timetravel.compose/ReplayControls|null[0]
+sealed interface actron.timetravel.compose/BranchRequest { // actron.timetravel.compose/BranchRequest|null[0]
+    final class Refused : actron.timetravel.compose/BranchRequest { // actron.timetravel.compose/BranchRequest.Refused|null[0]
+        constructor <init>(kotlin/String) // actron.timetravel.compose/BranchRequest.Refused.<init>|<init>(kotlin.String){}[0]
+
+        final val reason // actron.timetravel.compose/BranchRequest.Refused.reason|{}reason[0]
+            final fun <get-reason>(): kotlin/String // actron.timetravel.compose/BranchRequest.Refused.reason.<get-reason>|<get-reason>(){}[0]
+
+        final fun component1(): kotlin/String // actron.timetravel.compose/BranchRequest.Refused.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): actron.timetravel.compose/BranchRequest.Refused // actron.timetravel.compose/BranchRequest.Refused.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/BranchRequest.Refused.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/BranchRequest.Refused.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/BranchRequest.Refused.toString|toString(){}[0]
+    }
+
+    final object Ready : actron.timetravel.compose/BranchRequest { // actron.timetravel.compose/BranchRequest.Ready|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/BranchRequest.Ready.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/BranchRequest.Ready.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/BranchRequest.Ready.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.timetravel.compose/ChartInspection { // actron.timetravel.compose/ChartInspection|null[0]
+    abstract val violations // actron.timetravel.compose/ChartInspection.violations|{}violations[0]
+        abstract fun <get-violations>(): kotlin.collections/List<actron.statechart.machine/InvariantViolation> // actron.timetravel.compose/ChartInspection.violations.<get-violations>|<get-violations>(){}[0]
+
+    abstract fun withExplanation(kotlin/Function1<actron.statechart.machine/DecisionExplanation, kotlin/Unit>) // actron.timetravel.compose/ChartInspection.withExplanation|withExplanation(kotlin.Function1<actron.statechart.machine.DecisionExplanation,kotlin.Unit>){}[0]
+
+    final class Checkpoint : actron.timetravel.compose/ChartInspection { // actron.timetravel.compose/ChartInspection.Checkpoint|null[0]
+        constructor <init>(kotlin.collections/List<actron.statechart.machine/InvariantViolation>) // actron.timetravel.compose/ChartInspection.Checkpoint.<init>|<init>(kotlin.collections.List<actron.statechart.machine.InvariantViolation>){}[0]
+
+        final val violations // actron.timetravel.compose/ChartInspection.Checkpoint.violations|{}violations[0]
+            final fun <get-violations>(): kotlin.collections/List<actron.statechart.machine/InvariantViolation> // actron.timetravel.compose/ChartInspection.Checkpoint.violations.<get-violations>|<get-violations>(){}[0]
+
+        final fun component1(): kotlin.collections/List<actron.statechart.machine/InvariantViolation> // actron.timetravel.compose/ChartInspection.Checkpoint.component1|component1(){}[0]
+        final fun copy(kotlin.collections/List<actron.statechart.machine/InvariantViolation> = ...): actron.timetravel.compose/ChartInspection.Checkpoint // actron.timetravel.compose/ChartInspection.Checkpoint.copy|copy(kotlin.collections.List<actron.statechart.machine.InvariantViolation>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/ChartInspection.Checkpoint.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/ChartInspection.Checkpoint.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/ChartInspection.Checkpoint.toString|toString(){}[0]
+        final fun withExplanation(kotlin/Function1<actron.statechart.machine/DecisionExplanation, kotlin/Unit>) // actron.timetravel.compose/ChartInspection.Checkpoint.withExplanation|withExplanation(kotlin.Function1<actron.statechart.machine.DecisionExplanation,kotlin.Unit>){}[0]
+    }
+
+    final class Decided : actron.timetravel.compose/ChartInspection { // actron.timetravel.compose/ChartInspection.Decided|null[0]
+        constructor <init>(actron.statechart.machine/DecisionExplanation, kotlin/String, kotlin.collections/List<actron.statechart.machine/InvariantViolation>) // actron.timetravel.compose/ChartInspection.Decided.<init>|<init>(actron.statechart.machine.DecisionExplanation;kotlin.String;kotlin.collections.List<actron.statechart.machine.InvariantViolation>){}[0]
+
+        final val explanation // actron.timetravel.compose/ChartInspection.Decided.explanation|{}explanation[0]
+            final fun <get-explanation>(): actron.statechart.machine/DecisionExplanation // actron.timetravel.compose/ChartInspection.Decided.explanation.<get-explanation>|<get-explanation>(){}[0]
+        final val outcome // actron.timetravel.compose/ChartInspection.Decided.outcome|{}outcome[0]
+            final fun <get-outcome>(): kotlin/String // actron.timetravel.compose/ChartInspection.Decided.outcome.<get-outcome>|<get-outcome>(){}[0]
+        final val violations // actron.timetravel.compose/ChartInspection.Decided.violations|{}violations[0]
+            final fun <get-violations>(): kotlin.collections/List<actron.statechart.machine/InvariantViolation> // actron.timetravel.compose/ChartInspection.Decided.violations.<get-violations>|<get-violations>(){}[0]
+
+        final fun component1(): actron.statechart.machine/DecisionExplanation // actron.timetravel.compose/ChartInspection.Decided.component1|component1(){}[0]
+        final fun component2(): kotlin/String // actron.timetravel.compose/ChartInspection.Decided.component2|component2(){}[0]
+        final fun component3(): kotlin.collections/List<actron.statechart.machine/InvariantViolation> // actron.timetravel.compose/ChartInspection.Decided.component3|component3(){}[0]
+        final fun copy(actron.statechart.machine/DecisionExplanation = ..., kotlin/String = ..., kotlin.collections/List<actron.statechart.machine/InvariantViolation> = ...): actron.timetravel.compose/ChartInspection.Decided // actron.timetravel.compose/ChartInspection.Decided.copy|copy(actron.statechart.machine.DecisionExplanation;kotlin.String;kotlin.collections.List<actron.statechart.machine.InvariantViolation>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/ChartInspection.Decided.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/ChartInspection.Decided.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/ChartInspection.Decided.toString|toString(){}[0]
+        final fun withExplanation(kotlin/Function1<actron.statechart.machine/DecisionExplanation, kotlin/Unit>) // actron.timetravel.compose/ChartInspection.Decided.withExplanation|withExplanation(kotlin.Function1<actron.statechart.machine.DecisionExplanation,kotlin.Unit>){}[0]
+    }
+
+    final object Unrequested : actron.timetravel.compose/ChartInspection { // actron.timetravel.compose/ChartInspection.Unrequested|null[0]
+        final val violations // actron.timetravel.compose/ChartInspection.Unrequested.violations|{}violations[0]
+            final fun <get-violations>(): kotlin.collections/List<actron.statechart.machine/InvariantViolation> // actron.timetravel.compose/ChartInspection.Unrequested.violations.<get-violations>|<get-violations>(){}[0]
+
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/ChartInspection.Unrequested.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/ChartInspection.Unrequested.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/ChartInspection.Unrequested.toString|toString(){}[0]
+        final fun withExplanation(kotlin/Function1<actron.statechart.machine/DecisionExplanation, kotlin/Unit>) // actron.timetravel.compose/ChartInspection.Unrequested.withExplanation|withExplanation(kotlin.Function1<actron.statechart.machine.DecisionExplanation,kotlin.Unit>){}[0]
+    }
+}
+
+sealed interface actron.timetravel.compose/GroupReplayMovement { // actron.timetravel.compose/GroupReplayMovement|null[0]
+    final class Diverged : actron.timetravel.compose/GroupReplayMovement { // actron.timetravel.compose/GroupReplayMovement.Diverged|null[0]
+        constructor <init>(actron.timetravel/GroupMismatch) // actron.timetravel.compose/GroupReplayMovement.Diverged.<init>|<init>(actron.timetravel.GroupMismatch){}[0]
+
+        final val mismatch // actron.timetravel.compose/GroupReplayMovement.Diverged.mismatch|{}mismatch[0]
+            final fun <get-mismatch>(): actron.timetravel/GroupMismatch // actron.timetravel.compose/GroupReplayMovement.Diverged.mismatch.<get-mismatch>|<get-mismatch>(){}[0]
+
+        final fun component1(): actron.timetravel/GroupMismatch // actron.timetravel.compose/GroupReplayMovement.Diverged.component1|component1(){}[0]
+        final fun copy(actron.timetravel/GroupMismatch = ...): actron.timetravel.compose/GroupReplayMovement.Diverged // actron.timetravel.compose/GroupReplayMovement.Diverged.copy|copy(actron.timetravel.GroupMismatch){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/GroupReplayMovement.Diverged.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/GroupReplayMovement.Diverged.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/GroupReplayMovement.Diverged.toString|toString(){}[0]
+    }
+
+    final object Open : actron.timetravel.compose/GroupReplayMovement { // actron.timetravel.compose/GroupReplayMovement.Open|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/GroupReplayMovement.Open.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/GroupReplayMovement.Open.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/GroupReplayMovement.Open.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.timetravel.compose/GroupTravel { // actron.timetravel.compose/GroupTravel|null[0]
+    final class Experiment : actron.timetravel.compose/GroupTravel { // actron.timetravel.compose/GroupTravel.Experiment|null[0]
+        constructor <init>(kotlin/Int, actron.timetravel.compose/BranchControls) // actron.timetravel.compose/GroupTravel.Experiment.<init>|<init>(kotlin.Int;actron.timetravel.compose.BranchControls){}[0]
+
+        final val branch // actron.timetravel.compose/GroupTravel.Experiment.branch|{}branch[0]
+            final fun <get-branch>(): actron.timetravel.compose/BranchControls // actron.timetravel.compose/GroupTravel.Experiment.branch.<get-branch>|<get-branch>(){}[0]
+        final val position // actron.timetravel.compose/GroupTravel.Experiment.position|{}position[0]
+            final fun <get-position>(): kotlin/Int // actron.timetravel.compose/GroupTravel.Experiment.position.<get-position>|<get-position>(){}[0]
+
+        final fun component1(): kotlin/Int // actron.timetravel.compose/GroupTravel.Experiment.component1|component1(){}[0]
+        final fun component2(): actron.timetravel.compose/BranchControls // actron.timetravel.compose/GroupTravel.Experiment.component2|component2(){}[0]
+        final fun copy(kotlin/Int = ..., actron.timetravel.compose/BranchControls = ...): actron.timetravel.compose/GroupTravel.Experiment // actron.timetravel.compose/GroupTravel.Experiment.copy|copy(kotlin.Int;actron.timetravel.compose.BranchControls){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/GroupTravel.Experiment.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/GroupTravel.Experiment.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/GroupTravel.Experiment.toString|toString(){}[0]
+    }
+
+    final object Replaying : actron.timetravel.compose/GroupTravel { // actron.timetravel.compose/GroupTravel.Replaying|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/GroupTravel.Replaying.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/GroupTravel.Replaying.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/GroupTravel.Replaying.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.timetravel.compose/GroupVerification { // actron.timetravel.compose/GroupVerification|null[0]
+    final class Checked : actron.timetravel.compose/GroupVerification { // actron.timetravel.compose/GroupVerification.Checked|null[0]
+        constructor <init>(kotlin.collections/List<actron.timetravel/GroupMismatch>) // actron.timetravel.compose/GroupVerification.Checked.<init>|<init>(kotlin.collections.List<actron.timetravel.GroupMismatch>){}[0]
+
+        final val problems // actron.timetravel.compose/GroupVerification.Checked.problems|{}problems[0]
+            final fun <get-problems>(): kotlin.collections/List<actron.timetravel/GroupMismatch> // actron.timetravel.compose/GroupVerification.Checked.problems.<get-problems>|<get-problems>(){}[0]
+
+        final fun component1(): kotlin.collections/List<actron.timetravel/GroupMismatch> // actron.timetravel.compose/GroupVerification.Checked.component1|component1(){}[0]
+        final fun copy(kotlin.collections/List<actron.timetravel/GroupMismatch> = ...): actron.timetravel.compose/GroupVerification.Checked // actron.timetravel.compose/GroupVerification.Checked.copy|copy(kotlin.collections.List<actron.timetravel.GroupMismatch>){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/GroupVerification.Checked.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/GroupVerification.Checked.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/GroupVerification.Checked.toString|toString(){}[0]
+    }
+
+    final object Unchecked : actron.timetravel.compose/GroupVerification { // actron.timetravel.compose/GroupVerification.Unchecked|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/GroupVerification.Unchecked.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/GroupVerification.Unchecked.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/GroupVerification.Unchecked.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.timetravel.compose/InspectorSelection { // actron.timetravel.compose/InspectorSelection|null[0]
+    final class Position : actron.timetravel.compose/InspectorSelection { // actron.timetravel.compose/InspectorSelection.Position|null[0]
+        constructor <init>(kotlin/Int) // actron.timetravel.compose/InspectorSelection.Position.<init>|<init>(kotlin.Int){}[0]
+
+        final val index // actron.timetravel.compose/InspectorSelection.Position.index|{}index[0]
+            final fun <get-index>(): kotlin/Int // actron.timetravel.compose/InspectorSelection.Position.index.<get-index>|<get-index>(){}[0]
+
+        final fun component1(): kotlin/Int // actron.timetravel.compose/InspectorSelection.Position.component1|component1(){}[0]
+        final fun copy(kotlin/Int = ...): actron.timetravel.compose/InspectorSelection.Position // actron.timetravel.compose/InspectorSelection.Position.copy|copy(kotlin.Int){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/InspectorSelection.Position.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/InspectorSelection.Position.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/InspectorSelection.Position.toString|toString(){}[0]
+    }
+
+    final object Overview : actron.timetravel.compose/InspectorSelection { // actron.timetravel.compose/InspectorSelection.Overview|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/InspectorSelection.Overview.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/InspectorSelection.Overview.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/InspectorSelection.Overview.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.timetravel.compose/ReplayMovement { // actron.timetravel.compose/ReplayMovement|null[0]
+    final class Diverged : actron.timetravel.compose/ReplayMovement { // actron.timetravel.compose/ReplayMovement.Diverged|null[0]
+        constructor <init>(kotlin/Int, kotlin/String) // actron.timetravel.compose/ReplayMovement.Diverged.<init>|<init>(kotlin.Int;kotlin.String){}[0]
+
+        final val description // actron.timetravel.compose/ReplayMovement.Diverged.description|{}description[0]
+            final fun <get-description>(): kotlin/String // actron.timetravel.compose/ReplayMovement.Diverged.description.<get-description>|<get-description>(){}[0]
+        final val position // actron.timetravel.compose/ReplayMovement.Diverged.position|{}position[0]
+            final fun <get-position>(): kotlin/Int // actron.timetravel.compose/ReplayMovement.Diverged.position.<get-position>|<get-position>(){}[0]
+
+        final fun component1(): kotlin/Int // actron.timetravel.compose/ReplayMovement.Diverged.component1|component1(){}[0]
+        final fun component2(): kotlin/String // actron.timetravel.compose/ReplayMovement.Diverged.component2|component2(){}[0]
+        final fun copy(kotlin/Int = ..., kotlin/String = ...): actron.timetravel.compose/ReplayMovement.Diverged // actron.timetravel.compose/ReplayMovement.Diverged.copy|copy(kotlin.Int;kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/ReplayMovement.Diverged.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/ReplayMovement.Diverged.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/ReplayMovement.Diverged.toString|toString(){}[0]
+    }
+
+    final object Open : actron.timetravel.compose/ReplayMovement { // actron.timetravel.compose/ReplayMovement.Open|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/ReplayMovement.Open.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/ReplayMovement.Open.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/ReplayMovement.Open.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.timetravel.compose/ReplayVerification { // actron.timetravel.compose/ReplayVerification|null[0]
+    final class Checked : actron.timetravel.compose/ReplayVerification { // actron.timetravel.compose/ReplayVerification.Checked|null[0]
+        constructor <init>(kotlin/String) // actron.timetravel.compose/ReplayVerification.Checked.<init>|<init>(kotlin.String){}[0]
+
+        final val verdict // actron.timetravel.compose/ReplayVerification.Checked.verdict|{}verdict[0]
+            final fun <get-verdict>(): kotlin/String // actron.timetravel.compose/ReplayVerification.Checked.verdict.<get-verdict>|<get-verdict>(){}[0]
+
+        final fun component1(): kotlin/String // actron.timetravel.compose/ReplayVerification.Checked.component1|component1(){}[0]
+        final fun copy(kotlin/String = ...): actron.timetravel.compose/ReplayVerification.Checked // actron.timetravel.compose/ReplayVerification.Checked.copy|copy(kotlin.String){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/ReplayVerification.Checked.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/ReplayVerification.Checked.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/ReplayVerification.Checked.toString|toString(){}[0]
+    }
+
+    final object Unchecked : actron.timetravel.compose/ReplayVerification { // actron.timetravel.compose/ReplayVerification.Unchecked|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/ReplayVerification.Unchecked.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/ReplayVerification.Unchecked.hashCode|hashCode(){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/ReplayVerification.Unchecked.toString|toString(){}[0]
+    }
+}
+
+sealed interface actron.timetravel.compose/StoreFilter { // actron.timetravel.compose/StoreFilter|null[0]
+    abstract fun includes(actron.observability/RecordSubject): kotlin/Boolean // actron.timetravel.compose/StoreFilter.includes|includes(actron.observability.RecordSubject){}[0]
+
+    final class Single : actron.timetravel.compose/StoreFilter { // actron.timetravel.compose/StoreFilter.Single|null[0]
+        constructor <init>(actron.observability/StoreInstanceId) // actron.timetravel.compose/StoreFilter.Single.<init>|<init>(actron.observability.StoreInstanceId){}[0]
+
+        final val store // actron.timetravel.compose/StoreFilter.Single.store|{}store[0]
+            final fun <get-store>(): actron.observability/StoreInstanceId // actron.timetravel.compose/StoreFilter.Single.store.<get-store>|<get-store>(){}[0]
+
+        final fun component1(): actron.observability/StoreInstanceId // actron.timetravel.compose/StoreFilter.Single.component1|component1(){}[0]
+        final fun copy(actron.observability/StoreInstanceId = ...): actron.timetravel.compose/StoreFilter.Single // actron.timetravel.compose/StoreFilter.Single.copy|copy(actron.observability.StoreInstanceId){}[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/StoreFilter.Single.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/StoreFilter.Single.hashCode|hashCode(){}[0]
+        final fun includes(actron.observability/RecordSubject): kotlin/Boolean // actron.timetravel.compose/StoreFilter.Single.includes|includes(actron.observability.RecordSubject){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/StoreFilter.Single.toString|toString(){}[0]
+    }
+
+    final object All : actron.timetravel.compose/StoreFilter { // actron.timetravel.compose/StoreFilter.All|null[0]
+        final fun equals(kotlin/Any?): kotlin/Boolean // actron.timetravel.compose/StoreFilter.All.equals|equals(kotlin.Any?){}[0]
+        final fun hashCode(): kotlin/Int // actron.timetravel.compose/StoreFilter.All.hashCode|hashCode(){}[0]
+        final fun includes(actron.observability/RecordSubject): kotlin/Boolean // actron.timetravel.compose/StoreFilter.All.includes|includes(actron.observability.RecordSubject){}[0]
+        final fun toString(): kotlin/String // actron.timetravel.compose/StoreFilter.All.toString|toString(){}[0]
+    }
+}
+
+final class <#A: kotlin/Any, #B: actron.core/Action, #C: kotlin/Any, #D: actron.core/Event> actron.timetravel.compose/ReplayControls { // actron.timetravel.compose/ReplayControls|null[0]
     constructor <init>(actron.observability/StoreInstanceId, actron.timetravel/ReplaySession<#A, #B, #C, #D>) // actron.timetravel.compose/ReplayControls.<init>|<init>(actron.observability.StoreInstanceId;actron.timetravel.ReplaySession<1:0,1:1,1:2,1:3>){}[0]
 
     final val canStepBackward // actron.timetravel.compose/ReplayControls.canStepBackward|{}canStepBackward[0]
         final fun <get-canStepBackward>(): kotlin/Boolean // actron.timetravel.compose/ReplayControls.canStepBackward.<get-canStepBackward>|<get-canStepBackward>(){}[0]
     final val canStepForward // actron.timetravel.compose/ReplayControls.canStepForward|{}canStepForward[0]
         final fun <get-canStepForward>(): kotlin/Boolean // actron.timetravel.compose/ReplayControls.canStepForward.<get-canStepForward>|<get-canStepForward>(){}[0]
-    final val forwardUnavailable // actron.timetravel.compose/ReplayControls.forwardUnavailable|{}forwardUnavailable[0]
-        final fun <get-forwardUnavailable>(): kotlin/String? // actron.timetravel.compose/ReplayControls.forwardUnavailable.<get-forwardUnavailable>|<get-forwardUnavailable>(){}[0]
+    final val forwardAvailability // actron.timetravel.compose/ReplayControls.forwardAvailability|{}forwardAvailability[0]
+        final fun <get-forwardAvailability>(): actron.timetravel.inspect/Availability // actron.timetravel.compose/ReplayControls.forwardAvailability.<get-forwardAvailability>|<get-forwardAvailability>(){}[0]
     final val length // actron.timetravel.compose/ReplayControls.length|{}length[0]
         final fun <get-length>(): kotlin/Int // actron.timetravel.compose/ReplayControls.length.<get-length>|<get-length>(){}[0]
     final val session // actron.timetravel.compose/ReplayControls.session|{}session[0]
@@ -104,18 +333,14 @@ final class <#A: kotlin/Any?, #B: actron.core/Action, #C: kotlin/Any?, #D: actro
     final val store // actron.timetravel.compose/ReplayControls.store|{}store[0]
         final fun <get-store>(): actron.observability/StoreInstanceId // actron.timetravel.compose/ReplayControls.store.<get-store>|<get-store>(){}[0]
 
-    final var divergence // actron.timetravel.compose/ReplayControls.divergence|{}divergence[0]
-        final fun <get-divergence>(): kotlin/String? // actron.timetravel.compose/ReplayControls.divergence.<get-divergence>|<get-divergence>(){}[0]
-    final var explanation // actron.timetravel.compose/ReplayControls.explanation|{}explanation[0]
-        final fun <get-explanation>(): actron.statechart.machine/DecisionExplanation? // actron.timetravel.compose/ReplayControls.explanation.<get-explanation>|<get-explanation>(){}[0]
-    final var explanationOutcome // actron.timetravel.compose/ReplayControls.explanationOutcome|{}explanationOutcome[0]
-        final fun <get-explanationOutcome>(): kotlin/String? // actron.timetravel.compose/ReplayControls.explanationOutcome.<get-explanationOutcome>|<get-explanationOutcome>(){}[0]
-    final var invariantViolations // actron.timetravel.compose/ReplayControls.invariantViolations|{}invariantViolations[0]
-        final fun <get-invariantViolations>(): kotlin.collections/List<actron.statechart.machine/InvariantViolation> // actron.timetravel.compose/ReplayControls.invariantViolations.<get-invariantViolations>|<get-invariantViolations>(){}[0]
+    final var inspection // actron.timetravel.compose/ReplayControls.inspection|{}inspection[0]
+        final fun <get-inspection>(): actron.timetravel.compose/ChartInspection // actron.timetravel.compose/ReplayControls.inspection.<get-inspection>|<get-inspection>(){}[0]
+    final var movement // actron.timetravel.compose/ReplayControls.movement|{}movement[0]
+        final fun <get-movement>(): actron.timetravel.compose/ReplayMovement // actron.timetravel.compose/ReplayControls.movement.<get-movement>|<get-movement>(){}[0]
     final var position // actron.timetravel.compose/ReplayControls.position|{}position[0]
         final fun <get-position>(): kotlin/Int // actron.timetravel.compose/ReplayControls.position.<get-position>|<get-position>(){}[0]
-    final var verdict // actron.timetravel.compose/ReplayControls.verdict|{}verdict[0]
-        final fun <get-verdict>(): kotlin/String? // actron.timetravel.compose/ReplayControls.verdict.<get-verdict>|<get-verdict>(){}[0]
+    final var verification // actron.timetravel.compose/ReplayControls.verification|{}verification[0]
+        final fun <get-verification>(): actron.timetravel.compose/ReplayVerification // actron.timetravel.compose/ReplayControls.verification.<get-verification>|<get-verification>(){}[0]
 
     final fun explainNext() // actron.timetravel.compose/ReplayControls.explainNext|explainNext(){}[0]
     final fun mermaid(): kotlin/String // actron.timetravel.compose/ReplayControls.mermaid|mermaid(){}[0]
@@ -139,8 +364,8 @@ final class actron.timetravel.compose/BranchControls { // actron.timetravel.comp
 
     final var decisions // actron.timetravel.compose/BranchControls.decisions|{}decisions[0]
         final fun <get-decisions>(): kotlin.collections/List<actron.timetravel.compose/BranchDecision> // actron.timetravel.compose/BranchControls.decisions.<get-decisions>|<get-decisions>(){}[0]
-    final var problem // actron.timetravel.compose/BranchControls.problem|{}problem[0]
-        final fun <get-problem>(): kotlin/String? // actron.timetravel.compose/BranchControls.problem.<get-problem>|<get-problem>(){}[0]
+    final var request // actron.timetravel.compose/BranchControls.request|{}request[0]
+        final fun <get-request>(): actron.timetravel.compose/BranchRequest // actron.timetravel.compose/BranchControls.request.<get-request>|<get-request>(){}[0]
 
     final fun advance(kotlin.time/Duration) // actron.timetravel.compose/BranchControls.advance|advance(kotlin.time.Duration){}[0]
     final fun answer(actron.timetravel.compose/BranchInput.Answer, actron.statechart.machine/CommandId) // actron.timetravel.compose/BranchControls.answer|answer(actron.timetravel.compose.BranchInput.Answer;actron.statechart.machine.CommandId){}[0]
@@ -188,28 +413,29 @@ final class actron.timetravel.compose/GroupReplayControls { // actron.timetravel
         final fun <get-canStepBackward>(): kotlin/Boolean // actron.timetravel.compose/GroupReplayControls.canStepBackward.<get-canStepBackward>|<get-canStepBackward>(){}[0]
     final val canStepForward // actron.timetravel.compose/GroupReplayControls.canStepForward|{}canStepForward[0]
         final fun <get-canStepForward>(): kotlin/Boolean // actron.timetravel.compose/GroupReplayControls.canStepForward.<get-canStepForward>|<get-canStepForward>(){}[0]
-    final val forwardUnavailable // actron.timetravel.compose/GroupReplayControls.forwardUnavailable|{}forwardUnavailable[0]
-        final fun <get-forwardUnavailable>(): kotlin/String? // actron.timetravel.compose/GroupReplayControls.forwardUnavailable.<get-forwardUnavailable>|<get-forwardUnavailable>(){}[0]
+    final val forwardAvailability // actron.timetravel.compose/GroupReplayControls.forwardAvailability|{}forwardAvailability[0]
+        final fun <get-forwardAvailability>(): actron.timetravel.inspect/Availability // actron.timetravel.compose/GroupReplayControls.forwardAvailability.<get-forwardAvailability>|<get-forwardAvailability>(){}[0]
+    final val hasSelection // actron.timetravel.compose/GroupReplayControls.hasSelection|{}hasSelection[0]
+        final fun <get-hasSelection>(): kotlin/Boolean // actron.timetravel.compose/GroupReplayControls.hasSelection.<get-hasSelection>|<get-hasSelection>(){}[0]
     final val length // actron.timetravel.compose/GroupReplayControls.length|{}length[0]
         final fun <get-length>(): kotlin/Int // actron.timetravel.compose/GroupReplayControls.length.<get-length>|<get-length>(){}[0]
     final val members // actron.timetravel.compose/GroupReplayControls.members|{}members[0]
         final fun <get-members>(): kotlin.collections/List<actron.observability/StoreInstanceId> // actron.timetravel.compose/GroupReplayControls.members.<get-members>|<get-members>(){}[0]
-    final val selected // actron.timetravel.compose/GroupReplayControls.selected|{}selected[0]
-        final fun <get-selected>(): actron.timetravel.compose/GroupReplayPosition? // actron.timetravel.compose/GroupReplayControls.selected.<get-selected>|<get-selected>(){}[0]
     final val session // actron.timetravel.compose/GroupReplayControls.session|{}session[0]
         final fun <get-session>(): actron.timetravel/GroupReplaySession // actron.timetravel.compose/GroupReplayControls.session.<get-session>|<get-session>(){}[0]
 
-    final var divergence // actron.timetravel.compose/GroupReplayControls.divergence|{}divergence[0]
-        final fun <get-divergence>(): actron.timetravel/GroupMismatch? // actron.timetravel.compose/GroupReplayControls.divergence.<get-divergence>|<get-divergence>(){}[0]
+    final var movement // actron.timetravel.compose/GroupReplayControls.movement|{}movement[0]
+        final fun <get-movement>(): actron.timetravel.compose/GroupReplayMovement // actron.timetravel.compose/GroupReplayControls.movement.<get-movement>|<get-movement>(){}[0]
     final var position // actron.timetravel.compose/GroupReplayControls.position|{}position[0]
         final fun <get-position>(): kotlin/Int // actron.timetravel.compose/GroupReplayControls.position.<get-position>|<get-position>(){}[0]
     final var verification // actron.timetravel.compose/GroupReplayControls.verification|{}verification[0]
-        final fun <get-verification>(): kotlin.collections/List<actron.timetravel/GroupMismatch>? // actron.timetravel.compose/GroupReplayControls.verification.<get-verification>|<get-verification>(){}[0]
+        final fun <get-verification>(): actron.timetravel.compose/GroupVerification // actron.timetravel.compose/GroupReplayControls.verification.<get-verification>|<get-verification>(){}[0]
 
     final fun at(kotlin/Int): actron.timetravel.compose/GroupReplayPosition // actron.timetravel.compose/GroupReplayControls.at|at(kotlin.Int){}[0]
     final fun checkpoint(actron.observability/StoreInstanceId): actron.statechart.machine/ExecutorCheckpoint<*, *> // actron.timetravel.compose/GroupReplayControls.checkpoint|checkpoint(actron.observability.StoreInstanceId){}[0]
     final fun mermaid(actron.observability/StoreInstanceId): kotlin/String // actron.timetravel.compose/GroupReplayControls.mermaid|mermaid(actron.observability.StoreInstanceId){}[0]
     final fun seek(kotlin/Int) // actron.timetravel.compose/GroupReplayControls.seek|seek(kotlin.Int){}[0]
+    final fun selectedPosition(): actron.timetravel.compose/GroupReplayPosition // actron.timetravel.compose/GroupReplayControls.selectedPosition|selectedPosition(){}[0]
     final fun snapshot(actron.observability/StoreInstanceId): actron.statechart.machine/MachineSnapshot<*> // actron.timetravel.compose/GroupReplayControls.snapshot|snapshot(actron.observability.StoreInstanceId){}[0]
     final fun stepBackward() // actron.timetravel.compose/GroupReplayControls.stepBackward|stepBackward(){}[0]
     final fun stepForward() // actron.timetravel.compose/GroupReplayControls.stepForward|stepForward(){}[0]
@@ -255,10 +481,8 @@ final class actron.timetravel.compose/GroupTimeTravelControls { // actron.timetr
     final val replay // actron.timetravel.compose/GroupTimeTravelControls.replay|{}replay[0]
         final fun <get-replay>(): actron.timetravel.compose/GroupReplayControls // actron.timetravel.compose/GroupTimeTravelControls.replay.<get-replay>|<get-replay>(){}[0]
 
-    final var branch // actron.timetravel.compose/GroupTimeTravelControls.branch|{}branch[0]
-        final fun <get-branch>(): actron.timetravel.compose/BranchControls? // actron.timetravel.compose/GroupTimeTravelControls.branch.<get-branch>|<get-branch>(){}[0]
-    final var branchPosition // actron.timetravel.compose/GroupTimeTravelControls.branchPosition|{}branchPosition[0]
-        final fun <get-branchPosition>(): kotlin/Int? // actron.timetravel.compose/GroupTimeTravelControls.branchPosition.<get-branchPosition>|<get-branchPosition>(){}[0]
+    final var travel // actron.timetravel.compose/GroupTimeTravelControls.travel|{}travel[0]
+        final fun <get-travel>(): actron.timetravel.compose/GroupTravel // actron.timetravel.compose/GroupTimeTravelControls.travel.<get-travel>|<get-travel>(){}[0]
 
     final fun branchHere() // actron.timetravel.compose/GroupTimeTravelControls.branchHere|branchHere(){}[0]
     final fun returnToReplay() // actron.timetravel.compose/GroupTimeTravelControls.returnToReplay|returnToReplay(){}[0]
@@ -267,26 +491,26 @@ final class actron.timetravel.compose/GroupTimeTravelControls { // actron.timetr
 final class actron.timetravel.compose/InspectorState { // actron.timetravel.compose/InspectorState|null[0]
     constructor <init>(actron.timetravel.inspect/Inspector, actron.timetravel.compose/InspectorMode = ...) // actron.timetravel.compose/InspectorState.<init>|<init>(actron.timetravel.inspect.Inspector;actron.timetravel.compose.InspectorMode){}[0]
 
-    final val selectedItem // actron.timetravel.compose/InspectorState.selectedItem|{}selectedItem[0]
-        final fun <get-selectedItem>(): actron.timetravel.inspect/TimelineItem? // actron.timetravel.compose/InspectorState.selectedItem.<get-selectedItem>|<get-selectedItem>(){}[0]
     final val visibleTimeline // actron.timetravel.compose/InspectorState.visibleTimeline|{}visibleTimeline[0]
         final fun <get-visibleTimeline>(): kotlin.collections/List<kotlin.collections/IndexedValue<actron.timetravel.inspect/TimelineItem>> // actron.timetravel.compose/InspectorState.visibleTimeline.<get-visibleTimeline>|<get-visibleTimeline>(){}[0]
 
+    final var filter // actron.timetravel.compose/InspectorState.filter|{}filter[0]
+        final fun <get-filter>(): actron.timetravel.compose/StoreFilter // actron.timetravel.compose/InspectorState.filter.<get-filter>|<get-filter>(){}[0]
+        final fun <set-filter>(actron.timetravel.compose/StoreFilter) // actron.timetravel.compose/InspectorState.filter.<set-filter>|<set-filter>(actron.timetravel.compose.StoreFilter){}[0]
     final var inspector // actron.timetravel.compose/InspectorState.inspector|{}inspector[0]
         final fun <get-inspector>(): actron.timetravel.inspect/Inspector // actron.timetravel.compose/InspectorState.inspector.<get-inspector>|<get-inspector>(){}[0]
     final var mode // actron.timetravel.compose/InspectorState.mode|{}mode[0]
         final fun <get-mode>(): actron.timetravel.compose/InspectorMode // actron.timetravel.compose/InspectorState.mode.<get-mode>|<get-mode>(){}[0]
         final fun <set-mode>(actron.timetravel.compose/InspectorMode) // actron.timetravel.compose/InspectorState.mode.<set-mode>|<set-mode>(actron.timetravel.compose.InspectorMode){}[0]
-    final var selected // actron.timetravel.compose/InspectorState.selected|{}selected[0]
-        final fun <get-selected>(): kotlin/Int? // actron.timetravel.compose/InspectorState.selected.<get-selected>|<get-selected>(){}[0]
-        final fun <set-selected>(kotlin/Int?) // actron.timetravel.compose/InspectorState.selected.<set-selected>|<set-selected>(kotlin.Int?){}[0]
-    final var storeFilter // actron.timetravel.compose/InspectorState.storeFilter|{}storeFilter[0]
-        final fun <get-storeFilter>(): actron.observability/StoreInstanceId? // actron.timetravel.compose/InspectorState.storeFilter.<get-storeFilter>|<get-storeFilter>(){}[0]
-        final fun <set-storeFilter>(actron.observability/StoreInstanceId?) // actron.timetravel.compose/InspectorState.storeFilter.<set-storeFilter>|<set-storeFilter>(actron.observability.StoreInstanceId?){}[0]
+    final var selection // actron.timetravel.compose/InspectorState.selection|{}selection[0]
+        final fun <get-selection>(): actron.timetravel.compose/InspectorSelection // actron.timetravel.compose/InspectorState.selection.<get-selection>|<get-selection>(){}[0]
+        final fun <set-selection>(actron.timetravel.compose/InspectorSelection) // actron.timetravel.compose/InspectorState.selection.<set-selection>|<set-selection>(actron.timetravel.compose.InspectorSelection){}[0]
 
+    final fun clearSelection() // actron.timetravel.compose/InspectorState.clearSelection|clearSelection(){}[0]
     final fun refresh(actron.timetravel.inspect/Inspector) // actron.timetravel.compose/InspectorState.refresh|refresh(actron.timetravel.inspect.Inspector){}[0]
-    final fun select(kotlin/Int?) // actron.timetravel.compose/InspectorState.select|select(kotlin.Int?){}[0]
+    final fun select(kotlin/Int) // actron.timetravel.compose/InspectorState.select|select(kotlin.Int){}[0]
     final fun toggleFilter(actron.observability/StoreInstanceId) // actron.timetravel.compose/InspectorState.toggleFilter|toggleFilter(actron.observability.StoreInstanceId){}[0]
+    final fun withSelected(kotlin/Function1<actron.timetravel.inspect/TimelineItem, kotlin/Unit>): kotlin/Boolean // actron.timetravel.compose/InspectorState.withSelected|withSelected(kotlin.Function1<actron.timetravel.inspect.TimelineItem,kotlin.Unit>){}[0]
 }
 
 final object actron.timetravel.compose/BranchText { // actron.timetravel.compose/BranchText|null[0]
@@ -298,26 +522,54 @@ final val actron.timetravel.compose/actron_timetravel_compose_BranchDecision$sta
 final val actron.timetravel.compose/actron_timetravel_compose_BranchInput_Answer$stableprop // actron.timetravel.compose/actron_timetravel_compose_BranchInput_Answer$stableprop|#static{}actron_timetravel_compose_BranchInput_Answer$stableprop[0]
 final val actron.timetravel.compose/actron_timetravel_compose_BranchInput_Dispatch$stableprop // actron.timetravel.compose/actron_timetravel_compose_BranchInput_Dispatch$stableprop|#static{}actron_timetravel_compose_BranchInput_Dispatch$stableprop[0]
 final val actron.timetravel.compose/actron_timetravel_compose_BranchInput_Feed$stableprop // actron.timetravel.compose/actron_timetravel_compose_BranchInput_Feed$stableprop|#static{}actron_timetravel_compose_BranchInput_Feed$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_BranchRequest_Ready$stableprop // actron.timetravel.compose/actron_timetravel_compose_BranchRequest_Ready$stableprop|#static{}actron_timetravel_compose_BranchRequest_Ready$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_BranchRequest_Refused$stableprop // actron.timetravel.compose/actron_timetravel_compose_BranchRequest_Refused$stableprop|#static{}actron_timetravel_compose_BranchRequest_Refused$stableprop[0]
 final val actron.timetravel.compose/actron_timetravel_compose_BranchText$stableprop // actron.timetravel.compose/actron_timetravel_compose_BranchText$stableprop|#static{}actron_timetravel_compose_BranchText$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Checkpoint$stableprop // actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Checkpoint$stableprop|#static{}actron_timetravel_compose_ChartInspection_Checkpoint$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Decided$stableprop // actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Decided$stableprop|#static{}actron_timetravel_compose_ChartInspection_Decided$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Unrequested$stableprop // actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Unrequested$stableprop|#static{}actron_timetravel_compose_ChartInspection_Unrequested$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Node$stableprop // actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Node$stableprop|#static{}actron_timetravel_compose_ChartSelection_Node$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Overview$stableprop // actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Overview$stableprop|#static{}actron_timetravel_compose_ChartSelection_Overview$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Transition$stableprop // actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Transition$stableprop|#static{}actron_timetravel_compose_ChartSelection_Transition$stableprop[0]
 final val actron.timetravel.compose/actron_timetravel_compose_GroupReplayControls$stableprop // actron.timetravel.compose/actron_timetravel_compose_GroupReplayControls$stableprop|#static{}actron_timetravel_compose_GroupReplayControls$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_GroupReplayMovement_Diverged$stableprop // actron.timetravel.compose/actron_timetravel_compose_GroupReplayMovement_Diverged$stableprop|#static{}actron_timetravel_compose_GroupReplayMovement_Diverged$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_GroupReplayMovement_Open$stableprop // actron.timetravel.compose/actron_timetravel_compose_GroupReplayMovement_Open$stableprop|#static{}actron_timetravel_compose_GroupReplayMovement_Open$stableprop[0]
 final val actron.timetravel.compose/actron_timetravel_compose_GroupReplayPosition$stableprop // actron.timetravel.compose/actron_timetravel_compose_GroupReplayPosition$stableprop|#static{}actron_timetravel_compose_GroupReplayPosition$stableprop[0]
 final val actron.timetravel.compose/actron_timetravel_compose_GroupTimeTravelControls$stableprop // actron.timetravel.compose/actron_timetravel_compose_GroupTimeTravelControls$stableprop|#static{}actron_timetravel_compose_GroupTimeTravelControls$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_GroupTravel_Experiment$stableprop // actron.timetravel.compose/actron_timetravel_compose_GroupTravel_Experiment$stableprop|#static{}actron_timetravel_compose_GroupTravel_Experiment$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_GroupTravel_Replaying$stableprop // actron.timetravel.compose/actron_timetravel_compose_GroupTravel_Replaying$stableprop|#static{}actron_timetravel_compose_GroupTravel_Replaying$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_GroupVerification_Checked$stableprop // actron.timetravel.compose/actron_timetravel_compose_GroupVerification_Checked$stableprop|#static{}actron_timetravel_compose_GroupVerification_Checked$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_GroupVerification_Unchecked$stableprop // actron.timetravel.compose/actron_timetravel_compose_GroupVerification_Unchecked$stableprop|#static{}actron_timetravel_compose_GroupVerification_Unchecked$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_InspectorSelection_Overview$stableprop // actron.timetravel.compose/actron_timetravel_compose_InspectorSelection_Overview$stableprop|#static{}actron_timetravel_compose_InspectorSelection_Overview$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_InspectorSelection_Position$stableprop // actron.timetravel.compose/actron_timetravel_compose_InspectorSelection_Position$stableprop|#static{}actron_timetravel_compose_InspectorSelection_Position$stableprop[0]
 final val actron.timetravel.compose/actron_timetravel_compose_InspectorState$stableprop // actron.timetravel.compose/actron_timetravel_compose_InspectorState$stableprop|#static{}actron_timetravel_compose_InspectorState$stableprop[0]
 final val actron.timetravel.compose/actron_timetravel_compose_ReplayControls$stableprop // actron.timetravel.compose/actron_timetravel_compose_ReplayControls$stableprop|#static{}actron_timetravel_compose_ReplayControls$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ReplayMovement_Diverged$stableprop // actron.timetravel.compose/actron_timetravel_compose_ReplayMovement_Diverged$stableprop|#static{}actron_timetravel_compose_ReplayMovement_Diverged$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ReplayMovement_Open$stableprop // actron.timetravel.compose/actron_timetravel_compose_ReplayMovement_Open$stableprop|#static{}actron_timetravel_compose_ReplayMovement_Open$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ReplayVerification_Checked$stableprop // actron.timetravel.compose/actron_timetravel_compose_ReplayVerification_Checked$stableprop|#static{}actron_timetravel_compose_ReplayVerification_Checked$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_ReplayVerification_Unchecked$stableprop // actron.timetravel.compose/actron_timetravel_compose_ReplayVerification_Unchecked$stableprop|#static{}actron_timetravel_compose_ReplayVerification_Unchecked$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_SeekGesture_Dragging$stableprop // actron.timetravel.compose/actron_timetravel_compose_SeekGesture_Dragging$stableprop|#static{}actron_timetravel_compose_SeekGesture_Dragging$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_SeekGesture_Idle$stableprop // actron.timetravel.compose/actron_timetravel_compose_SeekGesture_Idle$stableprop|#static{}actron_timetravel_compose_SeekGesture_Idle$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_StoreFilter_All$stableprop // actron.timetravel.compose/actron_timetravel_compose_StoreFilter_All$stableprop|#static{}actron_timetravel_compose_StoreFilter_All$stableprop[0]
+final val actron.timetravel.compose/actron_timetravel_compose_StoreFilter_Single$stableprop // actron.timetravel.compose/actron_timetravel_compose_StoreFilter_Single$stableprop|#static{}actron_timetravel_compose_StoreFilter_Single$stableprop[0]
 
 final fun (actron.timetravel.inspect/Completeness).actron.timetravel.compose/label(): kotlin/String // actron.timetravel.compose/label|label@actron.timetravel.inspect.Completeness(){}[0]
-final fun <#A: kotlin/Any?> actron.timetravel.compose/StateChartPanel(actron.statechart/StateChartDefinition, actron.statechart.machine/MachineSnapshot<#A>, actron.statechart/StateConfiguration?, actron.statechart.machine/DecisionExplanation?, kotlin.collections/List<actron.statechart.machine/InvariantViolation>?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/StateChartPanel|StateChartPanel(actron.statechart.StateChartDefinition;actron.statechart.machine.MachineSnapshot<0:0>;actron.statechart.StateConfiguration?;actron.statechart.machine.DecisionExplanation?;kotlin.collections.List<actron.statechart.machine.InvariantViolation>?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){0§<kotlin.Any?>}[0]
+final fun <#A: kotlin/Any> actron.timetravel.compose/StateChartPanel(actron.statechart/StateChartDefinition, actron.statechart.machine/MachineSnapshot<#A>, kotlin.collections/Set<actron.statechart/StateId>?, actron.timetravel.compose/ChartInspection?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/StateChartPanel|StateChartPanel(actron.statechart.StateChartDefinition;actron.statechart.machine.MachineSnapshot<0:0>;kotlin.collections.Set<actron.statechart.StateId>?;actron.timetravel.compose.ChartInspection?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){0§<kotlin.Any>}[0]
 final fun actron.timetravel.compose/BranchPanel(actron.timetravel.compose/BranchControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/BranchPanel|BranchPanel(actron.timetravel.compose.BranchControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/DefinitionPanel(kotlin/String, kotlin/String, kotlin/String, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/DefinitionPanel|DefinitionPanel(kotlin.String;kotlin.String;kotlin.String;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/GroupPositionPanel(actron.timetravel.compose/GroupReplayControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/GroupPositionPanel|GroupPositionPanel(actron.timetravel.compose.GroupReplayControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/GroupReplayBar(actron.timetravel.compose/GroupReplayControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/GroupReplayBar|GroupReplayBar(actron.timetravel.compose.GroupReplayControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/GroupTimeTravelBar(actron.timetravel.compose/GroupTimeTravelControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/GroupTimeTravelBar|GroupTimeTravelBar(actron.timetravel.compose.GroupTimeTravelControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun actron.timetravel.compose/GroupTimelinePanel(actron.timetravel.compose/GroupReplayControls, actron.observability/StoreInstanceId?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/GroupTimelinePanel|GroupTimelinePanel(actron.timetravel.compose.GroupReplayControls;actron.observability.StoreInstanceId?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun actron.timetravel.compose/InspectorScreen(actron.timetravel.compose/InspectorState, actron.timetravel.compose/GroupReplayControls, actron.timetravel.compose/BranchControls?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/InspectorScreen|InspectorScreen(actron.timetravel.compose.InspectorState;actron.timetravel.compose.GroupReplayControls;actron.timetravel.compose.BranchControls?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun actron.timetravel.compose/GroupTimelinePanel(actron.timetravel.compose/GroupReplayControls, actron.timetravel.compose/StoreFilter?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/GroupTimelinePanel|GroupTimelinePanel(actron.timetravel.compose.GroupReplayControls;actron.timetravel.compose.StoreFilter?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun actron.timetravel.compose/InspectorScreen(actron.timetravel.compose/InspectorState, actron.timetravel.compose/BranchControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/InspectorScreen|InspectorScreen(actron.timetravel.compose.InspectorState;actron.timetravel.compose.BranchControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun actron.timetravel.compose/InspectorScreen(actron.timetravel.compose/InspectorState, actron.timetravel.compose/GroupReplayControls, actron.timetravel.compose/BranchControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/InspectorScreen|InspectorScreen(actron.timetravel.compose.InspectorState;actron.timetravel.compose.GroupReplayControls;actron.timetravel.compose.BranchControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun actron.timetravel.compose/InspectorScreen(actron.timetravel.compose/InspectorState, actron.timetravel.compose/GroupReplayControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/InspectorScreen|InspectorScreen(actron.timetravel.compose.InspectorState;actron.timetravel.compose.GroupReplayControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/InspectorScreen(actron.timetravel.compose/InspectorState, actron.timetravel.compose/GroupTimeTravelControls, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/InspectorScreen|InspectorScreen(actron.timetravel.compose.InspectorState;actron.timetravel.compose.GroupTimeTravelControls;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun actron.timetravel.compose/InspectorScreen(actron.timetravel.compose/InspectorState, actron.timetravel.compose/ReplayControls<*, *, *, *>?, actron.timetravel.compose/BranchControls?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/InspectorScreen|InspectorScreen(actron.timetravel.compose.InspectorState;actron.timetravel.compose.ReplayControls<*,*,*,*>?;actron.timetravel.compose.BranchControls?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun actron.timetravel.compose/InspectorScreen(actron.timetravel.compose/InspectorState, actron.timetravel.compose/ReplayControls<*, *, *, *>, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/InspectorScreen|InspectorScreen(actron.timetravel.compose.InspectorState;actron.timetravel.compose.ReplayControls<*,*,*,*>;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun actron.timetravel.compose/InspectorScreen(actron.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/InspectorScreen|InspectorScreen(actron.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/ModeBar(actron.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/ModeBar|ModeBar(actron.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
-final fun actron.timetravel.compose/PositionPanel(actron.timetravel.compose/InspectorState, actron.timetravel.compose/ReplayControls<*, *, *, *>?, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/PositionPanel|PositionPanel(actron.timetravel.compose.InspectorState;actron.timetravel.compose.ReplayControls<*,*,*,*>?;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun actron.timetravel.compose/PositionPanel(actron.timetravel.compose/InspectorState, actron.timetravel.compose/ReplayControls<*, *, *, *>, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/PositionPanel|PositionPanel(actron.timetravel.compose.InspectorState;actron.timetravel.compose.ReplayControls<*,*,*,*>;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
+final fun actron.timetravel.compose/PositionPanel(actron.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/PositionPanel|PositionPanel(actron.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/ReplayBar(actron.timetravel.compose/ReplayControls<*, *, *, *>, actron.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/ReplayBar|ReplayBar(actron.timetravel.compose.ReplayControls<*,*,*,*>;actron.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/StoresPanel(actron.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/StoresPanel|StoresPanel(actron.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/TimelinePanel(actron.timetravel.compose/InspectorState, androidx.compose.ui/Modifier?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int) // actron.timetravel.compose/TimelinePanel|TimelinePanel(actron.timetravel.compose.InspectorState;androidx.compose.ui.Modifier?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
@@ -326,12 +578,36 @@ final fun actron.timetravel.compose/actron_timetravel_compose_BranchDecision$sta
 final fun actron.timetravel.compose/actron_timetravel_compose_BranchInput_Answer$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_BranchInput_Answer$stableprop_getter|actron_timetravel_compose_BranchInput_Answer$stableprop_getter(){}[0]
 final fun actron.timetravel.compose/actron_timetravel_compose_BranchInput_Dispatch$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_BranchInput_Dispatch$stableprop_getter|actron_timetravel_compose_BranchInput_Dispatch$stableprop_getter(){}[0]
 final fun actron.timetravel.compose/actron_timetravel_compose_BranchInput_Feed$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_BranchInput_Feed$stableprop_getter|actron_timetravel_compose_BranchInput_Feed$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_BranchRequest_Ready$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_BranchRequest_Ready$stableprop_getter|actron_timetravel_compose_BranchRequest_Ready$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_BranchRequest_Refused$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_BranchRequest_Refused$stableprop_getter|actron_timetravel_compose_BranchRequest_Refused$stableprop_getter(){}[0]
 final fun actron.timetravel.compose/actron_timetravel_compose_BranchText$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_BranchText$stableprop_getter|actron_timetravel_compose_BranchText$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Checkpoint$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Checkpoint$stableprop_getter|actron_timetravel_compose_ChartInspection_Checkpoint$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Decided$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Decided$stableprop_getter|actron_timetravel_compose_ChartInspection_Decided$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Unrequested$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ChartInspection_Unrequested$stableprop_getter|actron_timetravel_compose_ChartInspection_Unrequested$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Node$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Node$stableprop_getter|actron_timetravel_compose_ChartSelection_Node$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Overview$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Overview$stableprop_getter|actron_timetravel_compose_ChartSelection_Overview$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Transition$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ChartSelection_Transition$stableprop_getter|actron_timetravel_compose_ChartSelection_Transition$stableprop_getter(){}[0]
 final fun actron.timetravel.compose/actron_timetravel_compose_GroupReplayControls$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_GroupReplayControls$stableprop_getter|actron_timetravel_compose_GroupReplayControls$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_GroupReplayMovement_Diverged$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_GroupReplayMovement_Diverged$stableprop_getter|actron_timetravel_compose_GroupReplayMovement_Diverged$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_GroupReplayMovement_Open$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_GroupReplayMovement_Open$stableprop_getter|actron_timetravel_compose_GroupReplayMovement_Open$stableprop_getter(){}[0]
 final fun actron.timetravel.compose/actron_timetravel_compose_GroupReplayPosition$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_GroupReplayPosition$stableprop_getter|actron_timetravel_compose_GroupReplayPosition$stableprop_getter(){}[0]
 final fun actron.timetravel.compose/actron_timetravel_compose_GroupTimeTravelControls$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_GroupTimeTravelControls$stableprop_getter|actron_timetravel_compose_GroupTimeTravelControls$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_GroupTravel_Experiment$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_GroupTravel_Experiment$stableprop_getter|actron_timetravel_compose_GroupTravel_Experiment$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_GroupTravel_Replaying$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_GroupTravel_Replaying$stableprop_getter|actron_timetravel_compose_GroupTravel_Replaying$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_GroupVerification_Checked$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_GroupVerification_Checked$stableprop_getter|actron_timetravel_compose_GroupVerification_Checked$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_GroupVerification_Unchecked$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_GroupVerification_Unchecked$stableprop_getter|actron_timetravel_compose_GroupVerification_Unchecked$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_InspectorSelection_Overview$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_InspectorSelection_Overview$stableprop_getter|actron_timetravel_compose_InspectorSelection_Overview$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_InspectorSelection_Position$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_InspectorSelection_Position$stableprop_getter|actron_timetravel_compose_InspectorSelection_Position$stableprop_getter(){}[0]
 final fun actron.timetravel.compose/actron_timetravel_compose_InspectorState$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_InspectorState$stableprop_getter|actron_timetravel_compose_InspectorState$stableprop_getter(){}[0]
 final fun actron.timetravel.compose/actron_timetravel_compose_ReplayControls$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ReplayControls$stableprop_getter|actron_timetravel_compose_ReplayControls$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ReplayMovement_Diverged$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ReplayMovement_Diverged$stableprop_getter|actron_timetravel_compose_ReplayMovement_Diverged$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ReplayMovement_Open$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ReplayMovement_Open$stableprop_getter|actron_timetravel_compose_ReplayMovement_Open$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ReplayVerification_Checked$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ReplayVerification_Checked$stableprop_getter|actron_timetravel_compose_ReplayVerification_Checked$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_ReplayVerification_Unchecked$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_ReplayVerification_Unchecked$stableprop_getter|actron_timetravel_compose_ReplayVerification_Unchecked$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_SeekGesture_Dragging$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_SeekGesture_Dragging$stableprop_getter|actron_timetravel_compose_SeekGesture_Dragging$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_SeekGesture_Idle$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_SeekGesture_Idle$stableprop_getter|actron_timetravel_compose_SeekGesture_Idle$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_StoreFilter_All$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_StoreFilter_All$stableprop_getter|actron_timetravel_compose_StoreFilter_All$stableprop_getter(){}[0]
+final fun actron.timetravel.compose/actron_timetravel_compose_StoreFilter_Single$stableprop_getter(): kotlin/Int // actron.timetravel.compose/actron_timetravel_compose_StoreFilter_Single$stableprop_getter|actron_timetravel_compose_StoreFilter_Single$stableprop_getter(){}[0]
 final fun actron.timetravel.compose/rememberInspectorState(actron.timetravel.inspect/Inspector, actron.timetravel.compose/InspectorMode?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): actron.timetravel.compose/InspectorState // actron.timetravel.compose/rememberInspectorState|rememberInspectorState(actron.timetravel.inspect.Inspector;actron.timetravel.compose.InspectorMode?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/rememberLiveInspector(actron.observability/RecordingSession, kotlin.collections/Map<actron.observability/StoreInstanceId, actron.timetravel/Recording<*, *, *, *>>?, kotlin.time/Duration, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): actron.timetravel.compose/InspectorState // actron.timetravel.compose/rememberLiveInspector|rememberLiveInspector(actron.observability.RecordingSession;kotlin.collections.Map<actron.observability.StoreInstanceId,actron.timetravel.Recording<*,*,*,*>>?;kotlin.time.Duration;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]
 final fun actron.timetravel.compose/rememberLiveInspector(actron.observability/RecordingSession, kotlin.collections/Map<actron.observability/StoreInstanceId, actron.timetravel/Recording<*, *, *, *>>?, kotlin.time/Duration?, androidx.compose.runtime/Composer?, kotlin/Int, kotlin/Int): actron.timetravel.compose/InspectorState // actron.timetravel.compose/rememberLiveInspector|rememberLiveInspector(actron.observability.RecordingSession;kotlin.collections.Map<actron.observability.StoreInstanceId,actron.timetravel.Recording<*,*,*,*>>?;kotlin.time.Duration?;androidx.compose.runtime.Composer?;kotlin.Int;kotlin.Int){}[0]

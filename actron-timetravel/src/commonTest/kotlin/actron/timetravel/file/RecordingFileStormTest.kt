@@ -2,6 +2,8 @@
 
 package actron.timetravel.file
 
+import actron.timetravel.verify
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
@@ -97,9 +99,9 @@ class RecordingFileStormTest {
         root,
         listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root)),
         listOf(
-            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = "countLoad"),
-            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = "countLoad"),
-            Transition(loading, idle, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
+            Transition(idle, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("countLoad")),
+            Transition(loading, loading, ActionMatcher.of<Act.Load>("Load"), effect = actron.statechart.EffectKey("countLoad")),
+            Transition(loading, idle, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("store")),
         ),
     )
 

@@ -15,6 +15,15 @@ to make decisions you can record, verify and replay.
 
 **Model behavior. Control state. Replay time.**
 
+**Totally null-free domain model. Enforced in CI.** Actron's own values and domain contracts
+are non-null. Absence has behavior: lifecycle phases, domain outcomes and operations replace
+nullable values. `Optional`, `Option`, `Maybe` and renamed value/empty containers are forbidden.
+CI checks both Kotlin source and compiler-resolved types, including inferred types and nested
+generic arguments. The nullable baseline is empty; the strict policy prevents new debt and
+cannot be removed relative to the base branch. Readers for old recordings remain supported.
+See the [null-free API and enforcement policy](doc/guides/absence-policy.md) for migration,
+the language-required `equals` signature and external integration boundaries.
+
 [Get started](#1-a-store-for-a-counter) · [Try Time Travel](#4-time-travel-from-a-real-saved-run) ·
 [Installation](#installation) · [Migrating from Koma](doc/guides/migrating-from-koma.md)
 

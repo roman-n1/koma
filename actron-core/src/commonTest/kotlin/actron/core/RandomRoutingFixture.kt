@@ -159,7 +159,7 @@ internal val legacyPredicates: List<LegacyPredicate> = listOf(
 internal class PlannedHandler(
     val id: Int,
     val kind: HandlerKind,
-    val expectedMatcher: HandlerMatcher?,
+    val expectedMatcher: HandlerMatcher,
     val matches: (RtState, Any?) -> Boolean,
 )
 
@@ -188,7 +188,11 @@ internal class RoutingProgram(val blocks: List<Block>) {
         when (block) {
             is Block.LegacyTop -> if (block.kind == kind) {
                 listOf(
-                    PlannedHandler(block.id, kind, null) { s, input ->
+                    PlannedHandler(block.id, kind, HandlerMatcher(RtState::class, when (kind) {
+                        HandlerKind.ACTION -> RtAction::class
+                        HandlerKind.RECOVER -> Exception::class
+                        else -> Unit::class
+                    })) { s, input ->
                         block.predicate.onState(s) && (input == null || block.predicate.onInput(input))
                     },
                 )
@@ -233,6 +237,7 @@ internal class RoutingProgram(val blocks: List<Block>) {
                         StoreBuilder.StateHandlerConfig.ThreadedHandler(
                             dispatcher = inner.dispatcher,
                             predicate = { action: RtAction -> predicate.onInput(action) },
+                            inputType = RtAction::class,
                             handler = {
                                 log += id
                                 action.fail?.let { throw it }
@@ -250,6 +255,7 @@ internal class RoutingProgram(val blocks: List<Block>) {
                         StoreBuilder.StateHandlerConfig.ThreadedHandler(
                             dispatcher = inner.dispatcher,
                             predicate = { error: Exception -> predicate.onInput(error) },
+                            inputType = Exception::class,
                             handler = { log += id },
                         ),
                     )
@@ -264,11 +270,12 @@ internal class RoutingProgram(val blocks: List<Block>) {
         val id = block.id
         val p = block.predicate
         when (block.kind) {
-            HandlerKind.ENTER -> builder.registeredEnterHandlers.add(StoreBuilder.StateHandler(predicate = { s: RtState -> p.onState(s) }, handler = { log += id }))
-            HandlerKind.EXIT -> builder.registeredExitHandlers.add(StoreBuilder.StateHandler(predicate = { s: RtState -> p.onState(s) }, handler = { log += id }))
+            HandlerKind.ENTER -> builder.registeredEnterHandlers.add(StoreBuilder.StateHandler(predicate = { s: RtState -> p.onState(s) }, handler = { log += id }, matcher = HandlerMatcher(RtState::class)))
+            HandlerKind.EXIT -> builder.registeredExitHandlers.add(StoreBuilder.StateHandler(predicate = { s: RtState -> p.onState(s) }, handler = { log += id }, matcher = HandlerMatcher(RtState::class)))
             HandlerKind.ACTION -> builder.registeredActionHandlers.add(
                 StoreBuilder.StateHandler(
                     predicate = { s: RtState, a: RtAction -> p.onState(s) && p.onInput(a) },
+                    matcher = HandlerMatcher(RtState::class, RtAction::class),
                     handler = {
                         log += id
                         action.fail?.let { throw it }
@@ -278,7 +285,7 @@ internal class RoutingProgram(val blocks: List<Block>) {
             )
 
             HandlerKind.RECOVER -> builder.registeredErrorHandlers.add(
-                StoreBuilder.StateHandler(predicate = { s: RtState, e: Exception -> p.onState(s) && p.onInput(e) }, handler = { log += id }),
+                StoreBuilder.StateHandler(predicate = { s: RtState, e: Exception -> p.onState(s) && p.onInput(e) }, handler = { log += id }, matcher = HandlerMatcher(RtState::class, Exception::class)),
             )
         }
     }
@@ -321,7 +328,13 @@ internal class RoutingProgram(val blocks: List<Block>) {
 }
 
 /** A legacy inner handler has a state type but no input type, since the old constructor did not take one. */
-internal fun Inner.effectiveInputType(): KClass<*>? = if (legacyPredicate != null) null else actionKind?.type ?: recoverKind?.type
+internal fun Inner.effectiveInputType(): KClass<*> = if (legacyPredicate != null) {
+    when (kind) {
+        HandlerKind.ACTION -> RtAction::class
+        HandlerKind.RECOVER -> Exception::class
+        else -> Unit::class
+    }
+} else actionKind?.type ?: recoverKind?.type ?: Unit::class
 
 internal fun randomAction(random: Random): RtAction {
     val fail = if (random.nextInt(3) == 0) exceptionPool().random(random) else null

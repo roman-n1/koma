@@ -14,7 +14,7 @@ class SentryDiagnosticSink(private val scopes: IScopes) : DiagnosticSink {
             attributes.forEach { (key, value) -> setData(key, value) }
         }
         scopes.addBreadcrumb(breadcrumb)
-        event.failureType?.let { failure ->
+        event.withFailureType { failure ->
             val report = SentryEvent(BehaviouralDiagnosticException(failure))
             attributes.forEach { (key, value) -> report.setExtra(key, value) }
             scopes.captureEvent(report)

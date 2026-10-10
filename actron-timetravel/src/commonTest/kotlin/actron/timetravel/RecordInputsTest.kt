@@ -17,7 +17,7 @@ class RecordInputsTest {
     @Test fun generatedInputsBecomeReplayableRecordingWithIgnoredAndFailedStepsWithoutExtraDecisions() {
         var guards = 0
         val machine = Machine<Int, Action, String, Event>(DefinitionId("record-inputs"), DefinitionVersion("1"),
-            StateChartDefinition(idle, listOf(AtomicState(idle)), listOf(Transition(idle, idle, Trigger.Eventless, guard = "never", kind = TransitionKind.Internal)))) {
+            StateChartDefinition(idle, listOf(AtomicState(idle)), listOf(Transition(idle, idle, Trigger.Eventless, guard = actron.statechart.GuardKey("never"), kind = TransitionKind.Internal)))) {
             guard("never") { _, _ -> guards++; false }
             onAction(idle, ActionMatcher.of<Tick>("tick")) { context++; command("never-execute-io") }
             invariant("less-than-two") { it.context < 2 }
@@ -30,7 +30,7 @@ class RecordInputsTest {
         assertEquals(3, guards, "Start and two handled macrosteps each evaluate their automatic guard once")
         assertEquals(inputs, recording.steps.map { it.input })
         assertTrue(recording.steps[2] is RecordedStep.Ignored)
-        assertEquals("InvariantViolationException", (recording.steps.last() as RecordedStep.Failed).failure.type)
+        assertEquals("InvariantViolationException", (recording.steps.last() as RecordedStep.Failed).failure.typeLabel)
         assertEquals(1, recording.snapshotAt(recording.length).context)
         assertEquals("never-execute-io", recording.checkpointAt(recording.length).registrations.values.single().command)
         assertNull(ReplaySession(machine, recording).verify())

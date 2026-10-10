@@ -71,6 +71,17 @@ public final class NullabilityGuard {
                 }
             }
             switch (args[0]) {
+                case "--report" -> {
+                    Map<String, Integer> kinds = new java.util.TreeMap<>();
+                    Map<String, Integer> modules = new java.util.TreeMap<>();
+                    for (Finding finding : findings) {
+                        kinds.merge(finding.kind, 1, Integer::sum);
+                        modules.merge(finding.path.split("/")[0], 1, Integer::sum);
+                    }
+                    System.out.println("Remaining findings: " + findings.size());
+                    System.out.println("Kinds: " + kinds);
+                    System.out.println("Modules: " + modules);
+                }
                 case "--check" -> {
                     Map<String, Integer> remaining = counts(baseline);
                     List<Finding> added = new ArrayList<>();
@@ -147,6 +158,16 @@ public final class NullabilityGuard {
                 if (!isKotlinEqualsParameter(type)) report("nullable-type", type);
                 super.visitNullableType(type);
             }
+            @Override public void visitTypeParameter(KtTypeParameter parameter) {
+                if (parameter.getParent().getParent() instanceof KtTypeParameterListOwner owner
+                    && !(owner instanceof KtTypeAlias) && parameter.getExtendsBound() == null
+                    && owner.getTypeConstraints().stream().noneMatch(constraint ->
+                        constraint.getSubjectTypeParameterName() != null
+                        && constraint.getSubjectTypeParameterName().getReferencedName().equals(parameter.getName()))) {
+                    report("unbounded-type-parameter", parameter);
+                }
+                super.visitTypeParameter(parameter);
+            }
             @Override public void visitConstantExpression(KtConstantExpression expression) {
                 if (expression.getText().equals("null")) report("null-literal", expression);
                 super.visitConstantExpression(expression);
@@ -222,9 +243,12 @@ public final class NullabilityGuard {
         assertKinds(parser, "val x = \"\"\"${null}\"\"\"", List.of("null-literal"));
         assertKinds(parser, "import java.util.Optional as Hidden\nval x = Hidden.empty<String>()", List.of("optional-container"));
         assertKinds(parser, "typealias Hidden<T> = java.util.Optional<T>", List.of("optional-container"));
-        assertKinds(parser, "class Maybe<T>", List.of("optional-container"));
+        assertKinds(parser, "class Maybe<T : Any>", List.of("optional-container"));
         assertKinds(parser, "data object None", List.of("optional-container"));
-        assertKinds(parser, "class `Optional`<T>", List.of("optional-container"));
+        assertKinds(parser, "class `Optional`<T : Any>", List.of("optional-container"));
+        assertKinds(parser, "class Holder<T>", List.of("unbounded-type-parameter"));
+        assertKinds(parser, "class Holder<T : Any>", List.of());
+        assertKinds(parser, "class Holder<T> where T : Any", List.of());
         assertKinds(parser, "val x = object { val y: String? = null }", List.of("nullable-type", "null-literal"));
         assertKinds(parser, "class X { override fun equals(other: Any?): Boolean = other is X }", List.of());
         assertKinds(parser, "class X { override fun equals(other: Any?): Boolean { val x: Any? = null; return true } }", List.of("nullable-type", "null-literal"));

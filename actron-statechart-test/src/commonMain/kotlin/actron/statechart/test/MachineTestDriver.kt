@@ -50,7 +50,7 @@ import kotlin.time.Duration.Companion.seconds
  * @param builder Store configuration on top of the driver's (exception handler, saver, plugins)
  */
 @ExperimentalActronApi
-class MachineTestDriver<C, A : Action, CMD, E : Event>(
+class MachineTestDriver<C : Any, A : Action, CMD : Any, E : Event>(
     val machine: Machine<C, A, CMD, E>,
     context: C,
     scope: TestScope,

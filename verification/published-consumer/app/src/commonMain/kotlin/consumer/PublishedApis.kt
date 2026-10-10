@@ -36,7 +36,7 @@ data object Ev : Event
 data object Ping : Message
 
 fun counter(scope: CoroutineScope): Store<Counter, Increment, Ev> = Store(Counter(), context = scope.coroutineContext) {
-    plugin(simpleLogging(logger = Logger { _, _, _, _ -> }))
+    plugin(simpleLogging(logger = Logger { _, _, _ -> }))
     state<Counter> {
         action<Increment> {
             nextState { state.copy(count = state.count + 1) }
@@ -52,7 +52,7 @@ fun receiver(scope: CoroutineScope): Store<Counter, Increment, Ev> = Store(Count
 
 val counting = StateId("Counting")
 val definition = StateChartDefinition(counting, listOf(AtomicState(counting)), listOf(
-    Transition(counting, counting, ActionMatcher.of<Increment>("Increment"), effect = "increment"),
+    Transition(counting, counting, ActionMatcher.of<Increment>("Increment"), effect = actron.statechart.EffectKey("increment")),
 ))
 val machine = Machine<Int, Increment, Nothing, Ev>(DefinitionId("published-counter"), DefinitionVersion("1"), definition) {
     effect("increment") { count, _ -> count + 1 }

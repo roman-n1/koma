@@ -1,13 +1,19 @@
 package actron.observability.file
 
 import actron.core.InputId
+import actron.core.InputAttribution
 import actron.observability.ActivationRef
 import actron.observability.Capability
 import actron.observability.CommandRef
+import actron.observability.CommandExecution
 import actron.observability.DiscardDescriptor
 import actron.observability.DiscardKind
 import actron.observability.ExecutionMode
 import actron.observability.FailureDescriptor
+import actron.observability.FailureDetails
+import actron.observability.FailureRelation
+import actron.observability.RecordSubject
+import actron.observability.RecordOrdinal
 import actron.observability.GroupSeq
 import actron.observability.InputDescriptor
 import actron.observability.JOURNAL_FORMAT_VERSION
@@ -15,6 +21,7 @@ import actron.observability.JournalEntry
 import actron.observability.JournalRecord
 import actron.observability.MachineGroupId
 import actron.observability.MessageRef
+import actron.observability.MessageCause
 import actron.observability.OutcomeDescriptor
 import actron.observability.OutcomeKind
 import actron.observability.Payload
@@ -73,14 +80,21 @@ object JournalFileFormat {
         return "${session.value}-${index.toString().padStart(6, '0')}$EXTENSION"
     }
 
-    /** The session and index of a segment name, or `null` for a name that is not one. */
-    fun parseSegmentName(name: String): Pair<RuntimeSessionId, Int>? {
-        if (!name.endsWith(EXTENSION)) return null
+    /** Reports the session and index once; false for a name that is not a segment. */
+    fun parseSegmentName(name: String, accept: (RuntimeSessionId, Int) -> Unit): Boolean {
+        if (!name.endsWith(EXTENSION)) return false
         val stem = name.removeSuffix(EXTENSION)
         val dash = stem.lastIndexOf('-')
-        if (dash <= 0) return null
-        val index = stem.substring(dash + 1).takeIf { it.length == 6 }?.toIntOrNull() ?: return null
-        return RuntimeSessionId(stem.substring(0, dash)) to index
+        if (dash <= 0) return false
+        val index = stem.substring(dash + 1).takeIf { it.length == 6 }?.toIntOrNull() ?: return false
+        accept(RuntimeSessionId(stem.substring(0, dash)), index)
+        return true
+    }
+
+    internal fun namedSegments(storage: SegmentStorage, owner: RuntimeSessionId): List<Pair<Int, String>> = buildList {
+        for (info in storage.list()) parseSegmentName(info.name) { id, index ->
+            if (id == owner) add(index to info.name)
+        }
     }
 
     /** The bytes a segment begins with: the magic and the header frame. */
@@ -121,38 +135,28 @@ object JournalFileFormat {
         val frames = read.frames
         if (frames.isEmpty()) {
             // Cut right after the magic: the header was never written, nothing was dropped.
-            val mark = when (val mark = read.mark) {
-                is SegmentMark.Unfinished -> SegmentMark.TruncatedTail(name, 0, 0)
-                null -> SegmentMark.Corrupt(name, MAGIC.size, 0, "ended before the header")
-                else -> mark
-            }
-            return DecodedSegment(null, emptyList(), mark, finished = false)
+            val mark = read.ending.beforeHeader(name, MAGIC.size)
+            return DecodedSegment(JournalPrefix.Unreadable, emptyList(), SegmentEnding.Stopped(mark))
         }
         val header = try {
             decodeHeader(ByteReader(frames[0].payload))
         } catch (e: ByteReader.Malformed) {
-            return DecodedSegment(null, emptyList(), SegmentMark.Corrupt(name, frames[0].offset, 0, "header: ${e.message}"), finished = false)
+            return DecodedSegment(JournalPrefix.Unreadable, emptyList(), SegmentEnding.Stopped(SegmentMark.Corrupt(name, frames[0].offset, 0, "header: ${e.message}")))
         }
         if (header.fileFormatVersion > JOURNAL_FILE_FORMAT_VERSION || header.recordFormatVersion > JOURNAL_FORMAT_VERSION) {
-            return DecodedSegment(header, emptyList(), SegmentMark.UnsupportedFormat(name, header.fileFormatVersion, header.recordFormatVersion), finished = false)
+            return DecodedSegment(header, emptyList(), SegmentEnding.Stopped(SegmentMark.UnsupportedFormat(name, header.fileFormatVersion, header.recordFormatVersion)))
         }
         val records = mutableListOf<JournalRecord<Nothing, Nothing, Nothing>>()
         for (frame in frames.drop(1)) {
             val record = try {
                 decodeRecord(ByteReader(frame.payload), header)
             } catch (e: ByteReader.Malformed) {
-                return DecodedSegment(header, records, SegmentMark.Corrupt(name, frame.offset, records.size, "record: ${e.message}"), finished = false)
+                return DecodedSegment(header, records, SegmentEnding.Stopped(SegmentMark.Corrupt(name, frame.offset, records.size, "record: ${e.message}")))
             }
             records += record
         }
         // The framing counted the header among the frames it read; records do not include it.
-        val mark = when (val mark = read.mark) {
-            is SegmentMark.TruncatedTail -> mark.copy(recordsRead = records.size)
-            is SegmentMark.Unfinished -> mark.copy(recordsRead = records.size)
-            is SegmentMark.Corrupt -> mark.copy(recordsRead = records.size)
-            else -> mark
-        }
-        return DecodedSegment(header, records, mark, read.finished)
+        return DecodedSegment(header, records, read.ending.countRecords(records.size))
     }
 
     // --- header ---
@@ -180,18 +184,25 @@ object JournalFileFormat {
 
     private fun encodeRecord(record: JournalRecord<*, *, *>, recordFormatVersion: Int): ByteArray = ByteWriter().apply {
         u8(tagOf(record.entry))
-        nullable(record.store) { string(it.value) }
+        when (val subject = record.store) {
+            RecordSubject.Session -> bool(false)
+            is StoreInstanceId -> { bool(true); string(subject.value) }
+        }
         i64(record.groupSeq.value)
-        nullable(record.storeSeq) { i64(it.value) }
+        when (val ordinal = record.storeSeq) {
+            RecordOrdinal.Session -> bool(false)
+            is StoreSeq -> { bool(true); i64(ordinal.value) }
+        }
         duration(record.elapsed)
         entry(record.entry, recordFormatVersion)
     }.toByteArray()
 
     private fun decodeRecord(reader: ByteReader, header: SegmentHeader): JournalRecord<Nothing, Nothing, Nothing> {
         val tag = reader.u8()
-        val store = reader.nullable { StoreInstanceId(reader.string()) }
+        val store: RecordSubject = if (reader.bool()) StoreInstanceId(reader.string()) else RecordSubject.Session
         val groupSeq = GroupSeq(reader.i64())
-        val storeSeq = reader.nullable { StoreSeq(reader.i64()) }
+        val storeSeq: RecordOrdinal = if (reader.bool()) StoreSeq(reader.i64()) else RecordOrdinal.Session
+        if ((store is StoreInstanceId) != (storeSeq is StoreSeq)) throw ByteReader.Malformed("record subject and Store ordinal differ")
         val elapsed = reader.duration()
         val entry = reader.entry(tag, header.recordFormatVersion)
         reader.expectEnd()
@@ -237,7 +248,8 @@ object JournalFileFormat {
             is JournalEntry.InputDiscarded -> {
                 i64(entry.input.value)
                 string(entry.reason.kind.name)
-                nullable(entry.reason.failure) { failure(it) }
+                bool(entry.reason.hasFailure)
+                entry.reason.withFailure { failure(it) }
             }
             is JournalEntry.ProcessingStarted -> {
                 i64(entry.input.value)
@@ -250,11 +262,11 @@ object JournalFileFormat {
                 payload(entry.state)
             }
             is JournalEntry.EventEmitted -> {
-                nullable(entry.input) { i64(it.value) }
+                attribution(entry.input)
                 payload(entry.event)
             }
             is JournalEntry.FailureReported -> {
-                nullable(entry.input) { i64(it.value) }
+                attribution(entry.input)
                 failure(entry.failure)
             }
             is JournalEntry.ProcessingFinished -> {
@@ -262,7 +274,8 @@ object JournalFileFormat {
                 i64(entry.ordinal)
                 string(entry.outcome.kind.name)
                 i32(entry.outcome.commits)
-                nullable(entry.outcome.failure) { failure(it) }
+                bool(entry.outcome.hasFailure)
+                entry.outcome.withFailure { failure(it) }
                 duration(entry.duration)
             }
             JournalEntry.StoreClosed -> Unit
@@ -271,7 +284,7 @@ object JournalFileFormat {
                 string(entry.reason)
             }
             is JournalEntry.DecisionCommitted -> {
-                nullable(entry.input) { i64(it.value) }
+                attribution(entry.input)
                 i64(entry.revision)
                 list(entry.active) { string(it) }
                 list(entry.transitions) { i32(it) }
@@ -280,8 +293,7 @@ object JournalFileFormat {
                 list(entry.commands) {
                     i64(it.id)
                     i64(it.scope)
-                    nullable(it.lane) { lane -> string(lane) }
-                    nullable(it.policy) { policy -> string(policy) }
+                    commandExecution(it.execution)
                     payload(it.command)
                 }
                 list(entry.cancelledScopes) { i64(it) }
@@ -295,20 +307,20 @@ object JournalFileFormat {
                 i32(entry.effects)
             }
             is JournalEntry.DecisionIgnored -> {
-                nullable(entry.input) { i64(it.value) }
+                attribution(entry.input)
                 string(entry.reason)
             }
             is JournalEntry.JournalGap -> i64(entry.dropped)
             JournalEntry.RecordingStopped -> Unit
             is JournalEntry.BridgeSent -> {
-                nullable(entry.input) { i64(it.value) }
+                attribution(entry.input)
                 message(entry.message)
                 string(entry.to.value)
                 bool(entry.delivered)
-                if (recordFormatVersion >= 7) nullable(entry.cause) { message(it) }
+                if (recordFormatVersion >= 7) { bool(entry.cause.prompted); entry.cause.withMessage { message(it) } }
             }
             is JournalEntry.BridgeReceived -> {
-                nullable(entry.input) { i64(it.value) }
+                attribution(entry.input)
                 message(entry.message)
             }
             is JournalEntry.BridgeDropped -> {
@@ -317,7 +329,7 @@ object JournalFileFormat {
                 string(entry.reason)
             }
             is JournalEntry.EffectQueued -> {
-                nullable(entry.input) { i64(it.value) }
+                attribution(entry.input)
                 i64(entry.effect)
                 string(entry.policy)
                 payload(entry.event)
@@ -332,7 +344,7 @@ object JournalFileFormat {
                 string(entry.reason)
             }
             is JournalEntry.ExternalReceived -> {
-                nullable(entry.input) { i64(it.value) }
+                attribution(entry.input)
                 string(entry.source)
             }
             is JournalEntry.CommandsAbandoned -> {
@@ -351,42 +363,48 @@ object JournalFileFormat {
     private fun ByteReader.entry(tag: Int, recordFormatVersion: Int): JournalEntry<Nothing, Nothing, Nothing> = when (tag) {
         1 -> JournalEntry.StoreRegistered(enumNamed<Capability>(string()))
         2 -> JournalEntry.InputAccepted(InputId(i64()), input())
-        3 -> JournalEntry.InputDiscarded(InputId(i64()), DiscardDescriptor(enumNamed<DiscardKind>(string()), nullable { failure() }))
+        3 -> JournalEntry.InputDiscarded(InputId(i64()), discard())
         4 -> JournalEntry.ProcessingStarted(InputId(i64()), i64())
         5 -> JournalEntry.StateCommitted(InputId(i64()), i64(), payload(), payload())
-        6 -> JournalEntry.EventEmitted(nullable { InputId(i64()) }, payload())
-        7 -> JournalEntry.FailureReported(nullable { InputId(i64()) }, failure())
-        8 -> JournalEntry.ProcessingFinished(InputId(i64()), i64(), OutcomeDescriptor(enumNamed<OutcomeKind>(string()), i32(), nullable { failure() }), duration())
+        6 -> JournalEntry.EventEmitted(attribution(), payload())
+        7 -> JournalEntry.FailureReported(attribution(), failure())
+        8 -> JournalEntry.ProcessingFinished(InputId(i64()), i64(), outcome(), duration())
         9 -> JournalEntry.StoreClosed
         10 -> JournalEntry.InputRejected(payload(), string())
         11 -> JournalEntry.DecisionCommitted(
-            input = nullable { InputId(i64()) },
+            input = attribution(),
             revision = i64(),
             active = list { string() },
             transitions = list { i32() },
             exited = list { activation() },
             entered = list { activation() },
-            commands = list { CommandRef(i64(), i64(), nullable { string() }, nullable { string() }, payload()) },
+            commands = list { CommandRef(i64(), i64(), commandExecution(), payload()) },
             cancelledScopes = list { i64() },
             timersScheduled = list { TimerRef(i64(), i32(), i64(), duration()) },
             timersCancelled = list { i64() },
             effects = i32(),
         )
-        12 -> JournalEntry.DecisionIgnored(nullable { InputId(i64()) }, string())
+        12 -> JournalEntry.DecisionIgnored(attribution(), string())
         13 -> JournalEntry.JournalGap(i64())
         14 -> JournalEntry.RecordingStopped
-        15 -> JournalEntry.BridgeSent(nullable { InputId(i64()) }, message(), StoreInstanceId(string()), bool(), if (recordFormatVersion >= 7) nullable { message() } else null)
-        16 -> JournalEntry.BridgeReceived(nullable { InputId(i64()) }, message())
-        17 -> JournalEntry.EffectQueued(nullable { InputId(i64()) }, i64(), string(), payload())
+        15 -> JournalEntry.BridgeSent(attribution(), message(), StoreInstanceId(string()), bool(), if (recordFormatVersion >= 7 && bool()) message() else MessageCause.Unprompted)
+        16 -> JournalEntry.BridgeReceived(attribution(), message())
+        17 -> JournalEntry.EffectQueued(attribution(), i64(), string(), payload())
         18 -> JournalEntry.EffectHandlingStarted(i64(), i32())
         19 -> JournalEntry.EffectAcknowledged(i64())
         20 -> JournalEntry.EffectDiscarded(i64(), string())
-        21 -> JournalEntry.ExternalReceived(nullable { InputId(i64()) }, string())
+        21 -> JournalEntry.ExternalReceived(attribution(), string())
         22 -> JournalEntry.CheckpointCreated(list { StoreInstanceId(string()) }, list { string() }, i32())
         23 -> JournalEntry.CommandsAbandoned(string(), list { i64() }, list { i64() })
         24 -> JournalEntry.BridgeDropped(message(), StoreInstanceId(string()), string())
         else -> throw ByteReader.Malformed("unknown entry tag $tag")
     }
+
+    private fun ByteWriter.attribution(input: InputAttribution) {
+        bool(input is InputId)
+        input.correlate { i64(it.value) }
+    }
+    private fun ByteReader.attribution(): InputAttribution = if (bool()) InputId(i64()) else InputAttribution.Unattributed
 
     private fun ByteWriter.message(message: MessageRef) {
         string(message.from.value)
@@ -404,12 +422,12 @@ object JournalFileFormat {
             }
             is InputDescriptor.Transaction -> {
                 u8(3)
-                nullable(kind.origin) { i64(it.value) }
+                attribution(kind.origin)
             }
             is InputDescriptor.Recovery -> {
                 u8(4)
                 failure(kind.failure)
-                nullable(kind.origin) { i64(it.value) }
+                attribution(kind.origin)
             }
         }
     }
@@ -417,9 +435,26 @@ object JournalFileFormat {
     private fun ByteReader.input(): InputDescriptor<Nothing> = when (val kind = u8()) {
         1 -> InputDescriptor.Startup
         2 -> InputDescriptor.Dispatch(payload())
-        3 -> InputDescriptor.Transaction(nullable { InputId(i64()) })
-        4 -> InputDescriptor.Recovery(failure(), nullable { InputId(i64()) })
+        3 -> InputDescriptor.Transaction(attribution())
+        4 -> InputDescriptor.Recovery(failure(), attribution())
         else -> throw ByteReader.Malformed("unknown input kind $kind")
+    }
+
+    private fun ByteWriter.commandExecution(execution: CommandExecution) {
+        when (execution) {
+            CommandExecution.Independent -> { bool(false); bool(false) }
+            is CommandExecution.InLane -> { bool(true); string(execution.lane); bool(true); string(execution.policy) }
+        }
+    }
+
+    private fun ByteReader.commandExecution(): CommandExecution {
+        if (!bool()) {
+            if (bool()) throw ByteReader.Malformed("command policy without a lane")
+            return CommandExecution.Independent
+        }
+        val lane = string()
+        if (!bool()) throw ByteReader.Malformed("command lane without a policy")
+        return CommandExecution.InLane(lane, string())
     }
 
     private fun ByteWriter.payload(payload: Payload<*>) {
@@ -454,19 +489,41 @@ object JournalFileFormat {
         else -> throw ByteReader.Malformed("unknown payload kind $kind")
     }
 
+    private fun ByteReader.discard(): DiscardDescriptor {
+        val kind = enumNamed<DiscardKind>(string())
+        return if (bool()) DiscardDescriptor(kind, failure()) else DiscardDescriptor(kind)
+    }
+
+    private fun ByteReader.outcome(): OutcomeDescriptor {
+        val kind = enumNamed<OutcomeKind>(string())
+        val commits = i32()
+        return if (bool()) OutcomeDescriptor(kind, commits, failure()) else OutcomeDescriptor(kind, commits)
+    }
+
     private fun ByteWriter.failure(failure: FailureDescriptor) {
-        nullable(failure.type) { string(it) }
-        nullable(failure.message) { string(it) }
-        nullable(failure.cause) { failure(it) }
+        bool("type" in failure.details.attributes)
+        failure.withType { string(it) }
+        bool("message" in failure.details.attributes)
+        failure.withMessage { string(it) }
+        bool(failure.hasCause)
+        failure.withCause { failure(it) }
         list(failure.suppressed) { failure(it) }
     }
 
-    private fun ByteReader.failure(): FailureDescriptor = FailureDescriptor(
-        type = nullable { string() },
-        message = nullable { string() },
-        cause = nullable { failure() },
-        suppressed = list { failure() },
-    )
+    private fun ByteReader.failure(): FailureDescriptor {
+        var details: FailureDetails = FailureDetails.Redacted
+        if (bool()) details = FailureDetails.MetadataOnly(string())
+        if (bool()) {
+            val message = string()
+            val named = details
+            details = if (named is FailureDetails.MetadataOnly) FailureDetails.Detailed(named.type, message) else FailureDetails.AnonymousMessage(message)
+        }
+        val related = buildList {
+            if (bool()) add(FailureRelation.Cause(failure()))
+            list { failure() }.forEach { add(FailureRelation.Suppressed(it)) }
+        }
+        return FailureDescriptor(details, related)
+    }
 
     private fun ByteWriter.activation(ref: ActivationRef) {
         string(ref.node)
@@ -486,6 +543,13 @@ object JournalFileFormat {
 /**
  * What the header of a segment says.
  */
+sealed interface JournalPrefix {
+    fun withHeader(accept: (SegmentHeader) -> Unit)
+    data object Unreadable : JournalPrefix {
+        override fun withHeader(accept: (SegmentHeader) -> Unit) = Unit
+    }
+}
+
 data class SegmentHeader(
     val fileFormatVersion: Int,
     val recordFormatVersion: Int,
@@ -493,7 +557,9 @@ data class SegmentHeader(
     val group: MachineGroupId,
     val mode: ExecutionMode,
     val index: Int,
-)
+) : JournalPrefix {
+    override fun withHeader(accept: (SegmentHeader) -> Unit) = accept(this)
+}
 
 /**
  * A segment as read: its header (when it had a readable one), the records read in order, the
@@ -501,11 +567,12 @@ data class SegmentHeader(
  * frame. A finished segment without a mark was read whole.
  */
 data class DecodedSegment(
-    val header: SegmentHeader?,
+    val prefix: JournalPrefix,
     val records: List<JournalRecord<Nothing, Nothing, Nothing>>,
-    val mark: SegmentMark?,
-    val finished: Boolean,
-)
+    val ending: SegmentEnding,
+) {
+    val finished: Boolean get() = ending.finished
+}
 
 /**
  * What a reader found instead of, or after, records. Marks are never thrown; they are part of

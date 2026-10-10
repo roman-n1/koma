@@ -39,7 +39,7 @@ import kotlin.coroutines.CoroutineContext
  * counter that a guard reads)
  * @property timers The running timers; bookkeeping of the Store (see [ChartTimers])
  */
-data class ChartState<C>(
+data class ChartState<C : Any>(
     val configuration: StateConfiguration,
     val context: C,
     val timers: ChartTimers = ChartTimers(),
@@ -79,7 +79,7 @@ data class ChartTimers(
  * [StateChartStoreBuilder.onEnter] hook.
  */
 @ActronStoreDsl
-interface ChartHookScope<C, E : Event> {
+interface ChartHookScope<C : Any, E : Event> {
     /** Underlying handler scope for extensions such as `store.message(...)`. */
     val store: StoreScope
 
@@ -89,10 +89,10 @@ interface ChartHookScope<C, E : Event> {
     val node: StateId
 
     /**
-     * What caused the step: the dispatched action, [TimerFired] for a timer, or `null` when the
+     * What caused the step: the dispatched action, [TimerFired] for a timer, or [ChartInitialization] when the
      * Store enters its initial configuration on start.
      */
-    val action: Action?
+    val action: Action
 
     /**
      * The context as updated so far in this step. Assign it to update the context; the step
@@ -110,7 +110,7 @@ interface ChartHookScope<C, E : Event> {
  * Scope of an [StateChartStoreBuilder.onEnter] hook.
  */
 @ActronStoreDsl
-interface ChartEnterScope<C, A : Action, E : Event> : ChartHookScope<C, E> {
+interface ChartEnterScope<C : Any, A : Action, E : Event> : ChartHookScope<C, E> {
     /**
      * Starts work that lives while [node] stays active: it is cancelled when [node] is exited (or
      * when the Store closes), and it does not start at all when the step that entered [node]
@@ -127,7 +127,7 @@ interface ChartEnterScope<C, A : Action, E : Event> : ChartHookScope<C, E> {
  * `recover {}` handlers, otherwise by its exception handler.
  */
 @ActronStoreDsl
-interface ChartLaunchScope<C, A : Action, E : Event> {
+interface ChartLaunchScope<C : Any, A : Action, E : Event> {
     /** Underlying launch scope for StoreScope extensions. */
     val store: StoreScope
 
@@ -166,7 +166,7 @@ interface ChartLaunchScope<C, A : Action, E : Event> {
  * for entering and exiting nodes, and the Actron Store configuration.
  */
 @ActronStoreDsl
-class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
+class StateChartStoreBuilder<C : Any, A : Action, E : Event> internal constructor() {
     internal var maxMicrosteps = 100
 
     /** Bounds automatic transitions per input; lifecycle changes are staged until stability. */
@@ -189,7 +189,8 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * @throws IllegalArgumentException if [label] already has an implementation
      */
     fun guard(label: String, guard: (state: ChartState<C>, action: Action) -> Boolean) {
-        require(guards.put(label, guard) == null) { "[Actron] Guard '$label' is implemented twice" }
+        require(label !in guards) { "[Actron] Guard '$label' is implemented twice" }
+        guards[label] = guard
     }
 
     /**
@@ -200,7 +201,8 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
      * @throws IllegalArgumentException if [label] already has an implementation
      */
     fun effect(label: String, effect: (context: C, action: Action) -> C) {
-        require(effects.put(label, effect) == null) { "[Actron] Effect '$label' is implemented twice" }
+        require(label !in effects) { "[Actron] Effect '$label' is implemented twice" }
+        effects[label] = effect
     }
 
     fun guard(key: GuardKey, guard: (ChartState<C>, Action) -> Boolean) = guard(key.name, guard)
@@ -268,7 +270,7 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
  * meanwhile may run first).
  *
  * On start, with the declared initial state: the enter hooks of the initial configuration run
- * (with a `null` action), then activities and timers start. With a state restored by a
+ * (with [ChartInitialization]), then activities and timers start. With a state restored by a
  * [actron.core.StateSaver], the enter hooks do not run again (the context already reflects them),
  * but activities start and the running timers restart with their full delay. A restored
  * configuration that [definition] cannot produce, such as one naming a state that no longer
@@ -284,12 +286,12 @@ class StateChartStoreBuilder<C, A : Action, E : Event> internal constructor() {
  * a guard or effect label is implemented twice, if the hierarchy of [definition] is malformed or
  * refers to undeclared states, or if timers without a positive delay restart each other in a loop
  */
-fun <C, A : Action, E : Event> StateChartStore(
+fun <C : Any, A : Action, E : Event> StateChartStore(
     definition: StateChartDefinition,
     context: C,
     coroutineContext: CoroutineContext = kotlinx.coroutines.Dispatchers.Default,
     builder: StateChartStoreBuilder<C, A, E>.() -> Unit = {},
-): Store<ChartState<C>, A, E> = ChartStoreHost(definition, context, StateChartStoreBuilder<C, A, E>().apply(builder)).build(coroutineContext)
+): Store<ChartState<C>, A, E> = ChartStoreHost(definition, context, StateChartStoreBuilder<C, A, E>().apply(builder), coroutineContext).build()
 
 /**
  * Everything one [StateChartStore] keeps besides its Actron state. Its mutable parts are touched only
@@ -297,17 +299,18 @@ fun <C, A : Action, E : Event> StateChartStore(
  * is a channel.
  */
 @OptIn(InternalActronApi::class)
-internal class ChartStoreHost<C, A : Action, E : Event>(
+internal class ChartStoreHost<C : Any, A : Action, E : Event>(
     private val definition: StateChartDefinition,
     context: C,
     private val config: StateChartStoreBuilder<C, A, E>,
+    private val coroutineContext: CoroutineContext,
     /** Whether a timer coroutine is cancelled with its source; tests turn it off to check the tokens alone. */
     private val cancelTimers: Boolean = true,
 ) {
     private val runtime = StateChartRuntime<ChartState<C>>(definition, { definition.activeLeaves(it.configuration).first() }, config.guards)
 
     init {
-        val missing = definition.transitions.mapNotNull { it.effect }.distinct().filter { it !in config.effects }
+        val missing = buildList { definition.transitions.forEach { it.effect.withLabel { add(it) } } }.distinct().filter { it !in config.effects }
         require(missing.isEmpty()) { "[Actron] Missing effect implementations: ${missing.joinToString()}" }
         val declared = definition.states.filter { it !is HistoryState }.map { it.id }.toSet()
         val undeclared = (config.enterHooks.keys + config.exitHooks.keys + config.activities.keys).filter { it !in declared }
@@ -319,7 +322,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         val loops = definition.instantTimerCycles()
         require(loops.isEmpty()) {
             "[Actron] Timers without a positive delay restart each other forever: " +
-                loops.joinToString { cycle -> cycle.joinToString(" -> ") { "${it.source.value} --after ${it.after}--> ${it.target.value}" } }
+                loops.joinToString { cycle -> cycle.joinToString(" -> ") { "${it.source.value} --after ${it.timerDelay()}--> ${it.target.value}" } }
         }
     }
 
@@ -339,20 +342,20 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         context = context,
     ).let { it.copy(timers = issue(it.timers, timersOf(definition.inEntryOrder(it.configuration.active)))) }
 
-    private class Task(val activation: Job, val block: suspend () -> Unit)
+    private inner class Worker(val transactor: EnterLaunchScope<ChartState<C>, E, ChartState<C>>, val scope: CoroutineScope)
+    private inner class Task(val activation: Job, val block: suspend Worker.() -> Unit)
 
     private val tasks = Channel<Task>(Channel.UNLIMITED)
     private val activations = mutableMapOf<StateId, Job>()
-    private lateinit var transactor: EnterLaunchScope<ChartState<C>, E, ChartState<C>>
-    private lateinit var workScope: CoroutineScope
-    private lateinit var store: Store<ChartState<C>, A, E>
 
     /** Timer firings ignored because their token was stale; read by tests. */
     internal var staleFirings: Int = 0
         private set
 
-    fun build(coroutineContext: CoroutineContext): Store<ChartState<C>, A, E> {
-        store = Store(declaredInitial, coroutineContext) {
+    fun build(): Store<ChartState<C>, A, E> = store
+
+    private val store: Store<ChartState<C>, A, E> by lazy {
+        Store(declaredInitial, coroutineContext) {
             // The action type is erased; every action this Store receives is an A.
             @Suppress("UNCHECKED_CAST")
             (this as StoreBuilder<ChartState<C>, Action, E>).state<ChartState<C>> {
@@ -375,7 +378,6 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
             }
             initialState(declaredInitial)
         }
-        return store
     }
 
     private fun timersOf(states: List<StateId>): List<Int> = states.flatMap { timersBySource[it].orEmpty() }
@@ -393,23 +395,26 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         // A restored configuration whose active nodes this chart cannot produce (for example one
         // saved by an older version of the chart) starts over from the initial configuration,
         // keeping the context. History records the chart cannot restore are dropped on their own.
-        val consistent = if (restored === declaredInitial) restored.configuration else definition.consistentPart(restored.configuration)
-        val state = when (consistent) {
-            null -> declaredInitial.copy(context = restored.context)
-            restored.configuration -> restored
-            else -> restored.copy(configuration = consistent)
+        val restart = restored !== declaredInitial && !definition.hasRestorableActiveNodes(restored.configuration)
+        val state = when {
+            restart -> declaredInitial.copy(context = restored.context)
+            restored === declaredInitial -> restored
+            else -> {
+                val consistent = definition.pruneInvalidHistory(restored.configuration)
+                if (consistent == restored.configuration) restored else restored.copy(configuration = consistent)
+            }
         }
-        val fresh = state === declaredInitial || consistent == null
+        val fresh = restored === declaredInitial || restart
         val active = definition.inEntryOrder(state.configuration.active)
         var context = state.context
         val entered = linkedMapOf<StateId, Job>()
         val launches = mutableListOf<Task>()
-        var failure: Exception? = null
+        var startupResult: Result<Unit> = Result.success(Unit)
         // Every active node gets its activation before any hook runs: a failing hook of an outer
         // node must not leave the nodes after it without one.
         for (id in active) entered[id] = Job()
         try {
-            if (fresh) for (id in active) context = enter(id, entered.getValue(id), context, null, launches, this) { event(it) }
+            if (fresh) for (id in active) context = enter(id, entered.getValue(id), context, ChartInitialization, launches, this) { event(it) }
         } catch (e: Exception) {
             // The Store's own cancellation ends the start; any other exception, including an
             // expired withTimeout, is a failed hook (the core rule).
@@ -421,7 +426,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
             // in: the Store is in this one, so its activations, activities and timers must exist.
             // Only the failed hooks' context changes and launches are dropped; the error reaches
             // the recover {} handlers once the state is committed.
-            failure = e
+            startupResult = Result.failure(e)
             context = state.context
             launches.clear()
         }
@@ -429,14 +434,14 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         val expected = timersOf(active)
         val timers = if (state.timers.running.keys == expected.toSet()) state.timers else issue(ChartTimers(issued = state.timers.issued), expected)
         var next = state.copy(context = context, timers = timers)
-        if (failure == null) {
+        if (startupResult.isSuccess) {
             try {
                 val automatic = runtime.automaticStep(next.configuration, next)
                 if (automatic is StepResult.Transitioned) {
                     next = takeStep(next, automatic, AutomaticTransition(automatic.transitions.first().trigger == Trigger.Completion), this) { event(it) }
                 }
             } catch (error: Exception) {
-                failure = error
+                startupResult = Result.failure(error)
                 next = state.copy(timers = timers)
                 launches.clear()
             }
@@ -445,7 +450,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         active.filter { activations[it] === entered[it] }.forEach(::startActivities)
         expected.filter { next.timers.running[it] == timers.running[it] }.forEach { schedule(it, timers.running.getValue(it)) }
         if (next != restored) nextState { next }
-        failure?.let { error -> launch { transaction { throw error } } }
+        startupResult.onFailure { error -> launch { transaction { throw error } } }
     }
 
     /** Runs the hooks and effects of [result] and returns the state to commit. */
@@ -471,7 +476,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
                     working.remove(id)?.let(cancelled::add)
                 }
                 for (transition in step.transitions) {
-                    transition.effect?.let { context = config.effects.getValue(it)(context, stepAction) }
+                    transition.effect.withLabel { context = config.effects.getValue(it)(context, stepAction) }
                 }
                 for (id in step.entered) {
                     val activation = Job()
@@ -508,7 +513,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         id: StateId,
         activation: Job,
         context: C,
-        action: Action?,
+        action: Action,
         launches: MutableList<Task>,
         storeScope: StoreScope,
         emit: suspend (E) -> Unit,
@@ -536,7 +541,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
     }
 
     private fun taskFor(id: StateId, activation: Job, block: suspend ChartLaunchScope<C, A, E>.() -> Unit): Task =
-        Task(activation) { LaunchScope(id, activation).block() }
+        Task(activation) { LaunchScope(id, activation, this).block() }
 
     private fun schedule(index: Int, token: Long) {
         val timer = definition.transitions[index]
@@ -576,21 +581,20 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
 
     /** The Store-lifetime coroutine that runs [tasks]; subscribed once from the chart's `enter {}`, so a test's `awaitIdle` does not wait for it: activities and timers are the chart's data. */
     private suspend fun work(scope: EnterLaunchScope<ChartState<C>, E, ChartState<C>>) {
-        transactor = scope
         supervisorScope {
-            workScope = this
+            val worker = Worker(scope, this)
             for (task in tasks) {
                 if (!task.activation.isActive) continue
-                launch { runTask(task) }
+                launch { worker.runTask(task) }
             }
         }
     }
 
-    private suspend fun runTask(task: Task) {
+    private suspend fun Worker.runTask(task: Task) {
         val job = currentCoroutineContext().job
         val handle = task.activation.invokeOnCompletion { job.cancel() }
         try {
-            task.block()
+            task.block(this)
         } catch (e: Exception) {
             // The task's own cancellation (its node exited, the Store closed) ends it; any other
             // exception, including an expired withTimeout, is a failure of the task.
@@ -608,13 +612,13 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
      * may exit (cancelling the task) before the transaction gets the lock. The transaction still
      * runs after the step that exits the node, so the handlers see the committed state.
      */
-    private fun report(failure: Exception) {
-        workScope.launch { transactor.transaction { throw failure } }
+    private fun Worker.report(failure: Exception) {
+        scope.launch { transactor.transaction { throw failure } }
     }
 
     private inner class ExitScope(
         override val node: StateId,
-        override val action: Action?,
+        override val action: Action,
         override var context: C,
         override val store: StoreScope,
         private val emit: suspend (E) -> Unit,
@@ -624,7 +628,7 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
 
     private inner class EnterHookScope(
         override val node: StateId,
-        override val action: Action?,
+        override val action: Action,
         override var context: C,
         override val store: StoreScope,
         private val emit: suspend (E) -> Unit,
@@ -641,20 +645,20 @@ internal class ChartStoreHost<C, A : Action, E : Event>(
         }
     }
 
-    private inner class LaunchScope(override val node: StateId, private val activation: Job) : ChartLaunchScope<C, A, E> {
-        override val store: StoreScope get() = transactor
+    private inner class LaunchScope(override val node: StateId, private val activation: Job, private val worker: Worker) : ChartLaunchScope<C, A, E> {
+        override val store: StoreScope get() = worker.transactor
 
         // The activation is a plain Job that close() does not cancel; the transactor's scope is.
-        override val isActive: Boolean get() = activation.isActive && transactor.isActive
+        override val isActive: Boolean get() = activation.isActive && worker.transactor.isActive
 
         override suspend fun event(event: E) {
-            if (isActive) transactor.event(event)
+            if (isActive) worker.transactor.event(event)
         }
 
         override suspend fun updateContext(transform: (C) -> C): Boolean {
             var applied = false
             val activation = activation
-            transactor.transaction {
+            worker.transactor.transaction {
                 if (activation.isActive) {
                     // Computed before `applied` is set: a throwing transform reaches recover {}
                     // and the caller learns that nothing was applied.

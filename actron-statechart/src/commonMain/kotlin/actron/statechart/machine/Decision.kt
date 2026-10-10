@@ -20,7 +20,7 @@ import actron.observability.FailureDescriptor
  * @property timersCancelled The timers to cancel, including a fired one
  * @property effects The events to deliver, in the order the hooks emitted them
  */
-data class Decision<C, out CMD, out E : Event>(
+data class Decision<C : Any, out CMD : Any, out E : Event>(
     val outcome: DecisionOutcome,
     val snapshot: MachineSnapshot<C>,
     val transitions: List<TransitionId> = emptyList(),
@@ -86,6 +86,8 @@ enum class IgnoreReason {
  * How commands in one [LaneId] relate.
  */
 sealed interface ConcurrencyPolicy {
+    /** Runs independently of other commands, outside any named lane. */
+    data object Independent : ConcurrencyPolicy
     /** A new command cancels the running one in the lane. */
     data object Latest : ConcurrencyPolicy
 
@@ -107,15 +109,15 @@ sealed interface ConcurrencyPolicy {
  * A command to register: what to run, for which activation, and how it relates to other commands
  * of its lane. A command without a lane runs on its own.
  */
-data class CommandRegistration<out CMD>(
+data class CommandRegistration<out CMD : Any>(
     val id: CommandId,
     val command: CMD,
     val scope: ActivationId,
-    val lane: LaneId? = null,
-    val policy: ConcurrencyPolicy? = null,
+    val lane: CommandLane = CommandLane.Independent,
+    val policy: ConcurrencyPolicy = ConcurrencyPolicy.Independent,
 ) {
     init {
-        require((lane == null) == (policy == null)) { "[Actron] A lane needs a policy and a policy needs a lane" }
+        require((lane == CommandLane.Independent) == (policy == ConcurrencyPolicy.Independent)) { "[Actron] A named lane needs a concurrency policy" }
     }
 }
 

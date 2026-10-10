@@ -1,5 +1,7 @@
 package actron.timetravel
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.InputId
@@ -15,6 +17,7 @@ import actron.statechart.machine.MachineGroup
 import actron.statechart.machine.MachineInput
 import actron.statechart.machine.MessageId
 import actron.statechart.machine.RoutePair
+import actron.statechart.machine.RouteProtocol
 import actron.statechart.machine.SourceId
 import actron.statechart.machine.SourceSnapshot
 import kotlinx.coroutines.sync.Mutex
@@ -26,7 +29,7 @@ data class GroupStep(val store: StoreInstanceId, val step: Int)
  * A route of the group's bridge, as a recording remembers it: effects of [from] reached [to] at
  * some time of the run; [pair] is its place in a request/reply pair, when it has one.
  */
-data class GroupRoute(val from: StoreInstanceId, val to: StoreInstanceId, val pair: RoutePair? = null)
+data class GroupRoute(val from: StoreInstanceId, val to: StoreInstanceId, val pair: RouteProtocol = RouteProtocol.OneWay)
 
 /**
  * A run of a [MachineGroup]: each member's [Recording] and the order the members' decisions were
@@ -95,11 +98,13 @@ class GroupRecording(
             dropped[id] = 0
         }
         val seen = mutableMapOf<StoreInstanceId, Int>()
-        val newOrder = order.mapNotNull { step ->
-            val index = seen[step.store] ?: 0
-            seen[step.store] = index + 1
-            val skip = dropped.getValue(step.store)
-            if (index < skip) null else GroupStep(step.store, step.step - skip)
+        val newOrder = buildList {
+            for (step in order) {
+                val index = seen[step.store] ?: 0
+                seen[step.store] = index + 1
+                val skip = dropped.getValue(step.store)
+                if (index >= skip) add(GroupStep(step.store, step.step - skip))
+            }
         }
         return GroupRecording(trimmed, newOrder, routes, checkpoint.inFlight.map { it.id }, sourceIds + checkpoint.sources.keys, checkpoint.sources)
     }
@@ -108,7 +113,7 @@ class GroupRecording(
 
     @Suppress("UNCHECKED_CAST")
     private fun Recording<*, *, *, *>.sinceUnchecked(cut: ExecutorCheckpoint<*, *>): Recording<*, *, *, *> =
-        (this as Recording<Any?, Action, Any?, Event>).since(cut as ExecutorCheckpoint<Any?, Any?>)
+        (this as Recording<Any, Action, Any, Event>).since(cut as ExecutorCheckpoint<Any, Any>)
 }
 
 /**
@@ -136,24 +141,24 @@ class GroupRecorder(
      *
      * @throws IllegalArgumentException if [id] is already recorded
      */
-    fun <C, A : Action, CMD, E : Event> member(id: StoreInstanceId, machine: Machine<C, A, CMD, E>, context: C): DecisionObserver<C, A, CMD, E> {
+    fun <C : Any, A : Action, CMD : Any, E : Event> member(id: StoreInstanceId, machine: Machine<C, A, CMD, E>, context: C): DecisionObserver<C, A, CMD, E> {
         val recorder = MachineRecorder(machine, context)
         locked {
             require(id !in recorders) { "[Actron] $id is already recorded by this group recorder" }
             recorders[id] = recorder
         }
         return object : DecisionObserver<C, A, CMD, E> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) = locked {
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) = locked {
                 recorder.onCommitted(input, machineInput, decision)
                 step(id)
             }
 
-            override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) = locked {
+            override fun onIgnored(input: InputAttribution, machineInput: MachineInput<A>, reason: IgnoreReason) = locked {
                 recorder.onIgnored(input, machineInput, reason)
                 step(id)
             }
 
-            override fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) = locked {
+            override fun onFailed(input: InputAttribution, machineInput: MachineInput<A>, failure: FailureDescriptor) = locked {
                 recorder.onFailed(input, machineInput, failure)
                 step(id)
             }
@@ -162,7 +167,7 @@ class GroupRecorder(
 
     /** The problems of the members' recorders, by member; empty when every run began at its initial snapshot. */
     val problems: Map<StoreInstanceId, String>
-        get() = locked { recorders.mapNotNull { (id, recorder) -> recorder.problem?.let { id to it } }.toMap() }
+        get() = locked { buildMap { for ((id, recorder) in recorders) recorder.origin.withProblem { put(id, it) } } }
 
     /** The group's recording so far. */
     fun recording(): GroupRecording = locked {
@@ -175,7 +180,7 @@ class GroupRecorder(
         order += GroupStep(id, index)
     }
 
-    private inline fun <T> locked(block: () -> T): T {
+    private inline fun <T : Any> locked(block: () -> T): T {
         while (!lock.tryLock()) {
             // Spin: the holder appends one step.
         }

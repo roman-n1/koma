@@ -72,7 +72,7 @@ class GroupFailureRegressionTest {
             runCurrent()
             assertFailsWith<IllegalArgumentException> { group.member<Unit, Act, Nothing, Ev>(id) }
             assertTrue(member.isAttached)
-            assertEquals(store.currentState, checkNotNull(group.checkpoint()).members.getValue(id).snapshot)
+            assertEquals(store.currentState, kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(group.checkpoint()).checkpoint.members.getValue(id).snapshot)
         } finally { store.close() }
     }
 
@@ -146,7 +146,7 @@ class GroupFailureRegressionTest {
         assertFalse(first.paused)
         assertEquals(0, last.resumes)
         gate.complete(Unit)
-        assertEquals(setOf(first.id, last.id), checkNotNull(group.checkpoint()).sources.keys)
+        assertEquals(setOf(first.id, last.id), kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(group.checkpoint()).checkpoint.sources.keys)
         assertFalse(first.paused || last.paused)
     }
 

@@ -141,7 +141,7 @@ class StoreProbeTest {
         }
     }
 
-    private val StoreTrace<*, *, *>.input: InputId?
+    private val StoreTrace<*, *, *>.input: InputAttribution?
         get() = when (this) {
             is StoreTrace.InputAccepted -> input
             is StoreTrace.InputDiscarded -> input

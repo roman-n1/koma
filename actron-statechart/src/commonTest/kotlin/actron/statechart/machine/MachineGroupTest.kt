@@ -87,7 +87,7 @@ class MachineGroupTest {
 
     private val root = StateId("Root")
     private val idle = StateId("Idle")
-    private fun chart(matcher: ActionMatcher) = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, matcher, effect = "remember")))
+    private fun chart(matcher: ActionMatcher) = StateChartDefinition(root, listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root)), listOf(Transition(idle, idle, matcher, effect = actron.statechart.EffectKey("remember"))))
 
     private val picker = Machine<PickerCtx, PickerAct, Fetch, PickerEv>(DefinitionId("picker"), DefinitionVersion("1"), chart(ActionMatcher.of<PickerAct.Pick>("Pick"))) {
         effect("remember") { c, a -> c.copy(last = (a as PickerAct.Pick).name) }
@@ -144,8 +144,8 @@ class MachineGroupTest {
 
         init {
             if (routed) {
-                group.route<PickerEv, RootAct>(pickerId, rootId) { (it as? PickerEv.Picked)?.let { picked -> RootAct.Apply(picked.name) } }
-                group.route<RootEv, PickerAct>(rootId, pickerId) { (it as? RootEv.Applied)?.let { applied -> PickerAct.Ack(applied.count) } }
+                group.route<PickerEv, RootAct>(pickerId, rootId) { event, carry -> (event as? PickerEv.Picked)?.let { picked -> carry(RootAct.Apply(picked.name)) } }
+                group.route<RootEv, PickerAct>(rootId, pickerId) { event, carry -> (event as? RootEv.Applied)?.let { applied -> carry(PickerAct.Ack(applied.count)) } }
             }
             pickerMember.attach(pickerStore)
             if (attachRoot) rootMember.attach(rootStore)
@@ -167,7 +167,7 @@ class MachineGroupTest {
         val other = MachineStore(rootMachine, RootCtx(), CommandHandler<Nothing, RootAct> { _, _ -> }, f.executionScope, TestClock(testScheduler), f.dispatcher, observers = listOf(member))
         try {
             member.attach(other)
-            f.group.route<PickerEv, RootAct>(pickerId, otherId) { (it as? PickerEv.Picked)?.let { event -> RootAct.Apply(event.name) } }
+            f.group.route<PickerEv, RootAct>(pickerId, otherId) { event, carry -> (event as? PickerEv.Picked)?.let { carry(RootAct.Apply(it.name)) } }
             other.start()
             runCurrent()
             (f.rootStore as MachineStoreImpl).freeze()
@@ -249,7 +249,7 @@ class MachineGroupTest {
     fun aTypedRoute_carriesLikeAnIdRoute_andARemovedRoute_carriesNothingMore_butStaysInTheHistory() = runTest {
         val f = Fixture(this, routed = false)
         // The receiver's action type is checked where the route is written: RootAct for the root.
-        val toRoot = f.group.route(f.pickerMember, f.rootMember) { picked: PickerEv -> (picked as? PickerEv.Picked)?.let { RootAct.Apply(it.name) } }
+        val toRoot = f.group.route(f.pickerMember, f.rootMember) { picked: PickerEv, carry -> (picked as? PickerEv.Picked)?.let { carry(RootAct.Apply(it.name)) } }
         runCurrent()
 
         f.pickerStore.dispatch(PickerAct.Pick("tom"))
@@ -274,8 +274,8 @@ class MachineGroupTest {
         val f = Fixture(this, routed = false)
         val pair = f.group.requestReply(
             f.pickerMember, f.rootMember, "apply",
-            request = { picked: PickerEv -> (picked as? PickerEv.Picked)?.let { RootAct.Apply(it.name) } },
-            reply = { applied: RootEv -> (applied as? RootEv.Applied)?.let { PickerAct.Ack(it.count) } },
+            request = { picked: PickerEv, carry -> (picked as? PickerEv.Picked)?.let { carry(RootAct.Apply(it.name)) } },
+            reply = { applied: RootEv, carry -> (applied as? RootEv.Applied)?.let { carry(PickerAct.Ack(it.count)) } },
         )
         runCurrent()
         assertEquals(listOf(pair.request, pair.reply), f.group.routes)
@@ -290,7 +290,7 @@ class MachineGroupTest {
         assertEquals(listOf(1), f.pickerStore.currentState.context.acks)
         val sent = f.session.records().map { it.entry }.filterIsInstance<JournalEntry.BridgeSent>()
         assertEquals(listOf(MessageRef(pickerId, 1) to rootId, MessageRef(rootId, 1) to pickerId), sent.map { it.message to it.to })
-        assertEquals(listOf<MessageRef?>(null, MessageRef(pickerId, 1)), sent.map { it.cause }, "the request replies to nothing; the reply, decided from the request, names it")
+        assertEquals(listOf<actron.observability.MessageCause>(actron.observability.MessageCause.Unprompted, MessageRef(pickerId, 1)), sent.map { it.cause }, "the request replies to nothing; the reply, decided from the request, names it")
         f.close()
     }
 
@@ -321,7 +321,7 @@ class MachineGroupTest {
         // A cut does not wait for the closed member.
         val cut = async { f.group.checkpoint(1.seconds) }
         runCurrent()
-        assertEquals(setOf(pickerId), cut.await()?.members?.keys)
+        assertEquals(setOf(pickerId), kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(cut.await()).checkpoint.members.keys)
         f.pickerStore.close()
     }
 
@@ -354,7 +354,7 @@ class MachineGroupTest {
         assertEquals(false, f.session.records().map { it.entry }.filterIsInstance<JournalEntry.BridgeSent>().last().delivered, "a message to a detached member goes nowhere")
         val cut = async { f.group.checkpoint(1.seconds) }
         runCurrent()
-        assertEquals(setOf(pickerId), cut.await()?.members?.keys, "a cut without the detached member")
+        assertEquals(setOf(pickerId), kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(cut.await()).checkpoint.members.keys, "a cut without the detached member")
 
         f.rootMember.attach(f.rootStore)
         assertTrue(f.rootMember.isAttached)
@@ -403,14 +403,14 @@ class MachineGroupTest {
         f.pickerStore.dispatch(PickerAct.Pick("a"))
         runCurrent()
 
-        val cut = f.group.checkpoint(1.seconds)
+        val cut = kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(f.group.checkpoint(1.seconds)).checkpoint
 
-        assertTrue(cut != null)
+        assertTrue(cut.members.isNotEmpty())
         assertEquals(setOf(pickerId, rootId), cut.members.keys)
         assertEquals(listOf("a"), (cut.members.getValue(rootId).snapshot.context as RootCtx).names)
         assertTrue(cut.inFlight.isEmpty())
         assertEquals(mapOf(pickerId to 0, rootId to 0), cut.held)
-        assertTrue(cut.boundary != null && cut.boundary!!.value > 0)
+        assertTrue(kotlin.test.assertIs<actron.observability.GroupSeq>(cut.boundary).value > 0)
 
         // Frozen by hand: inputs from every source wait, in arrival order, and enter after the thaw.
         val pickerImpl = f.pickerStore as MachineStoreImpl<PickerCtx, PickerAct, Fetch, PickerEv>
@@ -471,7 +471,7 @@ class MachineGroupTest {
         advanceTimeBy(200.milliseconds)
         runCurrent()
 
-        assertNull(cut.await(), "the cut timed out")
+        kotlin.test.assertIs<actron.statechart.machine.GroupCut.TimedOut>(cut.await(), "the cut timed out")
         // "slow" reached the root before the picker got stuck (plugins run in parallel, the
         // group's observer ran); "during" was held by the failed cut and entered after it.
         assertEquals(listOf("slow", "during"), f.rootStore.currentState.context.names, "the group resumed and the input held during the failed cut entered")
@@ -479,7 +479,7 @@ class MachineGroupTest {
         runCurrent()
         assertTrue(f.pickerStore.currentState.context.acks.isNotEmpty(), "the picker finished its processing and got the root's acknowledgements")
         val again = f.group.checkpoint(1.seconds)
-        assertTrue(again != null && again.inFlight.isEmpty())
+        assertTrue(kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(again).checkpoint.inFlight.isEmpty())
         f.close()
     }
 
@@ -500,7 +500,7 @@ class MachineGroupTest {
         }
         f.group.onCut(listener)
 
-        val cut = f.group.checkpoint(1.seconds)
+        val cut = kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(f.group.checkpoint(1.seconds)).checkpoint
 
         assertEquals(listOf(cut), seen, "the listener saw the cut the caller got")
         assertEquals(listOf(1), heldDuring, "the members were frozen while the listener ran")
@@ -518,7 +518,7 @@ class MachineGroupTest {
         runCurrent()
         assertEquals("after", f.pickerStore.currentState.context.last, "the group resumed after the failed cut")
         val again = f.group.checkpoint(1.seconds)
-        assertTrue(again != null, "a cut without listeners succeeds again")
+        kotlin.test.assertIs<actron.statechart.machine.GroupCut.Ready>(again, "a cut without listeners succeeds again")
         f.close()
     }
 }

@@ -10,29 +10,28 @@ import kotlin.reflect.KClass
  *
  * @property stateType The state type given to `state<S2> {}`
  * @property inputType The action type given to `action<A2> {}` or the exception type given to
- * `recover<T> {}`; `null` for `enter {}` and `exit {}` handlers
+ * `recover<T> {}`; `Unit::class` describes the input-free `enter {}` and `exit {}` handlers
  */
 @PublishedApi
 internal data class HandlerMatcher(
     val stateType: KClass<*>,
-    val inputType: KClass<*>? = null,
+    val inputType: KClass<*> = Unit::class,
 )
 
 /**
  * Matchers of all registered handlers, in registration order.
  *
  * Each list lines up with the order the Store uses for first-match selection.
- * An entry is `null` when the handler was registered by inline code compiled against an earlier
- * Actron version that did not record matchers.
+ * Every entry has declared metadata. Consumers of older inline registries must recompile.
  *
  * [actionPredicates] lines up with [action] and holds the predicates the Store uses to select an
  * action handler, so routing can be checked without running any handler.
  */
 internal class HandlerRegistry<S : State, A : Action>(
-    val enter: List<HandlerMatcher?>,
-    val action: List<HandlerMatcher?>,
-    val exit: List<HandlerMatcher?>,
-    val recover: List<HandlerMatcher?>,
+    val enter: List<HandlerMatcher>,
+    val action: List<HandlerMatcher>,
+    val exit: List<HandlerMatcher>,
+    val recover: List<HandlerMatcher>,
     val actionPredicates: List<(S, A) -> Boolean>,
 )
 
@@ -42,15 +41,15 @@ internal class HandlerRegistry<S : State, A : Action>(
  * Used by `:actron-test` routing diagnostics through [StoreInternalApi.matchActionHandlers].
  *
  * @property index Position of the handler in first-match order
- * @property stateType The state type given to `state<S2> {}`, or `null` if unknown
- * @property actionType The action type given to `action<A2> {}`, or `null` if unknown
+ * @property stateType The state type given to `state<S2> {}`
+ * @property actionType The action type given to `action<A2> {}`
  * @property matches Whether the handler matches the given state and action
  */
 @InternalActronApi
 class ActionHandlerMatch(
     val index: Int,
-    val stateType: KClass<*>?,
-    val actionType: KClass<*>?,
+    val stateType: KClass<*>,
+    val actionType: KClass<*>,
     val matches: Boolean,
 )
 
@@ -60,15 +59,15 @@ class ActionHandlerMatch(
  * Used by `:actron-test` through [StoreInternalApi.handlerMetadata].
  *
  * @property index Position of the handler in first-match order within its kind
- * @property stateType The state type given to `state<S2> {}`, or `null` if unknown
+ * @property stateType The state type given to `state<S2> {}`
  * @property inputType The action type for `action {}`, the exception type for `recover {}`,
- * `null` for `enter {}` and `exit {}` or if unknown
+ * `Unit::class` for input-free `enter {}` and `exit {}`
  */
 @InternalActronApi
 class HandlerMetadata(
     val index: Int,
-    val stateType: KClass<*>?,
-    val inputType: KClass<*>?,
+    val stateType: KClass<*>,
+    val inputType: KClass<*>,
 )
 
 /**

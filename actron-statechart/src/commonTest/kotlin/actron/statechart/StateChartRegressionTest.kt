@@ -188,7 +188,7 @@ class StateChartRegressionTest {
     @Test
     fun mermaidLabelsStayOnOneLine() {
         val guarded = chart.copy(
-            transitions = listOf(Transition(a, b, go, guard = "online\nand ready", effect = "log; count")),
+            transitions = listOf(Transition(a, b, go, guard = actron.statechart.GuardKey("online\nand ready"), effect = actron.statechart.EffectKey("log; count"))),
         )
 
         val diagram = guarded.toMermaid()

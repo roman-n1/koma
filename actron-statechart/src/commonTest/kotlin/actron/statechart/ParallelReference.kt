@@ -25,7 +25,7 @@ internal class ParallelReference(val chart: StateChartDefinition) {
     private val index = nodes.keys.withIndex().associate { (i, id) -> id to i }
     private val histories = nodes.values.filterIsInstance<HistoryState>()
 
-    fun parent(id: StateId): StateId? = nodes[id]?.parent?.takeIf { it in nodes }
+    fun parent(id: StateId): StateId? = (nodes[id]?.parent as? StateId)?.takeIf { it in nodes }
 
     /** [id], its parent, ..., up to the top. */
     fun chain(id: StateId): List<StateId> = generateSequence(id) { parent(it) }.toList()
@@ -84,7 +84,7 @@ internal class ParallelReference(val chart: StateChartDefinition) {
             val target = nodes[t.target]
             if (target is HistoryState) {
                 must += chain(t.target).drop(1).takeWhile { it != d }
-                val restore = history[target.id] ?: target.default?.let(::setOf) ?: when (val p = nodes.getValue(target.parent)) {
+                val restore = history[target.id] ?: (target.default as? StateId)?.let(::setOf) ?: when (val p = nodes.getValue(target.parent)) {
                     is CompoundState -> setOf(p.initial)
                     else -> regions(p.id).toSet()
                 }
@@ -135,7 +135,7 @@ internal class ParallelReference(val chart: StateChartDefinition) {
     }
 
     fun step(configuration: HistoryConfiguration, action: RandomAction, guard: (String, RandomAction) -> Boolean): ParallelFired? {
-        val taken = select(configuration.active) { t -> HierarchyReference.matches(t.on, action) && (t.guard == null || guard(t.guard, action)) }
+        val taken = select(configuration.active) { t -> HierarchyReference.matches((t.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action) && ((t.guard as? actron.statechart.GuardKey)?.name == null || guard((t.guard as actron.statechart.GuardKey).name, action)) }
         return if (taken.isEmpty()) null else fire(configuration, taken)
     }
 
@@ -145,7 +145,7 @@ internal class ParallelReference(val chart: StateChartDefinition) {
     /** A timer firing: nothing when its source is inactive or [guard] rejects its label; otherwise the timer alone. */
     fun fireTimer(configuration: HistoryConfiguration, timer: Transition, guard: (String) -> Boolean): ParallelFired? {
         if (timer.source !in configuration.active) return null
-        if (timer.guard != null && !guard(timer.guard)) return null
+        if ((timer.guard as? actron.statechart.GuardKey)?.name != null && !guard((timer.guard as actron.statechart.GuardKey).name)) return null
         return fire(configuration, listOf(timer))
     }
 
@@ -153,7 +153,7 @@ internal class ParallelReference(val chart: StateChartDefinition) {
     fun graphStep(configuration: HistoryConfiguration, trigger: Transition): ParallelFired {
         if (trigger.trigger is Trigger.After) return fire(configuration, listOf(trigger))
         val triggerExit = exitSet(configuration.active, trigger)
-        val taken = select(configuration.active) { t -> t == trigger || (t.on == trigger.on && exitSet(configuration.active, t).none { it in triggerExit }) }
+        val taken = select(configuration.active) { t -> t == trigger || ((t.trigger as? actron.statechart.Trigger.OnAction)?.matcher == (trigger.trigger as? actron.statechart.Trigger.OnAction)?.matcher && exitSet(configuration.active, t).none { it in triggerExit }) }
         return fire(configuration, taken)
     }
 

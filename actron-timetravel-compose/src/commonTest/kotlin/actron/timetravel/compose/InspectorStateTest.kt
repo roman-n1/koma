@@ -38,7 +38,7 @@ class InspectorStateTest {
     private fun records(processings: Int): List<JournalRecord<*, *, *>> {
         var seq = 0L
         fun record(entry: JournalEntry<*, *, *>, store: StoreInstanceId? = a) =
-            JournalRecord(JOURNAL_FORMAT_VERSION, RuntimeSessionId("s"), MachineGroupId("g"), store, ExecutionMode.Live, GroupSeq(++seq), store?.let { StoreSeq(seq) }, seq.milliseconds, entry)
+            JournalRecord(JOURNAL_FORMAT_VERSION, RuntimeSessionId("s"), MachineGroupId("g"), store ?: actron.observability.RecordSubject.Session, ExecutionMode.Live, GroupSeq(++seq), store?.let { StoreSeq(seq) } ?: actron.observability.RecordOrdinal.Session, seq.milliseconds, entry)
         return buildList {
             add(record(JournalEntry.StoreRegistered(Capability.InspectOnly)))
             add(record(JournalEntry.StoreRegistered(Capability.InspectOnly), b))

@@ -1,5 +1,7 @@
 package actron.timetravel.file
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.InputId
@@ -8,6 +10,8 @@ import actron.observability.MachineGroupId
 import actron.observability.StoreInstanceId
 import actron.observability.file.Framing
 import actron.observability.file.SegmentMark
+import actron.observability.file.SegmentEnding
+import actron.observability.file.beforeHeader
 import actron.observability.file.SegmentOutput
 import actron.observability.file.SegmentStorage
 import actron.statechart.machine.CutListener
@@ -22,6 +26,7 @@ import actron.statechart.machine.MachineInput
 import actron.statechart.machine.MessageId
 import actron.statechart.machine.PairRole
 import actron.statechart.machine.RoutePair
+import actron.statechart.machine.RouteProtocol
 import actron.statechart.machine.SourceId
 import actron.statechart.machine.SourceSnapshot
 import actron.timetravel.GroupRecording
@@ -41,6 +46,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * The layout of a segment of a group's order file: `KOMAGRPO`, a header frame (the group, its
@@ -74,31 +83,46 @@ object GroupRecordingFileFormat {
 
     fun segmentName(group: MachineGroupId, index: Int): String = "${group.value}-${index.toString().padStart(6, '0')}$EXTENSION"
 
-    fun parseSegmentName(name: String): Pair<MachineGroupId, Int>? {
-        if (!name.endsWith(EXTENSION)) return null
+    fun parseSegmentName(name: String, accept: (MachineGroupId, Int) -> Unit): Boolean {
+        if (!name.endsWith(EXTENSION)) return false
         val stem = name.removeSuffix(EXTENSION)
         val dash = stem.lastIndexOf('-')
-        if (dash <= 0) return null
-        val index = stem.substring(dash + 1).takeIf { it.length == 6 }?.toIntOrNull() ?: return null
-        return MachineGroupId(stem.substring(0, dash)) to index
+        if (dash <= 0) return false
+        val index = stem.substring(dash + 1).takeIf { it.length == 6 }?.toIntOrNull() ?: return false
+        accept(MachineGroupId(stem.substring(0, dash)), index)
+        return true
+    }
+
+    internal fun namedSegments(storage: SegmentStorage, owner: MachineGroupId): List<Pair<Int, String>> = buildList {
+        for (info in storage.list()) parseSegmentName(info.name) { id, index ->
+            if (id == owner) add(index to info.name)
+        }
     }
 
     fun header(header: GroupSegmentHeader): ByteArray {
         val wire = GroupHeaderWire(
-            header.fileFormatVersion, header.group.value, header.members.map { it.value }, header.routes.map { RouteWire(it.from.value, it.to.value, it.pair?.name, it.pair?.role?.name) },
+            header.fileFormatVersion, header.group.value, header.members.map { it.value }, header.routes.map { val pair = it.pair; if (pair is RoutePair) RouteWire(it.from.value, it.to.value, JsonPrimitive(pair.name), JsonPrimitive(pair.role.name)) else RouteWire(it.from.value, it.to.value) },
             header.sourceIds.map { it.value }, header.index, header.firstEntry, header.inFlight.map { MessageWireG(it.from.value, it.effect.value) },
-            header.cut?.let { cut ->
-                CutWire(
-                    cut.counts.map { (store, count) -> store.value to count }.toMap(),
-                    cut.sources.values.map { SourceSnapshotWire(it.source.value, it.kind, it.version, it.fields) },
-                )
-            },
+            cutNode(header.boundary),
         )
         return MAGIC + Framing.frame(byteArrayOf(TAG_HEADER.toByte()) + json.encodeToString(GroupHeaderWire.serializer(), wire).encodeToByteArray())
     }
 
+    private fun cutNode(boundary: GroupBoundary): JsonElement {
+        var node: JsonElement = JsonNull
+        boundary.withCut { cut ->
+            node = json.encodeToJsonElement(CutWire.serializer(), CutWire(
+                    cut.counts.map { (store, count) -> store.value to count }.toMap(),
+                    cut.sources.values.map { SourceSnapshotWire(it.source.value, it.kind, it.version, it.fields) },
+            ))
+        }
+        return node
+    }
+
     fun entryFrame(entry: GroupOrderEntry): ByteArray {
-        val wire = EntryWire(entry.store.value, entry.step, entry.sent.map { MessageWireG(it.from.value, it.effect.value) }, entry.received?.let { MessageWireG(it.from.value, it.effect.value) })
+        var received: JsonElement = JsonNull
+        entry.delivery.withReceived { received = json.encodeToJsonElement(MessageWireG.serializer(), MessageWireG(it.from.value, it.effect.value)) }
+        val wire = EntryWire(entry.store.value, entry.step, entry.sent.map { MessageWireG(it.from.value, it.effect.value) }, received)
         return Framing.frame(byteArrayOf(TAG_ENTRY.toByte()) + json.encodeToString(EntryWire.serializer(), wire).encodeToByteArray())
     }
 
@@ -106,12 +130,8 @@ object GroupRecordingFileFormat {
         val read = Framing.read(name, bytes, MAGIC)
         val frames = read.frames
         if (frames.isEmpty()) {
-            val mark = when (val mark = read.mark) {
-                is SegmentMark.Unfinished -> SegmentMark.TruncatedTail(name, 0, 0)
-                null -> SegmentMark.Corrupt(name, MAGIC.size, 0, "ended before the header")
-                else -> mark
-            }
-            return DecodedGroupSegment(null, emptyList(), mark, finished = false)
+            val mark = read.ending.beforeHeader(name, MAGIC.size)
+            return DecodedGroupSegment.Unreadable(mark)
         }
         val header = try {
             val payload = frames[0].payload
@@ -120,7 +140,7 @@ object GroupRecordingFileFormat {
             GroupSegmentHeader(
                 wire.formatVersion, MachineGroupId(wire.group), wire.members.map(::StoreInstanceId), wire.routes.map { GroupRoute(StoreInstanceId(it.from), StoreInstanceId(it.to), it.pair()) },
                 wire.sourceIds.map(::SourceId).toSet(), wire.index, wire.firstEntry, wire.inFlight.map { MessageId(StoreInstanceId(it.from), EffectId(it.effect)) },
-                wire.cut?.let { cut ->
+                if (wire.cut == JsonNull) GroupBoundary.Continuation else json.decodeFromJsonElement(CutWire.serializer(), wire.cut).let { cut ->
                     RecordedCut(
                         wire.firstEntry,
                         cut.counts.map { (store, count) -> StoreInstanceId(store) to count }.toMap(),
@@ -129,32 +149,26 @@ object GroupRecordingFileFormat {
                 },
             )
         } catch (e: SerializationException) {
-            return DecodedGroupSegment(null, emptyList(), SegmentMark.Corrupt(name, frames[0].offset, 0, "header: ${e.message}"), finished = false)
+            return DecodedGroupSegment.Unreadable(SegmentMark.Corrupt(name, frames[0].offset, 0, "header: ${e.message}"))
         } catch (e: IllegalArgumentException) {
-            return DecodedGroupSegment(null, emptyList(), SegmentMark.Corrupt(name, frames[0].offset, 0, "header: ${e.message}"), finished = false)
+            return DecodedGroupSegment.Unreadable(SegmentMark.Corrupt(name, frames[0].offset, 0, "header: ${e.message}"))
         }
-        if (header.fileFormatVersion > VERSION) return DecodedGroupSegment(header, emptyList(), SegmentMark.UnsupportedFormat(name, header.fileFormatVersion, 0), finished = false)
+        if (header.fileFormatVersion > VERSION) return DecodedGroupSegment.Readable(header, emptyList(), SegmentEnding.Stopped(SegmentMark.UnsupportedFormat(name, header.fileFormatVersion, 0)))
         val entries = mutableListOf<GroupOrderEntry>()
         for (frame in frames.drop(1)) {
             val entry = try {
                 val payload = frame.payload
                 require(payload.isNotEmpty() && payload[0].toInt() == TAG_ENTRY) { "not an entry frame" }
                 val wire = json.decodeFromString(EntryWire.serializer(), payload.decodeToString(1))
-                GroupOrderEntry(StoreInstanceId(wire.store), wire.step, wire.sent.map { MessageId(StoreInstanceId(it.from), EffectId(it.effect)) }, wire.received?.let { MessageId(StoreInstanceId(it.from), EffectId(it.effect)) })
+                GroupOrderEntry(StoreInstanceId(wire.store), wire.step, wire.sent.map { MessageId(StoreInstanceId(it.from), EffectId(it.effect)) }, if (wire.received == JsonNull) GroupDelivery.Local else json.decodeFromJsonElement(MessageWireG.serializer(), wire.received).let { GroupDelivery.Bridged(MessageId(StoreInstanceId(it.from), EffectId(it.effect))) })
             } catch (e: SerializationException) {
-                return DecodedGroupSegment(header, entries, SegmentMark.Corrupt(name, frame.offset, entries.size, "entry: ${e.message}"), finished = false)
+                return DecodedGroupSegment.Readable(header, entries, SegmentEnding.Stopped(SegmentMark.Corrupt(name, frame.offset, entries.size, "entry: ${e.message}")))
             } catch (e: IllegalArgumentException) {
-                return DecodedGroupSegment(header, entries, SegmentMark.Corrupt(name, frame.offset, entries.size, "entry: ${e.message}"), finished = false)
+                return DecodedGroupSegment.Readable(header, entries, SegmentEnding.Stopped(SegmentMark.Corrupt(name, frame.offset, entries.size, "entry: ${e.message}")))
             }
             entries += entry
         }
-        val mark = when (val mark = read.mark) {
-            is SegmentMark.TruncatedTail -> mark.copy(recordsRead = entries.size)
-            is SegmentMark.Unfinished -> mark.copy(recordsRead = entries.size)
-            is SegmentMark.Corrupt -> mark.copy(recordsRead = entries.size)
-            else -> mark
-        }
-        return DecodedGroupSegment(header, entries, mark, read.finished)
+        return DecodedGroupSegment.Readable(header, entries, read.ending.countRecords(entries.size))
     }
 }
 
@@ -168,7 +182,7 @@ internal class GroupHeaderWire(
     val index: Int,
     val firstEntry: Int,
     val inFlight: List<MessageWireG> = emptyList(),
-    val cut: CutWire? = null,
+    val cut: JsonElement = JsonNull,
 )
 
 @Serializable
@@ -178,15 +192,19 @@ internal class CutWire(val counts: Map<String, Int>, val sources: List<SourceSna
 internal class SourceSnapshotWire(val source: String, val kind: String, val version: Int, val fields: Map<String, String>)
 
 @Serializable
-internal class RouteWire(val from: String, val to: String, val pair: String? = null, val role: String? = null) {
-    fun pair(): RoutePair? = if (pair != null && role != null) RoutePair(pair, PairRole.valueOf(role)) else null
+internal class RouteWire(val from: String, val to: String, val pair: JsonElement = JsonNull, val role: JsonElement = JsonNull) {
+    fun pair(): RouteProtocol {
+        require(pair == JsonNull || pair is JsonPrimitive && pair.isString) { "[Actron] Route pair must be a JSON string" }
+        require(role == JsonNull || role is JsonPrimitive && role.isString) { "[Actron] Route role must be a JSON string" }
+        return if (pair != JsonNull && role != JsonNull) RoutePair(pair.jsonPrimitive.content, PairRole.valueOf(role.jsonPrimitive.content)) else RouteProtocol.OneWay
+    }
 }
 
 @Serializable
 internal class MessageWireG(val from: String, val effect: Long)
 
 @Serializable
-internal class EntryWire(val store: String, val step: Int, val sent: List<MessageWireG> = emptyList(), val received: MessageWireG? = null)
+internal class EntryWire(val store: String, val step: Int, val sent: List<MessageWireG> = emptyList(), val received: JsonElement = JsonNull)
 
 /**
  * What the header of an order segment says; [firstEntry] is the index in the whole run of its
@@ -202,7 +220,7 @@ data class GroupSegmentHeader(
     val index: Int,
     val firstEntry: Int,
     val inFlight: List<MessageId>,
-    val cut: RecordedCut? = null,
+    val boundary: GroupBoundary = GroupBoundary.Continuation,
 )
 
 /**
@@ -210,12 +228,43 @@ data class GroupSegmentHeader(
  * entry after it, how many steps of each member came before it, and the sources' snapshots
  * there. A run since a cut knows its sources' state, as [GroupRecording.since] does in memory.
  */
-data class RecordedCut(val position: Int, val counts: Map<StoreInstanceId, Int>, val sources: Map<SourceId, SourceSnapshot>)
+sealed interface GroupBoundary {
+    fun withCut(accept: (RecordedCut) -> Unit): Boolean
+    data object Continuation : GroupBoundary {
+        override fun withCut(accept: (RecordedCut) -> Unit): Boolean = false
+    }
+}
+
+data class RecordedCut(val position: Int, val counts: Map<StoreInstanceId, Int>, val sources: Map<SourceId, SourceSnapshot>) : GroupBoundary {
+    override fun withCut(accept: (RecordedCut) -> Unit): Boolean { accept(this); return true }
+}
+
+/** How a member's decision reached the group: its local input or a delivered bridge message. */
+sealed interface GroupDelivery {
+    fun withReceived(accept: (MessageId) -> Unit): Boolean
+    data object Local : GroupDelivery {
+        override fun withReceived(accept: (MessageId) -> Unit): Boolean = false
+    }
+    data class Bridged(val message: MessageId) : GroupDelivery {
+        override fun withReceived(accept: (MessageId) -> Unit): Boolean { accept(message); return true }
+    }
+}
 
 /** One decision of the group in its order: which member, which of its steps, what it sent over the bridge and what it received. */
-data class GroupOrderEntry(val store: StoreInstanceId, val step: Int, val sent: List<MessageId> = emptyList(), val received: MessageId? = null)
+data class GroupOrderEntry(val store: StoreInstanceId, val step: Int, val sent: List<MessageId> = emptyList(), val delivery: GroupDelivery = GroupDelivery.Local) {
+    constructor(store: StoreInstanceId, step: Int, sent: List<MessageId> = emptyList(), received: MessageId) : this(store, step, sent, GroupDelivery.Bridged(received))
+}
 
-data class DecodedGroupSegment(val header: GroupSegmentHeader?, val entries: List<GroupOrderEntry>, val mark: SegmentMark?, val finished: Boolean)
+sealed class DecodedGroupSegment {
+    abstract val entries: List<GroupOrderEntry>
+    abstract val ending: SegmentEnding
+    val finished: Boolean get() = ending.finished
+    data class Unreadable(val issue: SegmentMark) : DecodedGroupSegment() {
+        override val entries: List<GroupOrderEntry> get() = emptyList()
+        override val ending: SegmentEnding get() = SegmentEnding.Stopped(issue)
+    }
+    data class Readable(val header: GroupSegmentHeader, override val entries: List<GroupOrderEntry>, override val ending: SegmentEnding) : DecodedGroupSegment()
+}
 
 /**
  * Records a [MachineGroup] into files as it runs: a [RecordingFileSink] per member and one
@@ -250,8 +299,19 @@ class GroupRecordingFileSink(
     private var droppedCutCount = 0L
     private var closed = false
 
-    /** An entry to write, or a cut ([entry] `null`) that begins a segment. */
-    private class Item(val entry: GroupOrderEntry?, val index: Int, val inFlight: List<MessageId>, val beginSegment: Boolean, val cut: RecordedCut? = null)
+    /** A queued decision or an actual cut that begins a segment. */
+    private sealed class Item {
+        abstract val index: Int
+        abstract val inFlight: List<MessageId>
+        abstract val boundary: GroupBoundary
+        class Order(val entry: GroupOrderEntry, override val index: Int, override val inFlight: List<MessageId>, val beginSegment: Boolean) : Item() {
+            override val boundary: GroupBoundary get() = GroupBoundary.Continuation
+        }
+        class Cut(val cut: RecordedCut, override val inFlight: List<MessageId>) : Item() {
+            override val index: Int get() = cut.position
+            override val boundary: GroupBoundary get() = cut
+        }
+    }
 
     private val cutListener = CutListener { cut(it) }
 
@@ -260,7 +320,11 @@ class GroupRecordingFileSink(
     }
 
     private val queue = Channel<Item>(config.queueCapacity)
-    private var output: SegmentOutput? = null
+    private sealed interface SegmentWriter {
+        data object Detached : SegmentWriter
+        data class Active(val output: SegmentOutput) : SegmentWriter
+    }
+    private var segmentWriter: SegmentWriter = SegmentWriter.Detached
     private var segmentIndex = -1
     private var segmentBytes = 0
     private var segmentEntries = 0
@@ -268,7 +332,7 @@ class GroupRecordingFileSink(
     private var failed = false
 
     private val writer: Job = scope.launch {
-        var failure: Throwable? = null
+        var completion: Result<Unit> = Result.success(Unit)
         try {
             for (item in queue) {
                 if (failed) continue
@@ -277,19 +341,19 @@ class GroupRecordingFileSink(
                 } catch (e: Exception) {
                     if (e is CancellationException && !currentCoroutineContext().isActive) throw e
                     failed = true
-                    release(e)
+                    release(Result.failure(e))
                     notifyFailure(e)
                 }
             }
             if (!failed) finish()
         } catch (t: Throwable) {
-            failure = t
+            completion = Result.failure(t)
             if (t is CancellationException || t !is Exception) throw t
             notifyFailure(t)
         } finally {
             // Cancellation leaves an unfinished segment; never append END to a failed frame.
             try {
-                release(failure)
+                release(completion)
             } finally {
                 locked { closed = true }
                 queue.cancel()
@@ -305,18 +369,21 @@ class GroupRecordingFileSink(
         }
     }
 
-    private fun release(failure: Throwable?) {
-        val output = output ?: return
-        this.output = null
-        closeOutput(output, failure)
+    private fun release(completion: Result<Unit>) {
+        val active = segmentWriter
+        if (active !is SegmentWriter.Active) return
+        segmentWriter = SegmentWriter.Detached
+        closeOutput(active.output, completion)
     }
 
-    private fun closeOutput(output: SegmentOutput, failure: Throwable?) {
+    private fun closeOutput(output: SegmentOutput, completion: Result<Unit>) {
         try {
             output.close()
         } catch (t: Throwable) {
-            if (failure == null) throw t
-            if (failure !== t) failure.addSuppressed(t)
+            completion.fold(
+                onSuccess = { throw t },
+                onFailure = { primary -> if (primary !== t) primary.addSuppressed(t) },
+            )
         }
     }
 
@@ -333,28 +400,32 @@ class GroupRecordingFileSink(
      * The observer for the store of [memberId]: its steps go to the member's own recording file
      * and to the group's order.
      */
-    fun <C, A : Action, CMD, E : Event> member(memberId: StoreInstanceId, machine: Machine<C, A, CMD, E>, context: C, codec: RecordingCodec<C, A, CMD, E>): DecisionObserver<C, A, CMD, E> {
+    fun <C : Any, A : Action, CMD : Any, E : Event> member(memberId: StoreInstanceId, machine: Machine<C, A, CMD, E>, context: C, codec: RecordingCodec<C, A, CMD, E>): DecisionObserver<C, A, CMD, E> {
         val sink = locked {
             check(!closed) { "[Actron] This group sink is closed" }
             require(memberId !in sinks) { "[Actron] $memberId is already recorded by this group sink" }
             RecordingFileSink(memberId, machine, context, codec, storage, scope, config).also { sinks[memberId] = it }
         }
         return object : DecisionObserver<C, A, CMD, E> {
-            override fun onCommitted(input: InputId?, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
+            override fun onCommitted(input: InputAttribution, machineInput: MachineInput<A>, decision: Decision<C, CMD, E>) {
                 sink.onCommitted(input, machineInput, decision)
                 val routes = group.routes.filter { it.from == memberId }
-                val sent = if (routes.isEmpty()) emptyList() else decision.effects.flatMap { effect -> routes.mapNotNull { route -> route.mapUnchecked(effect.event)?.let { MessageId(memberId, effect.id) to route.to } } }
-                order(memberId, (machineInput as? MachineInput.BridgeReceived)?.message, sent)
+                val sent = buildList {
+                    for (effect in decision.effects) for (route in routes) route.mapEvent(effect.event) {
+                        add(MessageId(memberId, effect.id) to route.to)
+                    }
+                }
+                order(memberId, if (machineInput is MachineInput.BridgeReceived) GroupDelivery.Bridged(machineInput.message) else GroupDelivery.Local, sent)
             }
 
-            override fun onIgnored(input: InputId?, machineInput: MachineInput<A>, reason: IgnoreReason) {
+            override fun onIgnored(input: InputAttribution, machineInput: MachineInput<A>, reason: IgnoreReason) {
                 sink.onIgnored(input, machineInput, reason)
-                order(memberId, (machineInput as? MachineInput.BridgeReceived)?.message, emptyList())
+                order(memberId, if (machineInput is MachineInput.BridgeReceived) GroupDelivery.Bridged(machineInput.message) else GroupDelivery.Local, emptyList())
             }
 
-            override fun onFailed(input: InputId?, machineInput: MachineInput<A>, failure: FailureDescriptor) {
+            override fun onFailed(input: InputAttribution, machineInput: MachineInput<A>, failure: FailureDescriptor) {
                 sink.onFailed(input, machineInput, failure)
-                order(memberId, (machineInput as? MachineInput.BridgeReceived)?.message, emptyList())
+                order(memberId, if (machineInput is MachineInput.BridgeReceived) GroupDelivery.Bridged(machineInput.message) else GroupDelivery.Local, emptyList())
             }
         }
     }
@@ -371,15 +442,15 @@ class GroupRecordingFileSink(
         for (sink in members) sink.close()
     }
 
-    private fun order(memberId: StoreInstanceId, received: MessageId?, sent: List<Pair<MessageId, StoreInstanceId>>) {
+    private fun order(memberId: StoreInstanceId, delivery: GroupDelivery, sent: List<Pair<MessageId, StoreInstanceId>>) {
         val item = locked {
             if (closed) return
             val step = counts[memberId] ?: 0
             counts[memberId] = step + 1
-            received?.let { message -> pending[message]?.let { count -> if (count <= 1) pending.remove(message) else pending[message] = count - 1 } }
+            delivery.withReceived { message -> if (message in pending) { val count = pending.getValue(message); if (count <= 1) pending.remove(message) else pending[message] = count - 1 } }
             val inFlight = pending.keys.toList()
             for ((message, _) in sent) pending[message] = (pending[message] ?: 0) + 1
-            Item(GroupOrderEntry(memberId, step, sent.map { it.first }.distinct(), received), nextEntry++, inFlight, beginSegment).also { beginSegment = false }
+            Item.Order(GroupOrderEntry(memberId, step, sent.map { it.first }.distinct(), delivery), nextEntry++, inFlight, beginSegment).also { beginSegment = false }
         }
         if (queue.trySend(item).isFailure) locked {
             droppedEntries++
@@ -394,27 +465,29 @@ class GroupRecordingFileSink(
             val members = sinks.keys.associateWith { counts[it] ?: 0 }
             for (sink in sinks.values) sink.cut()
             beginSegment = false
-            Item(null, nextEntry, pending.keys.toList(), beginSegment = true, cut = RecordedCut(nextEntry, members, checkpoint.sources))
+            Item.Cut(RecordedCut(nextEntry, members, checkpoint.sources), pending.keys.toList())
         }
         if (queue.trySend(item).isFailure) locked { droppedCutCount++ }
     }
 
     private fun write(item: Item) {
-        val entry = item.entry
-        if (entry == null) {
+        if (item is Item.Cut) {
             // A cut: the segment it begins carries it; the entries follow.
             finish()
             open(item)
             retain()
             return
         }
-        val frame = GroupRecordingFileFormat.entryFrame(entry)
-        if (item.beginSegment || output == null || (segmentEntries > 0 && segmentBytes + frame.size > config.maxSegmentBytes)) {
+        item as Item.Order
+        val frame = GroupRecordingFileFormat.entryFrame(item.entry)
+        if (item.beginSegment || segmentWriter is SegmentWriter.Detached || (segmentEntries > 0 && segmentBytes + frame.size > config.maxSegmentBytes)) {
             finish()
             open(item)
             retain()
         }
-        val output = checkNotNull(output)
+        val active = segmentWriter
+        check(active is SegmentWriter.Active)
+        val output = active.output
         output.write(frame)
         segmentBytes += frame.size
         segmentEntries++
@@ -427,38 +500,40 @@ class GroupRecordingFileSink(
     private fun open(item: Item) {
         segmentIndex = if (segmentIndex < 0) nextIndex() else segmentIndex + 1
         val header = GroupRecordingFileFormat.header(
-            GroupSegmentHeader(GroupRecordingFileFormat.VERSION, id, locked { sinks.keys.toList() }, group.routeHistory.map { GroupRoute(it.from, it.to, it.pair) }, group.sourceIds.toSet(), segmentIndex, item.index, item.inFlight, item.cut),
+            GroupSegmentHeader(GroupRecordingFileFormat.VERSION, id, locked { sinks.keys.toList() }, group.routeHistory.map { GroupRoute(it.from, it.to, it.pair) }, group.sourceIds.toSet(), segmentIndex, item.index, item.inFlight, item.boundary),
         )
         val output = storage.append(GroupRecordingFileFormat.segmentName(id, segmentIndex))
-        this.output = output
+        segmentWriter = SegmentWriter.Active(output)
         output.write(header)
         segmentBytes = header.size
         segmentEntries = 0
         unflushed = 0
     }
 
-    private fun nextIndex(): Int = storage.list().mapNotNull { GroupRecordingFileFormat.parseSegmentName(it.name) }.filter { it.first == id }.maxOfOrNull { it.second }?.plus(1) ?: 0
+    private fun nextIndex(): Int = GroupRecordingFileFormat.namedSegments(storage, id).maxOfOrNull { it.first }?.plus(1) ?: 0
 
     private fun finish() {
-        val output = output ?: return
-        this.output = null
-        var failure: Throwable? = null
+        val active = segmentWriter
+        if (active !is SegmentWriter.Active) return
+        val output = active.output
+        segmentWriter = SegmentWriter.Detached
+        var completion: Result<Unit> = Result.success(Unit)
         try {
             output.write(Framing.END)
         } catch (t: Throwable) {
-            failure = t
+            completion = Result.failure(t)
             throw t
         } finally {
-            closeOutput(output, failure)
+            closeOutput(output, completion)
         }
     }
 
     private fun retain() {
-        val mine = storage.list().mapNotNull { info -> GroupRecordingFileFormat.parseSegmentName(info.name)?.takeIf { it.first == id }?.let { it.second to info.name } }.sortedBy { it.first }
+        val mine = GroupRecordingFileFormat.namedSegments(storage, id).sortedBy { it.first }
         for ((_, name) in mine.dropLast(config.maxSegments)) storage.delete(name)
     }
 
-    private inline fun <T> locked(block: () -> T): T {
+    private inline fun <T : Any> locked(block: () -> T): T {
         while (!lock.tryLock()) {
             // Spin: the holder assigns one entry.
         }
@@ -470,37 +545,41 @@ class GroupRecordingFileSink(
     }
 }
 
-private fun MachineGroup.Route.mapUnchecked(event: Event): Action? = mapEvent(event)
-
 /**
  * What [GroupRecordingFiles.read] found: the group's run over the range every member's file and
  * the order file still cover, replayable from the members' checkpoints there, the cuts inside
  * that range, and the marks of everything else.
  *
- * @property recording The range as a group recording, or `null` when nothing could be read; its
- * sources' snapshots are known when the range begins at a cut
+ * A [GroupRecordingFileContents.Readable] holds the range and its starting position; sources'
+ * snapshots are known when the range begins at a cut. Unreadable results retain diagnostics
  * @property position The index in the whole run of the range's first entry
  * @property cuts The group's cuts inside the range, by position; [since] gives the run from one
  */
-class GroupRecordingFileContents internal constructor(
-    val recording: GroupRecording?,
-    val position: Int?,
-    val cuts: List<RecordedCut>,
-    val marks: List<RecordingFileMark>,
-    private val slice: (RecordedCut) -> GroupRecording,
-) {
-    /**
-     * The range from [cut] on, with the sources' snapshots the cut holds and the messages in
-     * flight there, as [GroupRecording.since] gives in memory.
-     *
-     * @throws IllegalArgumentException if [cut] is not one of [cuts]
-     */
+sealed class GroupRecordingFileContents {
+    abstract val cuts: List<RecordedCut>
+    abstract val marks: List<RecordingFileMark>
+    protected abstract fun slice(cut: RecordedCut): GroupRecording
+
+    /** Continues the readable group range from one of its recorded cuts. */
     fun since(cut: RecordedCut): GroupRecording {
         require(cut in cuts) { "[Actron] $cut is not a cut inside the range read" }
         return slice(cut)
     }
-
-    override fun toString(): String = "GroupRecordingFileContents(position=$position, cuts=${cuts.map { it.position }}, marks=$marks)"
+    class Unreadable(override val marks: List<RecordingFileMark>) : GroupRecordingFileContents() {
+        override val cuts: List<RecordedCut> get() = emptyList()
+        override fun slice(cut: RecordedCut): GroupRecording = error("[Actron] Nothing was read")
+        override fun toString(): String = "GroupRecordingFileContents(position=null, cuts=[], marks=$marks)"
+    }
+    class Readable internal constructor(
+        val recording: GroupRecording,
+        val position: Int,
+        override val cuts: List<RecordedCut>,
+        override val marks: List<RecordingFileMark>,
+        private val slicing: (RecordedCut) -> GroupRecording,
+    ) : GroupRecordingFileContents() {
+        override fun slice(cut: RecordedCut): GroupRecording = slicing(cut)
+        override fun toString(): String = "GroupRecordingFileContents(position=$position, cuts=${cuts.map { it.position }}, marks=$marks)"
+    }
 }
 
 /**
@@ -512,58 +591,59 @@ class GroupRecordingFileContents internal constructor(
  */
 class GroupRecordingFiles(private val storage: SegmentStorage) {
     /** The groups that have order files. */
-    fun groups(): List<MachineGroupId> = storage.list().mapNotNull { GroupRecordingFileFormat.parseSegmentName(it.name)?.first }.distinct()
+    fun groups(): List<MachineGroupId> = buildList { for (info in storage.list()) GroupRecordingFileFormat.parseSegmentName(info.name) { id, _ -> add(id) } }.distinct()
 
     fun read(group: MachineGroupId, codecs: Map<StoreInstanceId, RecordingCodec<*, *, *, *>>): GroupRecordingFileContents {
         val marks = mutableListOf<RecordingFileMark>()
-        val nothing = { GroupRecordingFileContents(null, null, emptyList(), marks.toList()) { throw IllegalStateException("[Actron] Nothing was read") } }
+        val nothing = { GroupRecordingFileContents.Unreadable(marks.toList()) }
         // The order file's last continuous range.
-        val segments = storage.list().mapNotNull { info -> GroupRecordingFileFormat.parseSegmentName(info.name)?.takeIf { it.first == group }?.let { it.second to info.name } }.sortedBy { it.first }
-        var open: OrderRun? = null
-        var latest: OrderRun? = null
+        val segments = GroupRecordingFileFormat.namedSegments(storage, group).sortedBy { it.first }
+        val runs = mutableListOf<OrderRun>()
+        var canContinue = false
         var expectedIndex = 0
         for ((index, name) in segments) {
             if (index > expectedIndex) {
                 marks += RecordingFileMark.MissingSegments(StoreInstanceId(group.value), expectedIndex, index - 1)
-                open = null
+                canContinue = false
             }
             expectedIndex = index + 1
             val decoded = GroupRecordingFileFormat.decodeSegment(name, storage.read(name))
-            val header = decoded.header
-            if (header == null) {
-                decoded.mark?.let { marks += RecordingFileMark.Damaged(it) }
-                open = null
+            if (decoded !is DecodedGroupSegment.Readable) {
+                decoded.ending.withIssue { marks += RecordingFileMark.Damaged(it) }
+                canContinue = false
                 continue
             }
-            val current = open
-            if (current != null && header.firstEntry != current.nextEntry) {
-                marks += RecordingFileMark.StepsMissing(StoreInstanceId(group.value), current.nextEntry, header.firstEntry)
-                open = null
+            val header = decoded.header
+            if (canContinue && header.firstEntry != runs.last().nextEntry) {
+                marks += RecordingFileMark.StepsMissing(StoreInstanceId(group.value), runs.last().nextEntry, header.firstEntry)
+                canContinue = false
             }
-            val run = open ?: OrderRun(header, mutableListOf()).also {
-                open = it
-                latest = it
+            if (!canContinue) {
+                runs += OrderRun(header, mutableListOf())
+                canContinue = true
             }
-            header.cut?.let { run.cuts += it }
+            val run = runs.last()
+            header.boundary.withCut { run.cuts += it }
             run.entries += decoded.entries
             run.nextEntry = header.firstEntry + decoded.entries.size
-            decoded.mark?.let {
+            decoded.ending.withIssue {
                 marks += RecordingFileMark.Damaged(it)
-                if (it !is SegmentMark.Unfinished) open = null
+                if (it !is SegmentMark.Unfinished) canContinue = false
             }
         }
-        val order = latest ?: return nothing()
+        if (runs.isEmpty()) return nothing()
+        val order = runs.last()
         // Every member's last continuous range.
         val members = mutableMapOf<StoreInstanceId, Pair<Recording<*, *, *, *>, Int>>()
         for (member in order.header.members) {
-            val codec = codecs[member] ?: run {
+            if (member !in codecs) {
                 marks += RecordingFileMark.StartMismatch(member, "-", "no codec for $member")
                 continue
             }
-            val contents = storage.readMember(member, codec)
+            val contents = storage.readMember(member, codecs.getValue(member))
             marks += contents.marks
-            val recording = contents.recording ?: continue
-            members[member] = recording to checkNotNull(contents.firstStep)
+            if (contents !is RecordingFileContents.Readable) continue
+            members[member] = contents.recording to contents.firstStep
         }
         // The range all files cover: from the latest start among the order's and the members', to the earliest end.
         val entries = order.entries
@@ -587,8 +667,9 @@ class GroupRecordingFiles(private val storage: SegmentStorage) {
         for ((member, pair) in members) {
             if (entries.subList(from, to).any { it.store == member }) continue
             val (recording, firstStep) = pair
-            val step = idleStep(order, from, member)
-            if (step == null || step !in firstStep..(firstStep + recording.length)) {
+            var covered = false
+            idleStep(order, from, member) { covered = it in firstStep..(firstStep + recording.length) }
+            if (!covered) {
                 marks += RecordingFileMark.StartMismatch(member, "-", "no checkpoint for the member at the surviving order range")
                 return nothing()
             }
@@ -597,25 +678,43 @@ class GroupRecordingFiles(private val storage: SegmentStorage) {
         val cuts = order.cuts.filter { cut ->
             val at = cut.position - firstEntry
             if (at !in from..to) return@filter false
-            val disagreeing = cut.counts.entries.firstOrNull { (member, count) -> stepsBefore(entries, at, member)?.let { it != count } == true }
-            if (disagreeing != null) marks += RecordingFileMark.StartMismatch(disagreeing.key, "-", "the cut at ${cut.position} counts ${disagreeing.value} steps of ${disagreeing.key}, the order ${stepsBefore(entries, at, disagreeing.key)}")
-            disagreeing == null
+            for ((member, count) in cut.counts) {
+                var agrees = true
+                stepsBefore(entries, at, member) { step ->
+                    if (step != count) {
+                        marks += RecordingFileMark.StartMismatch(member, "-", "the cut at ${cut.position} counts $count steps of $member, the order $step")
+                        agrees = false
+                    }
+                }
+                if (!agrees) return@filter false
+            }
+            true
         }
         val sliceAt = { at: Int, sources: Map<SourceId, SourceSnapshot> -> slice(order, members, at, to, sources) }
-        val recording = sliceAt(from, cuts.firstOrNull { it.position - firstEntry == from }?.sources ?: emptyMap())
-        return GroupRecordingFileContents(recording, firstEntry + from, cuts, marks) { cut -> sliceAt(cut.position - firstEntry, cut.sources) }
+        var sources: Map<SourceId, SourceSnapshot> = emptyMap()
+        for (cut in cuts) if (cut.position - firstEntry == from) { sources = cut.sources; break }
+        val recording = sliceAt(from, sources)
+        return GroupRecordingFileContents.Readable(recording, firstEntry + from, cuts, marks) { cut -> sliceAt(cut.position - firstEntry, cut.sources) }
     }
 
-    // How many steps of `member` came before entry `at` of the run, from the steps the entries carry; `null` when no entry of it says.
-    private fun stepsBefore(entries: List<GroupOrderEntry>, at: Int, member: StoreInstanceId): Int? =
-        entries.subList(0, at).lastOrNull { it.store == member }?.let { it.step + 1 } ?: entries.subList(at, entries.size).firstOrNull { it.store == member }?.step
+    // The order can establish a member's count from its preceding or following entry.
+    private fun stepsBefore(entries: List<GroupOrderEntry>, at: Int, member: StoreInstanceId, accept: (Int) -> Unit): Boolean {
+        for (index in at - 1 downTo 0) if (entries[index].store == member) { accept(entries[index].step + 1); return true }
+        for (index in at until entries.size) if (entries[index].store == member) { accept(entries[index].step); return true }
+        return false
+    }
 
-    // A member with no entries in the selected range must still have a known checkpoint there.
-    // A cut gives its count; at the beginning of the complete order the count is zero. Never
-    // substitute the member writer's newer end state for a checkpoint whose order was lost.
-    private fun idleStep(order: OrderRun, at: Int, member: StoreInstanceId): Int? =
-        stepsBefore(order.entries, at, member) ?: order.header.cut?.counts?.get(member)
-            ?: 0.takeIf { order.header.firstEntry == 0 }
+    // An idle member still needs a checkpoint established by the order or an actual cut.
+    private fun idleStep(order: OrderRun, at: Int, member: StoreInstanceId, accept: (Int) -> Unit): Boolean {
+        if (stepsBefore(order.entries, at, member, accept)) return true
+        var reported = false
+        order.header.boundary.withCut { cut ->
+            if (member in cut.counts) { accept(cut.counts.getValue(member)); reported = true }
+        }
+        if (reported) return true
+        if (order.header.firstEntry == 0) { accept(0); return true }
+        return false
+    }
 
     // The run over entries `from` until `to`: every member trimmed to its checkpoint at its first entry there, the order re-based, the messages in flight computed.
     private fun slice(order: OrderRun, members: Map<StoreInstanceId, Pair<Recording<*, *, *, *>, Int>>, from: Int, to: Int, sources: Map<SourceId, SourceSnapshot>): GroupRecording {
@@ -625,18 +724,21 @@ class GroupRecordingFiles(private val storage: SegmentStorage) {
         val offsets = mutableMapOf<StoreInstanceId, Int>()
         for ((member, pair) in members) {
             val (recording, firstStep) = pair
-            val firstInRange = range.firstOrNull { it.store == member }?.step ?: checkNotNull(idleStep(order, from, member))
-            val skip = firstInRange - firstStep
-            // A member writer may flush ahead of the order writer when the process dies.
-            // Keep only the steps whose order entries survive, on both ends of the range.
-            trimmed[member] = recording.sinceStep(skip, range.count { it.store == member })
-            offsets[member] = firstInRange
+            fun trim(firstInRange: Int) {
+                val skip = firstInRange - firstStep
+                // Keep only the steps whose order entries survived the process stopping.
+                trimmed[member] = recording.sinceStep(skip, range.count { it.store == member })
+                offsets[member] = firstInRange
+            }
+            val first = range.indexOfFirst { it.store == member }
+            if (first >= 0) trim(range[first].step)
+            else check(idleStep(order, from, member, ::trim)) { "[Actron] No checkpoint for $member at the surviving order range" }
         }
         val groupOrder = range.map { GroupStep(it.store, it.step - offsets.getValue(it.store)) }
         // Messages in flight at the range's start: the header's, plus what the skipped entries sent, minus what they received.
         val inFlight = order.header.inFlight.groupingBy { it }.eachCount().toMutableMap()
         for (entry in entries.subList(0, from)) {
-            entry.received?.let { message -> inFlight[message]?.let { count -> if (count <= 1) inFlight.remove(message) else inFlight[message] = count - 1 } }
+            entry.delivery.withReceived { message -> if (message in inFlight) { val count = inFlight.getValue(message); if (count <= 1) inFlight.remove(message) else inFlight[message] = count - 1 } }
             for (message in entry.sent) inFlight[message] = (inFlight[message] ?: 0) + 1
         }
         return GroupRecording(trimmed, groupOrder, order.header.routes, inFlight.keys.toList(), order.header.sourceIds + sources.keys, sources)
@@ -649,11 +751,11 @@ class GroupRecordingFiles(private val storage: SegmentStorage) {
 
     @Suppress("UNCHECKED_CAST")
     private fun SegmentStorage.readMember(member: StoreInstanceId, codec: RecordingCodec<*, *, *, *>): RecordingFileContents<*, *, *, *> =
-        RecordingFiles(this).read(member, codec as RecordingCodec<Any?, Action, Any?, Event>)
+        RecordingFiles(this).read(member, codec as RecordingCodec<Any, Action, Any, Event>)
 
     @Suppress("UNCHECKED_CAST")
     private fun Recording<*, *, *, *>.sinceStep(skip: Int, count: Int): Recording<*, *, *, *> {
-        val typed = this as Recording<Any?, Action, Any?, Event>
+        val typed = this as Recording<Any, Action, Any, Event>
         return Recording(typed.definition, typed.version, typed.checkpointAt(skip), typed.steps.drop(skip).take(count))
     }
 }

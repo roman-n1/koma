@@ -6,6 +6,7 @@ import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
 import actron.core.InputId
+import actron.core.InputAttribution
 import actron.core.StoreInternalApi
 import actron.observability.JournalConfig
 import actron.observability.JournalRecord
@@ -262,7 +263,7 @@ internal suspend fun runBatch(batch: Int, storeDispatcher: CoroutineDispatcher =
     try {
         repeat(STORES) { index ->
             val observer = object : DecisionObserver<History, Message, Poll, Render> {
-                override fun onCommitted(input: InputId?, machineInput: MachineInput<Message>, decision: Decision<History, Poll, Render>) {
+                override fun onCommitted(input: InputAttribution, machineInput: MachineInput<Message>, decision: Decision<History, Poll, Render>) {
                     if (machineInput is MachineInput.Dispatch) {
                         latencies.add(nowNanos() - machineInput.action.sentNanos)
                         inFlight[index].update { it - 1 }

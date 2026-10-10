@@ -224,9 +224,27 @@ public final class actron/core/HandlerMetadata {
 	public final fun getStateType ()Lkotlin/reflect/KClass;
 }
 
-public final class actron/core/InputId {
+public abstract interface class actron/core/InputAttribution {
+	public abstract fun correlate (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun describe ()Ljava/lang/String;
+}
+
+public final class actron/core/InputAttribution$Unattributed : actron/core/InputAttribution {
+	public static final field INSTANCE Lactron/core/InputAttribution$Unattributed;
+	public fun correlate (Lkotlin/jvm/functions/Function1;)V
+	public fun describe ()Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class actron/core/InputId : actron/core/InputAttribution {
 	public static final synthetic fun box-impl (J)Lactron/core/InputId;
 	public static fun constructor-impl (J)J
+	public fun correlate (Lkotlin/jvm/functions/Function1;)V
+	public static fun correlate-impl (JLkotlin/jvm/functions/Function1;)V
+	public fun describe ()Ljava/lang/String;
+	public static fun describe-impl (J)Ljava/lang/String;
 	public fun equals (Ljava/lang/Object;)Z
 	public static fun equals-impl (JLjava/lang/Object;)Z
 	public static final fun equals-impl0 (JJ)Z
@@ -253,14 +271,14 @@ public final class actron/core/InputKind$Dispatch : actron/core/InputKind {
 }
 
 public final class actron/core/InputKind$Recovery : actron/core/InputKind {
-	public synthetic fun <init> (Ljava/lang/Throwable;Lactron/core/InputId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/Throwable;Lactron/core/InputAttribution;)V
 	public final fun component1 ()Ljava/lang/Throwable;
-	public final fun component2-DS-bGsQ ()Lactron/core/InputId;
-	public final fun copy-jMDErnM (Ljava/lang/Throwable;Lactron/core/InputId;)Lactron/core/InputKind$Recovery;
-	public static synthetic fun copy-jMDErnM$default (Lactron/core/InputKind$Recovery;Ljava/lang/Throwable;Lactron/core/InputId;ILjava/lang/Object;)Lactron/core/InputKind$Recovery;
+	public final fun component2 ()Lactron/core/InputAttribution;
+	public final fun copy (Ljava/lang/Throwable;Lactron/core/InputAttribution;)Lactron/core/InputKind$Recovery;
+	public static synthetic fun copy$default (Lactron/core/InputKind$Recovery;Ljava/lang/Throwable;Lactron/core/InputAttribution;ILjava/lang/Object;)Lactron/core/InputKind$Recovery;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getError ()Ljava/lang/Throwable;
-	public final fun getOrigin-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getOrigin ()Lactron/core/InputAttribution;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -273,12 +291,12 @@ public final class actron/core/InputKind$Startup : actron/core/InputKind {
 }
 
 public final class actron/core/InputKind$Transaction : actron/core/InputKind {
-	public synthetic fun <init> (Lactron/core/InputId;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
-	public final fun copy-Sp_oens (Lactron/core/InputId;)Lactron/core/InputKind$Transaction;
-	public static synthetic fun copy-Sp_oens$default (Lactron/core/InputKind$Transaction;Lactron/core/InputId;ILjava/lang/Object;)Lactron/core/InputKind$Transaction;
+	public fun <init> (Lactron/core/InputAttribution;)V
+	public final fun component1 ()Lactron/core/InputAttribution;
+	public final fun copy (Lactron/core/InputAttribution;)Lactron/core/InputKind$Transaction;
+	public static synthetic fun copy$default (Lactron/core/InputKind$Transaction;Lactron/core/InputAttribution;ILjava/lang/Object;)Lactron/core/InputKind$Transaction;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getOrigin-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getOrigin ()Lactron/core/InputAttribution;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
@@ -538,7 +556,6 @@ public final class actron/core/StoreBuilder {
 }
 
 public final class actron/core/StoreBuilder$StateHandler {
-	public fun <init> (Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)V
 	public fun <init> (Ljava/lang/Object;Lkotlin/jvm/functions/Function2;Lactron/core/HandlerMatcher;)V
 	public final fun getHandler ()Lkotlin/jvm/functions/Function2;
 	public final fun getMatcher ()Lactron/core/HandlerMatcher;
@@ -558,7 +575,6 @@ public final class actron/core/StoreBuilder$StateHandlerConfig {
 }
 
 public final class actron/core/StoreBuilder$StateHandlerConfig$ThreadedHandler {
-	public fun <init> (Lkotlin/coroutines/CoroutineContext;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;)V
 	public fun <init> (Lkotlin/coroutines/CoroutineContext;Ljava/lang/Object;Lkotlin/jvm/functions/Function2;Lkotlin/reflect/KClass;)V
 	public final fun getInputType ()Lkotlin/reflect/KClass;
 	public final fun getPredicate ()Ljava/lang/Object;
@@ -732,27 +748,27 @@ public abstract interface class actron/core/StoreTrace {
 }
 
 public final class actron/core/StoreTrace$EventEmitted : actron/core/StoreTrace {
-	public synthetic fun <init> (Lactron/core/InputId;Lactron/core/Event;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public fun <init> (Lactron/core/InputAttribution;Lactron/core/Event;)V
+	public final fun component1 ()Lactron/core/InputAttribution;
 	public final fun component2 ()Lactron/core/Event;
-	public final fun copy-3sQabHQ (Lactron/core/InputId;Lactron/core/Event;)Lactron/core/StoreTrace$EventEmitted;
-	public static synthetic fun copy-3sQabHQ$default (Lactron/core/StoreTrace$EventEmitted;Lactron/core/InputId;Lactron/core/Event;ILjava/lang/Object;)Lactron/core/StoreTrace$EventEmitted;
+	public final fun copy (Lactron/core/InputAttribution;Lactron/core/Event;)Lactron/core/StoreTrace$EventEmitted;
+	public static synthetic fun copy$default (Lactron/core/StoreTrace$EventEmitted;Lactron/core/InputAttribution;Lactron/core/Event;ILjava/lang/Object;)Lactron/core/StoreTrace$EventEmitted;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getEvent ()Lactron/core/Event;
-	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getInput ()Lactron/core/InputAttribution;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class actron/core/StoreTrace$FailureReported : actron/core/StoreTrace {
-	public synthetic fun <init> (Lactron/core/InputId;Ljava/lang/Throwable;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun component1-DS-bGsQ ()Lactron/core/InputId;
+	public fun <init> (Lactron/core/InputAttribution;Ljava/lang/Throwable;)V
+	public final fun component1 ()Lactron/core/InputAttribution;
 	public final fun component2 ()Ljava/lang/Throwable;
-	public final fun copy-3sQabHQ (Lactron/core/InputId;Ljava/lang/Throwable;)Lactron/core/StoreTrace$FailureReported;
-	public static synthetic fun copy-3sQabHQ$default (Lactron/core/StoreTrace$FailureReported;Lactron/core/InputId;Ljava/lang/Throwable;ILjava/lang/Object;)Lactron/core/StoreTrace$FailureReported;
+	public final fun copy (Lactron/core/InputAttribution;Ljava/lang/Throwable;)Lactron/core/StoreTrace$FailureReported;
+	public static synthetic fun copy$default (Lactron/core/StoreTrace$FailureReported;Lactron/core/InputAttribution;Ljava/lang/Throwable;ILjava/lang/Object;)Lactron/core/StoreTrace$FailureReported;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getError ()Ljava/lang/Throwable;
-	public final fun getInput-DS-bGsQ ()Lactron/core/InputId;
+	public final fun getInput ()Lactron/core/InputAttribution;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

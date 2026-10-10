@@ -66,7 +66,7 @@ class StateChartHierarchyTest {
     private val open = Transition(idle, chat, ActionMatcher.of<ChatAction.Open>("Open"))
     private val type = Transition(reading, typing, ActionMatcher.of<ChatAction.Type>("Type"))
     private val send = Transition(typing, reading, ActionMatcher.of<ChatAction.Send>("Send"))
-    private val keepDraft = Transition(typing, reading, ActionMatcher.of<ChatAction.Close>("Close"), guard = "hasDraft")
+    private val keepDraft = Transition(typing, reading, ActionMatcher.of<ChatAction.Close>("Close"), guard = actron.statechart.GuardKey("hasDraft"))
     private val home = Transition(reading, online, ActionMatcher.of<ChatAction.Home>("Home"))
     private val close = Transition(chat, idle, ActionMatcher.of<ChatAction.Close>("Close"))
     private val refresh = Transition(chat, chat, ActionMatcher.of<ChatAction.Refresh>("Refresh"))
@@ -112,8 +112,10 @@ class StateChartHierarchyTest {
     @Test
     fun hierarchyHelpersFollowParentLinks() {
         assertEquals(CompoundState(chat, initial = reading, parent = online), chart.node(chat))
-        assertNull(chart.node(StateId("Nowhere")))
-        assertEquals(listOf(online, offline), chart.childrenOf(null).map { it.id })
+        assertFalse(chart.hasNode(StateId("Nowhere")))
+        assertFalse(chart.nodeSatisfies(StateId("Nowhere")) { true })
+        assertFailsWith<NoSuchElementException> { chart.node(StateId("Nowhere")) }
+        assertEquals(listOf(online, offline), chart.childrenOf(StateParent.Root).map { it.id })
         assertEquals(listOf(idle, chat), chart.childrenOf(online).map { it.id })
         assertEquals(emptyList(), chart.childrenOf(typing))
         assertEquals(listOf(chat, online), chart.ancestorsOf(typing))
@@ -129,8 +131,8 @@ class StateChartHierarchyTest {
 
     @Test
     fun atomicStateKeepsItsOneArgumentConstructor() {
-        assertEquals(AtomicState(idle, parent = null), AtomicState(idle))
-        assertNull(AtomicState(idle).parent)
+        assertEquals(AtomicState(idle, parent = StateParent.Root), AtomicState(idle))
+        assertEquals(StateParent.Root, AtomicState(idle).parent)
     }
 
     @Test

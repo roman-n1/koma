@@ -20,7 +20,7 @@ import actron.statechart.machine.MachineSnapshot
  * @property differences One line per field that differs, for the inspector
  */
 @ExperimentalActronApi
-data class ReplayMismatch<C, A : Action, CMD, E : Event>(
+data class ReplayMismatch<C : Any, A : Action, CMD : Any, E : Event>(
     val position: Int,
     val input: MachineInput<A>,
     val expected: RecordedStep<C, A, CMD, E>,
@@ -34,12 +34,15 @@ data class ReplayMismatch<C, A : Action, CMD, E : Event>(
  * The result of one forward step of a [ReplaySession].
  */
 @ExperimentalActronApi
-sealed interface ReplayStep<C, A : Action, CMD, E : Event> {
+sealed interface ReplayStep<C : Any, A : Action, CMD : Any, E : Event> {
+    /** The cursor reached the checkpoint after the final recorded input. */
+    data class Finished<C : Any, A : Action, CMD : Any, E : Event>(val position: Int) : ReplayStep<C, A, CMD, E>
+
     /** The machine decided the recorded input as recorded; [decision] is what it decided. */
-    data class Matched<C, A : Action, CMD, E : Event>(val position: Int, val decision: Decision<C, CMD, E>) : ReplayStep<C, A, CMD, E>
+    data class Matched<C : Any, A : Action, CMD : Any, E : Event>(val position: Int, val decision: Decision<C, CMD, E>) : ReplayStep<C, A, CMD, E>
 
     /** The machine decided differently; the session stays at the position. */
-    data class Diverged<C, A : Action, CMD, E : Event>(val mismatch: ReplayMismatch<C, A, CMD, E>) : ReplayStep<C, A, CMD, E>
+    data class Diverged<C : Any, A : Action, CMD : Any, E : Event>(val mismatch: ReplayMismatch<C, A, CMD, E>) : ReplayStep<C, A, CMD, E>
 }
 
 /**
@@ -58,7 +61,7 @@ sealed interface ReplayStep<C, A : Action, CMD, E : Event> {
  * @throws IllegalArgumentException if [recording] is not [Compatibility.Replayable] by [machine]
  */
 @ExperimentalActronApi
-class ReplaySession<C, A : Action, CMD, E : Event>(
+class ReplaySession<C : Any, A : Action, CMD : Any, E : Event>(
     val machine: Machine<C, A, CMD, E>,
     val recording: Recording<C, A, CMD, E>,
 ) {
@@ -77,24 +80,27 @@ class ReplaySession<C, A : Action, CMD, E : Event>(
     /** The snapshot at [position]. */
     val snapshot: MachineSnapshot<C> get() = recording.snapshotAt(position)
 
-    /** The recorded step [position] will decide next, or `null` at the end. */
-    val next: RecordedStep<C, A, CMD, E>? get() = recording.steps.getOrNull(position)
+    /** Reports the next recorded step once; returns false at the end. */
+    fun withNext(accept: (RecordedStep<C, A, CMD, E>) -> Unit): Boolean {
+        if (position >= length) return false
+        accept(recording.steps[position])
+        return true
+    }
 
     /**
      * Decides the next recorded input on the current snapshot and compares with the recording.
      * Advances on a match; stays on a divergence, and returns it again until [seek] moves on.
-     * `null` at the end.
+     * [ReplayStep.Finished] at the final checkpoint.
      */
-    fun stepForward(): ReplayStep<C, A, CMD, E>? {
-        val step = next ?: return null
+    fun stepForward(): ReplayStep<C, A, CMD, E> {
+        if (position >= length) return ReplayStep.Finished(position)
+        val step = recording.steps[position]
         val decision = machine.decide(snapshot, step.input)
-        val mismatch = replay(position, snapshot, step, decision)
-        return if (mismatch == null) {
+        val differences = differences(position, snapshot, step, decision)
+        return if (differences.isEmpty()) {
             position++
             ReplayStep.Matched(position - 1, decision)
-        } else {
-            ReplayStep.Diverged(mismatch)
-        }
+        } else ReplayStep.Diverged(ReplayMismatch(position, step.input, step, decision, differences))
     }
 
     /**
@@ -118,25 +124,30 @@ class ReplaySession<C, A : Action, CMD, E : Event>(
 
     /**
      * Decides the recorded steps [from] until [to] again, from the recorded snapshot at [from],
-     * and returns the first divergence, or `null` when every step matches. Does not move.
+     * and reports the first divergence through [onMismatch]. Returns true when reported; does not move.
      */
-    fun verify(from: Int = 0, to: Int = length): ReplayMismatch<C, A, CMD, E>? {
+    fun verify(from: Int = 0, to: Int = length, onMismatch: (ReplayMismatch<C, A, CMD, E>) -> Unit): Boolean {
         require(from in 0..to && to <= length) { "[Actron] Range $from..$to is outside 0..$length" }
         var current = recording.snapshotAt(from)
         for (index in from until to) {
             val step = recording.steps[index]
-            replay(index, current, step)?.let { return it }
+            val actual = machine.decide(current, step.input)
+            val differences = differences(index, current, step, actual)
+            if (differences.isNotEmpty()) {
+                onMismatch(ReplayMismatch(index, step.input, step, actual, differences))
+                return true
+            }
             if (step is RecordedStep.Committed) current = step.decision.snapshot
         }
-        return null
+        return false
     }
 
     /** Invariant violations at the selected checkpoint, usable by an inspector without replay. */
     fun checkInvariants(): List<actron.statechart.machine.InvariantViolation> = machine.checkInvariants(snapshot)
 
     /** Explains the next recorded input through one pure decision; does not move the cursor. */
-    fun explainNext(): actron.statechart.machine.ExplainedDecision<C, CMD, E>? =
-        next?.let { machine.decideExplained(snapshot, it.input) }
+    fun explainNext(accept: (actron.statechart.machine.ExplainedDecision<C, CMD, E>) -> Unit): Boolean =
+        withNext { accept(machine.decideExplained(snapshot, it.input)) }
 
     /** The executor's state at [position]; see [Recording.checkpointAt]. */
     val checkpoint: ExecutorCheckpoint<C, CMD> get() = recording.checkpointAt(position)
@@ -148,12 +159,14 @@ class ReplaySession<C, A : Action, CMD, E : Event>(
      */
     fun branch(): Branch<C, A, CMD, E> = Branch(machine, checkpoint, recording)
 
-    private fun replay(index: Int, base: MachineSnapshot<C>, step: RecordedStep<C, A, CMD, E>, actual: Decision<C, CMD, E> = machine.decide(base, step.input)): ReplayMismatch<C, A, CMD, E>? {
+    private fun differences(index: Int, base: MachineSnapshot<C>, step: RecordedStep<C, A, CMD, E>, actual: Decision<C, CMD, E> = machine.decide(base, step.input)): List<String> {
         val differences = mutableListOf<String>()
         val input = step.input
         if (input is MachineInput.TimerFired) {
-            val timer = base.timers[input.timer]
-            if (timer != null && input.now < timer.deadline) differences += "timer ${input.timer} fired at ${input.now}, before its deadline ${timer.deadline}"
+            if (input.timer in base.timers) {
+                val timer = base.timers.getValue(input.timer)
+                if (input.now < timer.deadline) differences += "timer ${input.timer} fired at ${input.now}, before its deadline ${timer.deadline}"
+            }
         }
         when (step) {
             is RecordedStep.Committed -> {
@@ -170,11 +183,11 @@ class ReplaySession<C, A : Action, CMD, E : Event>(
             }
             is RecordedStep.Failed -> {
                 val outcome = actual.outcome
-                if (outcome !is DecisionOutcome.Failed) differences += "outcome: recorded Failed(${step.failure.type}), now $outcome"
-                else if (outcome.failure.type != step.failure.type) differences += "failure: recorded ${step.failure.type}, now ${outcome.failure.type}"
+                if (outcome !is DecisionOutcome.Failed) differences += "outcome: recorded Failed(${step.failure.typeLabel}), now $outcome"
+                else if (!outcome.failure.sameType(step.failure)) differences += "failure: recorded ${step.failure.typeLabel}, now ${outcome.failure.typeLabel}"
             }
         }
-        return if (differences.isEmpty()) null else ReplayMismatch(index, input, step, actual, differences)
+        return differences
     }
 
     private fun compare(expected: Decision<C, CMD, E>, actual: Decision<C, CMD, E>): List<String> = buildList {

@@ -71,7 +71,7 @@ fun StateChartDefinition.toMermaid(): String = toMermaid(emptySet())
 fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
     val compoundInitials = hierarchy.nodes.values.filterIsInstance<CompoundState>().map { it.initial }
     val histories = hierarchy.nodes.values.filterIsInstance<HistoryState>()
-    val historyDefaults = histories.mapNotNull { it.default }
+    val historyDefaults = histories.map { it.default }.filterIsInstance<StateId>()
     val ids = (states.map { it.id } + initial + compoundInitials + historyDefaults + transitions.flatMap { listOf(it.source, it.target) }).distinct()
     val taken = ids.map { it.value }.filterTo(mutableSetOf(), ::isPlainMermaidId)
     var nextAlias = 0
@@ -83,30 +83,42 @@ fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
         }
     }
     val containers = mermaidContainers()
-    fun containerOf(id: StateId): StateId? = containers[id]
+    fun containerOf(id: StateId): StateParent = containers[id] ?: StateParent.Root
     val drawnChildren = hierarchy.nodes.values.filter { it.id in containers }.groupBy { containers.getValue(it.id) }
-    fun isBlock(node: StateNode?): Boolean = node is CompoundState || (node is ParallelState && node.id in drawnChildren)
-    fun containerChain(id: StateId): List<StateId?> = generateSequence(containerOf(id)) { containerOf(it) }.toList() + null
+    fun isBlock(id: StateId): Boolean {
+        if (id !in hierarchy.nodes) return false
+        val node = hierarchy.nodes.getValue(id)
+        return node is CompoundState || (node is ParallelState && node.id in drawnChildren)
+    }
+    fun containerChain(id: StateId): List<StateParent> {
+        val chain = mutableListOf<StateParent>()
+        var parent = containerOf(id)
+        while (parent is StateId) {
+            chain += parent
+            parent = containerOf(parent)
+        }
+        chain += StateParent.Root
+        return chain
+    }
     fun declaration(id: StateId): String {
         val ref = refs.getValue(id)
-        val node = hierarchy.nodes[id]
-        return when {
-            node is FinalState -> "state \"${mermaidText(id.value).replace("\"", "'")} [final]\" as $ref"
-            node is HistoryState -> "state \"${if (node.deep) "[H*]" else "[H]"}\" as $ref"
-            ref == id.value -> ref
-            else -> "state \"${mermaidText(id.value).replace("\"", "'")}\" as $ref"
+        if (id in hierarchy.nodes) {
+            val node = hierarchy.nodes.getValue(id)
+            if (node is FinalState) return "state \"${mermaidText(id.value).replace("\"", "'")} [final]\" as $ref"
+            if (node is HistoryState) return "state \"${if (node.deep) "[H*]" else "[H]"}\" as $ref"
         }
+        return if (ref == id.value) ref else "state \"${mermaidText(id.value).replace("\"", "'")}\" as $ref"
     }
-    fun blockOf(source: StateId, target: StateId): StateId? {
+    fun blockOf(source: StateId, target: StateId): StateParent {
         val targetChain = containerChain(target)
         var block = containerChain(source).first { it in targetChain }
-        while (block != null && hierarchy.nodes[block] is ParallelState) block = containerOf(block)
+        while (block is StateId && hierarchy.nodes[block] is ParallelState) block = containerOf(block)
         return block
     }
     val transitionsByBlock = transitions.groupBy { blockOf(it.source, it.target) }
-    val defaultsByBlock = histories.flatMap { h -> listOfNotNull(h.default).map { h.id to it } }.groupBy { (h, default) -> blockOf(h, default) }
+    val defaultsByBlock = histories.filter { it.default is StateId }.map { h -> h.id to (h.default as StateId) }.groupBy { (h, default) -> blockOf(h, default) }
 
-    fun appendTransitions(block: StateId?, indent: String) {
+    fun appendTransitions(block: StateParent, indent: String) {
         for ((history, default) in defaultsByBlock[block].orEmpty()) {
             appendLine("$indent${refs.getValue(history)} --> ${refs.getValue(default)}")
         }
@@ -118,9 +130,9 @@ fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
                 Trigger.Completion -> "done"
             }
             append("$indent${refs.getValue(transition.source)} --> ${refs.getValue(transition.target)} : $label")
-            transition.guard?.let { append(" [${mermaidText(it)}]") }
+            transition.guard.withLabel { append(" [${mermaidText(it)}]") }
             if (transition.kind == TransitionKind.Internal) append(" (internal)")
-            transition.effect?.let { append(" / ${mermaidText(it)}") }
+            transition.effect.withLabel { append(" / ${mermaidText(it)}") }
             appendLine()
         }
     }
@@ -130,7 +142,7 @@ fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
         appendLine("$indent${if (ref == node.id.value) "state $ref" else declaration(node.id)} {")
         val inner = "$indent    "
         fun appendChild(child: StateNode) {
-            if (isBlock(child)) appendBlock(child, inner) else appendLine("$inner${declaration(child.id)}")
+            if (isBlock(child.id)) appendBlock(child, inner) else appendLine("$inner${declaration(child.id)}")
         }
         val children = drawnChildren[node.id].orEmpty()
         if (node is CompoundState) {
@@ -151,16 +163,16 @@ fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
 
     appendLine("stateDiagram-v2")
     for (id in ids) {
-        val node = hierarchy.nodes[id]
-        if (containerOf(id) == null && !isBlock(node) && (refs.getValue(id) != id.value || node is HistoryState)) {
+        val history = id in hierarchy.nodes && hierarchy.nodes.getValue(id) is HistoryState
+        if (containerOf(id) == StateParent.Root && !isBlock(id) && (refs.getValue(id) != id.value || history)) {
             appendLine("    ${declaration(id)}")
         }
     }
     appendLine("    [*] --> ${refs.getValue(initial)}")
     for (node in hierarchy.nodes.values) {
-        if (isBlock(node) && containerOf(node.id) == null) appendBlock(node, "    ")
+        if (isBlock(node.id) && containerOf(node.id) == StateParent.Root) appendBlock(node, "    ")
     }
-    appendTransitions(null, "    ")
+    appendTransitions(StateParent.Root, "    ")
     val highlighted = ids.filter { it in active }
     if (highlighted.isNotEmpty()) {
         appendLine("    classDef actron_active fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px")
@@ -170,25 +182,25 @@ fun StateChartDefinition.toMermaid(active: Set<StateId>): String = buildString {
 
 /**
  * The block each declared state is drawn in: its parent when that is a declared compound or
- * parallel state drawn itself, otherwise the top level (`null`, absent from the map). States left over by a
+ * parallel state drawn itself, otherwise the top level ([StateParent.Root]). States left over by a
  * parent cycle are drawn from the top, starting with the first declared one.
  */
 private fun StateChartDefinition.mermaidContainers(): Map<StateId, StateId> {
     val placed = mutableSetOf<StateId>()
     val containers = mutableMapOf<StateId, StateId>()
-    fun place(node: StateNode, container: StateId?) {
+    fun place(node: StateNode, container: StateParent) {
         placed += node.id
-        if (container != null) containers[node.id] = container
+        if (container is StateId) containers[node.id] = container
         if (node is CompoundState || node is ParallelState) {
             for (child in childrenOf(node.id)) if (child.id !in placed) place(child, node.id)
         }
     }
     for (node in hierarchy.nodes.values) {
         val parent = node.parent
-        if (node.id !in placed && (parent == null || node(parent).let { it !is CompoundState && it !is ParallelState })) place(node, null)
+        if (node.id !in placed && (parent !is StateId || !nodeSatisfies(parent) { it is CompoundState || it is ParallelState })) place(node, StateParent.Root)
     }
     for (node in hierarchy.nodes.values) {
-        if (node.id !in placed) place(node, null)
+        if (node.id !in placed) place(node, StateParent.Root)
     }
     return containers
 }

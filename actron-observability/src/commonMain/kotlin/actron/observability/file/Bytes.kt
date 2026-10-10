@@ -43,12 +43,7 @@ internal class ByteWriter(initial: Int = 256) {
         size += value.size
     }
 
-    fun <T> nullable(value: T?, write: (T) -> Unit) {
-        bool(value != null)
-        if (value != null) write(value)
-    }
-
-    fun <T> list(values: List<T>, write: (T) -> Unit) {
+    fun <T : Any> list(values: List<T>, write: (T) -> Unit) {
         i32(values.size)
         for (value in values) write(value)
     }
@@ -105,9 +100,7 @@ internal class ByteReader(private val bytes: ByteArray, var position: Int = 0, p
         return value
     }
 
-    fun <T> nullable(read: () -> T): T? = if (bool()) read() else null
-
-    fun <T> list(read: () -> T): List<T> {
+    fun <T : Any> list(read: () -> T): List<T> {
         val count = i32()
         // Every element takes at least one byte: a larger count is corruption, not a large list.
         if (count < 0 || count > remaining) throw Malformed("list of $count with $remaining bytes left")

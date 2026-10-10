@@ -11,13 +11,25 @@ import kotlin.time.Duration
  *
  * @property value The identifier text; must not be blank
  */
+sealed interface StateParent {
+    /** The implicit root containing the chart's top-level nodes. */
+    data object Root : StateParent {
+        override fun toString(): String = "root"
+    }
+}
+
 @JvmInline
-value class StateId(val value: String) {
+value class StateId(val value: String) : StateParent, HistoryFallback {
     init {
         require(value.isNotBlank()) { "[Actron] StateId must not be blank" }
     }
 
     override fun toString(): String = value
+}
+
+/** History either enters an explicit state or uses its parent's initial configuration. */
+sealed interface HistoryFallback {
+    data object InitialConfiguration : HistoryFallback
 }
 
 /**
@@ -33,24 +45,24 @@ sealed interface StateNode {
     val id: StateId
 
     /**
-     * The compound or parallel node that contains this node, or `null` for a top-level node.
+     * The compound or parallel node that contains this node, or [StateParent.Root] for a top-level node.
      */
-    val parent: StateId?
+    val parent: StateParent
 }
 
 /**
  * A state without child states.
  *
- * @property parent The compound or parallel state that contains this state, or `null` for a
+ * @property parent The compound or parallel state that contains this state, or [StateParent.Root] for a
  * top-level state
  */
 data class AtomicState(
     override val id: StateId,
-    override val parent: StateId? = null,
+    override val parent: StateParent = StateParent.Root,
 ) : StateNode
 
 /** A terminal leaf; entering it completes its compound parent. It has no outgoing transitions. */
-data class FinalState(override val id: StateId, override val parent: StateId? = null) : StateNode
+data class FinalState(override val id: StateId, override val parent: StateParent = StateParent.Root) : StateNode
 
 /** External transitions exit/re-enter; internal self-transitions preserve the activation. */
 enum class TransitionKind { External, Internal }
@@ -62,13 +74,13 @@ enum class TransitionKind { External, Internal }
  * too, unless a transition targets a deeper descendant directly.
  *
  * @property initial The child entered by default; must be a child of this state
- * @property parent The compound or parallel state that contains this state, or `null` for a
+ * @property parent The compound or parallel state that contains this state, or [StateParent.Root] for a
  * top-level state
  */
 data class CompoundState(
     override val id: StateId,
     val initial: StateId,
-    override val parent: StateId? = null,
+    override val parent: StateParent = StateParent.Root,
 ) : StateNode
 
 /**
@@ -86,12 +98,12 @@ data class CompoundState(
  * parallel state is exited and entered again. A parallel state should have at least two regions;
  * see [validate].
  *
- * @property parent The compound or parallel state that contains this state, or `null` for a
+ * @property parent The compound or parallel state that contains this state, or [StateParent.Root] for a
  * top-level state
  */
 data class ParallelState(
     override val id: StateId,
-    override val parent: StateId? = null,
+    override val parent: StateParent = StateParent.Root,
 ) : StateNode
 
 /**
@@ -106,7 +118,7 @@ data class ParallelState(
  *   restores them with every ancestor between them and [parent], outermost first.
  *
  * Until [parent] has been exited once, nothing is remembered, and the transition enters [default],
- * or the initial child of [parent] when [default] is `null` (every region, when [parent] is a
+ * or the initial child of [parent] when [default] is [HistoryFallback.InitialConfiguration] (every region, when [parent] is a
  * [ParallelState]). Regions of a parallel [parent] that the restored nodes do not cover are
  * entered through their initial states. What is remembered lives in
  * [StateConfiguration.history], keyed by this state's [id]; it is recorded right before [parent] is
@@ -120,40 +132,40 @@ data class ParallelState(
  * @property parent The compound or parallel state whose configuration is remembered
  * @property deep Whether the active atomic descendants are remembered rather than the active child
  * @property default Entered while nothing is remembered: a child of [parent] for a shallow history,
- * any proper descendant of [parent] for a deep one; `null` means the initial child of [parent]
+ * any proper descendant of [parent] for a deep one; [HistoryFallback.InitialConfiguration] means the initial child of [parent]
  */
 data class HistoryState(
     override val id: StateId,
     override val parent: StateId,
     val deep: Boolean = false,
-    val default: StateId? = null,
+    val default: HistoryFallback = HistoryFallback.InitialConfiguration,
 ) : StateNode
 
 /**
  * Describes which action triggers a [Transition].
  *
  * @property name Stable display name used by tools such as the Mermaid exporter. It is also how
- * the matcher recognizes actions when [type] is null (see [matches]).
- * @property type The action type, when the matcher was created from one
+ * a [ActionMatching.ByName] matcher recognizes actions (see [matches]).
+ * @property matching How actions are recognized
  */
 data class ActionMatcher(
     val name: String,
-    val type: KClass<out Action>? = null,
+    val matching: ActionMatching = ActionMatching.ByName,
 ) {
+    constructor(name: String, type: KClass<out Action>) : this(name, ActionMatching.ByType(type))
     init {
         require(name.isNotBlank()) { "[Actron] ActionMatcher name must not be blank" }
     }
 
     /**
-     * Whether [action] triggers transitions with this matcher: `type.isInstance(action)` when
-     * [type] is set, so a supertype matcher also matches its subtypes; otherwise the action's
+     * Whether [action] triggers transitions with this matcher: type matching recognizes
+     * subtypes; name matching requires the action's
      * simple class name must equal [name].
      *
      * The runtime and [validate] both use this definition.
      */
     fun matches(action: Action): Boolean {
-        val type = type
-        return if (type != null) type.isInstance(action) else action::class.simpleName == name
+        return matching.matches(action, name)
     }
 
     companion object {
@@ -167,6 +179,19 @@ data class ActionMatcher(
          * @param name Stable display name; must not be blank
          */
         inline fun <reified A : Action> of(name: String): ActionMatcher = ActionMatcher(name = name, type = A::class)
+    }
+}
+
+/** The recognition rule of an action matcher. */
+sealed interface ActionMatching {
+    fun matches(action: Action, name: String): Boolean
+
+    data object ByName : ActionMatching {
+        override fun matches(action: Action, name: String): Boolean = action::class.simpleName == name
+    }
+
+    data class ByType(val type: KClass<out Action>) : ActionMatching {
+        override fun matches(action: Action, name: String): Boolean = type.isInstance(action)
     }
 }
 
@@ -222,8 +247,8 @@ data class Transition(
     val source: StateId,
     val target: StateId,
     val trigger: Trigger,
-    val guard: String? = null,
-    val effect: String? = null,
+    val guard: GuardCondition = GuardCondition.Unconditional,
+    val effect: TransitionEffect = TransitionEffect.NoEffect,
     val kind: TransitionKind = TransitionKind.External,
 ) {
     init {
@@ -237,20 +262,35 @@ data class Transition(
         source: StateId,
         target: StateId,
         on: ActionMatcher,
-        guard: String? = null,
-        effect: String? = null,
+        guard: GuardCondition = GuardCondition.Unconditional,
+        effect: TransitionEffect = TransitionEffect.NoEffect,
         kind: TransitionKind = TransitionKind.External,
     ) : this(source, target, Trigger.OnAction(on), guard, effect, kind)
 
-    /**
-     * The matcher of an action transition, or `null` for a timer.
-     */
-    val on: ActionMatcher? get() = (trigger as? Trigger.OnAction)?.matcher
+    /** Whether this action activates the transition's declared trigger. */
+    fun matchesAction(action: Action): Boolean = when (val declared = trigger) {
+        is Trigger.OnAction -> declared.matcher.matches(action)
+        else -> false
+    }
 
-    /**
-     * The delay of a timer, or `null` for an action transition.
-     */
-    val after: Duration? get() = (trigger as? Trigger.After)?.delay
+    /** Visits the declared action matcher; other triggers perform no action-matcher operation. */
+    fun withActionMatcher(visit: (ActionMatcher) -> Unit) {
+        val declared = trigger
+        if (declared is Trigger.OnAction) visit(declared.matcher)
+    }
+
+    /** Delay of a timer transition; callers must first establish [isTimer]. */
+    fun timerDelay(): Duration {
+        val declared = trigger
+        require(declared is Trigger.After) { "[Actron] Not a timer: $this" }
+        return declared.delay
+    }
+
+    /** Display label of the declared trigger. */
+    val triggerLabel: String get() = when (val declared = trigger) {
+        is Trigger.OnAction -> declared.matcher.name
+        else -> declared.toString()
+    }
 
     /**
      * Whether this transition is a timer ([Trigger.After]).
@@ -290,15 +330,22 @@ data class StateChartDefinition(
     fun transitionsFrom(source: StateId): List<Transition> = hierarchy.transitionsBySource[source].orEmpty()
 
     /**
-     * Returns the first declared node with [id], or `null` when [id] is not declared.
+     * Returns the first declared node with [id]. Check [hasNode] when the id may be undeclared.
+     * @throws NoSuchElementException if the id is undeclared
      */
-    fun node(id: StateId): StateNode? = hierarchy.nodes[id]
+    fun node(id: StateId): StateNode = hierarchy.nodes.getValue(id)
+
+    /** Whether [id] is declared. */
+    fun hasNode(id: StateId): Boolean = id in hierarchy.nodes
+
+    /** Tests a declared node; an undeclared id does not satisfy any node predicate. */
+    fun nodeSatisfies(id: StateId, predicate: (StateNode) -> Boolean): Boolean = hasNode(id) && predicate(node(id))
 
     /**
      * Returns the nodes whose parent is [parent], in declaration order, history states included;
-     * `null` returns the top-level nodes.
+     * [StateParent.Root] returns the top-level nodes.
      */
-    fun childrenOf(parent: StateId?): List<StateNode> = hierarchy.children[parent].orEmpty()
+    fun childrenOf(parent: StateParent = StateParent.Root): List<StateNode> = hierarchy.children[parent].orEmpty()
 
     /**
      * Returns the declared ancestors of [id], innermost first, without [id] itself.
@@ -312,6 +359,12 @@ data class StateChartDefinition(
      * Whether [id] is a proper descendant of [ancestor], that is [ancestor] is in [ancestorsOf].
      */
     fun isDescendant(id: StateId, ancestor: StateId): Boolean = ancestor in hierarchy.ancestors(id)
+
+    /** Every declared hierarchy lies below the implicit root. */
+    fun isDescendant(id: StateId, ancestor: StateParent): Boolean = when (ancestor) {
+        StateParent.Root -> true
+        is StateId -> isDescendant(id, ancestor)
+    }
 
     /**
      * Returns the configuration in which [leaf] is the active leaf: [leaf] and its ancestors,
@@ -339,7 +392,7 @@ data class StateChartDefinition(
  */
 internal class HierarchyIndex(definition: StateChartDefinition) {
     val nodes: Map<StateId, StateNode> = buildMap { definition.states.forEach { if (it.id !in this) put(it.id, it) } }
-    val children: Map<StateId?, List<StateNode>> = nodes.values.groupBy { it.parent }
+    val children: Map<StateParent, List<StateNode>> = nodes.values.groupBy { it.parent }
     val transitionsBySource: Map<StateId, List<Transition>> = definition.transitions.groupBy { it.source }
 
     /** Timers ([Trigger.After] transitions) by source, in declaration order. */
@@ -360,7 +413,7 @@ internal class HierarchyIndex(definition: StateChartDefinition) {
     private val ancestorsById: Map<StateId, List<StateId>> = nodes.keys.associateWith { id ->
         val chain = mutableListOf<StateId>()
         var current = nodes.getValue(id).parent
-        while (current != null && current != id && current !in chain && current in nodes) {
+        while (current is StateId && current != id && current !in chain && current in nodes) {
             chain += current
             current = nodes.getValue(current).parent
         }

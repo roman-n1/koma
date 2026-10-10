@@ -176,7 +176,7 @@ The Store gives the labels their implementations and says what each state does:
 fun listStore(
     load: suspend () -> List<String>,
     initial: ListContext = ListContext(),
-    coroutineContext: CoroutineContext? = null,
+    coroutineContext: CoroutineContext = EmptyCoroutineContext,
 ) = StateChartStore<ListContext, ListAction, ListEvent>(listChart, initial, coroutineContext) {
         guard("canRetry") { state, _ -> state.context.attempts < 3 }
         effect("storeItems") { context, action -> context.copy(items = (action as ListAction.Loaded).items) }
@@ -186,14 +186,14 @@ fun listStore(
         // Runs while Loading is active; cancelled when it is exited. The self-loop on Failed exits
         // and re-enters Loading, so each retry starts a new load.
         activity(loading) {
-            val items = try {
-                load()
+            val response: ListAction = try {
+                ListAction.Loaded(load())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                null
+                ListAction.Failed
             }
-            dispatch(if (items != null) ListAction.Loaded(items) else ListAction.Failed)
+            dispatch(response)
         }
         onEnter(error) { event(ListEvent.GaveUp) }
 
@@ -608,8 +608,11 @@ fun everyPathReplays() = runTest {
             .patch { plugin(conformance) }
         store.startAndAwait()
         path.transitions.forEachIndexed { i, transition ->
-            val delay = transition.after
-            if (delay != null) advanceTimeBy(delay) else store.dispatchAndAwait(sampleFor(transition.on!!))
+            when (val trigger = transition.trigger) {
+                is Trigger.After -> advanceTimeBy(trigger.delay)
+                is Trigger.OnAction -> store.dispatchAndAwait(sampleFor(trigger.matcher))
+                Trigger.Always, Trigger.Completion -> Unit
+            }
             runCurrent()
             assertEquals(path.activeLeaves[i], store.currentState.activeLeaves(listChart))
         }
@@ -657,7 +660,7 @@ provided the chart does not rely on them either:
 `StateSaver` supplies storage and encoding through your implementation. Use durable storage for
 process restarts; an in-memory saver only survives as long as its owner does. Keep an application
 schema version beside the saved data and migrate or reject incompatible context before returning
-a snapshot. Returning `null` starts with the declared initial context; a decoding `Exception` is
+a snapshot. `restore(initialState)` returns the saved snapshot or its supplied initial state; a decoding `Exception` is
 reported to the Store's exception handler and also falls back to the declared initial state.
 Configure an exception handler that reports persistence failures if you need to diagnose them.
 
@@ -802,12 +805,16 @@ consistent checkpoint and bridge contracts remain unchanged. See the semantics d
 
 ## Behavioural queries and reachability
 
-`chart.query(TransitionQuery(sources = setOf(node), includeDescendants = true))` returns
+`chart.query(TransitionQuery(sources = { it == node }, includeDescendants = true))` returns
 matching declaration rows without running guards or effects. `chart.impactTo(nextChart)`
 reports conservative affected states, transition identities and referenced guard/effect labels.
 
 `chart.analyzeReachability(maxConfigurations, maxEdges)` explores structural configurations
 and history, with dead ends separated from terminal configurations. Guards, context and IO
-are opaque. A truncated search reports `structurallyUnreachable = null`; unvisited states are
-not proof of impossibility. See the [five-wave contracts](../doc/internal/design/2026-10-06-competitive-roadmap.md)
+are opaque. A truncated search reports an empty `structurallyUnreachable` set and `truncated = true`; unvisited
+states are not proof of impossibility. See the [five-wave contracts](../doc/internal/design/2026-10-06-competitive-roadmap.md)
 for payload-based verification, exported runtime frames, IDE navigation and CI review.
+
+Nullable APIs and optional containers have been removed from library implementations.
+See the [null-free API policy](../doc/guides/absence-policy.md) for breaking replacements
+and the strict CI checks, including inferred types. Old persistence readers remain supported.

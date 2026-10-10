@@ -40,7 +40,7 @@ class StateChartRuntimePropertyTest {
     private fun referenceMatches(matcher: ActionMatcher?, action: RandomAction): Boolean {
         if (matcher == null) return false
         val name = simpleNames[action] ?: "Go"
-        return when (matcher.type) {
+        return when (val type = (matcher.matching as? ActionMatching.ByType)?.type) {
             null -> matcher.name == name
             RandomAction::class -> true
             RandomAction.Go::class -> action is RandomAction.Go
@@ -77,8 +77,8 @@ class StateChartRuntimePropertyTest {
     private fun referenceStep(chart: StateChartDefinition, table: GuardTable, current: RandomState, action: RandomAction): StepResult {
         for (t in chart.transitions) {
             if (t.source != current.id) continue
-            if (!referenceMatches(t.on, action)) continue
-            if (t.guard != null && !table.holds(t.guard, current, action)) continue
+            if (!referenceMatches((t.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action)) continue
+            if ((t.guard as? actron.statechart.GuardKey)?.name != null && !table.holds((t.guard as actron.statechart.GuardKey).name, current, action)) continue
             return StepResult.Transitioned(t)
         }
         return StepResult.Ignored
@@ -111,8 +111,8 @@ class StateChartRuntimePropertyTest {
             // Every guard receives exactly the state and action passed to step.
             val expectedCalls = mutableListOf<Triple<String, RandomState, Action>>()
             for (t in chart.transitionsFrom(current.id)) {
-                if (!referenceMatches(t.on, action)) continue
-                val guard = t.guard ?: break
+                if (!referenceMatches((t.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action)) continue
+                val guard = (t.guard as? actron.statechart.GuardKey)?.name ?: break
                 expectedCalls += Triple(guard, current, action)
                 if (table.holds(guard, current, action)) break
             }
@@ -163,7 +163,7 @@ class StateChartRuntimePropertyTest {
     @Test
     fun missingGuardsAreAllListedOnceInFirstUseOrder() = RandomCharts.forEachChart(valid = false) { seed, random, chart ->
         val provided = RandomCharts.guards.filter { random.nextBoolean() }
-        val used = chart.transitions.mapNotNull { it.guard }.distinct()
+        val used = chart.transitions.mapNotNull { (it.guard as? actron.statechart.GuardKey)?.name }.distinct()
         val missing = used.filter { it !in provided }
         val guards = (provided + "unused-${random.nextInt(5)}").associateWith { { _: RandomState, _: Action -> true } }
 
@@ -201,8 +201,8 @@ class StateChartRuntimePropertyTest {
             states = listOf(AtomicState(a), AtomicState(b)),
             transitions = listOf(
                 Transition(a, b, ActionMatcher.of<RandomAction.Ping>("Ping")),
-                Transition(a, b, ActionMatcher.of<RandomAction.Ping>("Ping"), guard = "boom"),
-                Transition(a, a, ActionMatcher.of<RandomAction.Pong>("Pong"), guard = "boom"),
+                Transition(a, b, ActionMatcher.of<RandomAction.Ping>("Ping"), guard = actron.statechart.GuardKey("boom")),
+                Transition(a, a, ActionMatcher.of<RandomAction.Pong>("Pong"), guard = actron.statechart.GuardKey("boom")),
             ),
         )
         val runtime = StateChartRuntime(chart, stateIdOf, mapOf("boom" to { _: RandomState, _: Action -> throw IllegalStateException("boom") }))
@@ -228,9 +228,9 @@ class StateChartRuntimePropertyTest {
         repeat(10) {
             val id = chart.states.random(random).id
             val action = RandomCharts.actions.random(random)
-            val matching = chart.transitionsFrom(id).filter { referenceMatches(it.on, action) }
+            val matching = chart.transitionsFrom(id).filter { referenceMatches((it.trigger as? actron.statechart.Trigger.OnAction)?.matcher, action) }
             for (attempts in 0..5) {
-                val expected = matching.firstOrNull { it.guard == null || attempts < 3 }
+                val expected = matching.firstOrNull { (it.guard as? actron.statechart.GuardKey)?.name == null || attempts < 3 }
                 val result = runtime.step(RandomState(id, attempts), action)
                 assertEquals(expected?.let { StepResult.Transitioned(it) } ?: StepResult.Ignored, result, "seed $seed: $id/$attempts on $action")
             }

@@ -2,6 +2,8 @@
 
 package actron.statechart.machine
 
+import actron.core.InputAttribution
+
 import actron.core.Action
 import actron.core.Event
 import actron.core.ExceptionHandler
@@ -75,9 +77,9 @@ class FaultInjectionTest {
         listOf(CompoundState(root, initial = idle), AtomicState(idle, parent = root), AtomicState(loading, parent = root)),
         listOf(
             Transition(idle, loading, ActionMatcher.of<Act.Load>("Load")),
-            Transition(loading, idle, ActionMatcher.of<Act.Loaded>("Loaded"), effect = "store"),
+            Transition(loading, idle, ActionMatcher.of<Act.Loaded>("Loaded"), effect = actron.statechart.EffectKey("store")),
             Transition(loading, loading, ActionMatcher.of<Act.Load>("Load")),
-            Transition(loading, idle, Trigger.After(50.milliseconds), effect = "timeout"),
+            Transition(loading, idle, Trigger.After(50.milliseconds), effect = actron.statechart.EffectKey("timeout")),
         ),
     )
 
@@ -122,13 +124,13 @@ class FaultInjectionTest {
             results.result(Act.Loaded(command.command.n))
         }
         val recorder = object : DecisionObserver<Ctx, Act, Fetch, Nothing> {
-            override fun onCommitted(input: actron.core.InputId?, machineInput: MachineInput<Act>, decision: Decision<Ctx, Fetch, Nothing>) {
+            override fun onCommitted(input: actron.core.InputAttribution, machineInput: MachineInput<Act>, decision: Decision<Ctx, Fetch, Nothing>) {
                 committed += decision.snapshot
             }
         }
         val faulty = faults?.let { random ->
             object : DecisionObserver<Ctx, Act, Fetch, Nothing> {
-                override fun onCommitted(input: actron.core.InputId?, machineInput: MachineInput<Act>, decision: Decision<Ctx, Fetch, Nothing>) {
+                override fun onCommitted(input: actron.core.InputAttribution, machineInput: MachineInput<Act>, decision: Decision<Ctx, Fetch, Nothing>) {
                     if (random.nextInt(4) == 0) throw IllegalStateException("observer fault")
                 }
             }

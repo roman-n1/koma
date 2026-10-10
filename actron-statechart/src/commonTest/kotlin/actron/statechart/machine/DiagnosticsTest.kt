@@ -18,7 +18,7 @@ class DiagnosticsTest {
     @Test fun liveObserverSeesTheActualGuardInvocationOnce() = runTest {
         var calls = 0
         val machine = Machine<Unit, Go, Nothing, Event>(DefinitionId("diagnostic"), DefinitionVersion("1"),
-            StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), guard = "allowed")))) {
+            StateChartDefinition(idle, listOf(AtomicState(idle), FinalState(done)), listOf(Transition(idle, done, ActionMatcher.of<Go>("go"), guard = actron.statechart.GuardKey("allowed"))))) {
             guard("allowed") { _, _ -> calls++; false }
         }
         val explanations = mutableListOf<DecisionExplanation>()
@@ -27,7 +27,7 @@ class DiagnosticsTest {
         store.startAndAwait()
         store.dispatchAndAwait(Go)
         assertEquals(1, calls)
-        assertEquals(false, explanations.last().guards.single().result)
+        assertEquals(actron.statechart.GuardCheck.Rejected, explanations.last().guards.single().result)
         assertEquals(CandidateDisposition.GuardRejected, explanations.last().candidates.single().disposition)
         store.close()
     }

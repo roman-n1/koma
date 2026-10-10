@@ -65,7 +65,7 @@ class StateChartStorePropertyTest {
 
     /** Adds random effect labels to some action transitions; timers already have some. */
     private fun withEffects(random: Random, chart: StateChartDefinition) = chart.copy(
-        transitions = chart.transitions.map { if (it.effect == null && random.nextInt(3) == 0) it.copy(effect = effectLabels.random(random)) else it },
+        transitions = chart.transitions.map { if ((it.effect as? actron.statechart.EffectKey)?.name == null && random.nextInt(3) == 0) it.copy(effect = (effectLabels.random(random))?.let { actron.statechart.EffectKey(it) } ?: actron.statechart.TransitionEffect.NoEffect) else it },
     )
 
     private class RunningTimer(val index: Int, val deadline: Duration, val sequence: Long)
@@ -89,7 +89,7 @@ class StateChartStorePropertyTest {
 
         private fun start(states: List<StateId>) {
             for (index in states.flatMap { timersBySource[it].orEmpty() }) {
-                running += RunningTimer(index, now + chart.transitions[index].after!!, sequence++)
+                running += RunningTimer(index, now + (chart.transitions[index].trigger as Trigger.After).delay, sequence++)
             }
         }
 
@@ -101,7 +101,7 @@ class StateChartStorePropertyTest {
 
         private fun take(result: StepResult.Transitioned) {
             result.exited.forEach { log += "exit $it" }
-            result.transitions.mapNotNull { it.effect }.forEach { log += it; effects++ }
+            result.transitions.mapNotNull { (it.effect as? actron.statechart.EffectKey)?.name }.forEach { log += it; effects++ }
             result.entered.forEach { log += "enter $it" }
             val cancelled = result.exited.flatMap { timersBySource[it].orEmpty() }.toSet()
             assertEquals(result.timersToCancel, result.exited.flatMap { timersBySource[it].orEmpty() }.map { chart.transitions[it] })
@@ -160,9 +160,10 @@ class StateChartStorePropertyTest {
                 }
                 if (saver != null) store { stateSaver(saver) }
             },
+            coroutineContext = scope.backgroundScope.coroutineContext,
             cancelTimers = cancelTimers,
         )
-        val store: Store<ChartState<Int>, RandomAction, NoEvent> = host.build(scope.backgroundScope.coroutineContext)
+        val store: Store<ChartState<Int>, RandomAction, NoEvent> = host.build()
     }
 
     private class MemorySaver : StateSaver<ChartState<Int>> {

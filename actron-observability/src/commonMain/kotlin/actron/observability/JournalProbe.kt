@@ -13,7 +13,7 @@ import actron.core.StoreBuilder
 import actron.core.StorePatchBuilder
 import actron.core.StoreProbe
 import actron.core.StoreTrace
-import kotlin.time.TimeMark
+import kotlin.time.Duration
 
 /**
  * Records this Store into [session] as [store], keeping of each payload what [policy] allows.
@@ -52,14 +52,15 @@ internal class JournalProbe<S : State, A : Action, E : Event>(
     private val policy: PayloadPolicy<S, A, E>,
 ) : StoreProbe<S, A, E> {
     // ProcessingStarted and ProcessingFinished come under the Store's lock, one processing at a time.
-    private var processingStartedAt: TimeMark? = null
+    private var processingElapsed: () -> Duration = { Duration.ZERO }
 
     override fun record(trace: StoreTrace<S, A, E>) {
         val entry: JournalEntry<S, A, E> = when (trace) {
             is StoreTrace.InputAccepted -> JournalEntry.InputAccepted(trace.input, describe(trace.kind))
             is StoreTrace.InputDiscarded -> JournalEntry.InputDiscarded(trace.input, describe(trace.reason))
             is StoreTrace.ProcessingStarted -> {
-                processingStartedAt = session.now()
+                val startedAt = session.now()
+                processingElapsed = startedAt::elapsedNow
                 JournalEntry.ProcessingStarted(trace.input, trace.ordinal)
             }
             is StoreTrace.StateCommitted -> JournalEntry.StateCommitted(
@@ -71,8 +72,8 @@ internal class JournalProbe<S : State, A : Action, E : Event>(
             is StoreTrace.EventEmitted -> JournalEntry.EventEmitted(trace.input, guarded { policy.event(trace.event) })
             is StoreTrace.FailureReported -> JournalEntry.FailureReported(trace.input, failure(trace.error))
             is StoreTrace.ProcessingFinished -> {
-                val duration = processingStartedAt.elapsedOrZero()
-                processingStartedAt = null
+                val duration = processingElapsed()
+                processingElapsed = { Duration.ZERO }
                 JournalEntry.ProcessingFinished(trace.input, trace.ordinal, describe(trace.outcome), duration)
             }
             StoreTrace.StoreClosed -> JournalEntry.StoreClosed
@@ -113,7 +114,7 @@ internal class JournalProbe<S : State, A : Action, E : Event>(
         FailureDescriptor.Unavailable
     }
 
-    private inline fun <T> guarded(describe: () -> Payload<T>): Payload<T> = try {
+    private inline fun <T : Any> guarded(describe: () -> Payload<T>): Payload<T> = try {
         describe()
     } catch (e: Exception) {
         session.reportPolicyFailure(store, e)

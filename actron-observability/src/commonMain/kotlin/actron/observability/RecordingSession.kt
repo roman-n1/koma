@@ -115,6 +115,18 @@ data class JournalStats(
  * @param sinks Receive every record in [GroupSeq] order
  * @param timeSource Source of [JournalRecord.elapsed] and of processing durations
  */
+interface JournalPublisher {
+    val boundary: JournalBoundary
+    fun publish(store: StoreInstanceId, entry: JournalEntry<*, *, *>)
+    fun publish(entry: JournalEntry<*, *, *>)
+
+    data object Disabled : JournalPublisher {
+        override val boundary: JournalBoundary = JournalBoundary.Beginning
+        override fun publish(store: StoreInstanceId, entry: JournalEntry<*, *, *>) {}
+        override fun publish(entry: JournalEntry<*, *, *>) {}
+    }
+}
+
 class RecordingSession(
     scope: CoroutineScope,
     val id: RuntimeSessionId = RuntimeSessionId.random(),
@@ -123,7 +135,7 @@ class RecordingSession(
     private val config: JournalConfig = JournalConfig(),
     private val sinks: List<JournalSink> = emptyList(),
     private val timeSource: TimeSource = TimeSource.Monotonic,
-) {
+) : JournalPublisher {
     private val startedAt: TimeMark = timeSource.markNow()
 
     // Guards everything below down to `stopped`. Entered without suspending (tryLock), so the
@@ -186,6 +198,10 @@ class RecordingSession(
             )
         }
 
+    override val boundary: JournalBoundary get() = locked {
+        if (published == 0L) JournalBoundary.Beginning else GroupSeq(published)
+    }
+
     /**
      * Publishes [JournalEntry.RecordingStopped], stops accepting records, writes what is queued
      * and ends the writer. Idempotent.
@@ -199,10 +215,10 @@ class RecordingSession(
             stopped = true
             buildList {
                 if (pendingGap > 0) {
-                    add(allocate(null, JournalEntry.JournalGap(pendingGap)).also(::retain))
+                    add(allocate(RecordSubject.Session, JournalEntry.JournalGap(pendingGap)).also(::retain))
                     pendingGap = 0
                 }
-                add(allocate(null, JournalEntry.RecordingStopped).also(::retain))
+                add(allocate(RecordSubject.Session, JournalEntry.RecordingStopped).also(::retain))
             }
         }
         for (record in closing) queue.send(record)
@@ -221,29 +237,30 @@ class RecordingSession(
      * Publishes [entry] about [store]: assigns the sequence numbers ([StoreSeq] starts with the
      * store's first record, from a probe or from here), retains the record and offers it to the
      * writer, all in the session's short critical section. For records that no probe produces,
-     * such as the decisions of a replay-ready machine. Returns the record, or `null` after
-     * [close].
+     * such as the decisions of a replay-ready machine. After [close], counts the publication
+     * without retaining or writing it.
      */
-    fun publish(store: StoreInstanceId, entry: JournalEntry<*, *, *>): JournalRecord<*, *, *>? = publishRecord(store, entry)
+    override fun publish(store: StoreInstanceId, entry: JournalEntry<*, *, *>) = publishRecord(store, entry)
 
     /**
      * Publishes [entry] as a record of the session itself, about no Store: a group's cut, for
-     * example. Returns the record, or `null` after [close].
+     * example. After [close], counts the publication without retaining or writing it.
      */
-    fun publish(entry: JournalEntry<*, *, *>): JournalRecord<*, *, *>? = publishRecord(null, entry)
+    override fun publish(entry: JournalEntry<*, *, *>) = publishRecord(RecordSubject.Session, entry)
 
     /**
      * Assigns the sequence numbers, retains the record and offers it to the writer, all under the
-     * lock; `null` for a record of the session itself. Returns the record, or `null` after [close].
+     * lock. [RecordSubject.Session] identifies session records. After [close], only increments the
+     * after-stop counter.
      */
-    internal fun publishRecord(store: StoreInstanceId?, entry: JournalEntry<*, *, *>): JournalRecord<*, *, *>? {
+    internal fun publishRecord(store: RecordSubject, entry: JournalEntry<*, *, *>) {
         return locked {
             if (stopped) {
                 publishedAfterStop++
-                return@locked null
+                return@locked Unit
             }
             if (pendingGap > 0) {
-                val gap = allocate(null, JournalEntry.JournalGap(pendingGap))
+                val gap = allocate(RecordSubject.Session, JournalEntry.JournalGap(pendingGap))
                 retain(gap)
                 if (queue.trySend(gap).isSuccess) {
                     pendingGap = 0
@@ -254,23 +271,25 @@ class RecordingSession(
                     val record = allocate(store, entry)
                     retain(record)
                     lost()
-                    return@locked record
+                    return@locked Unit
                 }
             }
             val record = allocate(store, entry)
             retain(record)
             if (queue.trySend(record).isFailure) lost()
-            record
         }
     }
 
-    private fun allocate(store: StoreInstanceId?, entry: JournalEntry<*, *, *>): JournalRecord<*, *, *> {
+    private fun allocate(store: RecordSubject, entry: JournalEntry<*, *, *>): JournalRecord<*, *, *> {
         published++
         val groupSeq = GroupSeq(++nextGroupSeq)
-        val storeSeq = store?.let { id ->
-            val next = (storeSeqs[id] ?: 0L) + 1
-            storeSeqs[id] = next
-            StoreSeq(next)
+        val storeSeq: RecordOrdinal = when (store) {
+            RecordSubject.Session -> RecordOrdinal.Session
+            is StoreInstanceId -> {
+                val next = (storeSeqs[store] ?: 0L) + 1
+                storeSeqs[store] = next
+                StoreSeq(next)
+            }
         }
         return JournalRecord(
             formatVersion = JOURNAL_FORMAT_VERSION,
@@ -320,7 +339,7 @@ class RecordingSession(
         }
     }
 
-    private inline fun <T> locked(block: () -> T): T {
+    private inline fun <T : Any> locked(block: () -> T): T {
         while (!lock.tryLock()) {
             // Spin: the holder is inside a section of a few field writes.
         }
@@ -331,8 +350,3 @@ class RecordingSession(
         }
     }
 }
-
-/**
- * The duration of a processing, or zero when its start was not observed.
- */
-internal fun TimeMark?.elapsedOrZero(): Duration = this?.elapsedNow() ?: Duration.ZERO

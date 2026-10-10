@@ -40,3 +40,8 @@ The GitHub repository is now [roman-n1/actron](https://github.com/roman-n1/actro
 Update existing clones with `git remote set-url origin https://github.com/roman-n1/actron.git`.
 Repository hosting and Maven publication are separate; the repository rename does not
 publish artifacts. Upstream attribution and the MIT license are retained.
+
+Actron also enforces a [null-free domain API](absence-policy.md). Nullable arguments and results
+from earlier fork versions require the callback, concrete-overload or domain-phase replacements
+listed there. Optional-like wrappers are forbidden too. The five journal/recording format versions
+remain frozen and their old readers are covered by golden and crash/truncation tests.

@@ -51,7 +51,7 @@ fun <S : State, A : Action, E : Event> simpleLogging(
         private fun log(scope: PluginScope<S, A>, message: () -> String) {
             if (dispatcher == EmptyCoroutineContext) {
                 try {
-                    logger.log(severity = severity, tag = tag, throwable = null, message = message)
+                    logger.log(severity = severity, tag = tag, message = message)
                 } catch (e: Exception) {
                     // A failing logger (or a toString() that throws) must not abort the action or
                     // transition being logged; report it through the Store's exception handler.
@@ -59,7 +59,7 @@ fun <S : State, A : Action, E : Event> simpleLogging(
                 }
             } else {
                 scope.launch(dispatcher) {
-                    logger.log(severity = severity, tag = tag, throwable = null, message = message)
+                    logger.log(severity = severity, tag = tag, message = message)
                 }
             }
         }

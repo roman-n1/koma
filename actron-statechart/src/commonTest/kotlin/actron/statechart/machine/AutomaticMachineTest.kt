@@ -21,7 +21,7 @@ class AutomaticMachineTest {
 
     @Test fun automaticStepsCommitOnce_andTransientCommandsAndTimersNeverExecute() {
         val chart = StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(checking), FinalState(done)), listOf(
-            Transition(idle, checking, matcher), Transition(checking, done, Trigger.Eventless, guard = "valid", effect = "count"),
+            Transition(idle, checking, matcher), Transition(checking, done, Trigger.Eventless, guard = actron.statechart.GuardKey("valid"), effect = actron.statechart.EffectKey("count")),
             Transition(checking, idle, Trigger.After(5.seconds)),
         ))
         val machine = Machine<Int, Go, String, Event>(DefinitionId("auto"), DefinitionVersion("1"), chart) {
@@ -45,7 +45,7 @@ class AutomaticMachineTest {
 
     @Test fun internalTransitionsKeepActivationsCommandsAndTimers() {
         val chart = StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(done)), listOf(
-            Transition(idle, idle, matcher, effect = "count", kind = TransitionKind.Internal),
+            Transition(idle, idle, matcher, effect = actron.statechart.EffectKey("count"), kind = TransitionKind.Internal),
             Transition(idle, done, Trigger.After(5.seconds)),
         ))
         val machine = Machine<Int, Go, String, Event>(DefinitionId("internal"), DefinitionVersion("1"), chart) {
@@ -85,7 +85,7 @@ class AutomaticMachineTest {
 
     @Test fun livelockLimitRollsBackTheWholeMacrostep() {
         val chart = StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(checking)), listOf(
-            Transition(idle, checking, matcher), Transition(checking, checking, Trigger.Eventless, effect = "count", kind = TransitionKind.Internal),
+            Transition(idle, checking, matcher), Transition(checking, checking, Trigger.Eventless, effect = actron.statechart.EffectKey("count"), kind = TransitionKind.Internal),
         ))
         val machine = Machine<Int, Go, Nothing, Event>(DefinitionId("loop"), DefinitionVersion("1"), chart) {
             maxMicrosteps(3); effect("count") { context, _ -> context + 1 }
@@ -102,8 +102,8 @@ class AutomaticMachineTest {
     @Test fun guardsSeeOnePendingRevisionThroughoutTheMacrostep() {
         val chart = StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(checking), FinalState(done)), listOf(
             Transition(idle, checking, matcher),
-            Transition(checking, checking, Trigger.Eventless, guard = "advance", effect = "increment", kind = TransitionKind.Internal),
-            Transition(checking, done, Trigger.Eventless, guard = "finished"),
+            Transition(checking, checking, Trigger.Eventless, guard = actron.statechart.GuardKey("advance"), effect = actron.statechart.EffectKey("increment"), kind = TransitionKind.Internal),
+            Transition(checking, done, Trigger.Eventless, guard = actron.statechart.GuardKey("finished")),
         ))
         val machine = Machine<Int, Go, Nothing, Event>(DefinitionId("revision"), DefinitionVersion("1"), chart) {
             guard("advance") { snapshot, _ -> snapshot.revision == 2L && snapshot.context < 2 }
@@ -128,7 +128,7 @@ class AutomaticMachineTest {
     @Test fun chartStoreStabilizesContextAndStagesItsLifetimes() = runTest {
         var transientRuns = 0
         val chart = StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(checking), FinalState(done)), listOf(
-            Transition(idle, checking, matcher), Transition(checking, done, Trigger.Eventless, guard = "ready"),
+            Transition(idle, checking, matcher), Transition(checking, done, Trigger.Eventless, guard = actron.statechart.GuardKey("ready")),
         ))
         val store = StateChartStore<Int, Go, Event>(chart, 0, coroutineContext) {
             guard("ready") { state, _ -> state.context == 1 }
@@ -183,7 +183,7 @@ class AutomaticMachineTest {
         val failure = IllegalStateException("automatic effect failed")
         val chart = StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(checking), FinalState(done)), listOf(
             Transition(idle, checking, matcher),
-            Transition(checking, done, Trigger.Eventless, effect = "fail"),
+            Transition(checking, done, Trigger.Eventless, effect = actron.statechart.EffectKey("fail")),
             Transition(checking, idle, Trigger.After(5.seconds)),
         ))
         val machine = Machine<Int, Go, String, Event>(DefinitionId("rollback"), DefinitionVersion("1"), chart) {
@@ -207,7 +207,7 @@ class AutomaticMachineTest {
         val failures = mutableListOf<Exception>()
         val failure = IllegalStateException("automatic effect failed")
         val chart = StateChartDefinition(idle, listOf(AtomicState(idle), AtomicState(checking), FinalState(done)), listOf(
-            Transition(idle, checking, matcher), Transition(checking, done, Trigger.Eventless, effect = "fail"),
+            Transition(idle, checking, matcher), Transition(checking, done, Trigger.Eventless, effect = actron.statechart.EffectKey("fail")),
         ))
         val store = StateChartStore<Int, Go, Event>(chart, 0, coroutineContext) {
             activity(idle) { starts++; try { awaitCancellation() } finally { stops++ } }
