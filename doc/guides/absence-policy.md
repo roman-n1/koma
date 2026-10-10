@@ -35,6 +35,7 @@ replace old nullable arguments and return values:
 
 | Previous usage | Replacement |
 |---|---|
+| Unbounded context / command generic parameters | `C : Any` / `CMD : Any` in consumers and serializers |
 | `Store(initialState = null) { initialState(value) }` | `Store { initialState(value) }` |
 | `dispatcher = null` / `coroutineContext = null` | Omit the argument or pass `EmptyCoroutineContext` |
 | `StateSaver.restore(): S?` | `StateSaver.restore(initialState: S): S` |

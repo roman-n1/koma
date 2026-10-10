@@ -14,7 +14,7 @@ import actron.timetravel.compose.InspectorState
 import actron.timetravel.inspect.Inspector
 import kotlinx.coroutines.test.TestScope
 
-fun <C, A : Action, CMD, E : Event> publishedDriver(machine: Machine<C, A, CMD, E>, context: C, scope: TestScope) =
+fun <C : Any, A : Action, CMD : Any, E : Event> publishedDriver(machine: Machine<C, A, CMD, E>, context: C, scope: TestScope) =
     MachineTestDriver(machine, context, scope)
 
 suspend fun <S : State, A : Action, E : Event> publishedTestHelper(store: Store<S, A, E>) = store.startAndAwait()
