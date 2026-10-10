@@ -59,8 +59,8 @@ In this first step, nothing public changes:
 
 I made this change in my fork so you can look at real code:
 
-- Branch: https://github.com/roman-n1/koma/tree/feature/handler-matcher-metadata
-- Diff: https://github.com/roman-n1/koma/compare/main...feature/handler-matcher-metadata
+- Branch: https://github.com/roman-n1/actron/tree/feature/handler-matcher-metadata
+- Diff: https://github.com/roman-n1/actron/compare/main...feature/handler-matcher-metadata
 
 It touches `StoreBuilder.kt` and `StoreImpl.kt` and adds `HandlerMatcher.kt`.
 `StoreHandlerRegistryTest` checks that the matchers record the right types in

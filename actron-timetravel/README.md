@@ -87,7 +87,7 @@ Status: the **recording formats are stable in the fork** since 5.0-3 (2026-10-01
 `RecordingCodec`, `GroupRecording`, `GroupRecorder`, the recording and order files and their sinks
 are not `@ExperimentalActronApi` any more, `apiCheck` holds their API and the formats are frozen (above).
 Replay, branches and the inspector stay **experimental**, `@ExperimentalActronApi`: debug tooling whose
-model still grows. The module lives in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
+model still grows. The module lives in the fork [roman-n1/actron](https://github.com/roman-n1/actron).
 The [Compose inspector](../actron-timetravel-compose/README.md) supports group-wide positions:
 one cursor restores every member, and forward replay stops on decision or bridge/source
 causality mismatches. Seeking restores recorded checkpoints; verification remains explicit.

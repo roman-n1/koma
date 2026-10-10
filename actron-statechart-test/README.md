@@ -28,7 +28,7 @@ with the machine's meaning.
 - **`ScriptedCommandHandler`**: runs nothing by itself; records what the executor started and
   cancelled; the test answers, completes or fails each command, as a replay's `Branch` does.
 
-Status: **experimental**, `@ExperimentalActronApi`, in the fork [roman-n1/koma](https://github.com/roman-n1/koma).
+Status: **experimental**, `@ExperimentalActronApi`, in the fork [roman-n1/actron](https://github.com/roman-n1/actron).
 
 ## Dependency
 

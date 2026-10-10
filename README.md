@@ -1,30 +1,54 @@
-# Actron: MVI, statecharts and Time Travel for Kotlin Multiplatform
+# Actron
 
-Actron helps you describe **what a feature can do in each state**. The UI sends actions; the
-Store processes them and exposes immutable state. Use a small Store for a counter, explicit
-states for loading/retry flows, or a statechart when a feature has nested or parallel phases.
+![Actron: a tangled network becomes an ordered graph, with an orange path connecting actions and states.](doc/assets/actron-chaos-to-order.png)
+
+**From chaos to deterministic behavior.**
+
+MVI, statecharts and Time Travel for Kotlin Multiplatform.
+
+A tap starts a request. Another tap cancels it. A response arrives late. A retry timer fires.
+The hard part is knowing what your feature should do next — and explaining how it got here.
+
+Actron gives that behavior an explicit model: **what can happen, what changes, and what runs
+next.** Start with a small Store, describe richer flows with statecharts, and use pure Machines
+to make decisions you can record, verify and replay.
+
+**Model behavior. Control state. Replay time.**
+
+[Get started](#1-a-store-for-a-counter) · [Try Time Travel](#4-time-travel-from-a-real-saved-run) ·
+[Installation](#installation) · [Migrating from Koma](doc/guides/migrating-from-koma.md)
 
 ## Why Actron?
 
-Actron combines two ideas:
+As a feature grows, its behavior spreads across callbacks, flags, coroutine jobs and UI code.
+Actron brings the rules into a model you can read, test and inspect.
 
-- **Act** — actions and events that drive application behavior.
-- **-tron** — a mechanism, engine, or machine.
+| Bring order to… | With Actron… |
+|---|---|
+| **What can happen next** | Declare states, transitions and guards. Model loading, cancellation and retry as explicit behavior. |
+| **What changes and what runs** | A pure Machine returns the next snapshot and commands as data. The runtime commits the decision, then handlers perform I/O. |
+| **How you got here** | Record Machine inputs and decisions, inspect checkpoints and verify a replay to find the first divergence. |
+| **What could happen instead** | Branch from a recorded checkpoint, supply command responses and advance virtual time in an isolated experiment. |
 
-The name reflects what Actron is built around: explicit application behavior.
-Actron combines MVI, reducers, and statecharts into a behavioral engine where transitions
-are part of the model rather than hidden inside control flow.
-That makes behavior easier to execute, inspect, test, explain, and reproduce — including
-deterministic Time Travel, replay, and branching from previous execution checkpoints.
+### Determinism you can verify
 
-**Model Behavior. Control State. Replay Time.**
+On the pure Machine path, the same starting snapshot and ordered inputs — including explicit
+time — produce the same decisions when the machine definition and pure rules are unchanged.
+Network responses enter as inputs; commands leave as data. Replay checks recorded decisions
+without running the network calls again.
 
-Actron was previously named Koma in this fork, based on upstream
-[koma-kt/koma](https://github.com/koma-kt/koma) **4.0.0**. The source repository is currently
-[roman-n1/koma](https://github.com/roman-n1/koma). It adds an optional declarative statechart
-model, pure decision machines, structured recording and Time Travel.
-The original Store DSL remains available under the `actron.*` packages.
-See [Migrating from Koma](doc/guides/migrating-from-koma.md) for the breaking rename.
+That gives a bug report a concrete next step: **open the recording, find the decision, try an
+alternative.** Deterministic replay requires the pure Machine path and compatible definitions
+and codecs. Replay, branching and inspector APIs are currently experimental.
+
+### Start small. Make complexity explicit.
+
+A counter needs a Store. A loading screen needs clear phases. A feature with nested or
+parallel lifetimes can use a statechart. Add recording and Time Travel when you need them;
+choose the modules that fit your feature.
+
+The name carries the idea: **Act** for the actions that drive behavior, **-tron** for the
+engine that gives them structure.
 
 ## Start here
 
@@ -254,6 +278,13 @@ recompiling consumers that previously imported `koma.*`; it is not a binary repl
 For an Android-only build, the same dependency line belongs in `dependencies { … }`.
 
 ## What differs from the original project?
+
+Actron was previously named Koma in this fork, based on upstream
+[koma-kt/koma](https://github.com/koma-kt/koma) **4.0.0**. The source repository is currently
+[roman-n1/actron](https://github.com/roman-n1/actron). It adds an optional declarative statechart
+model, pure decision machines, structured recording and Time Travel.
+The original Store DSL remains available under the `actron.*` packages.
+See [Migrating from Koma](doc/guides/migrating-from-koma.md) for the breaking rename.
 
 The comparison is with the recorded **upstream base 4.0.0**, not a claim about future upstream
 releases. The original Store DSL, Compose helpers, messaging, logging and test support remain.

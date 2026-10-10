@@ -46,7 +46,7 @@ builds the inspector and the replay on; this module is the journal only.
 
 Status: **stable in the fork** since 5.0-3 (2026-10-01): no declaration of this module is
 `@ExperimentalActronApi` any more, `apiCheck` holds its API, and the formats are frozen (below);
-the module lives in the fork [roman-n1/koma](https://github.com/roman-n1/koma). The record model has `JOURNAL_FORMAT_VERSION`
+the module lives in the fork [roman-n1/actron](https://github.com/roman-n1/actron). The record model has `JOURNAL_FORMAT_VERSION`
 7 (new variants only at the end, under new tags, new fields only at the end of a variant; a
 reader of a version reads every earlier one; the
 [format freeze policy](../doc/internal/adr/2026-10-01-format-freeze-policy.md) says what a bump ships with),

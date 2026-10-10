@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>io.github.roman-n1.actron</id>
     <name>Actron Behavioural Model</name>
-    <vendor url="https://github.com/roman-n1/koma">Actron contributors</vendor>
+    <vendor url="https://github.com/roman-n1/actron">Actron contributors</vendor>
     <description>Navigate Actron statechart declarations, inspect exported behavioural graphs and find model usages.</description>
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>

@@ -76,7 +76,7 @@ Connected / Idle -> Connected / ChatOpened
 
 ### Status (after wave 6)
 
-All phases 0–7 are done in the fork; phase 8 partially. Numbers are PRs in `roman-n1/koma`.
+All phases 0–7 are done in the fork; phase 8 partially. Numbers are PRs in `roman-n1/actron`.
 
 | Phase | What | PR | Status |
 |---|---|---|---|
@@ -233,7 +233,7 @@ the series that follows it: [`notes/2026-10-01-upstream-series.md`](../notes/202
 
 ## Using the fork in the messenger and the way back to upstream
 
-Roman's goal: connect the fork `roman-n1/koma` to his KMP messenger now,
+Roman's goal: connect the fork `roman-n1/actron` to his KMP messenger now,
 and return to official Koma as the author accepts the requests. The rules
 follow from this.
 

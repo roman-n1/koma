@@ -47,7 +47,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Fork
 
-- This is the fork `roman-n1/koma` of `koma-kt/koma`, published as `io.github.roman-n1:*` (`actron.fork.version` in `gradle.properties`); `actron.upstream.base` names the upstream release it was last merged with
+- This is the fork `roman-n1/actron` of `koma-kt/koma`, published as `io.github.roman-n1:*` (`actron.fork.version` in `gradle.properties`); `actron.upstream.base` names the upstream release it was last merged with
 - Changes to the modules upstream owns are listed in the divergence inventory of `doc/internal/design/2026-09-28-statechart-roadmap.md`; keep it complete in the same PR as the change
 - `upstream-pr/<topic>` branches are single commits on the upstream tag, prepared per `doc/internal/notes/2026-10-01-upstream-series.md`
 - The five on-disk format versions are frozen under `doc/internal/adr/2026-10-01-format-freeze-policy.md`; a bump ships with a reader of the previous version, its test, the re-pinned golden and the table in `FormatVersionsTest`, in the same change

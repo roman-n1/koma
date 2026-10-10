@@ -40,7 +40,7 @@ way back is per row: each row is a small change the author can take on its own.
 
 ## Prepared (2026-10-01)
 
-Seven prepared branches pushed to roman-n1/koma. Six start directly on tag `4.0.0`;
+Seven prepared branches pushed to roman-n1/actron. Six start directly on tag `4.0.0`;
 U3 is stacked on U2. The table records the reported before/after checks; preparing a branch
 is separate from submitting an upstream PR:
 
